@@ -1,3 +1,0 @@
-# Disable Jekyll theme so it doesn't wrap our HTML in its own layout
-theme: null
-plugins: []

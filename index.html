@@ -5694,7 +5694,7 @@ function renderRunMileageBar(dates) {
   const statusMsg = !target
     ? 'Set a weekly target below'
     : pct >= 100 ? '🎉 Target hit!'
-    : pct >= 60  ? `${target-actual}km to go`
+    : pct >= 60  ? `${(target-actual).toFixed(2)}km to go
     : `${actual}km of ${target}km`;
 
   const barHtml = target ? `

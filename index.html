@@ -7133,6 +7133,7 @@ let raceSetupOpen = false;
 let raceSetupDist = '10k';
 let raceSetupCustomKm = '';
 let raceSetupDate = '';
+let racePlanOpen = false;
 
 function loadRaceGoal() {
   try { return JSON.parse(localStorage.getItem(RACE_KEY)||'null'); } catch(e) { return null; }
@@ -7312,8 +7313,87 @@ function renderRaceCountdown() {
   const weeksIntoPhase = weeks <= 0 ? 1
     : weeks <= taperWeeks ? taperWeeks - weeks + 1
     : weeks <= taperWeeks + peakWeeks ? peakWeeks - (weeks - taperWeeks) + 1
-    : buildWeeks - (weeks - taperWeeks - peakWeeks);
+    : buildWeeks - (weeks - taperWeeks - peakWeeks) + 1;  // +1 fixes off-by-one
   const phasePct = Math.min(100, Math.round((weeksIntoPhase / totalPhaseWeeks) * 100));
+
+  // ── Week-by-week training plan ──
+  // Shared interpolation used both for current week and plan rows
+  const interpolateTargets = (table, bKeys, val) => {
+    if (table[val]) return table[val];
+    const lo = bKeys.filter(k=>k<=val).pop() || bKeys[0];
+    const hi = bKeys.filter(k=>k>=val)[0]   || bKeys[bKeys.length-1];
+    const t  = lo===hi ? 0 : (val-lo)/(hi-lo);
+    return Math.round(table[lo] + t*(table[hi]-table[lo]));
+  };
+  const bKeys = [5,10,21.1,42.2];
+  const pWeeklyT = {5:30,10:45,21.1:60,42.2:80};
+  const pLongT   = {5:8, 10:14,21.1:18,42.2:32};
+
+  const planRows = [];
+  const thisMonday = getMonday(new Date());
+
+  for (let w = 0; w <= weeks; w++) {
+    const wMon = new Date(thisMonday); wMon.setDate(wMon.getDate() + w*7);
+    const wSun = new Date(wMon); wSun.setDate(wSun.getDate()+6);
+    const wWeeksLeft = weeks - w;
+
+    let wPhase, wPhaseEmoji, wWeekly, wLong;
+    let wPeakWeekly = interpolateTargets(pWeeklyT, bKeys, raceKm);
+    if (avgWeeklyKm) wPeakWeekly = Math.min(wPeakWeekly, Math.round(avgWeeklyKm * 1.3));
+    const wPeakLong = interpolateTargets(pLongT, bKeys, raceKm);
+    const wBuildWeeks = Math.max(0, (weeks+1) - taperWeeks - peakWeeks);
+
+    if (wWeeksLeft <= 0) {
+      wPhase = 'Race'; wPhaseEmoji = '🏁';
+      wWeekly = Math.round(wPeakWeekly * 0.2); wLong = null;
+    } else if (wWeeksLeft <= taperWeeks) {
+      const tf = taperWeeks === 1 ? 0.4 : 0.4 + 0.25*(taperWeeks - wWeeksLeft)/(taperWeeks-1);
+      wPhase = 'Taper'; wPhaseEmoji = '🧘';
+      wWeekly = Math.round(wPeakWeekly * (0.65 - tf*0.25));
+      wLong   = Math.round(wPeakLong * (0.5 + tf*0.15));
+    } else if (wWeeksLeft <= taperWeeks + peakWeeks) {
+      wPhase = 'Peak'; wPhaseEmoji = '🔥';
+      wWeekly = wPeakWeekly; wLong = wPeakLong;
+    } else {
+      const bp = wBuildWeeks > 0
+        ? (wBuildWeeks - (wWeeksLeft - taperWeeks - peakWeeks)) / wBuildWeeks
+        : 0;
+      const base     = avgWeeklyKm || Math.round(wPeakWeekly * 0.5);
+      const baseLong = currentLongKm || Math.round(wPeakLong * 0.5);
+      wPhase = 'Build'; wPhaseEmoji = '📈';
+      wWeekly = Math.round(base + bp*(wPeakWeekly - base));
+      wLong   = Math.round(baseLong + bp*(wPeakLong - baseLong));
+    }
+
+    const isThisWeek = w === 0;
+    const fmt = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    planRows.push({ wMon, wSun, wPhase, wPhaseEmoji, wWeekly, wLong, isThisWeek,
+      label: `${fmt(wMon)} – ${fmt(wSun)}` });
+  }
+
+  const phaseColour = p => p==='Peak'?'var(--red)':p==='Taper'?'var(--purple)':p==='Race'?'var(--green)':'var(--blue)';
+
+  const planHtml = racePlanOpen ? `
+    <div style="border-top:2px solid var(--ink);margin-top:10px;">
+      ${planRows.map((r,i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);
+          background:${r.isThisWeek?'var(--col1)':'transparent'};">
+          <div style="width:4px;align-self:stretch;border-radius:2px;background:${r.isThisWeek?'var(--blue)':'transparent'};flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);">
+              ${r.isThisWeek?'<strong style="color:var(--blue);">THIS WEEK · </strong>':''}${r.label}
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+              <span style="font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;
+                background:${phaseColour(r.wPhase)}22;color:${phaseColour(r.wPhase)};border:1px solid ${phaseColour(r.wPhase)}44;">
+                ${r.wPhaseEmoji} ${r.wPhase}
+              </span>
+              <span style="font-size:12px;font-weight:800;color:var(--ink);">${r.wWeekly}km</span>
+              ${r.wLong?`<span style="font-size:11px;color:var(--text3);">· long run ${r.wLong}km</span>`:'<span style="font-size:11px;color:var(--green);">· Race day! 🎉</span>'}
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>` : '';
 
   const countdownCells = diffDays > 60
     ? [
@@ -7364,8 +7444,16 @@ function renderRaceCountdown() {
       <div class="race-progress-bar"><div class="race-progress-fill" style="width:${phasePct}%;"></div></div>
       <div style="font-size:11px;color:var(--text2);margin-top:5px;font-weight:600;">${phaseNote}</div>
       ${trainingRows ? `<div style="margin-top:10px;border-top:2px solid var(--border);padding-top:4px;">${trainingRows}</div>` : ''}
-      <button onclick="clearRaceGoal()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;font-weight:600;margin-top:12px;padding:0;display:block;">Remove race goal</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+        <button onclick="racePlanOpen=!racePlanOpen;renderRaceCountdown();"
+          style="background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;
+            color:var(--text2);font-size:11px;font-weight:700;padding:5px 10px;font-family:-apple-system,sans-serif;">
+          ${racePlanOpen?'▲ Hide plan':'▾ View full plan'}
+        </button>
+        <button onclick="clearRaceGoal()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;font-weight:600;padding:0;">Remove</button>
+      </div>
     </div>
+    ${planHtml}
   </div>`;
 }
 

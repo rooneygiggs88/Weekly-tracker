@@ -840,9 +840,6 @@ body.dark .water-glass.filled { background:#0d1a2d; border-color:#3b82f6; }
 .health-trend-line { fill:none; stroke:var(--red); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
 
-/* ── SWIPE ── */
-.swipeable { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
-
 
 /* ── GOAL EDIT MODAL ── */
 #edit-goal-modal .modal { padding-bottom: 44px; }
@@ -967,8 +964,6 @@ body.dark .day-popup-header { background:var(--yellow); color:#111; }
 .day-popup-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .day-popup-close { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.7); font-size:18px; line-height:1; padding:0; }
 
-/* ── SWIPE TABS ── */
-.pages-swipe-container { position:relative; overflow:hidden; }
 
 /* ── MODAL SWIPE TO DISMISS ── */
 .modal { touch-action:pan-x; }
@@ -4257,34 +4252,6 @@ function checkForReviewAI() {
 async function generateReviewAI(){}
 
 
-// ── SWIPE BETWEEN WEEKS ──
-(function(){
-  let swipeStartX=0, swipeStartY=0, swipeStartOffset=0;
-  function onTouchStart(e){
-    swipeStartX=e.touches[0].clientX;
-    swipeStartY=e.touches[0].clientY;
-    swipeStartOffset=currentWeekOffset;
-  }
-  function onTouchEnd(e){
-    const dx=e.changedTouches[0].clientX-swipeStartX;
-    const dy=e.changedTouches[0].clientY-swipeStartY;
-    if(Math.abs(dx)<Math.abs(dy)||Math.abs(dx)<50)return;
-    if(dx<0){// swipe left = next week
-      if(currentWeekOffset<0){currentWeekOffset++;activeSessionDay={};renderWeek();}
-    } else {// swipe right = prev week
-      currentWeekOffset--;activeSessionDay={};renderWeek();
-    }
-  }
-  document.addEventListener('DOMContentLoaded',()=>{
-    const weekPage=document.getElementById('page-week');
-    if(weekPage){
-      weekPage.addEventListener('touchstart',onTouchStart,{passive:true});
-      weekPage.addEventListener('touchend',onTouchEnd,{passive:true});
-    }
-  });
-})();
-
-
 function copyLastGymSession() {
   const last = getLastSession(gymSession);
   if (!last) { 
@@ -7381,7 +7348,6 @@ buildNav();
 buildMorePage();
 renderWeek();
 checkReviewPrompt();
-initNavSwipe();
 setTimeout(initModalSwipeDismiss, 500);
 setTimeout(renderAnomalies, 800);
 </script>

@@ -4847,45 +4847,7 @@ function attachLongPress() {
   });
 }
 
-// ── SWIPE BETWEEN NAV TABS ──
-let navSwipeStartX = 0, navSwipeStartY = 0, navSwipeActive = false;
-
-function initNavSwipe() {
-  const body = document.body;
-  body.addEventListener('touchstart', e => {
-    // Don't swipe if modal is open, or in gym/journal where horizontal scroll is needed
-    if (document.querySelector('.modal-overlay.open')) return;
-    if (currentPage === 'week') return; // week uses its own swipe
-    navSwipeStartX = e.touches[0].clientX;
-    navSwipeStartY = e.touches[0].clientY;
-    navSwipeActive = true;
-  }, {passive:true});
-
-  body.addEventListener('touchend', e => {
-    if (!navSwipeActive) return;
-    navSwipeActive = false;
-    const dx = e.changedTouches[0].clientX - navSwipeStartX;
-    const dy = e.changedTouches[0].clientY - navSwipeStartY;
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.8) return;
-
-    const order = [...navOrder.slice(0,4), 'more'];
-    const cur = order.indexOf(currentPage);
-    if (cur === -1) return;
-
-    if (dx < 0 && cur < order.length-1) {
-      // Swipe left = next tab
-      const next = order[cur+1];
-      const btn = document.querySelector(`.nav-btn:nth-child(${cur+2})`);
-      if (btn) switchPage(next, btn);
-    } else if (dx > 0 && cur > 0) {
-      // Swipe right = prev tab
-      const prev = order[cur-1];
-      const btn = document.querySelector(`.nav-btn:nth-child(${cur})`);
-      if (btn) switchPage(prev, btn);
-    }
-  }, {passive:true});
-}
-
+  
 // ── SWIPE TO DISMISS MODALS ──
 function initModalSwipeDismiss() {
   document.querySelectorAll('.modal-overlay').forEach(overlay => {

@@ -2056,6 +2056,7 @@ function renderStats(){
     consistency: ()=>renderConsistencySection(),
     running: ()=>renderRunningAnalysisSection(),
     gym: ()=>renderGymAnalysisSection(),
+    bodycomp: ()=>renderBodyCompSection(),
     trend: ()=>renderTrendSection(weeks),
     heatmap: ()=>renderHeatmapSection(dates,goals),
     streaks: ()=>renderStreaksSection(goals),
@@ -2068,6 +2069,76 @@ function renderStats(){
   pOrder.forEach(id=>{ if(pVis[id]!==false && sectionRenderers[id]) html+=sectionRenderers[id](); });
   c.innerHTML=html;
   renderAnomalies();
+}
+
+function renderBodyCompSection() {
+  const data = loadHealthData();
+  const weights = data.weight || {};
+  const bf = data.bodyfat || {};
+  const hasWeight = Object.keys(weights).length >= 2;
+  const hasBf = Object.keys(bf).length >= 2;
+  if (!hasWeight && !hasBf) return '';
+
+  // Build 90-day series
+  const last90Keys = [];
+  for (let i=89;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); last90Keys.push(dk(d)); }
+
+  function miniChart(vals, keys, color, unit) {
+    const filled = vals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+    if (filled.length < 2) return '<div style="padding:20px;text-align:center;font-size:11px;color:var(--text3);">Not enough data</div>';
+    const W=280, H=60, PL=4, PR=4, PT=6, PB=14;
+    const minV=Math.min(...filled.map(x=>x.v)), maxV=Math.max(...filled.map(x=>x.v)), range=maxV-minV||0.5;
+    const chartW=W-PL-PR, chartH=H-PT-PB, n=vals.length;
+    const xStep=chartW/(n-1);
+    function px(i){return PL+i*xStep;}
+    function py(v){return PT+chartH-((v-minV)/range)*chartH;}
+    const pts=filled.map(x=>`${px(x.i)},${py(x.v)}`);
+    const line='M'+pts.join(' L');
+    const area=`M${px(filled[0].i)},${PT+chartH} L${pts.join(' L')} L${px(filled[filled.length-1].i)},${PT+chartH} Z`;
+    const first=filled[0], last=filled[filled.length-1];
+    const diff=(last.v-first.v).toFixed(1);
+    const diffCol=diff>0?'var(--red)':diff<0?'var(--green)':'var(--text3)';
+    const gradId='bcg'+color.replace(/[^a-z]/gi,'');
+    const labelStep=Math.floor(n/3);
+    const labels=keys.map((k,i)=>{
+      if(i%labelStep!==0&&i!==n-1) return '';
+      const d=new Date(k+'T12:00:00');
+      return `<text x="${px(i)}" y="${H}" text-anchor="middle" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
+    }).join('');
+    return `<div style="padding:4px 8px 0;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">
+        <span style="font-size:20px;font-weight:800;color:var(--ink);">${last.v}${unit}</span>
+        <span style="font-size:12px;font-weight:700;color:${diffCol};">${diff>0?'+':''}${diff}${unit}</span>
+      </div>
+      <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;">
+        <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+        </linearGradient></defs>
+        <path d="${area}" fill="url(#${gradId})"/>
+        <path d="${line}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${px(last.i)}" cy="${py(last.v)}" r="3" fill="${color}"/>
+        ${labels}
+      </svg>
+    </div>`;
+  }
+
+  const wVals = last90Keys.map(k => weights[k] || null);
+  const bfVals = last90Keys.map(k => bf[k] || null);
+
+  const cols = [];
+  if (hasWeight) cols.push(`<div style="flex:1;border-right:${hasBf?'1px solid var(--border)':'none'};padding:12px 0 8px;">
+    <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);padding:0 12px 4px;">Weight</div>
+    ${miniChart(wVals, last90Keys, 'var(--red)', 'kg')}
+  </div>`);
+  if (hasBf) cols.push(`<div style="flex:1;padding:12px 0 8px;">
+    <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);padding:0 12px 4px;">Body Fat</div>
+    ${miniChart(bfVals, last90Keys, 'var(--blue)', '%')}
+  </div>`);
+
+  return `<div class="section"><div class="section-title"><span>Body Composition</span></div>
+    <div class="card"><div style="display:flex;">${cols.join('')}</div></div>
+  </div>`;
 }
 
 function renderTrendSection(weeks){
@@ -4639,6 +4710,113 @@ function deleteWeight(dateKey) {
   renderHealth();
 }
 
+// ── BODY FAT ──
+function logBodyFat(val) {
+  const n = parseFloat(val);
+  if (!val || isNaN(n) || n <= 0 || n >= 100) return;
+  const data = loadHealthData();
+  if (!data.bodyfat) data.bodyfat = {};
+  data.bodyfat[dk(new Date())] = n;
+  saveHealthData(data);
+  renderHealth();
+  haptic('light');
+}
+function deleteBodyFat(dateKey) {
+  const data = loadHealthData();
+  if (data.bodyfat) delete data.bodyfat[dateKey];
+  saveHealthData(data);
+  renderHealth();
+}
+
+function renderBodyFatTab() {
+  const data = loadHealthData();
+  const bf = data.bodyfat || {};
+  const sortedKeys = Object.keys(bf).sort();
+  const todayKey = dk(new Date());
+  const todayVal = bf[todayKey] || '';
+
+  const vals = sortedKeys.map(k => bf[k]);
+  const latest = vals.length ? vals[vals.length-1] : null;
+  const week = sortedKeys.filter(k => { const d=new Date(k),now=new Date(); return (now-d)<=7*86400000; }).map(k=>bf[k]);
+  const avg7 = week.length ? (week.reduce((a,b)=>a+b,0)/week.length).toFixed(1) : null;
+  const change = vals.length >= 2 ? (vals[vals.length-1] - vals[0]).toFixed(1) : null;
+
+  const statsHtml = latest ? `<div class="metric-grid" style="border-bottom:1px solid var(--border);">
+    <div class="metric-cell"><div class="metric-val">${latest}%</div><div class="metric-unit">Latest</div></div>
+    <div class="metric-cell"><div class="metric-val">${avg7 ? avg7+'%' : '—'}</div><div class="metric-unit">7-day avg</div></div>
+    <div class="metric-cell"><div class="metric-val" style="color:${change>0?'var(--red)':change<0?'var(--green)':'var(--text)'}">${change !== null ? (change>0?'+':'')+change+'%' : '—'}</div><div class="metric-unit">Total change</div></div>
+  </div>` : '';
+
+  const logHtml = `<div class="weight-input-row">
+    <input class="weight-big-input" type="number" inputmode="decimal" placeholder="${todayVal || '—'}"
+      id="bf-input" value="${todayVal}" step="0.1" min="1" max="60"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();logBodyFat(this.value);}">
+    <span class="weight-unit">%</span>
+    <button class="weight-log-btn" onclick="logBodyFat(document.getElementById('bf-input').value)">Log</button>
+  </div>`;
+
+  // 30-day chart
+  const last30Keys = [];
+  for (let i=29;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); last30Keys.push(dk(d)); }
+  const chartVals = last30Keys.map(k => bf[k] || null);
+  const allVals = chartVals.filter(v=>v!==null);
+  const chartHtml = allVals.length >= 2 ? renderBodyFatChart(chartVals, last30Keys) : '';
+
+  const recentRowArr = sortedKeys.slice(-10).reverse();
+  const recentRows = recentRowArr.map((k, i) => {
+    const d = new Date(k+'T12:00:00');
+    const label = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    const border = i < recentRowArr.length-1 ? 'border-bottom:1px solid var(--border);' : '';
+    return `<div style="display:flex;align-items:center;padding:10px 14px;${border}">
+      <div style="font-size:12px;font-weight:700;color:var(--text3);width:90px;flex-shrink:0;">${label}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--ink);flex:1;">${bf[k]}<span style="font-size:12px;font-weight:600;color:var(--text3);margin-left:2px;">%</span></div>
+      <button onclick="deleteBodyFat('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:4px 8px;line-height:1;touch-action:manipulation;">×</button>
+    </div>`;
+  }).join('');
+  const logCard = sortedKeys.length ? `<div class="section"><div class="section-title"><span>Log</span></div><div class="card">${recentRows}</div></div>` : '';
+
+  return `<div class="section" style="padding-top:12px;"><div class="card">
+    ${statsHtml}${logHtml}${chartHtml}
+  </div></div>${logCard}`;
+}
+
+function renderBodyFatChart(vals, keys) {
+  const W=320, H=70, PL=8, PR=8, PT=8, PB=16;
+  const filled = vals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+  if (filled.length < 2) return '';
+  const minV = Math.min(...filled.map(x=>x.v));
+  const maxV = Math.max(...filled.map(x=>x.v));
+  const range = maxV - minV || 1;
+  const chartW=W-PL-PR, chartH=H-PT-PB, n=vals.length;
+  const xStep = chartW/(n-1);
+  function px(i){return PL+i*xStep;}
+  function py(v){return PT+chartH-((v-minV)/range)*chartH;}
+  const points = filled.map(x=>`${px(x.i)},${py(x.v)}`);
+  const linePath = 'M'+points.join(' L');
+  const areaPath = `M${px(filled[0].i)},${PT+chartH} L${points.join(' L')} L${px(filled[filled.length-1].i)},${PT+chartH} Z`;
+  const dots = filled.map(x=>`<circle cx="${px(x.i)}" cy="${py(x.v)}" r="2.5" fill="var(--blue)" opacity="0.8"/>`).join('');
+  const labelStep = Math.floor(n/4);
+  const labels = keys.map((k,i)=>{
+    if(i%labelStep!==0&&i!==n-1) return '';
+    const d=new Date(k+'T12:00:00');
+    return `<text x="${px(i)}" y="${H}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
+  }).join('');
+  return `<div style="padding:8px 8px 4px;overflow:hidden;">
+    <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;">
+      <defs>
+        <linearGradient id="bfGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--blue)" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="var(--blue)" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#bfGrad)"/>
+      <path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+      ${labels}
+    </svg>
+  </div>`;
+}
+
 function renderWeightTab() {
   const data = loadHealthData();
   const weights = data.weight || {};
@@ -4807,12 +4985,14 @@ function renderHealth() {
   const tabs = `<div style="padding:12px 16px 0;">
     <div class="health-tabs">
       <button class="health-tab${healthTab==='weight'?' active':''}" onclick="healthTab='weight';renderHealth()">Weight</button>
+      <button class="health-tab${healthTab==='bodyfat'?' active':''}" onclick="healthTab='bodyfat';renderHealth()">Body Fat</button>
       <button class="health-tab${healthTab==='water'?' active':''}" onclick="healthTab='water';renderHealth()">Water</button>
     </div>
   </div>`;
 
   let content = '';
   if (healthTab==='weight') content = renderWeightTab();
+  else if (healthTab==='bodyfat') content = renderBodyFatTab();
   else if (healthTab==='water') content = renderWaterTab();
 
   c.innerHTML = `<div style="padding-top:4px;">${tabs}${content}</div>`;
@@ -6430,6 +6610,7 @@ const ALL_PROGRESS_SECTIONS = [
   { id:'consistency',  label:'Consistency score',     icon:'🎯', defaultOn:true  },
   { id:'running',      label:'Running analysis',       icon:'🏃', defaultOn:true  },
   { id:'gym',          label:'Gym analysis',           icon:'🏋️', defaultOn:true  },
+  { id:'bodycomp',     label:'Body composition',        icon:'📊', defaultOn:true  },
   { id:'trend',        label:'Weekly trend',           icon:'📈', defaultOn:true  },
   { id:'heatmap',      label:'Day-of-week heatmap',    icon:'🗓', defaultOn:true  },
   { id:'streaks',      label:'Streaks',                icon:'🔥', defaultOn:true  },

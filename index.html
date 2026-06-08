@@ -1891,6 +1891,8 @@ function renderGymSessionDropdown(date, storeKey) {
       <option value="Push" ${current==='Push'?'selected':''}>Push</option>
       <option value="Pull" ${current==='Pull'?'selected':''}>Pull</option>
       <option value="Legs" ${current==='Legs'?'selected':''}>Legs</option>
+      <option value="Core" ${current==='Core'?'selected':''}>Core</option>
+      <option value="Custom" ${current==='Custom'?'selected':''}>Custom</option>
     </select>
   </div>`;
 }
@@ -4077,7 +4079,7 @@ function renderGymLog() {
     const elapsed = Math.floor((Date.now()-draft.startedAt)/60000);
     if (elapsed > 0) {
       const h=Math.floor(elapsed/60), m=elapsed%60;
-      durationHtml = '<div style="text-align:center;padding:8px 0 0;font-size:11px;font-weight:700;color:var(--text3);">&#9201; Session time: '+(h>0?h+'h '+m+'m':m+'m')+'</div>';
+      durationHtml = '<div style="display:flex;justify-content:center;padding:10px 16px 4px;"><div style="display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:var(--bg);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:800;letter-spacing:0.03em;">&#9201; '+(h>0?h+'h '+m+'m':m+'m')+'</div></div>';
     }
   }
   const draftBanner = hasDraftData ? '<div class="gym-draft-banner"><div style="font-size:12px;font-weight:700;">Draft restored</div><button onclick="clearGymDraft();gymLockedExercises={};initGymSets(gymSession);renderGym();" style="font-size:11px;font-weight:700;background:none;border:none;cursor:pointer;color:inherit;">Start fresh</button></div>' : '';

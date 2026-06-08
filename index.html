@@ -2572,7 +2572,8 @@ function renderRunAnalysis() {
       const by    = PT+chartH-bh;
       const isNow = i === weeks.length-1;
       const barFill = isNow ? 'url(#loadGradNow)' : 'url(#loadGrad)';
-      const labelEl = `<text x="${cx.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${new Date(w.monKey+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</text>`;
+      const _d = new Date(w.monKey+'T12:00:00');
+      const labelEl = `<text x="${cx.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${_d.getDate()}/${_d.getMonth()+1}</text>`;
       return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${barFill}" opacity="0.9"/>${labelEl}`;
     }).join('');
 

@@ -4725,11 +4725,11 @@ function loadHealthData() {
 function saveHealthData(d) { localStorage.setItem(healthKey(), JSON.stringify(d)); }
 
 // ── WEIGHT ──
-function logWeight(val) {
+function logWeight(val, dateKey) {
   if (!val || isNaN(parseFloat(val))) return;
   const data = loadHealthData();
   if (!data.weight) data.weight = {};
-  data.weight[dk(new Date())] = parseFloat(val);
+  data.weight[dateKey || dk(new Date())] = parseFloat(val);
   saveHealthData(data);
   renderHealth();
   haptic('light');
@@ -4738,6 +4738,49 @@ function deleteWeight(dateKey) {
   const data = loadHealthData();
   if (data.weight) delete data.weight[dateKey];
   saveHealthData(data);
+  renderHealth();
+}
+function logBodyFat(val, dateKey) {
+  const n = parseFloat(val);
+  if (!val || isNaN(n) || n < 1 || n > 60) return;
+  const data = loadHealthData();
+  if (!data.bodyfat) data.bodyfat = {};
+  data.bodyfat[dateKey || dk(new Date())] = n;
+  saveHealthData(data);
+  renderHealth();
+  haptic('light');
+}
+function deleteBodyFat(dateKey) {
+  const data = loadHealthData();
+  if (data.bodyfat) delete data.bodyfat[dateKey];
+  saveHealthData(data);
+  renderHealth();
+}
+
+let healthEditType = '';
+let healthEditOrigKey = '';
+
+function openHealthEdit(type, dateKey, val) {
+  healthEditType = type;
+  healthEditOrigKey = dateKey;
+  document.getElementById('health-edit-date').value = dateKey;
+  document.getElementById('health-edit-val').value = val;
+  document.getElementById('health-edit-label').textContent = type === 'weight' ? 'Weight (kg)' : 'Body fat (%)';
+  document.getElementById('health-edit-modal').classList.add('open');
+}
+function closeHealthEdit() {
+  document.getElementById('health-edit-modal').classList.remove('open');
+}
+function saveHealthEdit() {
+  const newDate = document.getElementById('health-edit-date').value;
+  const newVal = parseFloat(document.getElementById('health-edit-val').value);
+  if (!newDate || isNaN(newVal)) return;
+  const data = loadHealthData();
+  if (!data[healthEditType]) data[healthEditType] = {};
+  if (newDate !== healthEditOrigKey) delete data[healthEditType][healthEditOrigKey];
+  data[healthEditType][newDate] = newVal;
+  saveHealthData(data);
+  closeHealthEdit();
   renderHealth();
 }
 
@@ -4768,9 +4811,10 @@ function renderWeightTab() {
   const logHtml = `<div class="weight-input-row">
     <input class="weight-big-input" type="number" inputmode="decimal" placeholder="${todayVal || '—'}"
       id="weight-input" value="${todayVal}"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();logWeight(this.value);}">
+      onkeydown="if(event.key==='Enter'){event.preventDefault();logWeight(this.value,document.getElementById('weight-date-input').value);}">
     <span class="weight-unit">kg</span>
-    <button class="weight-log-btn" onclick="logWeight(document.getElementById('weight-input').value)">Log</button>
+    <input type="date" id="weight-date-input" value="${todayKey}" style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-family:-apple-system,sans-serif;font-size:12px;background:var(--card2);color:var(--text);outline:none;width:130px;">
+    <button class="weight-log-btn" onclick="logWeight(document.getElementById('weight-input').value,document.getElementById('weight-date-input').value)">Log</button>
   </div>`;
 
   // 30-day chart
@@ -4788,9 +4832,10 @@ function renderWeightTab() {
     const d = new Date(k+'T12:00:00');
     const label = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
     return `<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);width:48px;flex-shrink:0;text-transform:uppercase;">${label}</div>
-      <div style="font-size:16px;font-weight:800;color:var(--text);width:40px;text-align:center;">${weights[k]}kg</div>
-      <button onclick="deleteWeight('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;margin-left:auto;">×</button>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);width:80px;flex-shrink:0;text-transform:uppercase;">${label}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--text);flex:1;">${weights[k]}kg</div>
+      <button onclick="openHealthEdit('weight','${k}',${weights[k]})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;font-weight:700;padding:4px 8px;">Edit</button>
+      <button onclick="deleteWeight('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;">×</button>
     </div>`;
   }).join('');
   const logCard = sortedKeys.length ? `<div class="section"><div class="section-title"><span>Log</span></div><div class="card">${recentRows}</div></div>` : '';
@@ -4832,9 +4877,99 @@ function renderWeightChart(vals, keys) {
   </div>`;
 }
 
+function renderBodyFatTab() {
+  const data = loadHealthData();
+  const bfData = data.bodyfat || {};
+  const sortedKeys = Object.keys(bfData).sort();
+  const todayKey = dk(new Date());
+  const todayVal = bfData[todayKey] || '';
+
+  const vals = sortedKeys.map(k => bfData[k]);
+  const latest = vals.length ? vals[vals.length-1] : null;
+  const week = sortedKeys.filter(k => { const d=new Date(k); const now=new Date(); return (now-d)<=7*86400000; }).map(k=>bfData[k]);
+  const avg7 = week.length ? (week.reduce((a,b)=>a+b,0)/week.length).toFixed(1) : null;
+  const change = vals.length >= 2 ? (vals[vals.length-1] - vals[0]).toFixed(1) : null;
+
+  const statsHtml = latest ? `<div class="metric-grid" style="border-bottom:1px solid var(--border);">
+    <div class="metric-cell"><div class="metric-val">${latest}%</div><div class="metric-unit">Latest</div></div>
+    <div class="metric-cell"><div class="metric-val">${avg7 ? avg7+'%' : '—'}</div><div class="metric-unit">7-day avg</div></div>
+    <div class="metric-cell"><div class="metric-val" style="color:${change>0?'var(--red)':change<0?'var(--green)':'var(--text)'}">${change !== null ? (change>0?'+':'')+change+'%' : '—'}</div><div class="metric-unit">Total change</div></div>
+  </div>` : '';
+
+  const logHtml = `<div class="weight-input-row">
+    <input class="weight-big-input" type="number" inputmode="decimal" placeholder="${todayVal || '—'}" id="bf-input" value="${todayVal}"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();logBodyFat(this.value,document.getElementById('bf-date-input').value);}">
+    <span class="weight-unit">%</span>
+    <input type="date" id="bf-date-input" value="${todayKey}" style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-family:-apple-system,sans-serif;font-size:12px;background:var(--card2);color:var(--text);outline:none;width:130px;">
+    <button class="weight-log-btn" onclick="logBodyFat(document.getElementById('bf-input').value,document.getElementById('bf-date-input').value)">Log</button>
+  </div>`;
+
+  // Chart
+  const last30Keys = [];
+  for (let i=29;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); last30Keys.push(dk(d)); }
+  const chartVals = last30Keys.map(k => bfData[k] || null);
+  const allVals = chartVals.filter(v=>v!==null);
+  const chartHtml = allVals.length >= 2 ? renderBodyFatChart(chartVals, last30Keys) : '';
+
+  const recentRows = sortedKeys.slice(-10).reverse().map(k => {
+    const d = new Date(k+'T12:00:00');
+    const label = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    return `<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);width:80px;flex-shrink:0;text-transform:uppercase;">${label}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--text);flex:1;">${bfData[k]}%</div>
+      <button onclick="openHealthEdit('bodyfat','${k}',${bfData[k]})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;font-weight:700;padding:4px 8px;">Edit</button>
+      <button onclick="deleteBodyFat('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;">×</button>
+    </div>`;
+  }).join('');
+  const logCard = sortedKeys.length ? `<div class="section"><div class="section-title"><span>Log</span></div><div class="card">${recentRows}</div></div>` : '';
+
+  return `<div class="section" style="padding-top:12px;"><div class="card">
+    ${statsHtml}${logHtml}${chartHtml}
+  </div></div>${logCard}`;
+}
+
+function renderBodyFatChart(vals, keys) {
+  const W=320, H=70, PL=8, PR=8, PT=8, PB=16;
+  const filled = vals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+  if (filled.length < 2) return '';
+  const minV = Math.min(...filled.map(x=>x.v));
+  const maxV = Math.max(...filled.map(x=>x.v));
+  const range = maxV - minV || 1;
+  const chartW=W-PL-PR, chartH=H-PT-PB, n=vals.length;
+  const xStep = chartW/(n-1);
+  function px(i){return PL+i*xStep;}
+  function py(v){return PT+chartH-((v-minV)/range)*chartH;}
+  const points = filled.map(x=>`${px(x.i)},${py(x.v)}`);
+  const linePath = 'M' + points.join(' L');
+  const areaPath = `M${px(filled[0].i)},${PT+chartH} L${points.join(' L')} L${px(filled[filled.length-1].i)},${PT+chartH} Z`;
+  const dots = filled.map(x=>`<circle cx="${px(x.i)}" cy="${py(x.v)}" r="2.5" fill="var(--blue)" opacity="0.8"/>`).join('');
+  const labelStep = Math.floor(n/4);
+  const labels = keys.map((k,i)=>{
+    if(i%labelStep!==0&&i!==n-1) return '';
+    const d=new Date(k+'T12:00:00');
+    return `<text x="${px(i)}" y="${H}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
+  }).join('');
+  return `<div style="padding:10px 14px 0;">
+    <svg width="100%" viewBox="0 0 ${W} ${H+4}" style="height:${H+4}px;overflow:visible;">
+      <defs><linearGradient id="bfGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--blue)" stop-opacity="0.2"/><stop offset="100%" stop-color="var(--blue)" stop-opacity="0"/></linearGradient></defs>
+      <path d="${areaPath}" fill="url(#bfGrad)"/>
+      <path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}${labels}
+    </svg>
+  </div>`;
+}
+
+let healthTab = 'weight';
+function setHealthTab(t) { healthTab = t; renderHealth(); }
+
 function renderHealth() {
   const c = document.getElementById('health-content');
-  c.innerHTML = `<div style="padding-top:4px;">${renderWeightTab()}</div>`;
+  const tabs = `<div class="health-tabs">
+    <button class="health-tab${healthTab==='weight'?' active':''}" onclick="setHealthTab('weight')">Weight</button>
+    <button class="health-tab${healthTab==='bodyfat'?' active':''}" onclick="setHealthTab('bodyfat')">Body Fat</button>
+  </div>`;
+  const content = healthTab === 'bodyfat' ? renderBodyFatTab() : renderWeightTab();
+  c.innerHTML = tabs + `<div style="padding-top:4px;">${content}</div>`;
 }
 
 // ── WEEKLY REVIEW AI ──
@@ -7917,6 +8052,28 @@ setTimeout(renderAnomalies, 800);
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeExTagModal()">Skip</button>
       <button class="btn-primary" onclick="saveExTagModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEALTH EDIT MODAL -->
+<div class="modal-overlay" id="health-edit-modal" onclick="if(event.target===this)closeHealthEdit()">
+  <div class="modal" style="display:flex;flex-direction:column;max-height:80vh;">
+    <div class="modal-handle"></div>
+    <div style="padding:20px 20px 0;flex:1;overflow-y:auto;">
+      <div style="font-size:17px;font-weight:800;margin-bottom:16px;">Edit entry</div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:700;color:var(--text3);display:block;margin-bottom:6px;">Date</label>
+        <input type="date" id="health-edit-date" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:-apple-system,sans-serif;font-size:14px;background:var(--card2);color:var(--text);outline:none;">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label id="health-edit-label" style="font-size:12px;font-weight:700;color:var(--text3);display:block;margin-bottom:6px;">Weight (kg)</label>
+        <input type="number" inputmode="decimal" id="health-edit-val" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:-apple-system,sans-serif;font-size:14px;background:var(--card2);color:var(--text);outline:none;">
+      </div>
+    </div>
+    <div style="padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;">
+      <button onclick="closeHealthEdit()" style="flex:1;padding:13px;background:var(--card2);border:1.5px solid var(--border);border-radius:var(--radius);font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;">Cancel</button>
+      <button onclick="saveHealthEdit()" style="flex:1;padding:13px;background:var(--ink);color:white;border:none;border-radius:var(--radius);font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Save</button>
     </div>
   </div>
 </div>

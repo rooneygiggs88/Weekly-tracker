@@ -769,8 +769,12 @@ body.dark .gym-finish-btn { box-shadow:0 2px 0 rgba(0,0,0,0.4); }
 .gym-done-btn.active { background:#1a7a4a; border-color:#1a7a4a; color:#fff; transform:scale(1.08); }
 
 /* Set number */
-.gym-set-num { font-size:10px; font-weight:800; color:var(--text3); width:28px; flex-shrink:0; text-align:center; }
+.gym-set-num { font-size:11px; font-weight:800; color:var(--text3); width:36px; flex-shrink:0; text-align:center; display:flex; flex-direction:column; align-items:center; gap:1px; }
 .gym-set-num.done { color:var(--green); }
+.gym-set-num-delta { font-size:9px; font-weight:700; line-height:1; }
+.gym-set-num-delta.up { color:var(--green); }
+.gym-set-num-delta.down { color:var(--red); }
+.gym-set-num-delta.same { color:var(--text3); }
 .gym-set-warmup { opacity:0.6; }
 .gym-exercise-row.locked { border:2px solid #1a7a4a !important; background:#f0faf4; }
 body.dark .gym-exercise-row.locked { background:#0d2b1a; border-color:#2a9a5a !important; }
@@ -4010,17 +4014,8 @@ function renderGymLog() {
   const exerciseBlocks = exercises.map(ex => {
     const sets     = gymSets[ex] || [{reps:'',weight:''}];
     const lastSets = getLastSetsForExercise(gymSession, ex);
-    const lastMax = lastSets ? Math.max(...lastSets.filter(s=>!s.warmup).map(s=>parseFloat(s.weight)||0), 0) : null;
-    const workingSets = sets.filter(s=>!s.warmup);
-    const curMax = workingSets.length ? Math.max(...workingSets.map(s=>parseFloat(s.weight)||0)) : 0;
-    const pr       = getExercisePR(ex);
-
-    let overloadHtml = '';
-    if (lastMax !== null && curMax > 0) {
-      if      (curMax > lastMax) overloadHtml = `<span class="gym-overload up">&#9650; +${(curMax-lastMax).toFixed(1)}kg</span>`;
-      else if (curMax < lastMax) overloadHtml = `<span class="gym-overload down">&#9660; ${(curMax-lastMax).toFixed(1)}kg</span>`;
-      else                       overloadHtml = `<span class="gym-overload same">= same</span>`;
-    }
+    const lastWorkingSets = lastSets ? lastSets.filter(s=>!s.warmup) : [];
+    const pr = getExercisePR(ex);
 
     const lastPills = lastSets
       ? lastSets.map(s=>`<span class="gym-ex-last-pill">${s.weight}kg&times;${s.reps}</span>`).join('')
@@ -4034,13 +4029,26 @@ function renderGymLog() {
       const isDone = !!set.done;
       const isWarmup = !!set.warmup;
       const workingBefore = sets.slice(0,idx).filter(function(s){return !s.warmup;}).length;
+      // Per-set delta vs corresponding last session set
+      let deltaHtml = '';
+      if (!isWarmup && set.weight) {
+        const lastMatchSet = lastWorkingSets[workingBefore];
+        const lastW = lastMatchSet ? parseFloat(lastMatchSet.weight)||0 : null;
+        const curW = parseFloat(set.weight)||0;
+        if (lastW !== null && curW > 0) {
+          const diff = curW - lastW;
+          if      (diff > 0) deltaHtml = '<span class="gym-set-num-delta up">+' + diff.toFixed(1) + '</span>';
+          else if (diff < 0) deltaHtml = '<span class="gym-set-num-delta down">' + diff.toFixed(1) + '</span>';
+          else               deltaHtml = '<span class="gym-set-num-delta same">=</span>';
+        }
+      }
       const setLabel = isWarmup
-        ? '<span class="gym-set-num' + (isDone?' done':'') + '">WU' + (isDone?' &#10003;':'') + '</span>'
-        : '<span class="gym-set-num' + (isDone?' done':'') + '">' + (workingBefore+1) + (isDone?' &#10003;':'') + '</span>';
+        ? '<span class="gym-set-num' + (isDone?' done':'') + '">WU</span>'
+        : '<span class="gym-set-num' + (isDone?' done':'') + '">' + (workingBefore+1) + deltaHtml + '</span>';
       const showW = idx === 0 || isWarmup;
       const wBtn = showW
         ? '<button class="gym-warmup-btn' + (isWarmup?' active':'') + '" data-gym="warmup" data-idx="' + idx + '">W</button>'
-        : '<span style="width:36px;flex-shrink:0;"></span>';
+        : '<span style="width:32px;flex-shrink:0;"></span>';
       const doneBtn = '<button class="gym-done-btn' + (isDone?' active':'') + '" data-gym="done-set" data-idx="' + idx + '">&#10003;</button>';
       return '<div class="gym-set-row' + (isWarmup?' gym-set-warmup':'') + '">'
         + setLabel
@@ -4055,7 +4063,6 @@ function renderGymLog() {
           ? ' data-gym-key="add-set"'
           : ' data-gym-key="next"')
         + ' inputmode="numeric" autocomplete="off">'
-        + overloadHtml
         + doneBtn
         + wBtn
         + '<button class="gym-set-del" data-gym="del-set" data-idx="' + idx + '">&#215;</button>'

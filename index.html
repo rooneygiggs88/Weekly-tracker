@@ -144,6 +144,47 @@ body.dark .nav { background: rgba(18,16,14,0.96); border-top-color: rgba(255,255
 .ring-info .ri-val { font-size: 28px; font-weight: 800; color: var(--ink); letter-spacing: -1px; line-height: 1; }
 .ring-info .ri-sub { font-size: 12px; color: rgba(0,0,0,0.5); margin-top: 1px; }
 
+/* ── WEEK PLAN CARD ── */
+.week-plan-card { margin: 0; background: var(--card); border-bottom: 2px solid var(--ink); }
+.week-plan-header { background: var(--ink); color: white; padding: 8px 14px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; display: flex; justify-content: space-between; align-items: center; }
+body.dark .week-plan-header { background: var(--yellow); color: #111; }
+.week-plan-days { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--card); }
+.week-plan-day { border-right: 1px solid var(--border); padding: 7px 2px 8px; text-align: center; }
+.week-plan-day:last-child { border-right: none; }
+.week-plan-day.today-col { background: rgba(255,210,0,0.15); }
+body.dark .week-plan-day.today-col { background: rgba(255,210,0,0.08); }
+.week-plan-day-label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text3); letter-spacing: 0.04em; margin-bottom: 4px; }
+.week-plan-day.today-col .week-plan-day-label { color: var(--ink); }
+body.dark .week-plan-day.today-col .week-plan-day-label { color: var(--yellow); }
+.week-plan-day-type { font-size: 8px; font-weight: 700; text-transform: uppercase; color: var(--text3); letter-spacing: 0.03em; line-height: 1; margin-bottom: 2px; }
+.week-plan-day-val { font-size: 10px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+body.dark .week-plan-day-val { color: #f0f0f0; }
+.week-plan-day-val.rest { color: var(--text3); font-style: italic; font-weight: 400; }
+.week-plan-edit-btn { background: rgba(255,255,255,0.18); border: none; border-radius: 6px; color: inherit; font-size: 10px; font-weight: 700; padding: 3px 8px; cursor: pointer; letter-spacing: 0.03em; }
+body.dark .week-plan-edit-btn { background: rgba(0,0,0,0.25); }
+
+/* ── TODAY PLAN CARD ── */
+.today-plan-card { margin: 10px 16px 0; background: var(--card); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+.today-plan-header { background: var(--ink); color: white; padding: 8px 14px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; display: flex; justify-content: space-between; align-items: center; }
+body.dark .today-plan-header { background: var(--yellow); color: #111; }
+.today-plan-body { padding: 12px 16px; display: flex; align-items: center; gap: 12px; min-height: 64px; }
+.today-plan-activity { flex: 1; }
+.today-plan-activity-type { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+.today-plan-activity-name { font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: -0.5px; line-height: 1.1; }
+body.dark .today-plan-activity-name { color: #f0f0f0; }
+.today-plan-status { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.today-plan-status-dot { width: 38px; height: 38px; border-radius: 50%; border: 2.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; }
+.today-plan-status-dot.done { background: var(--green); border-color: var(--green); font-size: 16px; color: white; }
+.today-plan-status-dot.pending { color: var(--text3); }
+.today-plan-status-label { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* ── WEEK PLAN EDIT MODAL ── */
+.wpe-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.wpe-row:last-child { border-bottom: none; }
+.wpe-day-label { width: 36px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text3); flex-shrink: 0; }
+.wpe-select { flex: 1; padding: 8px 10px; border-radius: 8px; border: 2px solid var(--border); background: var(--card); color: var(--ink); font-size: 13px; font-weight: 600; -webkit-appearance: none; appearance: none; }
+body.dark .wpe-select { background: #1a1a1a; color: #f0f0f0; border-color: #2a2a2a; }
+
 /* ── SECTION ── */
 .section { padding: 16px 16px 0; }
 .section-title {
@@ -1416,28 +1457,9 @@ body.dark .run-effort-grid { }
       </div>
     </div>
   </div>
-  <div class="ring-wrap" id="ring-wrap">
-    <svg class="ring-svg" width="72" height="72" viewBox="0 0 72 72">
-      <defs>
-        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#6c63ff"/>
-          <stop offset="100%" stop-color="#a78bfa"/>
-        </linearGradient>
-      </defs>
-      <circle class="ring-bg" cx="36" cy="36" r="30"/>
-      <circle class="ring-fill" id="ring-fill" cx="36" cy="36" r="30"
-        stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
-      <text class="ring-text-val" id="ring-val" x="36" y="33" text-anchor="middle" dominant-baseline="middle">0</text>
-      <text class="ring-text-pct" x="36" y="44" text-anchor="middle">done</text>
-    </svg>
-    <div class="ring-info">
-      <div class="ri-label">Weekly progress</div>
-      <div class="ri-val" id="ring-pct-val">0%</div>
-      <div class="ri-sub" id="ring-sub">0 of 0 tasks</div>
-    </div>
-  </div>
+  <div id="week-plan-wrap"></div>
+  <div id="today-plan-wrap"></div>
   <div id="race-wrap"></div>
-  <div id="today-widget-wrap" style="padding:12px 0 0;"></div>
   <div id="anomaly-week-wrap"></div>
   <div id="week-content"></div>
   <div class="section">
@@ -1455,6 +1477,21 @@ body.dark .run-effort-grid { }
   </div>
 </div>
 
+
+<!-- WEEK PLAN EDIT MODAL -->
+<div id="week-plan-modal" class="modal-overlay" onclick="if(event.target===this)closeWeekPlanEdit()">
+  <div class="modal" style="max-height:85vh;overflow-y:auto;">
+    <div class="modal-header">
+      <div class="modal-title" id="week-plan-modal-title">Edit Week Plan</div>
+      <button class="modal-close" onclick="closeWeekPlanEdit()">×</button>
+    </div>
+    <div id="week-plan-modal-body" style="padding:16px 16px 0;"></div>
+    <div style="padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;">
+      <button class="btn-primary" onclick="saveWeekPlanEdit()">Save</button>
+      <button class="btn-secondary" onclick="closeWeekPlanEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- RECORDS PAGE -->
 <div id="page-records" class="page">
@@ -1801,7 +1838,8 @@ function _renderWeek(){
   allDailyGoals().forEach(g=>c.innerHTML+=renderDailyGrid(g,dates));
   allSessionGoals().forEach(g=>c.innerHTML+=renderSession(g,dates));
   updateProgress();
-  renderTodayWidget();
+  renderWeekPlanCard();
+  renderTodayPlanCard();
   renderRaceCountdown();
   renderAnomalies();
   if(currentWeekOffset===0) setTimeout(checkBackupReminder, 1500);
@@ -5203,32 +5241,190 @@ function toggleArchiveWeek(weekKey) {
 
 // ══ QUALITY OF LIFE BATCH ══
 
-// ── TODAY WIDGET ──
-function renderTodayWidget() {
-  const wrap = document.getElementById('today-widget-wrap');
-  if (!wrap || currentWeekOffset !== 0) { if(wrap) wrap.innerHTML=''; return; }
-  const today = new Date();
-  const todayKey = dk(today);
-  const {total, done} = dayScore(today);
-  const sessionsDone = allSessionGoals().filter(g=>getEntries(today,`session:${g.id}`).length>0).length;
-  const streak = currentStreak('all');
-  const dayLabel = today.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
-  wrap.innerHTML = `<div class="today-widget">
-    <div class="today-widget-header">
-      <span>Today — ${dayLabel}</span>
-      ${streak>0?`<span style="font-size:11px;">🔥 ${streak}d streak</span>`:''}
+// ── WEEK PLAN ──
+const WEEK_PLAN_TEMPLATE_KEY = 'weekPlanTemplate';
+const WEEK_PLAN_OVERRIDES_KEY = 'weekPlanOverrides';
+const DAYS_SHORT = ['mon','tue','wed','thu','fri','sat','sun'];
+const DAYS_LABEL = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const PLAN_OPTIONS = [
+  { value: '', label: 'Rest / Off', type: '' },
+  { value: 'Gym - Push',     label: 'Push',         type: 'Gym' },
+  { value: 'Gym - Pull',     label: 'Pull',         type: 'Gym' },
+  { value: 'Gym - Legs',     label: 'Legs',         type: 'Gym' },
+  { value: 'Gym - Upper',    label: 'Upper',        type: 'Gym' },
+  { value: 'Gym - Lower',    label: 'Lower',        type: 'Gym' },
+  { value: 'Gym - Full Body',label: 'Full Body',    type: 'Gym' },
+  { value: 'Run - Easy',     label: 'Easy',         type: 'Run' },
+  { value: 'Run - Tempo',    label: 'Tempo',        type: 'Run' },
+  { value: 'Run - Intervals',label: 'Intervals',    type: 'Run' },
+  { value: 'Run - Long Run', label: 'Long Run',     type: 'Run' },
+  { value: 'Cardio',         label: 'Cardio',       type: 'Other' },
+  { value: 'Active Recovery',label: 'Recovery',     type: 'Other' },
+];
+
+function loadWeekPlanTemplate() {
+  try { return JSON.parse(localStorage.getItem(WEEK_PLAN_TEMPLATE_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveWeekPlanTemplate(plan) {
+  localStorage.setItem(WEEK_PLAN_TEMPLATE_KEY, JSON.stringify(plan));
+}
+function loadWeekPlanOverrides() {
+  try { return JSON.parse(localStorage.getItem(WEEK_PLAN_OVERRIDES_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveWeekPlanOverride(mondayKey, plan) {
+  const overrides = loadWeekPlanOverrides();
+  overrides[mondayKey] = plan;
+  localStorage.setItem(WEEK_PLAN_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+function getEffectiveWeekPlan(offset) {
+  const template = loadWeekPlanTemplate();
+  const dates = getWeekDates(offset);
+  const mondayKey = dk(dates[0]);
+  const overrides = loadWeekPlanOverrides();
+  const weekOverride = overrides[mondayKey] || {};
+  const result = {};
+  DAYS_SHORT.forEach(day => {
+    result[day] = weekOverride.hasOwnProperty(day) ? weekOverride[day] : (template[day] || '');
+  });
+  return result;
+}
+function isTodayGymDone() {
+  const today = dk(new Date());
+  return (loadGymData().logs || []).some(l => l.date && l.date.slice(0,10) === today);
+}
+function isTodayRunDone() {
+  return getEntries(new Date(), 'session:run').length > 0;
+}
+
+function renderWeekPlanCard() {
+  const wrap = document.getElementById('week-plan-wrap');
+  if (!wrap) return;
+  const plan = getEffectiveWeekPlan(currentWeekOffset);
+  const dates = getWeekDates(currentWeekOffset);
+  const todayKey = dk(new Date());
+  const dayHtml = DAYS_SHORT.map((day, i) => {
+    const val = plan[day] || '';
+    const isToday = dk(dates[i]) === todayKey;
+    let inner;
+    if (!val) {
+      inner = `<div class="week-plan-day-val rest">—</div>`;
+    } else {
+      const parts = val.split(' - ');
+      const type = parts[0];
+      const sub = parts.slice(1).join(' - ') || '';
+      inner = `<div class="week-plan-day-type">${type}</div><div class="week-plan-day-val">${sub || type}</div>`;
+    }
+    return `<div class="week-plan-day${isToday ? ' today-col' : ''}">
+      <div class="week-plan-day-label">${DAYS_LABEL[i]}</div>
+      ${inner}
+    </div>`;
+  }).join('');
+  const mondayKey = dk(getWeekDates(currentWeekOffset)[0]);
+  const overrides = loadWeekPlanOverrides();
+  const hasOverride = !!(overrides[mondayKey] && Object.values(overrides[mondayKey]).some(v => v !== undefined));
+  wrap.innerHTML = `<div class="week-plan-card">
+    <div class="week-plan-header">
+      <span>Week Plan${hasOverride ? ' <span style="font-weight:400;font-style:italic;opacity:0.7;font-size:9px;">· custom</span>' : ''}</span>
+      <div style="display:flex;gap:5px;">
+        <button class="week-plan-edit-btn" onclick="openWeekPlanEdit('week')">Edit week</button>
+        <button class="week-plan-edit-btn" onclick="openWeekPlanEdit('template')">Template</button>
+      </div>
     </div>
-    <div class="today-widget-body">
-      <div class="today-stat">
-        <div class="today-stat-val">${done}/${total}</div>
-        <div class="today-stat-label">Daily tasks</div>
-      </div>
-      <div class="today-stat">
-        <div class="today-stat-val">${sessionsDone}</div>
-        <div class="today-stat-label">Sessions</div>
-      </div>
+    <div class="week-plan-days">${dayHtml}</div>
+  </div>`;
+}
+
+function renderTodayPlanCard() {
+  const wrap = document.getElementById('today-plan-wrap');
+  if (!wrap) return;
+  if (currentWeekOffset !== 0) { wrap.innerHTML = ''; return; }
+  const today = new Date();
+  const dayNames = ['sun','mon','tue','wed','thu','fri','sat'];
+  const todayDayKey = dayNames[today.getDay()];
+  const dayLabel = today.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'short' });
+  const streak = currentStreak('all');
+  const plan = getEffectiveWeekPlan(0);
+  const planValue = plan[todayDayKey] || '';
+  let activityHtml, statusHtml = '';
+  if (!planValue) {
+    activityHtml = `<div class="today-plan-activity">
+      <div class="today-plan-activity-type">Today's plan</div>
+      <div class="today-plan-activity-name" style="color:var(--text3);font-size:16px;font-weight:600;">Rest / Off day</div>
+    </div>`;
+  } else {
+    const parts = planValue.split(' - ');
+    const type = parts[0];
+    const sub = parts.slice(1).join(' - ') || type;
+    let isDone = false;
+    if (planValue.startsWith('Gym')) isDone = isTodayGymDone();
+    else if (planValue.startsWith('Run')) isDone = isTodayRunDone();
+    activityHtml = `<div class="today-plan-activity">
+      <div class="today-plan-activity-type">${type}</div>
+      <div class="today-plan-activity-name">${sub}</div>
+    </div>`;
+    statusHtml = `<div class="today-plan-status">
+      <div class="today-plan-status-dot ${isDone ? 'done' : 'pending'}">${isDone ? '✓' : '·'}</div>
+      <div class="today-plan-status-label">${isDone ? 'Done' : 'Pending'}</div>
+    </div>`;
+  }
+  wrap.innerHTML = `<div class="today-plan-card">
+    <div class="today-plan-header">
+      <span>Today — ${dayLabel}</span>
+      ${streak > 0 ? `<span style="font-size:11px;">🔥 ${streak}d</span>` : ''}
+    </div>
+    <div class="today-plan-body">
+      ${activityHtml}
+      ${statusHtml}
     </div>
   </div>`;
+}
+
+// ── WEEK PLAN EDIT MODAL ──
+let weekPlanEditMode = 'week';
+function openWeekPlanEdit(mode) {
+  weekPlanEditMode = mode;
+  const modal = document.getElementById('week-plan-modal');
+  document.getElementById('week-plan-modal-title').textContent = mode === 'template' ? 'Edit Weekly Template' : 'Edit This Week';
+  const plan = mode === 'template' ? loadWeekPlanTemplate() : getEffectiveWeekPlan(currentWeekOffset);
+  const optionsHtml = PLAN_OPTIONS.map(o =>
+    `<option value="${o.value}">${o.type ? o.type + ' · ' + o.label : o.label}</option>`
+  ).join('');
+  const note = mode === 'week'
+    ? 'Saves for this week only. Use "Template" to change the recurring default.'
+    : 'Sets the default plan applied to every week.';
+  document.getElementById('week-plan-modal-body').innerHTML =
+    DAYS_SHORT.map((day, i) => `
+      <div class="wpe-row">
+        <div class="wpe-day-label">${DAYS_LABEL[i]}</div>
+        <select id="wpe-${day}" class="wpe-select">${optionsHtml}</select>
+      </div>`).join('') +
+    `<div style="padding:10px 0 4px;font-size:11px;color:var(--text3);">${note}</div>`;
+  DAYS_SHORT.forEach(day => {
+    const sel = document.getElementById(`wpe-${day}`);
+    if (sel) sel.value = plan[day] || '';
+  });
+  modal.classList.add('open');
+}
+function closeWeekPlanEdit() {
+  document.getElementById('week-plan-modal').classList.remove('open');
+}
+function saveWeekPlanEdit() {
+  const newPlan = {};
+  DAYS_SHORT.forEach(day => {
+    const sel = document.getElementById(`wpe-${day}`);
+    newPlan[day] = sel ? sel.value : '';
+  });
+  if (weekPlanEditMode === 'template') {
+    saveWeekPlanTemplate(newPlan);
+    showToast('Template saved ✓', 'var(--green)');
+  } else {
+    const mondayKey = dk(getWeekDates(currentWeekOffset)[0]);
+    saveWeekPlanOverride(mondayKey, newPlan);
+    showToast('Week plan saved ✓', 'var(--green)');
+  }
+  closeWeekPlanEdit();
+  renderWeekPlanCard();
+  renderTodayPlanCard();
 }
 
 // ── LONG PRESS DAY SUMMARY ──

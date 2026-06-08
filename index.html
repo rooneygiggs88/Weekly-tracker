@@ -49,6 +49,7 @@ body {
   min-height: 100vh;
   padding-bottom: 90px;
   overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 /* ── PAGE SYSTEM ── */
@@ -2058,6 +2059,7 @@ function renderStats(){
     activityload: ()=>renderActivityLoadSection(),
     predicted: ()=>renderPredictedSection(),
     overload: ()=>renderProgressiveOverloadSection(),
+    bodycomp: ()=>renderBodyCompSection(),
   };
   pOrder.forEach(id=>{ if(pVis[id]!==false && sectionRenderers[id]) html+=sectionRenderers[id](); });
   c.innerHTML=html;
@@ -6589,6 +6591,7 @@ const ALL_PROGRESS_SECTIONS = [
   { id:'activityload',  label:'Activity load',          icon:'⚡', defaultOn:true  },
   { id:'predicted',     label:'Predicted completion',    icon:'🔮', defaultOn:true  },
   { id:'overload',      label:'Progressive overload',    icon:'💪', defaultOn:true  },
+  { id:'bodycomp',     label:'Body composition',        icon:'📊', defaultOn:true  },
 ];
 
 const PROGRESS_ORDER_KEY = 'progressSectionOrder';
@@ -7416,6 +7419,72 @@ function render1RMSection() {
     </div>
     <div class="card">${rows}</div>
   </div>`;
+}
+
+function renderBodyCompSection() {
+  const data = loadHealthData();
+  const weights = data.weight || {};
+  const bfData = data.bodyfat || {};
+  const wKeys = Object.keys(weights).sort();
+  const bfKeys = Object.keys(bfData).sort();
+  if (!wKeys.length && !bfKeys.length) {
+    return '<div class="section" style="padding-top:12px;"><div class="card"><div class="empty-state">Log weight and body fat in the Health tab to see body composition trends.</div></div></div>';
+  }
+  const latestW = wKeys.length ? weights[wKeys[wKeys.length-1]] : null;
+  const latestBF = bfKeys.length ? bfData[bfKeys[bfKeys.length-1]] : null;
+  const wChange = wKeys.length >= 2 ? (weights[wKeys[wKeys.length-1]] - weights[wKeys[0]]).toFixed(1) : null;
+  const bfChange = bfKeys.length >= 2 ? (bfData[bfKeys[bfKeys.length-1]] - bfData[bfKeys[0]]).toFixed(1) : null;
+
+  const statsHtml = `<div class="metric-grid" style="border-bottom:1px solid var(--border);">
+    ${latestW ? `<div class="metric-cell"><div class="metric-val">${latestW}kg</div><div class="metric-unit">Weight${wChange !== null ? ' ('+(wChange>0?'+':'')+wChange+'kg)' : ''}</div></div>` : ''}
+    ${latestBF ? `<div class="metric-cell"><div class="metric-val">${latestBF}%</div><div class="metric-unit">Body fat${bfChange !== null ? ' ('+(bfChange>0?'+':'')+bfChange+'%)' : ''}</div></div>` : ''}
+  </div>`;
+
+  // Combined 8-week chart
+  const last56Keys = [];
+  for (let i=55;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); last56Keys.push(dk(d)); }
+  const wVals = last56Keys.map(k => weights[k]||null);
+  const bfVals = last56Keys.map(k => bfData[k]||null);
+  const W=320,H=80,PL=8,PR=8,PT=8,PB=18;
+  const chartW=W-PL-PR, chartH=H-PT-PB, n=last56Keys.length;
+  const xStep=chartW/(n-1);
+  function px(i){return PL+i*xStep;}
+
+  let wLine='', bfLine='';
+  const wFilled=wVals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+  const bfFilled=bfVals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+
+  if (wFilled.length >= 2) {
+    const minV=Math.min(...wFilled.map(x=>x.v)), maxV=Math.max(...wFilled.map(x=>x.v)), range=maxV-minV||1;
+    function pyW(v){return PT+chartH-((v-minV)/range)*chartH;}
+    wLine = '<path d="M'+wFilled.map(x=>`${px(x.i)},${pyW(x.v)}`).join(' L')+'" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    wLine += wFilled.map(x=>`<circle cx="${px(x.i)}" cy="${pyW(x.v)}" r="2.5" fill="var(--red)" opacity="0.7"/>`).join('');
+  }
+  if (bfFilled.length >= 2) {
+    const minV=Math.min(...bfFilled.map(x=>x.v)), maxV=Math.max(...bfFilled.map(x=>x.v)), range=maxV-minV||1;
+    function pyBF(v){return PT+chartH-((v-minV)/range)*chartH;}
+    bfLine = '<path d="M'+bfFilled.map(x=>`${px(x.i)},${pyBF(x.v)}`).join(' L')+'" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 2"/>';
+    bfLine += bfFilled.map(x=>`<circle cx="${px(x.i)}" cy="${pyBF(x.v)}" r="2.5" fill="var(--blue)" opacity="0.7"/>`).join('');
+  }
+  const labelStep=Math.floor(n/4);
+  const labels=last56Keys.map((k,i)=>{
+    if(i%labelStep!==0&&i!==n-1) return '';
+    const d=new Date(k+'T12:00:00');
+    return `<text x="${px(i)}" y="${H+4}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
+  }).join('');
+
+  const chartHtml = (wFilled.length >= 2 || bfFilled.length >= 2) ? `
+    <div style="padding:12px 14px 4px;">
+      <div style="display:flex;gap:14px;margin-bottom:8px;">
+        ${wFilled.length ? '<span style="font-size:11px;font-weight:700;color:var(--red);">— Weight</span>' : ''}
+        ${bfFilled.length ? '<span style="font-size:11px;font-weight:700;color:var(--blue);">– – Body fat</span>' : ''}
+      </div>
+      <svg width="100%" viewBox="0 0 ${W} ${H+8}" style="height:${H+8}px;overflow:visible;">
+        ${wLine}${bfLine}${labels}
+      </svg>
+    </div>` : '';
+
+  return `<div class="section" style="padding-top:12px;"><div class="card">${statsHtml}${chartHtml}</div></div>`;
 }
 
 // ══ RACE COUNTDOWN ══

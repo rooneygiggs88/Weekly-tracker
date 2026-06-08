@@ -4066,7 +4066,7 @@ function renderGymLog() {
       <div class="gym-ex-header">
         <div class="gym-ex-header-top">
           <div style="display:flex;align-items:center;gap:6px;">
-            <span style="color:var(--text3);font-size:14px;cursor:grab;padding:0 2px;">&#9776;</span>
+            <span style="color:var(--text3);font-size:14px;cursor:grab;padding:0 2px;touch-action:none;" ontouchstart="gymExTouchStart(event,'${exSafe}')" ontouchmove="gymExTouchMove(event)" ontouchend="gymExTouchEnd(event)">&#9776;</span>
             <span class="gym-ex-name">${ex}</span>
           </div>
           <button data-gym="remove-ex" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 4px;line-height:1;transition:color 0.12s;" title="Remove exercise">&#215;</button>
@@ -4823,6 +4823,51 @@ function gymExDragEnd(e) {
   e.currentTarget.style.opacity = '';
   document.querySelectorAll('.gym-exercise-row').forEach(el=>el.style.borderTop='');
   gymDragEx = null;
+}
+
+let gymTouchDragEx = null;
+let gymTouchDragEl = null;
+let gymTouchClone  = null;
+function gymExTouchStart(e, exName) {
+  gymTouchDragEx = exName;
+  gymTouchDragEl = e.currentTarget.closest('.gym-exercise-row');
+  gymTouchDragEl.style.opacity = '0.4';
+  gymTouchClone = gymTouchDragEl.cloneNode(true);
+  gymTouchClone.style.cssText = 'position:fixed;opacity:0.85;pointer-events:none;z-index:9999;width:'+gymTouchDragEl.offsetWidth+'px;left:'+gymTouchDragEl.getBoundingClientRect().left+'px;top:'+gymTouchDragEl.getBoundingClientRect().top+'px;';
+  document.body.appendChild(gymTouchClone);
+}
+function gymExTouchMove(e) {
+  if (!gymTouchClone) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  gymTouchClone.style.left = (t.clientX - gymTouchDragEl.offsetWidth/2) + 'px';
+  gymTouchClone.style.top  = (t.clientY - gymTouchDragEl.offsetHeight/2) + 'px';
+  document.querySelectorAll('.gym-exercise-row').forEach(el => {
+    el.style.borderTop = '';
+    const r = el.getBoundingClientRect();
+    if (t.clientY >= r.top && t.clientY <= r.bottom) el.style.borderTop = '2px solid var(--yellow)';
+  });
+}
+function gymExTouchEnd(e) {
+  if (gymTouchClone) { gymTouchClone.remove(); gymTouchClone = null; }
+  if (gymTouchDragEl) gymTouchDragEl.style.opacity = '';
+  const overEl = [...document.querySelectorAll('.gym-exercise-row')].find(el => el.style.borderTop !== '');
+  if (overEl && gymTouchDragEx) {
+    const overName = overEl.querySelector('.gym-ex-name')?.textContent;
+    if (overName && overName !== gymTouchDragEx) {
+      const list = getSessionExercises(gymSession);
+      const fromIdx = list.indexOf(gymTouchDragEx);
+      const toIdx   = list.indexOf(overName);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        list.splice(fromIdx, 1);
+        list.splice(toIdx, 0, gymTouchDragEx);
+        saveSessionExercises(gymSession, list);
+      }
+    }
+  }
+  document.querySelectorAll('.gym-exercise-row').forEach(el => el.style.borderTop = '');
+  gymTouchDragEx = null; gymTouchDragEl = null;
+  renderGym();
 }
 
 

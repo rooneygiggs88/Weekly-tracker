@@ -771,8 +771,8 @@ body.dark .review-a { background:#22222e; color:#f0f0f5; }
 body.dark .gym-session-tab { background:#1a1a1a; color:#555; border-color:#2a2a2a; }
 body.dark .gym-session-tab.active { background:var(--yellow); color:#111; border-color:var(--yellow); }
 
-.gym-exercise-row { padding:12px 16px; border-bottom:1px solid var(--border); }
-.gym-exercise-row:last-child { border-bottom:none; }
+.gym-exercise-row { padding:12px 16px; border-bottom:1px solid var(--border); border-left:4px solid var(--ink); margin-bottom:12px; border-radius:var(--radius); box-shadow:var(--shadow-sm); }
+.gym-exercise-row:last-child { border-bottom:1px solid var(--border); }
 .gym-ex-header { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
 .gym-ex-header-top { display:flex; align-items:center; justify-content:space-between; }
 .gym-ex-name { font-size:14px; font-weight:700; color:var(--text); }
@@ -915,12 +915,6 @@ body.dark .health-tabs { border-bottom-color: var(--border); }
 body.dark .weight-log-btn { background:var(--yellow); color:#111; border-color:var(--yellow); }
 body.dark .weight-big-input { color:#f0f0f0; }
 
-.water-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; padding:14px 16px; }
-.water-glass { width:100%; aspect-ratio:1; border-radius:8px; border:2px solid var(--border); background:var(--card2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:all 0.15s; }
-.water-glass.filled { background:#dbeafe; border-color:#3b82f6; }
-.water-glass:active { transform:scale(0.88); }
-body.dark .water-glass { background:#1a1a1a; border-color:#2a2a2a; }
-body.dark .water-glass.filled { background:#0d1a2d; border-color:#3b82f6; }
 
 
 .health-chart-svg { overflow:visible; }
@@ -1278,13 +1272,6 @@ body.dark .quick-add-item { background:#1a1a1a; border-color:#2a2a2a; }
 .comp-select-row { display:flex; gap:6px; padding:10px 14px; flex-wrap:wrap; }
 
 /* ── TEMPLATES ── */
-.template-item { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); }
-.template-item:last-child { border-bottom:none; }
-.template-name { font-size:13px; font-weight:700; color:var(--text); flex:1; }
-.template-meta { font-size:11px; color:var(--text3); margin-top:2px; }
-.template-load-btn { padding:5px 12px; background:var(--ink); color:white; border:none; border-radius:8px; font-family:-apple-system,sans-serif; font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0; }
-body.dark .template-load-btn { background:var(--yellow); color:#111; }
-.template-del-btn { background:none; border:none; cursor:pointer; color:var(--text3); font-size:18px; padding:2px 4px; flex-shrink:0; }
 
 
 /* ── PROGRESSIVE OVERLOAD ── */
@@ -1534,7 +1521,7 @@ body.dark .run-effort-grid { }
 
 <!-- HEALTH PAGE -->
 <div id="page-health" class="page">
-  <div class="header"><h1>Health</h1><div class="week-label">Body weight &amp; water</div></div>
+  <div class="header"><h1>Health</h1><div class="week-label">Body weight &amp; composition</div></div>
   <div id="health-content" style="padding-bottom:8px;"></div>
 </div>
 
@@ -1957,7 +1944,7 @@ function renderSession(goal,dates){
     </div>
     <div class="card">
       <div class="days-grid" style="cursor:pointer;">${gridHeader}</div>
-      ${goal.id==='run' ? renderRunLogger(activeDate.toISOString(), storeKey) : renderEntryList(activeDate,storeKey,placeholder)}
+      ${goal.id==='run' ? renderRunLogger(activeDate.toISOString(), storeKey) : goal.id==='gym' ? renderGymSessionDropdown(activeDate, storeKey) : renderEntryList(activeDate,storeKey,placeholder)}
       ${goal.id==='run' ? renderRunMileageBar(dates) : ''}
     </div>
   </div>`;
@@ -2016,6 +2003,31 @@ function renderEntryList(date, storeKey, placeholder) {
         onblur="this.style.borderColor='var(--border)'">
     </div>
     <div style="padding:0 14px 12px;font-size:11px;color:var(--text3);">Press Return to add an entry</div>`;
+}
+
+function renderGymSessionDropdown(date, storeKey) {
+  const items = getEntries(date, storeKey);
+  const dateIso = date.toISOString();
+  const dateKey = dk(date);
+  const current = items[0] || '';
+  const options = ['', 'Push', 'Pull', 'Legs'];
+  const optHtml = options.map(o => `<option value="${o}"${current===o?' selected':''}>${o||'Select session…'}</option>`).join('');
+  const list = items.map((item, idx) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+      <span style="font-size:13px;flex:1;color:var(--text);">${item}</span>
+      <button onclick="removeEntry('${dateKey}','${storeKey}',${idx})" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px 4px;font-size:16px;line-height:1;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">×</button>
+    </div>`).join('');
+  return `
+    <div style="padding:10px 14px 12px;">
+      ${items.length ? `<div style="margin-bottom:8px;">${list}</div>` : ''}
+      <select style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:-apple-system,sans-serif;font-size:13px;background:var(--card2);color:var(--text);outline:none;"
+        onchange="if(this.value){saveEntries('${dateKey}','${storeKey}',[this.value]);renderWeek();}"
+        onfocus="this.style.borderColor='var(--ink)'"
+        onblur="this.style.borderColor='var(--border)'">
+        ${optHtml}
+      </select>
+    </div>`;
 }
 
 function updateProgress(){
@@ -2083,8 +2095,7 @@ function renderStats(){
   const pVis = loadProgressVisible();
   const sectionRenderers = {
     consistency: ()=>renderConsistencySection(),
-    running: ()=>renderRunningAnalysisSection(),
-    gym: ()=>renderGymAnalysisSection(),
+
     bodycomp: ()=>renderBodyCompSection(),
     trend: ()=>renderTrendSection(weeks),
     heatmap: ()=>renderHeatmapSection(dates,goals),
@@ -4105,7 +4116,6 @@ function renderGym() {
       <button class="gym-sub-tab${gymTab==='volume'?' active':''}" onclick="setGymTab('volume')">Volume</button>
       <button class="gym-sub-tab${gymTab==='programme'?' active':''}" onclick="setGymTab('programme')">Programme</button>
       <button class="gym-sub-tab${gymTab==='compare'?' active':''}" onclick="setGymTab('compare')">Compare</button>
-      <button class="gym-sub-tab${gymTab==='templates'?' active':''}" onclick="setGymTab('templates')">Templates</button>
     </div>
   </div>`;
 
@@ -4116,10 +4126,9 @@ function renderGym() {
   else if (gymTab === 'volume')    content = renderGymVolume();
   else if (gymTab === 'programme') content = renderGymPlanner();
   else if (gymTab === 'compare')   content = renderGymComparison();
-  else if (gymTab === 'templates') content = renderGymTemplates();
 
   const sessionLabel = GYM_SESSION_DEFS.find(s=>s.id===gymSession);
-  const pageLabels = {log:'Logging '+(sessionLabel?sessionLabel.name:'')+' session', history:'Session history', prs:'Personal records', volume:'Volume tracker', programme:'Weekly programme', compare:'Session comparison', templates:'Session templates'};
+  const pageLabels = {log:'Logging '+(sessionLabel?sessionLabel.name:'')+' session', history:'Session history', prs:'Personal records', volume:'Volume tracker', programme:'Weekly programme', compare:'Session comparison'};
   document.getElementById('gym-page-label').textContent = pageLabels[gymTab] || 'Gym';
 
   c.innerHTML = `<div style="padding-top:4px;">
@@ -4277,7 +4286,10 @@ function renderGymLog() {
         </button>
       </div>`;
 
-  return draftBanner + durationHtml + `<div id="gym-log-card" class="card" style="margin:12px 16px 0;border-radius:var(--radius);">
+  return draftBanner + durationHtml + `<button onclick="startGymSession()" style="display:block;width:calc(100% - 32px);margin:8px 16px;padding:13px;background:var(--card2);color:var(--ink);border:2px solid var(--ink);border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;text-align:center;letter-spacing:0.04em;text-transform:uppercase;">
+    Start Session
+  </button>
+  <div id="gym-log-card" class="card" style="margin:0 16px;border-radius:var(--radius);">
     ${exerciseBlocks}
     ${addExRow}
   </div>
@@ -4285,10 +4297,16 @@ function renderGymLog() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
     Copy last session
   </button>
-  <button class="gym-finish-btn" onclick="finishGymSession()">
+  <button class="gym-finish-btn" style="display:block;width:calc(100% - 32px);margin:8px 16px;" onclick="finishGymSession()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
     Finish &amp; Save Session
   </button>`;
+}
+
+function startGymSession() {
+  // Scroll to first exercise
+  const first = document.querySelector('.gym-exercise-row');
+  if (first) first.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 // ── SET HELPERS ──
@@ -4951,74 +4969,6 @@ function renderWeightChart(vals, keys) {
   </div>`;
 }
 
-// ── WATER ──
-function getWaterToday() {
-  const data = loadHealthData();
-  return (data.water || {})[dk(new Date())] || 0;
-}
-function setWaterGlasses(n) {
-  const data = loadHealthData();
-  if (!data.water) data.water = {};
-  data.water[dk(new Date())] = Math.max(0, Math.min(12, n));
-  saveHealthData(data);
-  haptic('light');
-  renderHealth();
-}
-
-function renderWaterTab() {
-  const glasses = getWaterToday();
-  const target = 8;
-  const pct = Math.round((glasses/target)*100);
-  const mlTotal = glasses * 250;
-
-  // Last 14 days
-  const data = loadHealthData();
-  const waterHist = data.water || {};
-  const last14 = [];
-  for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);last14.push({key:dk(d),date:d});}
-  const avg = last14.filter(x=>waterHist[x.key]).length
-    ? (last14.reduce((a,x)=>a+(waterHist[x.key]||0),0)/14).toFixed(1)
-    : null;
-
-  const glassEls = Array.from({length:12},(_,i)=>{
-    const filled = i < glasses;
-    return `<div class="water-glass${filled?' filled':''}" onclick="setWaterGlasses(${filled?i:i+1})">
-      ${filled?'💧':''}
-    </div>`;
-  }).join('');
-
-  const histBars = last14.map(x=>{
-    const g = waterHist[x.key] || 0;
-    const h = Math.round((g/target)*40);
-    const col = g>=target?'var(--blue)':g>=target*0.5?'#93c5fd':'var(--border)';
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
-      <div style="width:100%;height:40px;display:flex;align-items:flex-end;">
-        <div style="width:100%;height:${Math.max(2,h)}px;background:${col};border-radius:3px 3px 0 0;"></div>
-      </div>
-      <div style="font-size:8px;color:var(--text3);font-weight:700;">${x.date.toLocaleDateString('en-GB',{day:'numeric'})}</div>
-    </div>`;
-  }).join('');
-
-  return `<div class="section" style="padding-top:12px;">
-    <div class="card">
-      <div class="metric-grid" style="border-bottom:1px solid var(--border);">
-        <div class="metric-cell"><div class="metric-val">${glasses}</div><div class="metric-unit">Glasses today</div></div>
-        <div class="metric-cell"><div class="metric-val">${mlTotal}ml</div><div class="metric-unit">Volume</div></div>
-        <div class="metric-cell"><div class="metric-val">${avg||'—'}</div><div class="metric-unit">14-day avg</div></div>
-      </div>
-      <div style="padding:10px 16px 6px;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">Today — tap to fill (${glasses}/${target})</div>
-      <div class="water-grid">${glassEls}</div>
-      <div style="padding:0 16px 8px;display:flex;align-items:center;gap:8px;">
-        <button onclick="setWaterGlasses(${glasses}-1)" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--card2);cursor:pointer;font-size:16px;font-family:-apple-system,sans-serif;">−</button>
-        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${Math.min(100,pct)}%;background:var(--blue);border-radius:4px;transition:width 0.4s;"></div></div>
-        <button onclick="setWaterGlasses(${glasses}+1)" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--card2);cursor:pointer;font-size:16px;font-family:-apple-system,sans-serif;">+</button>
-      </div>
-    </div>
-  </div>
-  <div class="section"><div class="section-title"><span>Last 14 days</span></div>
-    <div class="card"><div style="display:flex;gap:3px;padding:10px 14px 14px;align-items:flex-end;">${histBars}</div></div>
-  </div>`;
-}
 
 function renderHealth() {
   const c = document.getElementById('health-content');
@@ -5027,14 +4977,12 @@ function renderHealth() {
     <div class="health-tabs">
       <button class="health-tab${healthTab==='weight'?' active':''}" onclick="healthTab='weight';renderHealth()">Weight</button>
       <button class="health-tab${healthTab==='bodyfat'?' active':''}" onclick="healthTab='bodyfat';renderHealth()">Body Fat</button>
-      <button class="health-tab${healthTab==='water'?' active':''}" onclick="healthTab='water';renderHealth()">Water</button>
     </div>
   </div>`;
 
   let content = '';
   if (healthTab==='weight') content = renderWeightTab();
   else if (healthTab==='bodyfat') content = renderBodyFatTab();
-  else if (healthTab==='water') content = renderWaterTab();
 
   c.innerHTML = `<div style="padding-top:4px;">${tabs}${content}</div>`;
 }
@@ -6598,7 +6546,6 @@ function exportCSV() {
   // Health — weight
   const health = loadHealthData();
   Object.entries(health.weight||{}).forEach(([date,val]) => rows.push([date,'weight','Body weight',val+'kg','']));
-  Object.entries(health.water||{}).forEach(([date,val]) => rows.push([date,'water','Water',val+' glasses','']));
 
   // Sort by date
   rows.slice(1).sort((a,b)=>a[0]>b[0]?-1:1);
@@ -6684,8 +6631,6 @@ function renderRunMileageBar(dates) {
 
 const ALL_PROGRESS_SECTIONS = [
   { id:'consistency',  label:'Consistency score',     icon:'🎯', defaultOn:true  },
-  { id:'running',      label:'Running analysis',       icon:'🏃', defaultOn:true  },
-  { id:'gym',          label:'Gym analysis',           icon:'🏋️', defaultOn:true  },
   { id:'bodycomp',     label:'Body composition',        icon:'📊', defaultOn:true  },
   { id:'trend',        label:'Weekly trend',           icon:'📈', defaultOn:true  },
   { id:'heatmap',      label:'Day-of-week heatmap',    icon:'🗓', defaultOn:true  },
@@ -7064,91 +7009,6 @@ function renderGymComparison() {
       <span style="color:var(--green);font-weight:700;">Green</span> = higher weight · <span style="color:var(--red);font-weight:700;">Red</span> = lower weight
     </div>
   </div></div>`;
-}
-
-// ══ SESSION TEMPLATES ══
-const TEMPLATES_KEY = 'gymTemplates_v1';
-
-function loadTemplates() {
-  try { return JSON.parse(localStorage.getItem(TEMPLATES_KEY)||'[]'); } catch(e) { return []; }
-}
-function saveTemplates(t) { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(t)); }
-
-function saveCurrentAsTemplate() {
-  const exercises = getSessionExercises(gymSession);
-  const hasData = exercises.some(ex=>(gymSets[ex]||[]).some(s=>s.weight||s.reps));
-  const name = prompt('Template name (e.g. "Heavy Push"):');
-  if (!name?.trim()) return;
-
-  const templates = loadTemplates();
-  templates.unshift({
-    id: Date.now(),
-    name: name.trim(),
-    sessionId: gymSession,
-    sessionName: GYM_SESSION_DEFS.find(s=>s.id===gymSession)?.name || gymSession,
-    exercises: exercises.reduce((acc,ex)=>{
-      const sets = (gymSets[ex]||[]).filter(s=>s.weight||s.reps);
-      if(sets.length) acc[ex]=sets; else acc[ex]=[{weight:'',reps:''}];
-      return acc;
-    }, {}),
-    created: new Date().toISOString().slice(0,10),
-  });
-  saveTemplates(templates);
-  showToast('Template saved ✓', 'var(--green)');
-}
-
-function loadTemplate(templateId) {
-  const templates = loadTemplates();
-  const t = templates.find(x=>x.id===templateId);
-  if (!t) return;
-  gymSession = t.sessionId;
-  gymSets = {};
-  Object.entries(t.exercises).forEach(([ex,sets])=>{
-    gymSets[ex] = sets.map(s=>({weight:s.weight||'',reps:s.reps||''}));
-  });
-  // Ensure exercises are in session list
-  Object.keys(t.exercises).forEach(ex=>{
-    const list=getSessionExercises(gymSession);
-    if(!list.includes(ex)){list.push(ex);saveSessionExercises(gymSession,list);}
-  });
-  gymTab='log';
-  renderGym();
-  showToast('Template loaded ✓', 'var(--blue)');
-}
-
-function deleteTemplate(templateId) {
-  const templates = loadTemplates().filter(t=>t.id!==templateId);
-  saveTemplates(templates);
-  renderGym();
-}
-
-function renderGymTemplates() {
-  const templates = loadTemplates();
-
-  const saveBtn = `<div style="padding:12px 14px;border-bottom:1px solid var(--border);">
-    <button onclick="saveCurrentAsTemplate()" style="width:100%;padding:10px;background:var(--ink);color:white;border:2px solid var(--ink);border-radius:10px;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      Save current session as template
-    </button>
-  </div>`;
-
-  if (!templates.length) {
-    return `<div class="section" style="padding-top:12px;"><div class="card">${saveBtn}<div class="empty-state" style="padding:20px;">No templates yet.<br><span style="font-size:12px;color:var(--text3);display:block;margin-top:4px;">Set up a session in the Log tab then save it as a template.</span></div></div></div>`;
-  }
-
-  const rows = templates.map(t => {
-    const exList = Object.keys(t.exercises).slice(0,3).join(', ');
-    return `<div class="template-item">
-      <div style="flex:1;">
-        <div class="template-name">${t.name}</div>
-        <div class="template-meta">${t.sessionName} · ${exList}${Object.keys(t.exercises).length>3?'…':''} · ${t.created}</div>
-      </div>
-      <button class="template-load-btn" onclick="loadTemplate(${t.id})">Load</button>
-      <button class="template-del-btn" onclick="deleteTemplate(${t.id})">×</button>
-    </div>`;
-  }).join('');
-
-  return `<div class="section" style="padding-top:12px;"><div class="card">${saveBtn}${rows}</div></div>`;
 }
 
 // ══ PR NOTIFICATION ENHANCEMENT ══
@@ -8230,7 +8090,7 @@ function exportData(){
     gymData:          loadGymData(),
     healthData:       loadHealthData(),
     gymProgramme:     loadProgramme(),
-    gymTemplates:     ls(TEMPLATES_KEY),
+
     raceGoal:         ls(RACE_KEY),
     trash:            ls(TRASH_KEY),
     runMileageTarget: ls(RUN_TARGET_KEY),
@@ -8259,7 +8119,7 @@ function importData(input){
       if(payload.gymData)       saveGymData(payload.gymData);
       if(payload.healthData)    saveHealthData(payload.healthData);
       if(payload.gymProgramme)  saveProgramme(payload.gymProgramme);
-      if(payload.gymTemplates)  saveTemplates(payload.gymTemplates);
+
       if(payload.raceGoal)      saveRaceGoal(payload.raceGoal);
       if(payload.trash)         localStorage.setItem(TRASH_KEY, JSON.stringify(payload.trash));
       if(payload.runMileageTarget !== null && payload.runMileageTarget !== undefined)

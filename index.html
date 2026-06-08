@@ -2377,6 +2377,10 @@ function parseRunEntry(text, date) {
   const efforts = ['easy','steady','tempo','hard','race','intervals','recovery','long','parkrun','fartlek'];
   result.effort = efforts.find(e => t.includes(e)) || null;
 
+  // Start time: @HH:MM
+  const startTimeMatch = text.match(/@(\d{1,2}):(\d{2})/);
+  if (startTimeMatch) result.startHour = parseInt(startTimeMatch[1]);
+
   // Return if we got something useful
   if(result.km || result.seconds || result.effort) return result;
   return null;
@@ -5309,20 +5313,29 @@ function renderTimeOfDaySection(dates) {
   const gymData = loadGymData();
   const logs = gymData.logs || [];
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-90);
-  logs.filter(l=>new Date(l.date)>=cutoff).forEach(l => {
-    const h = new Date(l.date).getHours();
+  let gymCount = 0, runCount = 0;
+
+  function bucketHour(h) {
     if(h>=6&&h<12) slots[0].count++;
     else if(h>=12&&h<17) slots[1].count++;
     else if(h>=17&&h<21) slots[2].count++;
     else slots[3].count++;
+  }
+
+  // Gym sessions — timestamp from log.date
+  logs.filter(l=>new Date(l.date)>=cutoff).forEach(l => {
+    bucketHour(new Date(l.date).getHours());
+    gymCount++;
   });
 
-  // Also sample journal entries by checking state.data keys with timestamps
-  Object.keys(state.data).forEach(k => {
-    if(k.startsWith('journal:daily:')) {
-      // We know the date but not the time — skip for now
-    }
-  });
+  // Run sessions — extract @HH:MM start time from entries
+  for (let off = 0; off >= -90; off--) {
+    const d = new Date(); d.setDate(d.getDate() + off);
+    getEntries(d, 'session:run').forEach(entry => {
+      const match = entry.match(/@(\d{1,2}):(\d{2})/);
+      if (match) { bucketHour(parseInt(match[1])); runCount++; }
+    });
+  }
 
   const total = slots.reduce((a,s)=>a+s.count,0);
   if(!total) return '';
@@ -5341,11 +5354,12 @@ function renderTimeOfDaySection(dates) {
   }).join('');
 
   const peak = slots.reduce((a,b)=>b.count>a.count?b:a);
-  return `<div class="section"><div class="section-title"><span>Best time of day</span><span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:none;letter-spacing:0;">gym sessions (90 days)</span></div>
+  const sourceNote = [gymCount&&`${gymCount} gym`, runCount&&`${runCount} run`].filter(Boolean).join(', ');
+  return `<div class="section"><div class="section-title"><span>Best time of day</span><span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:none;letter-spacing:0;">90 days</span></div>
   <div class="card">
     ${bars}
     <div style="padding:10px 16px 14px;font-size:12px;color:var(--text2);line-height:1.5;">
-      You train most in the <strong>${peak.label.toLowerCase()}</strong> — <strong>${total} sessions</strong> logged.
+      You train most in the <strong>${peak.label.toLowerCase()}</strong> — <strong>${total} sessions</strong> logged (${sourceNote}).
     </div>
   </div></div>`;
 }
@@ -7086,6 +7100,7 @@ let runLoggerEffort = '';
 let runLoggerKm     = '';
 let runLoggerTime   = '';
 let runLoggerNotes  = '';
+let runLoggerStartTime = '';
 let runLoggerDateKey = '';
 
 function effortClass(effort) {
@@ -7093,14 +7108,15 @@ function effortClass(effort) {
   return map[effort] || 'easy';
 }
 
-function formatRunEntry(km, timeStr, effort, notes) {
-  // Stores as structured string: "5.2km | 24:30 | Tempo | felt strong"
+function formatRunEntry(km, timeStr, effort, notes, startTime) {
+  // Stores as structured string: "5.2km | 24:30 | Tempo | felt strong | @07:30"
   const parts = [];
   const kmNum = parseFloat(km);
   if (km && kmNum > 0) parts.push(kmNum + 'km');
   if (timeStr && timeStr.trim() && timeStr !== 'hh:mm:ss') parts.push(timeStr.trim());
   if (effort) parts.push(effort);
   if (notes && notes.trim()) parts.push(notes.trim());
+  if (startTime && startTime.trim()) parts.push('@' + startTime.trim());
   return parts.join(' | ');
 }
 
@@ -7154,6 +7170,12 @@ function renderRunLogger(dateIso, storeKey) {
       <div class="run-logger-row" style="margin-bottom:8px;">
         <span class="run-logger-label">Effort</span>
         <div class="run-effort-grid">${effortBtns}</div>
+      </div>
+      <div class="run-logger-row" style="margin-bottom:8px;">
+        <span class="run-logger-label">Start time</span>
+        <input class="run-field" type="time" id="run-starttime-${dateKey}" style="max-width:110px;"
+          value="${runLoggerStartTime}" oninput="runLoggerStartTime=this.value">
+        <span class="run-field-unit" style="color:var(--text3);font-size:11px;">for time-of-day analysis</span>
       </div>
       <div class="run-logger-row" style="margin-bottom:10px;">
         <span class="run-logger-label">Notes</span>
@@ -7213,24 +7235,27 @@ function calcRunPace(dateKey) {
 }
 
 function saveRunLoggerInputs(dateKey) {
-  runLoggerKm    = document.getElementById('run-km-'+dateKey)?.value?.trim() || runLoggerKm;
-  runLoggerTime  = document.getElementById('run-time-'+dateKey)?.value?.trim() || runLoggerTime;
-  runLoggerNotes = document.getElementById('run-notes-'+dateKey)?.value?.trim() || runLoggerNotes;
+  runLoggerKm        = document.getElementById('run-km-'+dateKey)?.value?.trim() || runLoggerKm;
+  runLoggerTime      = document.getElementById('run-time-'+dateKey)?.value?.trim() || runLoggerTime;
+  runLoggerNotes     = document.getElementById('run-notes-'+dateKey)?.value?.trim() || runLoggerNotes;
+  runLoggerStartTime = document.getElementById('run-starttime-'+dateKey)?.value?.trim() || runLoggerStartTime;
 }
 
 function saveRunEntry(dateIso, storeKey) {
   const dateKey = dk(new Date(dateIso));
   // Read live from DOM, fall back to stored state
-  const km    = document.getElementById('run-km-'+dateKey)?.value?.trim() || runLoggerKm;
-  const time  = document.getElementById('run-time-'+dateKey)?.value?.trim() || runLoggerTime;
-  const notes = document.getElementById('run-notes-'+dateKey)?.value?.trim() || runLoggerNotes;
+  const km        = document.getElementById('run-km-'+dateKey)?.value?.trim() || runLoggerKm;
+  const time      = document.getElementById('run-time-'+dateKey)?.value?.trim() || runLoggerTime;
+  const notes     = document.getElementById('run-notes-'+dateKey)?.value?.trim() || runLoggerNotes;
+  const startTime = document.getElementById('run-starttime-'+dateKey)?.value?.trim() || runLoggerStartTime;
   if (!km && !time && !runLoggerEffort) { showToast('Add at least distance, time or effort','var(--orange)'); return; }
-  const entry = formatRunEntry(km, time, runLoggerEffort, notes);
+  const entry = formatRunEntry(km, time, runLoggerEffort, notes, startTime);
   addEntry(dateIso, storeKey, entry);
-  runLoggerEffort = '';
-  runLoggerKm     = '';
-  runLoggerTime   = '';
-  runLoggerNotes  = '';
+  runLoggerEffort    = '';
+  runLoggerKm        = '';
+  runLoggerTime      = '';
+  runLoggerNotes     = '';
+  runLoggerStartTime = '';
   showToast('Run logged ✓','var(--blue)');
   haptic('light');
 }

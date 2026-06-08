@@ -2488,23 +2488,6 @@ function renderRunAnalysis() {
   const bestPace = withPace.length ? Math.min(...withPace.map(r=>r.paceSecPerKm)) : null;
   const longestRun = withKm.length ? Math.max(...withKm.map(r=>r.km)) : null;
 
-  // ── Run type breakdown ──
-  const EFFORT_LABELS = {
-    easy:['easy','recovery','steady'], tempo:['tempo','fartlek','parkrun'],
-    hard:['hard','intervals','race'], long:['long']
-  };
-  const effortCounts = { Easy:0, Tempo:0, Hard:0, Long:0 };
-  runs.forEach(r => {
-    if (!r.effort) return;
-    if (EFFORT_LABELS.long.includes(r.effort))       effortCounts.Long++;
-    else if (EFFORT_LABELS.easy.includes(r.effort))  effortCounts.Easy++;
-    else if (EFFORT_LABELS.tempo.includes(r.effort)) effortCounts.Tempo++;
-    else if (EFFORT_LABELS.hard.includes(r.effort))  effortCounts.Hard++;
-  });
-  const typeColors = { Easy:'pill-green', Tempo:'pill-orange', Hard:'analysis-pill-red', Long:'pill-purple' };
-  const typePills = Object.entries(effortCounts).filter(([,n])=>n>0)
-    .map(([label,n])=>`<span class="analysis-pill ${typeColors[label]}" style="font-size:11px;">${label} ${n}</span>`).join('');
-
   // Avg runs per week
   const activeWeeks = new Set(runs.map(r=>dk(getMonday(new Date(r.date||Date.now()))))).size || 1;
   const avgPerWeek  = (runs.length / activeWeeks).toFixed(1);
@@ -2522,7 +2505,6 @@ function renderRunAnalysis() {
         ${bestPace?`<span class="analysis-pill pill-green">best ${fmtPace(bestPace)}</span>`:''}
         <span class="analysis-pill" style="background:var(--card2);border:1.5px solid var(--border);color:var(--text2);">${avgPerWeek}×/week</span>
       </div>
-      ${typePills ? `<div style="display:flex;gap:6px;padding:0 16px 14px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px;">${typePills}</div>` : ''}
     </div></div>`;
 
   // ── Build weekly buckets (all weeks with run data) ──

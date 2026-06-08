@@ -2488,6 +2488,27 @@ function renderRunAnalysis() {
   const bestPace = withPace.length ? Math.min(...withPace.map(r=>r.paceSecPerKm)) : null;
   const longestRun = withKm.length ? Math.max(...withKm.map(r=>r.km)) : null;
 
+  // ── Run type breakdown ──
+  const EFFORT_LABELS = {
+    easy:['easy','recovery','steady'], tempo:['tempo','fartlek','parkrun'],
+    hard:['hard','intervals','race'], long:['long']
+  };
+  const effortCounts = { Easy:0, Tempo:0, Hard:0, Long:0 };
+  runs.forEach(r => {
+    if (!r.effort) return;
+    if (EFFORT_LABELS.long.includes(r.effort))       effortCounts.Long++;
+    else if (EFFORT_LABELS.easy.includes(r.effort))  effortCounts.Easy++;
+    else if (EFFORT_LABELS.tempo.includes(r.effort)) effortCounts.Tempo++;
+    else if (EFFORT_LABELS.hard.includes(r.effort))  effortCounts.Hard++;
+  });
+  const typeColors = { Easy:'pill-green', Tempo:'pill-orange', Hard:'analysis-pill-red', Long:'pill-purple' };
+  const typePills = Object.entries(effortCounts).filter(([,n])=>n>0)
+    .map(([label,n])=>`<span class="analysis-pill ${typeColors[label]}" style="font-size:11px;">${label} ${n}</span>`).join('');
+
+  // Avg runs per week
+  const activeWeeks = new Set(runs.map(r=>dk(getMonday(new Date(r.date||Date.now()))))).size || 1;
+  const avgPerWeek  = (runs.length / activeWeeks).toFixed(1);
+
   // ── Summary card ──
   const metrics = `<div class="section"><div class="section-title"><span>Running summary</span></div>
     <div class="card">
@@ -2496,17 +2517,15 @@ function renderRunAnalysis() {
         <div class="metric-cell"><div class="metric-val">${totalKm>0?totalKm.toFixed(1):'–'}</div><div class="metric-unit">total km</div></div>
         <div class="metric-cell"><div class="metric-val">${longestRun?longestRun.toFixed(1)+'km':'–'}</div><div class="metric-unit">longest run</div></div>
       </div>
-      ${avgPace||bestPace ? `<div style="display:flex;gap:8px;padding:0 16px 14px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;padding:0 16px 10px;flex-wrap:wrap;">
         ${avgPace?`<span class="analysis-pill pill-purple">avg ${fmtPace(avgPace)}</span>`:''}
         ${bestPace?`<span class="analysis-pill pill-green">best ${fmtPace(bestPace)}</span>`:''}
-      </div>` : ''}
+        <span class="analysis-pill" style="background:var(--card2);border:1.5px solid var(--border);color:var(--text2);">${avgPerWeek}×/week</span>
+      </div>
+      ${typePills ? `<div style="display:flex;gap:6px;padding:0 16px 14px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px;">${typePills}</div>` : ''}
     </div></div>`;
 
   // ── Build weekly buckets (all weeks with run data) ──
-  const PLAN_TARGETS = {
-    '2026-03-16':34,'2026-03-23':42,'2026-03-30':48,
-    '2026-04-06':46,'2026-04-13':32,'2026-04-20':17,'2026-04-27':11
-  };
   const weekBuckets = [];
   for(let off=0; off>=-26; off--) {
     const dates = getWeekDates(off);
@@ -2519,65 +2538,61 @@ function renderRunAnalysis() {
         if(r) weekRuns.push(r);
       });
     });
-    if(!weekRuns.length && off < 0) continue; // skip empty past weeks, but keep current
-    const km      = weekRuns.filter(r=>r.km).reduce((a,r)=>a+r.km,0);
-    const paces   = weekRuns.filter(r=>r.paceSecPerKm && r.effort!=='long');
+    if(!weekRuns.length && off < 0) continue;
+    const km        = weekRuns.filter(r=>r.km).reduce((a,r)=>a+r.km,0);
+    const paces     = weekRuns.filter(r=>r.paceSecPerKm && r.effort!=='long');
     const avgWkPace = paces.length ? paces.reduce((a,r)=>a+r.paceSecPerKm,0)/paces.length : null;
-    const longRun = weekRuns.filter(r=>r.km).reduce((max,r)=>Math.max(max,r.km),0)||null;
-    weekBuckets.unshift({ monKey, dates, km:Math.round(km*10)/10, avgPace:avgWkPace, longRun, runs:weekRuns, target:PLAN_TARGETS[monKey]||null });
+    const longRun   = weekRuns.filter(r=>r.km).reduce((max,r)=>Math.max(max,r.km),0)||null;
+    weekBuckets.unshift({ monKey, dates, km:Math.round(km*10)/10, avgPace:avgWkPace, longRun, runs:weekRuns });
   }
 
-  // ── 1. TRAINING LOAD — weekly km vs plan target ──
+  // ── 1. TRAINING LOAD — weekly km ──
   const loadChart = (() => {
-    const weeks = weekBuckets.filter(w=>w.km>0||w.target);
+    const weeks = weekBuckets.filter(w=>w.km>0);
     if(weeks.length < 2) return `<div class="section"><div class="section-title"><span>📊 Training load</span></div><div class="card"><div class="empty-state" style="padding:16px;">Log 2+ weeks of runs to see your training load trend.</div></div></div>`;
-    const W=320,H=100,PT=10,PB=22,PL=8,PR=8;
+    const W=320,H=110,PT=10,PB=22,PL=32,PR=8;
     const chartH=H-PT-PB, chartW=W-PL-PR;
-    const maxKm = Math.max(...weeks.map(w=>Math.max(w.km||0,w.target||0)), 1);
+    const maxKm = Math.max(...weeks.map(w=>w.km||0), 1);
     const slotW = chartW/weeks.length;
-    const barW  = Math.max(6,Math.floor(slotW*0.55));
-    const bars  = weeks.map((w,i)=>{
-      const cx   = PL + slotW*i + slotW/2;
-      const x    = cx - barW/2;
-      const bh   = Math.max(2, Math.round((w.km/maxKm)*chartH));
-      const by   = PT+chartH-bh;
+    const barW  = Math.max(6,Math.floor(slotW*0.6));
+
+    // Y-axis gridlines + labels
+    const yStep = maxKm <= 20 ? 5 : maxKm <= 50 ? 10 : 20;
+    let axisSvg = '';
+    for(let km=0; km<=maxKm; km+=yStep) {
+      const y = PT + chartH - (km/maxKm)*chartH;
+      axisSvg += `<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#e2ddd8" stroke-width="${km===0?1.5:0.8}" stroke-dasharray="${km===0?'':'4,3'}"/>`;
+      axisSvg += `<text x="${(PL-4).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8" fill="#9a9490" font-family="-apple-system,sans-serif" font-weight="600">${km}</text>`;
+    }
+
+    const bars = weeks.map((w,i)=>{
+      const cx    = PL + slotW*i + slotW/2;
+      const x     = cx - barW/2;
+      const bh    = Math.max(2, Math.round((w.km/maxKm)*chartH));
+      const by    = PT+chartH-bh;
       const isNow = i === weeks.length-1;
-      const barFill = isNow ? 'url(#loadGradNow)' : w.target && w.km >= w.target ? 'url(#loadGradHit)' : 'url(#loadGrad)';
-      // Target line marker
-      const tLine = w.target ? `<line x1="${(cx-barW/2-1).toFixed(1)}" y1="${(PT+chartH-(w.target/maxKm)*chartH).toFixed(1)}" x2="${(cx+barW/2+1).toFixed(1)}" y2="${(PT+chartH-(w.target/maxKm)*chartH).toFixed(1)}" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>` : '';
-      const label = new Date(w.monKey+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}).replace(' ','<br>');
+      const barFill = isNow ? 'url(#loadGradNow)' : 'url(#loadGrad)';
       const labelEl = `<text x="${cx.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${new Date(w.monKey+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</text>`;
-      return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${barFill}" opacity="0.9"/>${tLine}${labelEl}`;
+      return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${barFill}" opacity="0.9"/>${labelEl}`;
     }).join('');
-    const legend = `<div style="display:flex;align-items:center;gap:14px;padding:8px 14px 0;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);">
-        <div style="width:24px;height:8px;background:var(--blue);border-radius:2px;opacity:0.7;"></div>Logged km
-      </div>
-      <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);">
-        <div style="width:18px;height:2px;background:var(--red);border-radius:1px;"></div>Plan target
-      </div>
-    </div>`;
+
     return `<div class="section"><div class="section-title"><span>📊 Training load</span></div><div class="card">
-      ${legend}
-      <div class="mini-chart-wrap" style="padding-top:6px;">
+      <div class="mini-chart-wrap" style="padding:8px 8px 4px;">
         <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;height:${H}px;">
           <defs>
             <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="var(--blue)" stop-opacity="0.9"/>
               <stop offset="100%" stop-color="var(--blue)" stop-opacity="0.4"/>
             </linearGradient>
-            <linearGradient id="loadGradHit" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="var(--green)" stop-opacity="0.9"/>
-              <stop offset="100%" stop-color="var(--green)" stop-opacity="0.4"/>
-            </linearGradient>
             <linearGradient id="loadGradNow" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="var(--yellow)"/>
               <stop offset="100%" stop-color="var(--orange)" stop-opacity="0.7"/>
             </linearGradient>
           </defs>
-          ${bars}
+          ${axisSvg}${bars}
         </svg>
       </div>
+      <div style="padding:0 14px 10px;font-size:10px;font-weight:700;color:var(--text3);">km per week · current week in yellow</div>
     </div></div>`;
   })();
 
@@ -2589,11 +2604,9 @@ function renderRunAnalysis() {
     const W=320, H=150, PL=38, PR=10, PT=14, PB=24;
     const chartW=W-PL-PR, chartH=H-PT-PB;
 
-    const goalPace   = 341; // 5:41 A goal
-    const zoneTopPace = 321; // 5:21 upper quality bound
     const paces = weeks.map(w=>w.avgPace);
-    const minP  = Math.min(...paces, zoneTopPace) - 20;
-    const maxP  = Math.max(...paces, goalPace)    + 20;
+    const minP  = Math.min(...paces) - 20;
+    const maxP  = Math.max(...paces) + 20;
     const range = Math.max(maxP - minP, 1);
     const bestPace = Math.min(...paces);
 
@@ -2617,15 +2630,6 @@ function renderRunAnalysis() {
     svg += `<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+chartH).toFixed(1)}" stroke="#e2ddd8" stroke-width="1.5"/>`;
     svg += `<line x1="${PL}" y1="${(PT+chartH).toFixed(1)}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="#e2ddd8" stroke-width="1.5"/>`;
 
-    // Marathon pace zone band (5:21–5:41)
-    const zoneT = py(zoneTopPace), zoneB = py(goalPace);
-    svg += `<rect x="${PL}" y="${zoneT.toFixed(1)}" width="${chartW}" height="${(zoneB-zoneT).toFixed(1)}" fill="#1a4fd4" opacity="0.07"/>`;
-    svg += `<text x="${(W-PR-2).toFixed(1)}" y="${(zoneB-2).toFixed(1)}" text-anchor="end" font-size="7" fill="#1a4fd4" opacity="0.55" font-family="-apple-system,sans-serif" font-weight="700">race zone</text>`;
-
-    // Goal pace dashed line
-    const goalY = py(goalPace);
-    svg += `<line x1="${PL}" y1="${goalY.toFixed(1)}" x2="${W-PR}" y2="${goalY.toFixed(1)}" stroke="#e8392a" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.65"/>`;
-
     // Area fill under line
     if(weeks.length > 1) {
       const areaD = `M${px(0).toFixed(1)},${py(weeks[0].avgPace).toFixed(1)} ` +
@@ -2639,23 +2643,33 @@ function renderRunAnalysis() {
       weeks.slice(1).map((_,i)=>`L${px(i+1).toFixed(1)},${py(weeks[i+1].avgPace).toFixed(1)}`).join(' ');
     svg += `<path d="${lineD}" fill="none" stroke="#6b3fb5" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`;
 
-    // Dots + labels (alternate above/below to avoid collision)
+    // Dots — label only on best and latest points
+    const lastIdx = weeks.length - 1;
     weeks.forEach((w,i)=>{
       const cx = px(i), cy = py(w.avgPace);
-      const isBest = w.avgPace === bestPace;
+      const isBest   = w.avgPace === bestPace;
+      const isLatest = i === lastIdx;
       const col = isBest ? '#34d399' : '#6b3fb5';
-      const r   = isBest ? 5.5 : 4;
+      const r   = (isBest || isLatest) ? 5 : 3.5;
       svg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+      if (isBest || isLatest) {
+        const anchor = i === 0 ? 'start' : i === lastIdx ? 'end' : 'middle';
+        const labelY = cy - 9;
+        svg += `<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-size="8.5" fill="${isBest?'#1a7a4a':'#5a5652'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(w.avgPace)}</text>`;
+      }
+    });
 
-      // Pace label — alternate above/below
-      const above = i % 2 === 0;
-      const labelY = above ? cy - 9 : cy + 16;
-      const anchor = i===0 ? 'start' : i===weeks.length-1 ? 'end' : 'middle';
-      svg += `<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-size="8.5" fill="${isBest?'#1a7a4a':'#5a5652'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(w.avgPace)}</text>`;
-
-      // Date label on X axis
-      const dateStr = new Date(w.monKey+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-      svg += `<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${anchor}" font-size="7.5" fill="#9a9490" font-family="-apple-system,sans-serif" font-weight="600">${dateStr}</text>`;
+    // X-axis: show month name only when it changes
+    let lastMonth = null;
+    weeks.forEach((w,i)=>{
+      const d = new Date(w.monKey+'T12:00:00');
+      const month = d.toLocaleDateString('en-GB',{month:'short'});
+      if (month !== lastMonth) {
+        lastMonth = month;
+        const cx = px(i);
+        const anchor = i === 0 ? 'start' : i === weeks.length-1 ? 'end' : 'middle';
+        svg += `<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${anchor}" font-size="8" fill="#9a9490" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;
+      }
     });
 
     const improving = weeks[weeks.length-1].avgPace <= weeks[0].avgPace;
@@ -2678,10 +2692,7 @@ function renderRunAnalysis() {
         </div>
         <div style="display:flex;align-items:center;gap:14px;padding:0 14px 12px;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:10px;height:10px;border-radius:50%;background:#34d399;"></div>Best week</div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);">
-            <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#e8392a" stroke-width="1.5" stroke-dasharray="4,3"/></svg>Goal 5:41/km
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:20px;height:8px;background:#1a4fd4;opacity:0.15;border-radius:1px;"></div>Race zone</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:10px;height:10px;border-radius:50%;background:#6b3fb5;opacity:0.7;"></div>Latest</div>
         </div>
       </div></div>`;
   })();

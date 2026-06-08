@@ -7626,8 +7626,8 @@ function renderBodyCompSection() {
   </div>`;
 
   // Combined chart — range from first data point to today
-  const allDataKeys = [...new Set([...wKeys, ...bfKeys])].sort();
-  const firstKey = allDataKeys[0];
+  const bothKeys = wKeys.filter(k => bfData[k] !== undefined).sort();
+  const firstKey = bothKeys[0];
   const chartKeys = [];
   if (firstKey) {
     const start = new Date(firstKey + 'T12:00:00');

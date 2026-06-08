@@ -2134,40 +2134,99 @@ function renderHeatmapSection(dates,goals){
     return`<tr><td class="act-label">${g.icon||''} ${g.name}</td>${cells}</tr>`;
   }).join('');
 
-  // ── Text analysis ──
+  // ── Smart pattern analysis ──
   const insights = [];
-  // For each goal (excluding 'All'), find best and worst days
-  goals.forEach(g => {
-    const stats = dayOfWeekStats(dates, g.id);
-    const withData = stats.map((s,i)=>({...s,day:DAYS[i],i})).filter(s=>s.total>=2);
-    if(withData.length < 2) return;
-    const best  = withData.reduce((a,b)=>b.rate>a.rate?b:a);
-    const worst = withData.reduce((a,b)=>b.rate<a.rate?b:a);
-    if(best.rate === worst.rate) return;
-    if(best.rate > 0.7)  insights.push(`${g.icon||''} <strong>${g.name}</strong> — you're most consistent on <strong>${best.day}</strong> (${Math.round(best.rate*100)}%).`);
-    if(worst.rate < 0.4) insights.push(`${g.icon||''} <strong>${g.name}</strong> — your weakest day is <strong>${worst.day}</strong> (${Math.round(worst.rate*100)}%).`);
-  });
+  const allStats = dayOfWeekStats(dates,'all').map((s,i)=>({...s,day:DAYS[i],i}));
+  const allReal  = allStats.filter(s=>s.total>=3);
 
-  // Overall best/worst day
-  const allStats = dayOfWeekStats(dates,'all');
-  const allWithData = allStats.map((s,i)=>({...s,day:DAYS[i]})).filter(s=>s.total>=2);
-  if(allWithData.length>=2){
-    const best  = allWithData.reduce((a,b)=>b.rate>a.rate?b:a);
-    const worst = allWithData.reduce((a,b)=>b.rate<a.rate?b:a);
-    if(best.rate !== worst.rate){
-      insights.unshift(`📅 Overall, <strong>${best.day}</strong> is your strongest tracking day and <strong>${worst.day}</strong> is your weakest.`);
+  // 1. Weekday vs weekend split
+  const weekdaySlots = allReal.filter(s=>s.i<=4);
+  const weekendSlots = allReal.filter(s=>s.i>=5);
+  if(weekdaySlots.length>=3 && weekendSlots.length>=1){
+    const wdRate = weekdaySlots.reduce((a,s)=>a+s.rate,0)/weekdaySlots.length;
+    const weRate = weekendSlots.reduce((a,s)=>a+s.rate,0)/weekendSlots.length;
+    const diff   = Math.round(Math.abs(wdRate-weRate)*100);
+    if(diff>=15){
+      if(wdRate>weRate) insights.push({icon:'📅',text:`Weekdays are <strong>${diff}% stronger</strong> than weekends for you.`,suggest:`Consider scheduling lighter/enjoyable goals on Sat–Sun to keep momentum going.`});
+      else insights.push({icon:'📅',text:`Weekends are <strong>${diff}% stronger</strong> than weekdays.`,suggest:`Use that weekend energy — try front-loading harder goals on Sat or Sun.`});
     }
   }
 
-  const analysisHtml = insights.length >= 1 ? `
-    <div style="padding:12px 14px 14px;border-top:1.5px solid var(--border);">
-      <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Patterns</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        ${insights.map(t=>`<div style="font-size:12px;color:var(--text2);line-height:1.5;">${t}</div>`).join('')}
-      </div>
-    </div>` : '';
+  // 2. Week shape — front-loaded, back-loaded, or mid-week dip
+  if(allReal.length>=5){
+    const firstHalf = allReal.filter(s=>s.i<=2).map(s=>s.rate); // Mon–Wed
+    const secondHalf= allReal.filter(s=>s.i>=3&&s.i<=4).map(s=>s.rate); // Thu–Fri
+    const fhAvg = firstHalf.reduce((a,b)=>a+b,0)/firstHalf.length;
+    const shAvg = secondHalf.reduce((a,b)=>a+b,0)/secondHalf.length;
+    const shapeDiff = Math.round(Math.abs(fhAvg-shAvg)*100);
+    if(shapeDiff>=20){
+      if(fhAvg>shAvg) insights.push({icon:'📉',text:`Your week is <strong>front-loaded</strong> — completion drops ~${shapeDiff}% by Thursday/Friday.`,suggest:`Try protecting Thu–Fri with 1 non-negotiable goal to maintain late-week momentum.`});
+      else insights.push({icon:'📈',text:`You <strong>warm into the week</strong> — your best days are Thu–Fri.`,suggest:`Use your strong finish to set up the following week while motivation is high.`});
+    }
+    // Mid-week dip (Wed lowest among Mon–Fri)
+    const midWeek = allReal.find(s=>s.i===2);
+    if(midWeek){
+      const wdRates = allReal.filter(s=>s.i<=4).map(s=>s.rate);
+      const wdAvg = wdRates.reduce((a,b)=>a+b,0)/wdRates.length;
+      if(midWeek.rate < wdAvg*0.7 && midWeek.total>=3) insights.push({icon:'⚠️',text:`<strong>Wednesday is your weakest day</strong> — ${Math.round(midWeek.rate*100)}% vs ${Math.round(wdAvg*100)}% weekday average.`,suggest:`Wednesday slump is common. Try scheduling a session you genuinely enjoy on Wednesdays.`});
+    }
+  }
 
-  return`<div class="section"><div class="section-title"><span>Day-of-week heatmap</span></div>
+  // 3. Consistent strong day
+  if(allReal.length>=3){
+    const best = allReal.reduce((a,b)=>b.rate>a.rate?b:a);
+    if(best.rate>=0.75) insights.push({icon:'💪',text:`<strong>${best.day} is your most reliable day</strong> — ${Math.round(best.rate*100)}% completion rate.`,suggest:`Anchor your hardest or most important goal on ${best.day} to leverage this momentum.`});
+  }
+
+  // 4. Single biggest drop-off day (only if meaningful gap)
+  if(allReal.length>=4){
+    const sorted = [...allReal].sort((a,b)=>a.rate-b.rate);
+    const weakest = sorted[0];
+    const secondWeakest = sorted[1];
+    if(weakest.rate < 0.35 && (secondWeakest.rate - weakest.rate) >= 0.2)
+      insights.push({icon:'🎯',text:`<strong>${weakest.day} needs attention</strong> — ${Math.round(weakest.rate*100)}% completion, well below your other days.`,suggest:`Either protect ${weakest.day} with a lighter plan, or identify what's making it hard and remove that blocker.`});
+  }
+
+  // 5. Gym session gap / clustering
+  const gymGoal = goals.find(g=>g.id==='gym'||g.name?.toLowerCase().includes('gym'));
+  if(gymGoal){
+    const gymStats = dayOfWeekStats(dates, gymGoal.id).map((s,i)=>({...s,i}));
+    const gymDays  = gymStats.filter(s=>s.total>=2&&s.rate>=0.5).map(s=>s.i);
+    if(gymDays.length>=2){
+      const gaps = gymDays.slice(1).map((d,i)=>d-gymDays[i]);
+      const avgGap = gaps.reduce((a,b)=>a+b,0)/gaps.length;
+      if(avgGap>=3) insights.push({icon:'🏋️',text:`Your gym days have an average <strong>${avgGap.toFixed(0)}-day gap</strong> — good recovery spacing.`,suggest:`Keep this pattern — ${avgGap>=4?'maybe add a light session mid-gap if energy allows':'consistent rest between sessions aids adaptation'}.`});
+      else if(avgGap<=1) insights.push({icon:'🏋️',text:`Your gym days are <strong>back-to-back</strong> — limited recovery time.`,suggest:`Consider spacing sessions out more. Aim for at least one rest day between lifting days.`});
+    }
+  }
+
+  // 6. Run pattern
+  const runGoal = goals.find(g=>g.id==='run'||g.name?.toLowerCase().includes('run'));
+  if(runGoal){
+    const runStats = dayOfWeekStats(dates, runGoal.id).map((s,i)=>({...s,day:DAYS[i]}));
+    const runDays  = runStats.filter(s=>s.total>=2&&s.rate>=0.5);
+    if(runDays.length>=1){
+      const best = runDays.reduce((a,b)=>b.rate>a.rate?b:a);
+      insights.push({icon:'🏃',text:`You run most reliably on <strong>${best.day}</strong> (${Math.round(best.rate*100)}%).`,suggest:`Schedule your quality/long run on ${best.day} — it's clearly when you show up.`});
+    }
+  }
+
+  const analysisHtml = insights.length ? `
+    <div style="padding:12px 14px 16px;border-top:1.5px solid var(--border);">
+      <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Insights</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${insights.map(({icon,text,suggest})=>`
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="font-size:16px;flex-shrink:0;line-height:1.4;">${icon}</span>
+            <div>
+              <div style="font-size:13px;color:var(--text);line-height:1.5;">${text}</div>
+              <div style="font-size:12px;color:var(--text3);line-height:1.5;margin-top:2px;">→ ${suggest}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : `<div style="padding:12px 14px 14px;border-top:1.5px solid var(--border);font-size:12px;color:var(--text3);">Keep tracking — patterns will appear here once there's enough data.</div>`;
+
+  return`<div class="section"><div class="section-title"><span>Weekly patterns</span></div>
   <div class="card"><div class="heatmap-wrap">
     <table class="heatmap-table">
       <thead><tr><th></th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>

@@ -915,20 +915,6 @@ body.dark .health-tabs { border-bottom-color: var(--border); }
 body.dark .weight-log-btn { background:var(--yellow); color:#111; border-color:var(--yellow); }
 body.dark .weight-big-input { color:#f0f0f0; }
 
-.water-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; padding:14px 16px; }
-.water-glass { width:100%; aspect-ratio:1; border-radius:8px; border:2px solid var(--border); background:var(--card2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:all 0.15s; }
-.water-glass.filled { background:#dbeafe; border-color:#3b82f6; }
-.water-glass:active { transform:scale(0.88); }
-body.dark .water-glass { background:#1a1a1a; border-color:#2a2a2a; }
-body.dark .water-glass.filled { background:#0d1a2d; border-color:#3b82f6; }
-
-.sleep-row { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--border); }
-.sleep-row:last-child { border-bottom:none; }
-.sleep-date { font-size:11px; font-weight:700; color:var(--text3); width:48px; flex-shrink:0; text-transform:uppercase; }
-.sleep-hours { font-size:16px; font-weight:800; color:var(--text); width:40px; text-align:center; }
-.sleep-quality { display:flex; gap:3px; }
-.sleep-star { font-size:14px; cursor:pointer; opacity:0.3; transition:opacity 0.12s; }
-.sleep-star.lit { opacity:1; }
 
 .health-chart-svg { overflow:visible; }
 .health-bar { transition:height 0.4s ease; }
@@ -1250,20 +1236,6 @@ body.dark .run-stat-val { color:#f0f0f0; }
 .lift-progress-bar { flex:1; border-radius:3px 3px 0 0; min-height:2px; transition:height 0.5s ease; }
 
 
-/* ── QUICK ADD WIDGET ── */
-.quick-add-fab { position:fixed; bottom:90px; right:16px; width:52px; height:52px; border-radius:50%; background:var(--ink); color:white; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,0,0,0.3); z-index:80; transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1); }
-.quick-add-fab:active { transform:scale(0.9); }
-.quick-add-fab.open { transform:rotate(45deg); background:var(--red); }
-body.dark .quick-add-fab { background:var(--yellow); color:#111; }
-body.dark .quick-add-fab.open { background:var(--red); color:white; }
-.quick-add-menu { position:fixed; bottom:152px; right:16px; display:flex; flex-direction:column; gap:8px; z-index:79; animation:fabMenuIn 0.2s ease-out; }
-@keyframes fabMenuIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
-.quick-add-item { display:flex; align-items:center; gap:10px; padding:9px 14px 9px 10px; background:var(--card); border:2px solid var(--ink); border-radius:24px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15); white-space:nowrap; transition:all 0.12s; }
-.quick-add-item:active { transform:scale(0.96); }
-body.dark .quick-add-item { background:#1a1a1a; border-color:#2a2a2a; }
-.quick-add-icon { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
-.quick-add-label { font-size:13px; font-weight:700; color:var(--text); }
-.quick-add-backdrop { position:fixed; inset:0; z-index:78; background:rgba(0,0,0,0.2); }
 
 /* ── WEEK RATING ── */
 .week-rating-row { display:flex; align-items:center; gap:6px; padding:10px 14px; border-top:1px solid var(--border); }
@@ -1512,7 +1484,7 @@ body.dark .run-effort-grid { }
 
 <!-- HEALTH PAGE -->
 <div id="page-health" class="page">
-  <div class="header"><h1>Health</h1><div class="week-label">Body weight, water &amp; sleep</div></div>
+  <div class="header"><h1>Health</h1><div class="week-label">Body weight &amp; body fat</div></div>
   <div id="health-content" style="padding-bottom:8px;"></div>
 </div>
 
@@ -4815,9 +4787,9 @@ function renderWeightTab() {
   const recentRows = sortedKeys.slice(-10).reverse().map(k => {
     const d = new Date(k+'T12:00:00');
     const label = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-    return `<div class="sleep-row">
-      <div class="sleep-date">${label}</div>
-      <div class="sleep-hours">${weights[k]}kg</div>
+    return `<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);width:48px;flex-shrink:0;text-transform:uppercase;">${label}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--text);width:40px;text-align:center;">${weights[k]}kg</div>
       <button onclick="deleteWeight('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;margin-left:auto;">×</button>
     </div>`;
   }).join('');
@@ -4860,90 +4832,9 @@ function renderWeightChart(vals, keys) {
   </div>`;
 }
 
-// ── WATER ──
-function getWaterToday() {
-  const data = loadHealthData();
-  return (data.water || {})[dk(new Date())] || 0;
-}
-function setWaterGlasses(n) {
-  const data = loadHealthData();
-  if (!data.water) data.water = {};
-  data.water[dk(new Date())] = Math.max(0, Math.min(12, n));
-  saveHealthData(data);
-  haptic('light');
-  renderHealth();
-}
-
-function renderWaterTab() {
-  const glasses = getWaterToday();
-  const target = 8;
-  const pct = Math.round((glasses/target)*100);
-  const mlTotal = glasses * 250;
-
-  // Last 14 days
-  const data = loadHealthData();
-  const waterHist = data.water || {};
-  const last14 = [];
-  for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);last14.push({key:dk(d),date:d});}
-  const avg = last14.filter(x=>waterHist[x.key]).length
-    ? (last14.reduce((a,x)=>a+(waterHist[x.key]||0),0)/14).toFixed(1)
-    : null;
-
-  const glassEls = Array.from({length:12},(_,i)=>{
-    const filled = i < glasses;
-    return `<div class="water-glass${filled?' filled':''}" onclick="setWaterGlasses(${filled?i:i+1})">
-      ${filled?'💧':''}
-    </div>`;
-  }).join('');
-
-  const histBars = last14.map(x=>{
-    const g = waterHist[x.key] || 0;
-    const h = Math.round((g/target)*40);
-    const col = g>=target?'var(--blue)':g>=target*0.5?'#93c5fd':'var(--border)';
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
-      <div style="width:100%;height:40px;display:flex;align-items:flex-end;">
-        <div style="width:100%;height:${Math.max(2,h)}px;background:${col};border-radius:3px 3px 0 0;"></div>
-      </div>
-      <div style="font-size:8px;color:var(--text3);font-weight:700;">${x.date.toLocaleDateString('en-GB',{day:'numeric'})}</div>
-    </div>`;
-  }).join('');
-
-  return `<div class="section" style="padding-top:12px;">
-    <div class="card">
-      <div class="metric-grid" style="border-bottom:1px solid var(--border);">
-        <div class="metric-cell"><div class="metric-val">${glasses}</div><div class="metric-unit">Glasses today</div></div>
-        <div class="metric-cell"><div class="metric-val">${mlTotal}ml</div><div class="metric-unit">Volume</div></div>
-        <div class="metric-cell"><div class="metric-val">${avg||'—'}</div><div class="metric-unit">14-day avg</div></div>
-      </div>
-      <div style="padding:10px 16px 6px;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">Today — tap to fill (${glasses}/${target})</div>
-      <div class="water-grid">${glassEls}</div>
-      <div style="padding:0 16px 8px;display:flex;align-items:center;gap:8px;">
-        <button onclick="setWaterGlasses(${glasses}-1)" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--card2);cursor:pointer;font-size:16px;font-family:-apple-system,sans-serif;">−</button>
-        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${Math.min(100,pct)}%;background:var(--blue);border-radius:4px;transition:width 0.4s;"></div></div>
-        <button onclick="setWaterGlasses(${glasses}+1)" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--card2);cursor:pointer;font-size:16px;font-family:-apple-system,sans-serif;">+</button>
-      </div>
-    </div>
-  </div>
-  <div class="section"><div class="section-title"><span>Last 14 days</span></div>
-    <div class="card"><div style="display:flex;gap:3px;padding:10px 14px 14px;align-items:flex-end;">${histBars}</div></div>
-  </div>`;
-}
-
 function renderHealth() {
   const c = document.getElementById('health-content');
-
-  const tabs = `<div style="padding:12px 16px 0;">
-    <div class="health-tabs">
-      <button class="health-tab${healthTab==='weight'?' active':''}" onclick="healthTab='weight';renderHealth()">Weight</button>
-      <button class="health-tab${healthTab==='water'?' active':''}" onclick="healthTab='water';renderHealth()">Water</button>
-    </div>
-  </div>`;
-
-  let content = '';
-  if (healthTab==='weight') content = renderWeightTab();
-  else if (healthTab==='water') content = renderWaterTab();
-
-  c.innerHTML = `<div style="padding-top:4px;">${tabs}${content}</div>`;
+  c.innerHTML = `<div style="padding-top:4px;">${renderWeightTab()}</div>`;
 }
 
 // ── WEEKLY REVIEW AI ──
@@ -6470,8 +6361,7 @@ function exportCSV() {
   // Health — weight
   const health = loadHealthData();
   Object.entries(health.weight||{}).forEach(([date,val]) => rows.push([date,'weight','Body weight',val+'kg','']));
-  Object.entries(health.water||{}).forEach(([date,val]) => rows.push([date,'water','Water',val+' glasses','']));
-  Object.entries(health.sleep||{}).forEach(([date,val]) => rows.push([date,'sleep','Sleep',val.hours+'h',`quality: ${val.quality}/5`]));
+
 
   // Sort by date
   rows.slice(1).sort((a,b)=>a[0]>b[0]?-1:1);
@@ -6741,104 +6631,6 @@ function renderProgressBarChart(values, labels, unit, colour, invertLabel=false)
   </div>`;
 }
 
-
-// ══ QUICK ADD WIDGET ══
-let quickAddOpen = false;
-
-function toggleQuickAdd() {
-  quickAddOpen = !quickAddOpen;
-  const fab = document.getElementById('quick-add-fab');
-  if (fab) fab.classList.toggle('open', quickAddOpen);
-
-  // Remove existing menu/backdrop
-  document.getElementById('quick-add-menu')?.remove();
-  document.getElementById('quick-add-backdrop')?.remove();
-
-  if (!quickAddOpen) return;
-
-  // Backdrop
-  const backdrop = document.createElement('div');
-  backdrop.className = 'quick-add-backdrop';
-  backdrop.id = 'quick-add-backdrop';
-  backdrop.onclick = () => toggleQuickAdd();
-  document.body.appendChild(backdrop);
-
-  // Menu
-  const items = [
-    { icon:'🏃', label:'Log a run',      bg:'#dbeafe', action:"openQuickRun()" },
-    { icon:'🏋️', label:'Go to gym log',  bg:'#fef3e2', action:"openQuickGym()" },
-    { icon:'⚖️', label:'Log weight',      bg:'#f0fdf4', action:"openQuickWeight()" },
-    { icon:'😴', label:'Log sleep',       bg:'#faf5ff', action:"openQuickSleep()" },
-  ];
-  const menu = document.createElement('div');
-  menu.className = 'quick-add-menu';
-  menu.id = 'quick-add-menu';
-  menu.innerHTML = items.map(item =>
-    `<div class="quick-add-item" onclick="${item.action};toggleQuickAdd()">
-      <div class="quick-add-icon" style="background:${item.bg};">${item.icon}</div>
-      <span class="quick-add-label">${item.label}</span>
-    </div>`
-  ).reverse().join('');
-  document.body.appendChild(menu);
-}
-
-function openQuickRun() {
-  document.getElementById('quick-run-modal').classList.add('open');
-  setTimeout(()=>{ const el=document.getElementById('quick-run-input'); if(el){el.value='';el.focus();} }, 150);
-}
-function quickLogRun() {
-  const input = document.getElementById('quick-run-input');
-  const val = input?.value?.trim();
-  if (!val) return;
-  // Log to today's run entries
-  const today = new Date();
-  addEntry(today.toISOString(), 'session:run', val);
-  document.getElementById('quick-run-modal').classList.remove('open');
-  showToast('Run logged ✓', 'var(--blue)');
-  if (currentPage==='week') renderWeek();
-}
-
-function openQuickGym() {
-  gymTab = 'log';
-  gymUserOverrideSession = false;
-  const gymBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b=>b.textContent.trim().includes('Gym'));
-  if (gymBtn) switchPage('gym', gymBtn);
-  else { currentPage='gym'; buildNav(); document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById('page-gym').classList.add('active'); renderGym(); }
-}
-
-function openQuickWeight() {
-  document.getElementById('quick-weight-modal').classList.add('open');
-  setTimeout(()=>{ const el=document.getElementById('quick-weight-input'); if(el){el.value='';el.focus();} }, 150);
-}
-function quickLogWeight() {
-  const input = document.getElementById('quick-weight-input');
-  const val = input?.value?.trim();
-  if (!val || isNaN(parseFloat(val))) return;
-  logWeight(val);
-  document.getElementById('quick-weight-modal').classList.remove('open');
-  showToast('Weight logged ✓', 'var(--green)');
-}
-
-function openQuickSleep() {
-  document.getElementById('quick-sleep-modal').classList.add('open');
-  updateQuickSleepStars();
-  setTimeout(()=>{ const el=document.getElementById('quick-sleep-input'); if(el){el.value='';el.focus();} }, 150);
-}
-function quickSetSleepQuality(n) {
-  updateQuickSleepStars();
-}
-function updateQuickSleepStars() {
-  for(let i=1;i<=5;i++) {
-    const el=document.getElementById('qss-'+i);
-  }
-}
-function quickLogSleep() {
-  const input = document.getElementById('quick-sleep-input');
-  const hours = input?.value?.trim();
-  if (!hours || isNaN(parseFloat(hours))) return;
-  document.getElementById('quick-sleep-modal').classList.remove('open');
-  showToast('Sleep logged ✓', 'var(--purple)');
-}
 
 // ══ WEEK RATING ══
 function setWeekRating(weekKey, rating) {
@@ -8097,36 +7889,6 @@ setTimeout(initModalSwipeDismiss, 500);
 setTimeout(renderAnomalies, 800);
 </script>
 
-<!-- QUICK ADD FAB -->
-<button class="quick-add-fab" id="quick-add-fab" onclick="toggleQuickAdd()">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-</button>
-
-<!-- QUICK ADD INLINE MODALS -->
-<div class="modal-overlay" id="quick-run-modal">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <h3>🏃 Log a run</h3>
-    <input type="text" id="quick-run-input" placeholder="e.g. 5k easy, 24:30, felt strong">
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="document.getElementById('quick-run-modal').classList.remove('open')">Cancel</button>
-      <button class="btn-primary" onclick="quickLogRun()">Save</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="quick-weight-modal">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <h3>⚖️ Log body weight</h3>
-    <input type="number" id="quick-weight-input" placeholder="e.g. 82.5" inputmode="decimal" style="font-size:24px;font-weight:800;text-align:center;">
-    <div style="text-align:center;font-size:14px;color:var(--text3);margin-top:-4px;margin-bottom:10px;">kg</div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="document.getElementById('quick-weight-modal').classList.remove('open')">Cancel</button>
-      <button class="btn-primary" onclick="quickLogWeight()">Save</button>
-    </div>
-  </div>
-</div>
 
 </html>
 

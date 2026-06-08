@@ -733,14 +733,14 @@ body.dark .gym-session-tab.active { background:var(--yellow); color:#111; border
 .gym-ex-last-pills { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
 .gym-ex-last-pill { font-size:11px; font-weight:600; color:var(--text2); background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:2px 7px; }
 .gym-sets-list { display:flex; flex-direction:column; gap:5px; margin-bottom:8px; }
-.gym-set-row { display:flex; align-items:center; gap:8px; }
+.gym-set-row { display:flex; align-items:center; gap:8px; touch-action:manipulation; }
 .gym-set-num { font-size:11px; font-weight:700; color:var(--text3); width:20px; flex-shrink:0; }
 .gym-set-input { width:64px; padding:6px 8px; border:1.5px solid var(--border); border-radius:8px; font-family:-apple-system,sans-serif; font-size:13px; font-weight:600; background:var(--card2); color:var(--text); outline:none; text-align:center; transition:border-color 0.12s; }
 .gym-set-input:focus { border-color:var(--ink); }
 body.dark .gym-set-input { background:#222; color:#f0f0f0; border-color:#333; }
 body.dark .gym-set-input:focus { border-color:var(--yellow); }
 .gym-set-x { font-size:12px; color:var(--text3); font-weight:700; }
-.gym-set-del { background:none; border:none; cursor:pointer; color:var(--text3); font-size:16px; padding:2px 4px; line-height:1; transition:color 0.12s; margin-left:auto; }
+.gym-set-del { background:none; border:none; cursor:pointer; color:var(--text3); font-size:16px; padding:8px; line-height:1; transition:color 0.12s; margin-left:auto; touch-action:manipulation; -webkit-tap-highlight-color:transparent; min-width:36px; min-height:36px; display:flex; align-items:center; justify-content:center; }
 .gym-set-del:active { color:var(--red); }
 .gym-overload { display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; margin-left:4px; }
 .gym-overload.up { color:var(--green); }

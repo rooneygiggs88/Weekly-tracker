@@ -1480,13 +1480,13 @@ body.dark .run-effort-grid { }
 
 <!-- WEEK PLAN EDIT MODAL -->
 <div id="week-plan-modal" class="modal-overlay" onclick="if(event.target===this)closeWeekPlanEdit()">
-  <div class="modal" style="max-height:85vh;overflow-y:auto;">
-    <div class="modal-header">
+  <div class="modal" style="max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
       <div class="modal-title" id="week-plan-modal-title">Edit Week Plan</div>
       <button class="modal-close" onclick="closeWeekPlanEdit()">×</button>
     </div>
-    <div id="week-plan-modal-body" style="padding:16px 16px 0;"></div>
-    <div style="padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;">
+    <div id="week-plan-modal-body" style="padding:16px 16px 0;overflow-y:auto;flex:1;"></div>
+    <div style="padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;border-top:1px solid var(--border);">
       <button class="btn-primary" onclick="saveWeekPlanEdit()">Save</button>
       <button class="btn-secondary" onclick="closeWeekPlanEdit()">Cancel</button>
     </div>
@@ -5251,14 +5251,11 @@ const PLAN_OPTIONS = [
   { value: 'Gym - Push',     label: 'Push',         type: 'Gym' },
   { value: 'Gym - Pull',     label: 'Pull',         type: 'Gym' },
   { value: 'Gym - Legs',     label: 'Legs',         type: 'Gym' },
-  { value: 'Gym - Upper',    label: 'Upper',        type: 'Gym' },
-  { value: 'Gym - Lower',    label: 'Lower',        type: 'Gym' },
-  { value: 'Gym - Full Body',label: 'Full Body',    type: 'Gym' },
   { value: 'Run - Easy',     label: 'Easy',         type: 'Run' },
   { value: 'Run - Tempo',    label: 'Tempo',        type: 'Run' },
   { value: 'Run - Intervals',label: 'Intervals',    type: 'Run' },
   { value: 'Run - Long Run', label: 'Long Run',     type: 'Run' },
-  { value: 'Cardio',         label: 'Cardio',       type: 'Other' },
+  { value: 'Run - Race',     label: 'Race',         type: 'Run' },
   { value: 'Active Recovery',label: 'Recovery',     type: 'Other' },
 ];
 

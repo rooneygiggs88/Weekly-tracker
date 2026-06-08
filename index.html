@@ -440,6 +440,7 @@ body.dark .wpe-select { background: #1a1a1a; color: #f0f0f0; border-color: #2a2a
 /* ── ANIMATIONS ── */
 @keyframes popIn { 0%{transform:scale(0.7);opacity:0;} 60%{transform:scale(1.1);} 100%{transform:scale(1);opacity:1;} }
 .dot-animate { animation: popIn 0.25s ease-out; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 ::-webkit-scrollbar { width: 0; height: 0; }
 
 /* ── SEGMENTED BUTTONS ── */
@@ -4074,15 +4075,62 @@ function renderGymLog() {
   const exercises = getSessionExercises(gymSession);
   const draft = loadGymDraft(gymSession);
   const hasDraftData = draft && Object.values(draft.sets||{}).some(sets=>Array.isArray(sets)&&sets.some(s=>s.weight||s.reps));
-  let durationHtml = '';
-  if (draft && draft.startedAt) {
-    const elapsed = Math.floor((Date.now()-draft.startedAt)/60000);
-    if (elapsed > 0) {
-      const h=Math.floor(elapsed/60), m=elapsed%60;
-      durationHtml = '<div style="display:flex;justify-content:center;padding:10px 16px 4px;"><div style="display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:var(--bg);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:800;letter-spacing:0.03em;">&#9201; '+(h>0?h+'h '+m+'m':m+'m')+'</div></div>';
-    }
+
+  // State detection
+  const todayKey = dk(new Date());
+  const gymData = loadGymData();
+  const todayLog = (gymData.logs||[]).find(l => dk(new Date(l.date)) === todayKey && l.sessionId === gymSession);
+  const sessionActive = !!(draft && draft.startedAt);
+
+  // State 3: Session already saved today
+  if (todayLog) {
+    const sessionName = todayLog.sessionId || gymSession;
+    const logDate = new Date(todayLog.date);
+    const timeStr = logDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const exRows = (todayLog.exercises||[]).map(ex => {
+      const exName = ex.name || ex;
+      const sets = ex.sets || [];
+      const workingSets = sets.filter(s => !s.warmup);
+      const setCount = workingSets.length;
+      const topWeight = setCount ? Math.max(...workingSets.map(s=>parseFloat(s.weight)||0)) : 0;
+      const summary = setCount + ' set' + (setCount!==1?'s':'') + (topWeight>0?' &middot; top '+topWeight+'kg':'');
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(22,163,74,0.15);">
+        <span style="font-size:14px;font-weight:600;color:var(--text);">${exName}</span>
+        <span style="font-size:12px;color:var(--green);font-weight:600;">${summary}</span>
+      </div>`;
+    }).join('');
+    return `<div style="margin:12px 16px;">
+      <div style="background:rgba(22,163,74,0.1);border:2px solid var(--green);border-radius:var(--radius);padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:28px;height:28px;background:#16a34a;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:var(--green);">Session Saved</div>
+            <div style="font-size:12px;color:var(--green);font-weight:600;">${sessionName} &middot; ${timeStr}</div>
+          </div>
+        </div>
+        ${exRows}
+      </div>
+      <button onclick="gymTab='history';renderGym();" style="display:block;width:100%;margin-top:10px;padding:12px;background:var(--card2);color:var(--text2);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:13px;font-weight:600;text-align:center;">
+        View full history &rarr;
+      </button>
+    </div>`;
   }
-  const draftBanner = hasDraftData ? '<div class="gym-draft-banner"><div style="font-size:12px;font-weight:700;">Draft restored</div><button onclick="clearGymDraft();gymLockedExercises={};initGymSets(gymSession);renderGym();" style="font-size:11px;font-weight:700;background:none;border:none;cursor:pointer;color:inherit;">Start fresh</button></div>' : '';
+
+  let durationHtml = '';
+  if (sessionActive) {
+    const elapsed = Math.floor((Date.now()-draft.startedAt)/60000);
+    const h=Math.floor(elapsed/60), m=elapsed%60;
+    const elapsedStr = h>0 ? h+'h '+m+'m' : (elapsed>0 ? m+'m' : '0m');
+    durationHtml = `<div style="display:flex;justify-content:center;padding:10px 16px 8px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:#16a34a;color:white;padding:8px 18px;border-radius:24px;font-size:14px;font-weight:800;letter-spacing:0.02em;">
+        <span style="width:8px;height:8px;background:white;border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;"></span>
+        Session active &middot; ${elapsedStr}
+      </div>
+    </div>`;
+  }
+  const draftBanner = hasDraftData && sessionActive ? '<div class="gym-draft-banner"><div style="font-size:12px;font-weight:700;">Draft restored</div><button onclick="clearGymDraft();gymLockedExercises={};initGymSets(gymSession);renderGym();" style="font-size:11px;font-weight:700;background:none;border:none;cursor:pointer;color:inherit;">Start fresh</button></div>' : '';
 
   const exerciseBlocks = exercises.map(ex => {
     const sets     = gymSets[ex] || [{reps:'',weight:''}];
@@ -4196,19 +4244,33 @@ function renderGymLog() {
         </button>
       </div>`;
 
-  const sessionActive = draft && draft.startedAt;
-  const startBtn = !sessionActive ? `<button onclick="startGymSession()" style="display:block;width:calc(100% - 32px);margin:0 16px 12px;padding:14px;background:var(--ink);color:var(--bg);border:none;border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:15px;font-weight:800;text-align:center;letter-spacing:0.05em;text-transform:uppercase;">
-    Start Session
-  </button>` : '';
+  const copyBtn = `<button onclick="copyLastGymSession()" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 16px 0;padding:11px;background:var(--card2);color:var(--text2);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:13px;font-weight:600;width:calc(100% - 32px);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    Copy last session
+  </button>`;
 
-  return draftBanner + durationHtml + startBtn + `<div id="gym-log-card" style="margin:0 16px;display:flex;flex-direction:column;gap:0;">
+  if (!sessionActive) {
+    // State 1: No session started — show locked overlay on exercise cards
+    const startBtn = `<button onclick="startGymSession()" style="display:block;width:calc(100% - 32px);margin:0 16px 12px;padding:15px;background:var(--green);color:white;border:none;border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:16px;font-weight:800;text-align:center;letter-spacing:0.05em;text-transform:uppercase;">
+      Start Session
+    </button>`;
+    const lockedExerciseBlocks = `<div onclick="showToast('Tap Start Session to begin','var(--orange)')" style="position:relative;cursor:pointer;">
+      <div style="pointer-events:none;opacity:0.45;">
+        <div id="gym-log-card" style="margin:0 16px;display:flex;flex-direction:column;gap:0;">
+          ${exerciseBlocks}
+          ${addExRow}
+        </div>
+      </div>
+    </div>`;
+    return copyBtn + startBtn + lockedExerciseBlocks;
+  }
+
+  // State 2: Session active
+  return draftBanner + durationHtml + `<div id="gym-log-card" style="margin:0 16px;display:flex;flex-direction:column;gap:0;">
     ${exerciseBlocks}
     ${addExRow}
   </div>
-  <button onclick="copyLastGymSession()" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 16px 0;padding:11px;background:var(--card2);color:var(--text2);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:13px;font-weight:600;width:calc(100% - 32px);">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-    Copy last session
-  </button>
+  ${copyBtn}
   <button class="gym-finish-btn" style="display:block;width:calc(100% - 32px);margin:8px 16px;" onclick="finishGymSession()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
     Finish &amp; Save Session

@@ -4681,13 +4681,15 @@ function renderWeightTab() {
   const chartHtml = allVals.length >= 2 ? renderWeightChart(chartVals, last30Keys) : '';
 
   // Recent log
-  const recentRows = sortedKeys.slice(-10).reverse().map(k => {
+  const recentRowArr = sortedKeys.slice(-10).reverse();
+  const recentRows = recentRowArr.map((k, i) => {
     const d = new Date(k+'T12:00:00');
     const label = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-    return `<div class="sleep-row">
-      <div class="sleep-date">${label}</div>
-      <div class="sleep-hours">${weights[k]}kg</div>
-      <button onclick="deleteWeight('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;margin-left:auto;">×</button>
+    const border = i < recentRowArr.length - 1 ? 'border-bottom:1px solid var(--border);' : '';
+    return `<div style="display:flex;align-items:center;padding:10px 14px;${border}">
+      <div style="font-size:12px;font-weight:700;color:var(--text3);width:90px;flex-shrink:0;">${label}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--ink);flex:1;">${weights[k]}<span style="font-size:12px;font-weight:600;color:var(--text3);margin-left:2px;">kg</span></div>
+      <button onclick="deleteWeight('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:4px 8px;line-height:1;touch-action:manipulation;">×</button>
     </div>`;
   }).join('');
   const logCard = sortedKeys.length ? `<div class="section"><div class="section-title"><span>Log</span></div><div class="card">${recentRows}</div></div>` : '';

@@ -723,10 +723,15 @@ body.dark .gym-session-tab.active { background:var(--yellow); color:#111; border
 
 .gym-exercise-row { padding:12px 16px; border-bottom:1px solid var(--border); }
 .gym-exercise-row:last-child { border-bottom:none; }
-.gym-ex-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.gym-ex-header { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+.gym-ex-header-top { display:flex; align-items:center; justify-content:space-between; }
 .gym-ex-name { font-size:14px; font-weight:700; color:var(--text); }
-.gym-ex-last { font-size:11px; color:var(--text3); font-weight:500; }
-.gym-ex-pb { font-size:10px; font-weight:800; color:var(--orange); text-transform:uppercase; letter-spacing:0.04em; margin-left:6px; }
+.gym-ex-meta { display:flex; flex-direction:column; gap:4px; padding-left:22px; }
+.gym-ex-pb-row { display:flex; align-items:center; gap:6px; }
+.gym-ex-pb { font-size:11px; font-weight:800; color:var(--orange); text-transform:uppercase; letter-spacing:0.04em; background:rgba(212,88,10,0.10); padding:2px 7px; border-radius:6px; }
+.gym-ex-last-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; }
+.gym-ex-last-pills { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+.gym-ex-last-pill { font-size:11px; font-weight:600; color:var(--text2); background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:2px 7px; }
 .gym-sets-list { display:flex; flex-direction:column; gap:5px; margin-bottom:8px; }
 .gym-set-row { display:flex; align-items:center; gap:8px; }
 .gym-set-num { font-size:11px; font-weight:700; color:var(--text3); width:20px; flex-shrink:0; }
@@ -4014,9 +4019,9 @@ function renderGymLog() {
       else                       overloadHtml = `<span class="gym-overload same">= same</span>`;
     }
 
-    const lastInfo = lastSets
-      ? 'Last: ' + lastSets.map(s=>`${s.weight}kg\u00d7${s.reps}`).join(', ')
-      : 'No previous data';
+    const lastPills = lastSets
+      ? lastSets.map(s=>`<span class="gym-ex-last-pill">${s.weight}kg&times;${s.reps}</span>`).join('')
+      : '<span class="gym-ex-last-pill" style="color:var(--text3);">No previous data</span>';
     const prBadge = pr ? `<span class="gym-ex-pb">PB ${pr.weight}kg</span>` : '';
 
     const exKey = ex.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -4059,13 +4064,17 @@ function renderGymLog() {
       ondrop="gymExDrop(event,'${exSafe}')"
       ondragend="gymExDragEnd(event)">
       <div class="gym-ex-header">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="color:var(--text3);font-size:14px;cursor:grab;padding:0 2px;">&#9776;</span>
-          <span class="gym-ex-name">${ex}</span>${prBadge}
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="gym-ex-last">${lastInfo}</span>
+        <div class="gym-ex-header-top">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="color:var(--text3);font-size:14px;cursor:grab;padding:0 2px;">&#9776;</span>
+            <span class="gym-ex-name">${ex}</span>
+          </div>
           <button data-gym="remove-ex" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 4px;line-height:1;transition:color 0.12s;" title="Remove exercise">&#215;</button>
+        </div>
+        <div class="gym-ex-meta">
+          ${prBadge ? `<div class="gym-ex-pb-row">${prBadge}</div>` : ''}
+          <div class="gym-ex-last-label">Last session</div>
+          <div class="gym-ex-last-pills">${lastPills}</div>
         </div>
       </div>
       <div class="gym-sets-list">${setRows}</div>

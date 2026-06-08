@@ -4087,9 +4087,7 @@ function renderGymLog() {
     const sessionName = todayLog.sessionId || gymSession;
     const logDate = new Date(todayLog.date);
     const timeStr = logDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    const exRows = (todayLog.exercises||[]).map(ex => {
-      const exName = ex.name || ex;
-      const sets = ex.sets || [];
+    const exRows = Object.entries(todayLog.exercises||{}).map(([exName, sets]) => {
       const workingSets = sets.filter(s => !s.warmup);
       const setCount = workingSets.length;
       const topWeight = setCount ? Math.max(...workingSets.map(s=>parseFloat(s.weight)||0)) : 0;

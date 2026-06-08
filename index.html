@@ -7625,37 +7625,83 @@ function renderBodyCompSection() {
     ${latestBF ? `<div class="metric-cell"><div class="metric-val">${latestBF}%</div><div class="metric-unit">Body fat${bfChange !== null ? ' ('+(bfChange>0?'+':'')+bfChange+'%)' : ''}</div></div>` : ''}
   </div>`;
 
-  // Combined 8-week chart
-  const last56Keys = [];
-  for (let i=55;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); last56Keys.push(dk(d)); }
-  const wVals = last56Keys.map(k => weights[k]||null);
-  const bfVals = last56Keys.map(k => bfData[k]||null);
-  const W=320,H=80,PL=8,PR=8,PT=8,PB=18;
-  const chartW=W-PL-PR, chartH=H-PT-PB, n=last56Keys.length;
+  // Combined chart — range from first data point to today
+  const allDataKeys = [...new Set([...wKeys, ...bfKeys])].sort();
+  const firstKey = allDataKeys[0];
+  const chartKeys = [];
+  if (firstKey) {
+    const start = new Date(firstKey + 'T12:00:00');
+    const today2 = new Date(); today2.setHours(12,0,0,0);
+    for (let d = new Date(start); d <= today2; d.setDate(d.getDate()+1)) {
+      chartKeys.push(dk(d));
+    }
+  }
+  const wVals = chartKeys.map(k => weights[k]||null);
+  const bfVals = chartKeys.map(k => bfData[k]||null);
+  const W=320, H=90, PL=8, PR=40, PT=8, PB=18;
+  const chartW=W-PL-PR, chartH=H-PT-PB, n=Math.max(chartKeys.length,2);
   const xStep=chartW/(n-1);
   function px(i){return PL+i*xStep;}
 
+  // 7-day rolling average helper
+  function rollingAvg(vals, window) {
+    return vals.map((v,i) => {
+      const slice = vals.slice(Math.max(0,i-window+1), i+1).filter(x=>x!==null);
+      return slice.length ? slice.reduce((a,b)=>a+b,0)/slice.length : null;
+    });
+  }
+
+  const wRolling = rollingAvg(wVals, 7);
+  const bfRolling = rollingAvg(bfVals, 7);
+
+  const wFilled  = wVals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+  const bfFilled = bfVals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+
   let wLine='', bfLine='';
-  const wFilled=wVals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
-  const bfFilled=bfVals.map((v,i)=>({v,i})).filter(x=>x.v!==null);
 
   if (wFilled.length >= 2) {
     const minV=Math.min(...wFilled.map(x=>x.v)), maxV=Math.max(...wFilled.map(x=>x.v)), range=maxV-minV||1;
     function pyW(v){return PT+chartH-((v-minV)/range)*chartH;}
-    wLine = '<path d="M'+wFilled.map(x=>`${px(x.i)},${pyW(x.v)}`).join(' L')+'" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
-    wLine += wFilled.map(x=>`<circle cx="${px(x.i)}" cy="${pyW(x.v)}" r="2.5" fill="var(--red)" opacity="0.7"/>`).join('');
+    // Daily dots + thin line
+    wLine = '<path d="M'+wFilled.map(x=>`${px(x.i).toFixed(1)},${pyW(x.v).toFixed(1)}`).join(' L')+'" fill="none" stroke="var(--red)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>';
+    wLine += wFilled.map(x=>`<circle cx="${px(x.i).toFixed(1)}" cy="${pyW(x.v).toFixed(1)}" r="2" fill="var(--red)" opacity="0.5"/>`).join('');
+    // 7-day rolling average — thicker line
+    const wRolFilled = wRolling.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+    if (wRolFilled.length >= 2) {
+      wLine += '<path d="M'+wRolFilled.map(x=>`${px(x.i).toFixed(1)},${pyW(x.v).toFixed(1)}`).join(' L')+'" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+      // End label
+      const last = wRolFilled[wRolFilled.length-1];
+      const labelVal = last.v.toFixed(1) + 'kg';
+      wLine += `<text x="${(px(last.i)+4).toFixed(1)}" y="${(pyW(last.v)+3.5).toFixed(1)}" font-size="8.5" font-weight="800" fill="var(--red)" font-family="-apple-system,sans-serif">${labelVal}</text>`;
+    }
   }
+
   if (bfFilled.length >= 2) {
     const minV=Math.min(...bfFilled.map(x=>x.v)), maxV=Math.max(...bfFilled.map(x=>x.v)), range=maxV-minV||1;
     function pyBF(v){return PT+chartH-((v-minV)/range)*chartH;}
-    bfLine = '<path d="M'+bfFilled.map(x=>`${px(x.i)},${pyBF(x.v)}`).join(' L')+'" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 2"/>';
-    bfLine += bfFilled.map(x=>`<circle cx="${px(x.i)}" cy="${pyBF(x.v)}" r="2.5" fill="var(--blue)" opacity="0.7"/>`).join('');
+    // Daily dots + thin dashed line
+    bfLine = '<path d="M'+bfFilled.map(x=>`${px(x.i).toFixed(1)},${pyBF(x.v).toFixed(1)}`).join(' L')+'" fill="none" stroke="var(--blue)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2" opacity="0.45"/>';
+    bfLine += bfFilled.map(x=>`<circle cx="${px(x.i).toFixed(1)}" cy="${pyBF(x.v).toFixed(1)}" r="2" fill="var(--blue)" opacity="0.5"/>`).join('');
+    // 7-day rolling average — thicker dashed line
+    const bfRolFilled = bfRolling.map((v,i)=>({v,i})).filter(x=>x.v!==null);
+    if (bfRolFilled.length >= 2) {
+      bfLine += '<path d="M'+bfRolFilled.map(x=>`${px(x.i).toFixed(1)},${pyBF(x.v).toFixed(1)}`).join(' L')+'" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 2"/>';
+      const last = bfRolFilled[bfRolFilled.length-1];
+      const labelVal = last.v.toFixed(1) + '%';
+      bfLine += `<text x="${(px(last.i)+4).toFixed(1)}" y="${(pyBF(last.v)+3.5).toFixed(1)}" font-size="8.5" font-weight="800" fill="var(--blue)" font-family="-apple-system,sans-serif">${labelVal}</text>`;
+    }
   }
-  const labelStep=Math.floor(n/4);
-  const labels=last56Keys.map((k,i)=>{
-    if(i%labelStep!==0&&i!==n-1) return '';
-    const d=new Date(k+'T12:00:00');
-    return `<text x="${px(i)}" y="${H+4}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
+
+  // X-axis: ~4 evenly spaced date labels
+  const labelCount = 4;
+  const labelStep = Math.max(1, Math.floor((chartKeys.length-1) / (labelCount-1)));
+  const labels = chartKeys.map((k,i) => {
+    const isFirst = i === 0;
+    const isLast  = i === chartKeys.length-1;
+    if (!isFirst && !isLast && i % labelStep !== 0) return '';
+    const d = new Date(k+'T12:00:00');
+    const anchor = i === 0 ? 'start' : i === chartKeys.length-1 ? 'end' : 'middle';
+    return `<text x="${px(i).toFixed(1)}" y="${H+4}" text-anchor="${anchor}" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
   }).join('');
 
   const chartHtml = (wFilled.length >= 2 || bfFilled.length >= 2) ? `
@@ -7663,6 +7709,7 @@ function renderBodyCompSection() {
       <div style="display:flex;gap:14px;margin-bottom:8px;">
         ${wFilled.length ? '<span style="font-size:11px;font-weight:700;color:var(--red);">— Weight</span>' : ''}
         ${bfFilled.length ? '<span style="font-size:11px;font-weight:700;color:var(--blue);">– – Body fat</span>' : ''}
+        <span style="font-size:10px;color:var(--text3);font-weight:600;margin-left:auto;">thick = 7d avg</span>
       </div>
       <svg width="100%" viewBox="0 0 ${W} ${H+8}" style="height:${H+8}px;overflow:visible;">
         ${wLine}${bfLine}${labels}

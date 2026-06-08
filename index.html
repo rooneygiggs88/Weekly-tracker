@@ -765,6 +765,8 @@ body.dark .gym-finish-btn { box-shadow:0 2px 0 rgba(0,0,0,0.4); }
 /* Warm-up button */
 .gym-warmup-btn { width:32px; height:32px; border-radius:8px; border:1.5px solid var(--border); background:var(--card2); color:var(--text3); font-size:11px; font-weight:800; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:-apple-system,sans-serif; transition:all 0.12s; }
 .gym-warmup-btn.active { background:var(--yellow); border-color:var(--ink); color:var(--ink); }
+.gym-done-btn { width:32px; height:32px; border-radius:8px; border:1.5px solid var(--border); background:var(--card2); color:var(--text3); font-size:15px; font-weight:800; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:-apple-system,sans-serif; transition:all 0.15s; }
+.gym-done-btn.active { background:#1a7a4a; border-color:#1a7a4a; color:#fff; transform:scale(1.08); }
 
 /* Set number */
 .gym-set-num { font-size:10px; font-weight:800; color:var(--text3); width:28px; flex-shrink:0; text-align:center; }
@@ -3833,6 +3835,7 @@ function attachGymLogEvents() {
     const idx = btn.dataset.idx !== undefined ? parseInt(btn.dataset.idx) : null;
 
     if (action === 'warmup'   && ex !== null && idx !== null) toggleWarmup(ex, idx);
+    if (action === 'done-set' && ex !== null && idx !== null) toggleSetDone(ex, idx);
     if (action === 'del-set'  && ex !== null && idx !== null) removeGymSet(ex, idx);
     if (action === 'add-set'  && ex !== null) addGymSet(ex);
     if (action === 'finish-ex'&& ex !== null) finishExercise(ex);
@@ -3888,7 +3891,7 @@ function finishExercise(ex) {
     row.classList.add('locked');
     row.style.background = '#f0faf4';
     row.style.border = '2px solid #1a7a4a';
-    const wSets = (gymSets[ex]||[]).filter(function(s){ return !s.warmup && s.weight && s.reps; });
+    const wSets = (gymSets[ex]||[]).filter(function(s){ return !s.warmup && s.done; });
     const topWeight = wSets.length ? Math.max.apply(null, wSets.map(function(s){ return parseFloat(s.weight)||0; })) : 0;
     row.querySelectorAll('.gym-add-set-btn, .gym-finish-ex-btn').forEach(function(el){ el.remove(); });
     var summary = document.createElement('div');
@@ -4028,7 +4031,7 @@ function renderGymLog() {
 
     const setRows = sets.map((set, idx) => {
       const isLast = idx === sets.length - 1;
-      const isDone = !!(set.weight && set.reps);
+      const isDone = !!set.done;
       const isWarmup = !!set.warmup;
       const workingBefore = sets.slice(0,idx).filter(function(s){return !s.warmup;}).length;
       const setLabel = isWarmup
@@ -4038,6 +4041,7 @@ function renderGymLog() {
       const wBtn = showW
         ? '<button class="gym-warmup-btn' + (isWarmup?' active':'') + '" data-gym="warmup" data-idx="' + idx + '">W</button>'
         : '<span style="width:36px;flex-shrink:0;"></span>';
+      const doneBtn = '<button class="gym-done-btn' + (isDone?' active':'') + '" data-gym="done-set" data-idx="' + idx + '">&#10003;</button>';
       return '<div class="gym-set-row' + (isWarmup?' gym-set-warmup':'') + '">'
         + setLabel
         + '<input class="gym-set-input" type="number" placeholder="kg" value="' + (set.weight||'') + '"'
@@ -4052,6 +4056,7 @@ function renderGymLog() {
           : ' data-gym-key="next"')
         + ' inputmode="numeric" autocomplete="off">'
         + overloadHtml
+        + doneBtn
         + wBtn
         + '<button class="gym-set-del" data-gym="del-set" data-idx="' + idx + '">&#215;</button>'
         + '</div>';
@@ -4080,14 +4085,14 @@ function renderGymLog() {
       <div class="gym-sets-list">${setRows}</div>
       ${(() => {
         if (gymLockedExercises[ex]) {
-          const wSets = sets.filter(s => !s.warmup && s.weight && s.reps);
+          const wSets = sets.filter(s => !s.warmup && s.done);
           const topW = wSets.length ? Math.max(...wSets.map(s=>parseFloat(s.weight)||0)) : 0;
           return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 12px;">'
             + '<div style="font-size:12px;font-weight:700;color:#1a7a4a;">&#10003; ' + wSets.length + ' set' + (wSets.length!==1?'s':'') + ' logged' + (topW>0?' &middot; top '+topW+'kg':'') + '</div>'
             + '<button data-gym="unlock" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;font-weight:700;padding:0;text-decoration:underline;">Edit</button>'
             + '</div>';
         }
-        const wCount = sets.filter(s => !s.warmup && s.weight && s.reps).length;
+        const wCount = sets.filter(s => !s.warmup && s.done).length;
         return '<button class="gym-add-set-btn" data-gym="add-set">'
           + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add set</button>'
           + (wCount > 0 ? '<button class="gym-finish-ex-btn" data-gym="finish-ex">Done &mdash; ' + wCount + ' set' + (wCount!==1?'s':'') + ' logged &#10003;</button>' : '');
@@ -4131,12 +4136,21 @@ function updateGymSet(ex, idx, field, val) {
   if (!gymSets[ex]) return;
   gymSets[ex][idx][field] = val;
   saveGymDraft();
-  if (field === 'reps' && val && gymSets[ex][idx].weight) {
+}
+function toggleSetDone(ex, idx) {
+  if (!gymSets[ex] || !gymSets[ex][idx]) return;
+  const set = gymSets[ex][idx];
+  set.done = !set.done;
+  saveGymDraft();
+  if (set.done) {
     const lib = loadExerciseLibrary();
     const entry = Object.entries(lib).find(([k]) => k.toLowerCase() === ex.toLowerCase());
     const restSecs = (entry && !Array.isArray(entry[1])) ? (entry[1].restSeconds || 90) : 90;
     startRestTimer(restSecs);
+  } else {
+    clearRestTimer();
   }
+  renderGym();
 }
 function addGymSet(ex) {
   if (!gymSets[ex]) gymSets[ex] = [];
@@ -4189,7 +4203,7 @@ function finishGymSession() {
   let hasData = false;
   const loggedExercises = {};
   exercises.forEach(ex => {
-    const sets = (gymSets[ex]||[]).filter(s=>(s.weight||s.reps)&&!s.warmup).map(({warmup,...rest})=>rest);
+    const sets = (gymSets[ex]||[]).filter(s=>s.done&&!s.warmup).map(({warmup,done,...rest})=>rest);
     if (sets.length) { loggedExercises[ex] = sets; hasData = true; }
   });
   if (!hasData) { alert('Log at least one set before saving.'); return; }

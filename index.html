@@ -2776,38 +2776,39 @@ function renderRunAnalysis() {
     const longRuns = runs.filter(r=>r.km && r.effort==='long')
       .sort((a,b)=>a.date-b.date);
     if(longRuns.length < 2) return `<div class="section"><div class="section-title"><span>🏃 Long run progression</span></div><div class="card"><div class="empty-state" style="padding:16px;">Log 2+ runs tagged as <strong>Long Run</strong> to see your progression.</div></div></div>`;
-    const W=320,H=110,PT=14,PB=22,PL=8,PR=8;
+    const W=320,H=120,PT=14,PB=22,PL=8,PR=8;
     const chartH=H-PT-PB, chartW=W-PL-PR;
-    const maxKm = Math.max(...longRuns.map(r=>r.km), 1);
-    // Plan long run targets by week (Monday-aligned)
-    const PLAN_LONG = {'2026-03-16':18,'2026-03-23':22,'2026-03-30':28,'2026-04-06':26,'2026-04-13':16,'2026-04-20':5,'2026-04-27':2.5};
-    const slotW = chartW/longRuns.length;
-    const barW  = Math.max(8,Math.floor(slotW*0.6));
+    const maxKm  = Math.max(...longRuns.map(r=>r.km), 1);
+    const slotW  = chartW/longRuns.length;
+    const barW   = Math.max(8,Math.floor(slotW*0.6));
+
+    // Trend line points (connect bar tops)
+    const cxArr = longRuns.map((_,i) => PL + slotW*i + slotW/2);
+    const cyArr = longRuns.map(r => PT + chartH - Math.max(4, Math.round((r.km/maxKm)*chartH)));
+    const trendLineD = cxArr.map((x,i) => `${i===0?'M':'L'}${x.toFixed(1)},${cyArr[i].toFixed(1)}`).join(' ');
 
     const bars = longRuns.map((r,i)=>{
-      const cx  = PL + slotW*i + slotW/2;
-      const x   = cx - barW/2;
-      const bh  = Math.max(4,Math.round((r.km/maxKm)*chartH));
-      const by  = PT+chartH-bh;
-      const isLast = i===longRuns.length-1;
-      const isPB   = r.km === maxKm;
-      const fill   = isPB ? 'url(#longGradPB)' : 'url(#longGrad)';
-      const dateLabel = r.date.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-      // plan target for this run's week
-      const runMonKey = dk(getMonday(r.date));
-      const planTarget = PLAN_LONG[runMonKey];
-      const tLine = planTarget ? `<line x1="${(cx-barW/2).toFixed(1)}" y1="${(PT+chartH-(planTarget/maxKm)*chartH).toFixed(1)}" x2="${(cx+barW/2).toFixed(1)}" y2="${(PT+chartH-(planTarget/maxKm)*chartH).toFixed(1)}" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>` : '';
-      const pbBadge = isPB ? `<text x="${cx.toFixed(1)}" y="${(by-4).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--green)" font-family="-apple-system,sans-serif" font-weight="800">PB</text>` : '';
-      return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${fill}" opacity="0.9"/>
-        ${tLine}${pbBadge}
-        <text x="${cx.toFixed(1)}" y="${(H-10).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${r.km.toFixed(1)}k</text>
+      const cx    = cxArr[i];
+      const x     = cx - barW/2;
+      const bh    = Math.max(4, Math.round((r.km/maxKm)*chartH));
+      const by    = PT+chartH-bh;
+      const isPB  = r.km === maxKm;
+      const isLast = i === longRuns.length-1;
+      const fill  = isPB ? 'url(#longGradPB)' : 'url(#longGrad)';
+      const d     = r.date;
+      const dateLabel = `${d.getDate()}/${d.getMonth()+1}`;
+      const pbBadge = isPB ? `<text x="${cx.toFixed(1)}" y="${(by-5).toFixed(1)}" text-anchor="middle" font-size="8" fill="#f59e0b" font-family="-apple-system,sans-serif" font-weight="800">PB</text>` : '';
+      const valLabel = (isPB || isLast) ? `<text x="${cx.toFixed(1)}" y="${(H-11).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${r.km.toFixed(1)}k</text>` : '';
+      return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${fill}" opacity="0.85"/>
+        ${pbBadge}${valLabel}
         <text x="${cx.toFixed(1)}" y="${(H-1).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif">${dateLabel}</text>`;
     }).join('');
 
     const latestLong = longRuns[longRuns.length-1];
     const prevLong   = longRuns[longRuns.length-2];
-    const trend = latestLong.km > prevLong.km ? `↑ ${(latestLong.km-prevLong.km).toFixed(1)}km longer than last` : latestLong.km < prevLong.km ? `↓ ${(prevLong.km-latestLong.km).toFixed(1)}km shorter (taper?)` : '→ Same as last long run';
-    const trendCol = latestLong.km >= prevLong.km ? 'var(--green)' : 'var(--text3)';
+    const diff = latestLong.km - prevLong.km;
+    const trend    = diff > 0 ? `↑ +${diff.toFixed(1)}km vs last` : diff < 0 ? `↓ ${diff.toFixed(1)}km vs last` : '→ Same as last';
+    const trendCol = diff >= 0 ? 'var(--green)' : 'var(--text3)';
 
     return `<div class="section"><div class="section-title"><span>🏃 Long run progression</span><span style="font-size:10px;font-weight:700;color:${trendCol};text-transform:none;letter-spacing:0;">${trend}</span></div><div class="card">
       <div class="mini-chart-wrap" style="padding-top:6px;">
@@ -2823,11 +2824,11 @@ function renderRunAnalysis() {
             </linearGradient>
           </defs>
           ${bars}
+          <path d="${trendLineD}" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-dasharray="4,3" stroke-linejoin="round" stroke-linecap="round"/>
         </svg>
       </div>
       <div style="display:flex;align-items:center;gap:14px;padding:0 14px 10px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:10px;height:10px;background:#fbbf24;border-radius:2px;"></div>Personal best</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:18px;height:2px;background:var(--red);border-radius:1px;"></div>Plan target</div>
       </div>
     </div></div>`;
   })();

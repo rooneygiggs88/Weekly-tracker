@@ -2095,7 +2095,7 @@ function renderStats(){
     predicted: ()=>renderPredictedSection(),
     overload: ()=>renderProgressiveOverloadSection(),
   };
-  pOrder.forEach(id=>{ if(pVis[id]!==false && sectionRenderers[id]) html+=sectionRenderers[id](); });
+  pOrder.forEach(id=>{ if(sectionRenderers[id]) html+=sectionRenderers[id](); });
   c.innerHTML=html;
   renderAnomalies();
 }
@@ -6761,7 +6761,6 @@ function renderProgressEditor() {
       <span class="pei-handle">&#9776;</span>
       <span class="pei-icon">${sec.icon}</span>
       <span class="pei-label">${sec.label}</span>
-      <button class="pei-toggle${isOn?' on':''}" onclick="toggleProgressSection('${id}')" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()"><div class="pei-knob"></div></button>
     </div>`;
   }).join('');
 }

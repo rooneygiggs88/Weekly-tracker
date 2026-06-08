@@ -7627,8 +7627,10 @@ function renderBodyCompSection() {
   </div>`;
 
   // Combined chart — range from first data point to today
-  const bothKeys = wKeys.filter(k => bfData[k] !== undefined).sort();
-  const firstKey = bothKeys[0];
+  // Start from whichever metric was logged last (so both have at least some data)
+  const firstKey = wKeys.length && bfKeys.length
+    ? (wKeys[0] > bfKeys[0] ? wKeys[0] : bfKeys[0])
+    : (wKeys[0] || bfKeys[0] || null);
   const chartKeys = [];
   if (firstKey) {
     const start = new Date(firstKey + 'T12:00:00');

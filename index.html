@@ -2029,9 +2029,8 @@ function renderStats(){
   const dates=getDatesForPeriod();
   const goals=allAnalyticsGoals();
   const c=document.getElementById('stats-content');
-  const maxWeeks=Math.ceil(PERIODS[selectedPeriod].days/7);
-  const weeks=getWeeklyHistory(maxWeeks);
-  const allWeeks=getWeeklyHistory();
+  const weeks=getWeeklyHistory();
+  const allWeeks=weeks;
   const bestWk=allWeeks.length?Math.max(...allWeeks.map(w=>w.pct)):0;
   const{total,done}=weekScore(dates);
   const pct=total?Math.round((done/total)*100):0;
@@ -2083,39 +2082,58 @@ function renderTrendSection(weeks){
   const displayWeeks=weeks.slice().reverse();
   const series=weekSeries(selectedTrendGoal);
   const avg=Math.round(series.reduce((a,b)=>a+b,0)/series.length);
-  const W=320,H=90,PL=8,PR=30,PT=10,PB=22;
-  const chartW=W-PL-PR,chartH=H-PT-PB,n=series.length;
-  const xStep=n>1?chartW/(n-1):0;
+  const n=series.length;
+  const W=320,H=100,PL=28,PR=8,PT=10,PB=28;
+  const chartW=W-PL-PR,chartH=H-PT-PB;
+  const xStep=n>1?chartW/(n-1):chartW;
   function px(i){return PL+i*xStep;}
   function py(v){return PT+chartH-(v/100)*chartH;}
-  const linePts=series.map((v,i)=>(i===0?'M':'L')+`${px(i)},${py(v)}`).join(' ');
-  const areaPath=`M${px(0)},${py(0)} ${series.map((v,i)=>`L${px(i)},${py(v)}`).join(' ')} L${px(n-1)},${PT+chartH} L${px(0)},${PT+chartH} Z`;
+  const linePts=series.map((v,i)=>(i===0?'M':'L')+`${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
+  const areaPath=`M${px(0)},${py(0)} ${series.map((v,i)=>`L${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ')} L${px(n-1)},${PT+chartH} L${px(0)},${PT+chartH} Z`;
   const avgY=py(avg);
-  const labelStep=Math.max(1,Math.floor(n/4));
-  const xLabels=displayWeeks.map((w,i)=>{ if(i%labelStep!==0&&i!==n-1) return ''; const _d=w.dates[0]; return `${_d.getDate()}/${_d.getMonth()+1}`; });
+
+  // Smart x-axis labels: show month boundaries
+  const xLabels=[];
+  let lastMonth=-1;
+  displayWeeks.forEach((w,i)=>{
+    const m=w.dates[0].getMonth();
+    const showLabel = n<=8 ? i%2===0||i===n-1 : m!==lastMonth;
+    if(showLabel){
+      const d=w.dates[0];
+      const label = n<=8 ? `${d.getDate()}/${d.getMonth()+1}` : d.toLocaleDateString('en-GB',{month:'short'})+(n>26?` '${String(d.getFullYear()).slice(2)}`:'');
+      xLabels.push({i,label});
+      lastMonth=m;
+    }
+  });
+
+  // Y-axis gridlines at 0, 50, 100
+  const yGridLines = [0,50,100].map(v=>`
+    <line x1="${PL}" y1="${py(v)}" x2="${W-PR}" y2="${py(v)}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="${v===0?'none':'3 3'}"/>
+    <text x="${PL-3}" y="${py(v)+3}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${v}%</text>
+  `).join('');
+
+  // Dots — only show if ≤20 weeks
+  const dots = n<=20 ? series.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="2.5" fill="#6c63ff"/>`).join('') : '';
+
   const tabsHtml=trendGoals.map(g=>`<button class="trend-tab${selectedTrendGoal===g.id?' active':''}" onclick="setTrendGoal('${g.id}')">${g.icon} ${g.name}</button>`).join('');
-  return`<div class="section"><div class="section-title"><span>Weekly trend</span><span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:none;letter-spacing:0;font-weight:700;">avg ${avg}%</span></div>
+  return`<div class="section"><div class="section-title"><span>Weekly trend</span><span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:none;letter-spacing:0;">${n} weeks · avg ${avg}%</span></div>
   <div class="card">
     <div class="trend-tabs" style="padding-bottom:8px;">${tabsHtml}</div>
     <div class="trend-wrap">
-      <svg class="trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px;">
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;overflow:visible;">
         <defs>
           <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#6c63ff" stop-opacity="0.3"/>
             <stop offset="100%" stop-color="#6c63ff" stop-opacity="0"/>
           </linearGradient>
-          <linearGradient id="trendLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#6c63ff"/>
-            <stop offset="100%" stop-color="#a78bfa"/>
-          </linearGradient>
         </defs>
-        <line class="trend-axis" x1="${PL}" y1="${PT+chartH}" x2="${W-PR}" y2="${PT+chartH}"/>
-        <line class="avg-line" x1="${PL}" y1="${avgY}" x2="${W-PR}" y2="${avgY}"/>
-        <text class="trend-label" x="${W-PR+4}" y="${avgY+3}" font-size="9">avg</text>
-        <path class="trend-area" d="${areaPath}"/>
-        <path class="trend-line" d="${linePts}"/>
-        ${series.map((v,i)=>`<circle class="trend-dot-bg" cx="${px(i)}" cy="${py(v)}" r="3.5"/><circle class="trend-dot" cx="${px(i)}" cy="${py(v)}" r="2.5"/>`).join('')}
-        ${xLabels.map((l,i)=>l?`<text class="trend-label" x="${px(i)}" y="${H-3}" text-anchor="middle">${l}</text>`:'').join('')}
+        ${yGridLines}
+        <line x1="${PL}" y1="${avgY}" x2="${W-PR}" y2="${avgY}" stroke="#6c63ff" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+        <text x="${W-PR+4}" y="${avgY+3}" font-size="8" fill="#6c63ff" font-family="-apple-system,sans-serif">avg</text>
+        <path d="${areaPath}" fill="url(#trendGrad)"/>
+        <path d="${linePts}" fill="none" stroke="#6c63ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dots}
+        ${xLabels.map(({i,label})=>`<text x="${px(i)}" y="${H-2}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${label}</text>`).join('')}
       </svg>
     </div>
   </div></div>`;
@@ -3355,11 +3373,22 @@ function computePrediction(){
 
 // ── FATIGUE INDICATOR ──
 function computeFatigue(){
-  // 7-day load vs 28-day rolling average, counting all activity
   function loadForDay(date){
     let score=0;
+    // Daily habit goals — 1 point each
     allDailyGoals().forEach(g=>{if(goalDone(date,{...g,atype:'daily'}))score++;});
-    allSessionGoals().forEach(g=>{if(getEntries(date,`session:${g.id}`).length>0)score++;});
+    // Session goals — 1 point each
+    allSessionGoals().forEach(g=>{
+      const entries = getEntries(date,`session:${g.id}`);
+      if(entries.length>0) score++;
+    });
+    // Gym session logged that day — extra 2 points (total 3 with session goal)
+    const gymDk = dk(date);
+    const gymLogs = (loadGymData().logs||[]).filter(l=>dk(new Date(l.date))===gymDk);
+    if(gymLogs.length>0) score+=2;
+    // Run logged that day — extra 1 point (total 2 with session goal)
+    const runEntries = getEntries(date,'session:run');
+    if(runEntries.length>0) score+=1;
     return score;
   }
   const days7=[]; for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);days7.push(d);}
@@ -4181,6 +4210,28 @@ function renderGymLog() {
     const lastPills = lastSets
       ? lastSets.map(s=>`<span class="gym-ex-last-pill">${s.weight}kg&times;${s.reps}</span>`).join('')
       : '<span class="gym-ex-last-pill" style="color:var(--text3);">No previous data</span>';
+
+    // Progressive overload suggestion
+    let overloadHtml = '';
+    if (lastSets && lastSets.length) {
+      const lastWorking = lastSets.filter(s => !s.warmup);
+      if (lastWorking.length) {
+        const topSet = lastWorking.reduce((a,b) => (parseFloat(b.weight)||0) > (parseFloat(a.weight)||0) ? b : a);
+        const lastW = parseFloat(topSet.weight) || 0;
+        const lastR = parseInt(topSet.reps) || 0;
+        if (lastW > 0) {
+          const suggestW = lastR >= 8 ? (lastW + 2.5) : lastW;
+          const suggestR = lastR >= 8 ? lastR : lastR + 1;
+          const arrow = suggestW > lastW ? '↑' : '→';
+          overloadHtml = `<div style="display:flex;align-items:center;gap:5px;margin-top:4px;padding:4px 8px;background:rgba(22,163,74,0.08);border-radius:6px;border-left:3px solid var(--green);">
+            <span style="font-size:11px;font-weight:800;color:var(--green);">${arrow} Target</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text2);">${suggestW}kg × ${suggestR} reps</span>
+            ${suggestW > lastW ? '<span style="font-size:10px;color:var(--green);font-weight:700;">+2.5kg</span>' : '<span style="font-size:10px;color:var(--text3);font-weight:700;">+1 rep</span>'}
+          </div>`;
+        }
+      }
+    }
+
     const prBadge = pr ? `<span class="gym-ex-pb">PB ${pr.weight}kg</span>` : '';
 
     const exKey = ex.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -4226,7 +4277,8 @@ function renderGymLog() {
         + doneBtn
         + wBtn
         + '<button class="gym-set-del" data-gym="del-set" data-idx="' + idx + '">&#215;</button>'
-        + '</div>';
+        + '</div>'
+        + `<div id="plates-${exKey.replace(/[^a-zA-Z0-9]/g,'_')}-${idx}" style="padding:0 2px 2px 36px;font-size:10px;line-height:1.6;"></div>`;
     }).join('');
 
     const exSafe = ex.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -4247,6 +4299,7 @@ function renderGymLog() {
           ${prBadge ? `<div class="gym-ex-pb-row">${prBadge}</div>` : ''}
           <div class="gym-ex-last-label">Last session</div>
           <div class="gym-ex-last-pills">${lastPills}</div>
+          ${overloadHtml}
         </div>
       </div>
       <div class="gym-sets-list">${setRows}</div>
@@ -4331,7 +4384,35 @@ function updateGymSet(ex, idx, field, val) {
   if (!gymSets[ex]) return;
   gymSets[ex][idx][field] = val;
   saveGymDraft();
+  if (field === 'weight') updatePlateDisplay(ex, idx);
 }
+
+function calcPlates(totalKg) {
+  const barKg = 20;
+  const plates = [25, 20, 15, 10, 5, 2.5, 1.25];
+  let remaining = (totalKg - barKg) / 2;
+  if (remaining <= 0) return null;
+  const used = [];
+  plates.forEach(p => {
+    while (remaining >= p - 0.001) { used.push(p); remaining -= p; remaining = Math.round(remaining * 1000) / 1000; }
+  });
+  return used;
+}
+
+function updatePlateDisplay(exKey, idx) {
+  const set = (gymSets[exKey] || [])[idx];
+  if (!set) return;
+  const w = parseFloat(set.weight);
+  const rowId = 'plates-' + exKey.replace(/[^a-zA-Z0-9]/g,'_') + '-' + idx;
+  const el = document.getElementById(rowId);
+  if (!el) return;
+  if (!w || w <= 20) { el.innerHTML = ''; return; }
+  const p = calcPlates(w);
+  if (!p) { el.innerHTML = ''; return; }
+  const pills = p.map(kg => `<span style="display:inline-block;padding:1px 6px;background:var(--card2);border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:700;color:var(--text2);margin:1px;">${kg}</span>`).join('');
+  el.innerHTML = `<span style="font-size:10px;color:var(--text3);font-weight:600;margin-right:4px;">Each side:</span>${pills}`;
+}
+
 function toggleSetDone(ex, idx) {
   if (!gymSets[ex] || !gymSets[ex][idx]) return;
   const set = gymSets[ex][idx];
@@ -5499,6 +5580,16 @@ function saveWeekPlanOverride(mondayKey, plan) {
   overrides[mondayKey] = plan;
   localStorage.setItem(WEEK_PLAN_OVERRIDES_KEY, JSON.stringify(overrides));
 }
+const REST_FLAGS_KEY = 'restDayFlags_v1';
+function loadRestFlags() { try { return JSON.parse(localStorage.getItem(REST_FLAGS_KEY)||'{}'); } catch(e) { return {}; } }
+function saveRestFlags(d) { localStorage.setItem(REST_FLAGS_KEY, JSON.stringify(d)); }
+function setRestFlag(dateKey, flag) {
+  const flags = loadRestFlags();
+  if (flag === null) delete flags[dateKey]; else flags[dateKey] = flag;
+  saveRestFlags(flags);
+  renderWeek();
+}
+
 function getEffectiveWeekPlan(offset) {
   const template = loadWeekPlanTemplate();
   const dates = getWeekDates(offset);
@@ -5570,9 +5661,17 @@ function renderTodayPlanCard() {
   const planValue = plan[todayDayKey] || '';
   let activityHtml, statusHtml = '';
   if (!planValue) {
+    const todayDk = dk(today);
+    const flags = loadRestFlags();
+    const currentFlag = flags[todayDk] || null;
+    const flagHtml = `<div style="display:flex;gap:6px;margin-top:8px;">
+      <button onclick="setRestFlag('${todayDk}','intentional')" style="flex:1;padding:6px 8px;border-radius:8px;border:1.5px solid ${currentFlag==='intentional'?'var(--green)':'var(--border)'};background:${currentFlag==='intentional'?'rgba(22,163,74,0.1)':'var(--card2)'};font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;color:${currentFlag==='intentional'?'var(--green)':'var(--text3)'};cursor:pointer;">✓ Intentional rest</button>
+      <button onclick="setRestFlag('${todayDk}','missed')" style="flex:1;padding:6px 8px;border-radius:8px;border:1.5px solid ${currentFlag==='missed'?'var(--red)':'var(--border)'};background:${currentFlag==='missed'?'rgba(220,38,38,0.1)':'var(--card2)'};font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;color:${currentFlag==='missed'?'var(--red)':'var(--text3)'};cursor:pointer;">✗ Missed session</button>
+    </div>`;
     activityHtml = `<div class="today-plan-activity">
       <div class="today-plan-activity-type">Today's plan</div>
       <div class="today-plan-activity-name" style="color:var(--text3);font-size:16px;font-weight:600;">Rest / Off day</div>
+      ${flagHtml}
     </div>`;
   } else {
     const parts = planValue.split(' - ');
@@ -7010,8 +7109,9 @@ function renderActivityLoadSection() {
         <div class="fatigue-marker" style="left:${markerPos}%;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:4px;font-weight:700;">
-        <span>7-day: ${fat.load7} tasks/day</span><span>Avg: ${fat.load28} tasks/day</span>
+        <span>7-day load: ${fat.load7}/day</span><span>28-day avg: ${fat.load28}/day</span>
       </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">Gym sessions (×3) and runs (×2) weighted higher than habit goals.</div>
       <div class="fatigue-status ${fatStatus.cls}">${fatStatus.msg}</div>
     </div></div></div>`;
 }

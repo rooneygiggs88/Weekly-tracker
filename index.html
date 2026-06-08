@@ -2062,7 +2062,7 @@ function renderTrendSection(weeks){
   const areaPath=`M${px(0)},${py(0)} ${series.map((v,i)=>`L${px(i)},${py(v)}`).join(' ')} L${px(n-1)},${PT+chartH} L${px(0)},${PT+chartH} Z`;
   const avgY=py(avg);
   const labelStep=Math.max(1,Math.floor(n/4));
-  const xLabels=displayWeeks.map((w,i)=>i%labelStep===0||i===n-1?w.dates[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'');
+  const xLabels=displayWeeks.map((w,i)=>{ if(i%labelStep!==0&&i!==n-1) return ''; const _d=w.dates[0]; return `${_d.getDate()}/${_d.getMonth()+1}`; });
   const tabsHtml=trendGoals.map(g=>`<button class="trend-tab${selectedTrendGoal===g.id?' active':''}" onclick="setTrendGoal('${g.id}')">${g.icon} ${g.name}</button>`).join('');
   return`<div class="section"><div class="section-title"><span>Weekly trend</span><span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:none;letter-spacing:0;font-weight:700;">avg ${avg}%</span></div>
   <div class="card">
@@ -2934,7 +2934,7 @@ function renderGymAnalysis() {
       if(dates[0] < APP_START) continue;
       const s=dk(dates[0]), e=dk(dates[6]);
       const count = logs.filter(l=>l.date.slice(0,10)>=s&&l.date.slice(0,10)<=e).length;
-      const label = dates[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+      const label = `${dates[0].getDate()}/${dates[0].getMonth()+1}`;
       weekPts.push({x:label, y:count});
     }
     const nonEmpty = weekPts.filter(p=>p.y>0);
@@ -2965,7 +2965,7 @@ function renderGymAnalysis() {
       const s=dk(dates[0]), e=dk(dates[6]);
       const weekLogs = logs.filter(l=>l.date.slice(0,10)>=s&&l.date.slice(0,10)<=e);
       const sets = weekLogs.reduce((a,l)=>a+Object.values(l.exercises).reduce((b,ex)=>b+ex.length,0),0);
-      const label = dates[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+      const label = `${dates[0].getDate()}/${dates[0].getMonth()+1}`;
       weekPts.push({x:label, y:sets});
     }
     const nonEmpty = weekPts.filter(p=>p.y>0);
@@ -2992,7 +2992,8 @@ function renderGymAnalysis() {
       const weekMap = {};
       [...logs].forEach(log => {
         const weekKey = dk(getMonday(new Date(log.date)));
-        const label   = getMonday(new Date(log.date)).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+        const _md = getMonday(new Date(log.date));
+        const label   = `${_md.getDate()}/${_md.getMonth()+1}`;
         Object.entries(log.exercises).forEach(([ex, sets]) => {
           if(!ex.toLowerCase().includes(lift)) return;
           sets.forEach(s => {
@@ -3152,7 +3153,7 @@ function renderGenericAnalysis(goalId) {
     const dates=getWeekDates(off);
     const count=dates.reduce((a,d)=>a+getEntries(d,`session:${goalId}`).length,0);
     weekCounts.push(count);
-    weekLabels.push(dates[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'}));
+    weekLabels.push(`${dates[0].getDate()}/${dates[0].getMonth()+1}`);
   }
 
   const summary = `<div class="section"><div class="section-title"><span>${goal.name} summary</span></div>
@@ -4681,7 +4682,7 @@ function renderWeightChart(vals, keys) {
   const labels = keys.map((k,i)=>{
     if(i%labelStep!==0&&i!==n-1) return '';
     const d=new Date(k+'T12:00:00');
-    return `<text x="${px(i)}" y="${H}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</text>`;
+    return `<text x="${px(i)}" y="${H}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
   }).join('');
   return `<div style="padding:10px 14px 0;">
     <svg width="100%" viewBox="0 0 ${W} ${H+4}" style="height:${H+4}px;overflow:visible;">

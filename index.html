@@ -921,13 +921,6 @@ body.dark .weight-big-input { color:#f0f0f0; }
 body.dark .water-glass { background:#1a1a1a; border-color:#2a2a2a; }
 body.dark .water-glass.filled { background:#0d1a2d; border-color:#3b82f6; }
 
-.sleep-row { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--border); }
-.sleep-row:last-child { border-bottom:none; }
-.sleep-date { font-size:11px; font-weight:700; color:var(--text3); width:48px; flex-shrink:0; text-transform:uppercase; }
-.sleep-hours { font-size:16px; font-weight:800; color:var(--text); width:40px; text-align:center; }
-.sleep-quality { display:flex; gap:3px; }
-.sleep-star { font-size:14px; cursor:pointer; opacity:0.3; transition:opacity 0.12s; }
-.sleep-star.lit { opacity:1; }
 
 .health-chart-svg { overflow:visible; }
 .health-bar { transition:height 0.4s ease; }
@@ -1511,7 +1504,7 @@ body.dark .run-effort-grid { }
 
 <!-- HEALTH PAGE -->
 <div id="page-health" class="page">
-  <div class="header"><h1>Health</h1><div class="week-label">Body weight, water &amp; sleep</div></div>
+  <div class="header"><h1>Health</h1><div class="week-label">Body weight &amp; water</div></div>
   <div id="health-content" style="padding-bottom:8px;"></div>
 </div>
 
@@ -2259,6 +2252,8 @@ function switchPage(page,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   buildNav();
+  const fab = document.getElementById('quick-add-fab');
+  if (fab) fab.style.display = page === 'week' ? '' : 'none';
   if(page==='week')    renderWeek();
   if(page==='stats')   renderStats();
   if(page==='history') { if(typeof historySubTab==='undefined')window.historySubTab='history'; renderHistory(); }
@@ -6345,7 +6340,6 @@ function exportCSV() {
   const health = loadHealthData();
   Object.entries(health.weight||{}).forEach(([date,val]) => rows.push([date,'weight','Body weight',val+'kg','']));
   Object.entries(health.water||{}).forEach(([date,val]) => rows.push([date,'water','Water',val+' glasses','']));
-  Object.entries(health.sleep||{}).forEach(([date,val]) => rows.push([date,'sleep','Sleep',val.hours+'h',`quality: ${val.quality}/5`]));
 
   // Sort by date
   rows.slice(1).sort((a,b)=>a[0]>b[0]?-1:1);
@@ -6644,7 +6638,6 @@ function toggleQuickAdd() {
     { icon:'🏃', label:'Log a run',      bg:'#dbeafe', action:"openQuickRun()" },
     { icon:'🏋️', label:'Go to gym log',  bg:'#fef3e2', action:"openQuickGym()" },
     { icon:'⚖️', label:'Log weight',      bg:'#f0fdf4', action:"openQuickWeight()" },
-    { icon:'😴', label:'Log sleep',       bg:'#faf5ff', action:"openQuickSleep()" },
   ];
   const menu = document.createElement('div');
   menu.className = 'quick-add-menu';
@@ -6695,26 +6688,6 @@ function quickLogWeight() {
   showToast('Weight logged ✓', 'var(--green)');
 }
 
-function openQuickSleep() {
-  document.getElementById('quick-sleep-modal').classList.add('open');
-  updateQuickSleepStars();
-  setTimeout(()=>{ const el=document.getElementById('quick-sleep-input'); if(el){el.value='';el.focus();} }, 150);
-}
-function quickSetSleepQuality(n) {
-  updateQuickSleepStars();
-}
-function updateQuickSleepStars() {
-  for(let i=1;i<=5;i++) {
-    const el=document.getElementById('qss-'+i);
-  }
-}
-function quickLogSleep() {
-  const input = document.getElementById('quick-sleep-input');
-  const hours = input?.value?.trim();
-  if (!hours || isNaN(parseFloat(hours))) return;
-  document.getElementById('quick-sleep-modal').classList.remove('open');
-  showToast('Sleep logged ✓', 'var(--purple)');
-}
 
 // ══ WEEK RATING ══
 function setWeekRating(weekKey, rating) {

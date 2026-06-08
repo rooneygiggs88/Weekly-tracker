@@ -805,9 +805,12 @@ body.dark .gym-locked-summary { color:#2a9a5a; } { padding:12px 16px; border-bot
 body.dark .gym-history-type.push { background:#2d1a0d; }
 body.dark .gym-history-type.pull { background:#0d1a2d; }
 body.dark .gym-history-type.legs { background:#0d2d1a; }
-.gym-history-lifts { font-size:12px; color:var(--text3); line-height:1.5; }
-.gym-history-expanded { padding:8px 16px 12px; background:var(--card2); border-bottom:1px solid var(--border); }
-body.dark .gym-history-expanded { background:#222; }
+.gym-history-meta { font-size:11px; color:var(--text3); font-weight:600; margin-top:3px; }
+.gym-history-pills { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.gym-history-pill { font-size:11px; font-weight:700; color:var(--text2); background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:3px 9px; }
+.gym-history-expanded { padding:10px 16px 14px; background:var(--card2); border-top:1px solid var(--border); }
+body.dark .gym-history-expanded { background:#1a1a1a; }
+body.dark .gym-history-pill { background:#222; border-color:#333; color:#ccc; }
 
 .gym-pr-row { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--border); }
 .gym-pr-row:last-child { border-bottom:none; }
@@ -4273,33 +4276,42 @@ function renderGymHistory() {
   if (!logs.length) return '<div class="section"><div class="card"><div class="empty-state">No sessions logged yet.<br><span style="font-size:12px;color:var(--text3);display:block;margin-top:4px;">Head to Log Session to record your first workout.</span></div></div></div>';
 
   const items = logs.map(log => {
-    const date    = new Date(log.date);
-    const dateStr = date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-    const timeStr = date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const date       = new Date(log.date);
+    const dateStr    = date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    const timeStr    = date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     const colourClass = log.sessionId || 'custom';
-    const topLifts = Object.entries(log.exercises).slice(0,3).map(([ex,sets])=>{
+    const exEntries  = Object.entries(log.exercises);
+    const setCount   = exEntries.reduce((a,[,s])=>a+s.length,0);
+    const pills      = exEntries.map(([ex,sets])=>{
       const maxW = Math.max(...sets.map(s=>parseFloat(s.weight)||0));
-      return `${ex}: ${maxW}kg`;
-    }).join(' \u00b7 ');
+      const label = maxW > 0 ? `${ex} \u00b7 ${maxW}kg` : ex;
+      return `<span class="gym-history-pill">${label}</span>`;
+    }).join('');
 
     const isExpanded = gymExpandedHistory === log.id;
     let expandedHtml = '';
     if (isExpanded) {
-      const exRows = Object.entries(log.exercises).map(([ex,sets])=>{
-        const setStr = sets.map(s=>`<span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600;">${s.weight}kg\u00d7${s.reps}</span>`).join(' ');
-        return `<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;">${ex}</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${setStr}</div></div>`;
+      const exRows = exEntries.map(([ex,sets])=>{
+        const setStr = sets.map(s=>`<span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;">${s.weight}kg\u00d7${s.reps}</span>`).join('');
+        return `<div style="margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px;">${ex}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">${setStr}</div>
+        </div>`;
       }).join('');
-      const rpeHtml = log.rpe ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;font-weight:600;">RPE ${log.rpe}</div>` : '';
-      const notesHtml = log.notes ? `<div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5;padding-top:6px;border-top:1px solid var(--border);">${log.notes}</div>` : '';
-      expandedHtml = `<div class="gym-history-expanded">${exRows}${rpeHtml}${notesHtml}</div>`;
+      const notesHtml = log.notes ? `<div style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5;padding-top:8px;border-top:1px solid var(--border);">${log.notes}</div>` : '';
+      expandedHtml = `<div class="gym-history-expanded">${exRows}${notesHtml}</div>`;
     }
+
     return `<div>
       <div class="gym-history-item" onclick="toggleGymHistory(${log.id})">
         <div class="gym-history-header">
-          <span class="gym-history-date">${dateStr} \u00b7 ${timeStr}</span>
+          <div>
+            <span class="gym-history-date">${dateStr}</span>
+            <div class="gym-history-meta">${timeStr} &middot; ${exEntries.length} exercise${exEntries.length!==1?'s':''} &middot; ${setCount} set${setCount!==1?'s':''}</div>
+          </div>
           <span class="gym-history-type ${colourClass}">${log.sessionName}</span>
         </div>
-        <div class="gym-history-lifts">${topLifts}</div>
+        <div class="gym-history-pills">${pills}</div>
       </div>
       ${expandedHtml}
     </div>`;

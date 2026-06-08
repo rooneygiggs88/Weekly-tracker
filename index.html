@@ -3689,7 +3689,7 @@ function removeExerciseFromSession(sessionId, exName) {
 // ── HISTORY HELPERS ──
 function getLastSession(sessionId) {
   const logs = (loadGymData().logs || []);
-  return [...logs].reverse().find(l=>l.sessionId===sessionId) || null;
+  return logs.find(l=>l.sessionId===sessionId) || null;
 }
 function getLastSetsForExercise(sessionId, exName) {
   const last = getLastSession(sessionId);

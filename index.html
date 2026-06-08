@@ -1472,6 +1472,35 @@ body.dark .run-effort-grid { }
 </div>
 
 
+<!-- HEALTH ENTRY EDIT MODAL -->
+<div id="health-edit-modal" class="modal-overlay" onclick="if(event.target===this)closeHealthEdit()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="health-edit-title">Edit Entry</div>
+      <button class="modal-close" onclick="closeHealthEdit()">×</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Value</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" inputmode="decimal" id="health-edit-val"
+            style="flex:1;padding:10px 12px;border-radius:8px;border:2px solid var(--border);background:var(--card);color:var(--ink);font-size:18px;font-weight:800;">
+          <span id="health-edit-unit" style="font-size:14px;font-weight:700;color:var(--text3);"></span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Date</div>
+        <input type="date" id="health-edit-date"
+          style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid var(--border);background:var(--card);color:var(--ink);font-size:14px;font-weight:600;box-sizing:border-box;">
+      </div>
+    </div>
+    <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;">
+      <button class="btn-primary" onclick="saveHealthEdit()">Save</button>
+      <button class="btn-secondary" onclick="closeHealthEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- WEEK PLAN EDIT MODAL -->
 <div id="week-plan-modal" class="modal-overlay" onclick="if(event.target===this)closeWeekPlanEdit()">
   <div class="modal" style="max-height:85vh;display:flex;flex-direction:column;">
@@ -4694,11 +4723,11 @@ function loadHealthData() {
 function saveHealthData(d) { localStorage.setItem(healthKey(), JSON.stringify(d)); }
 
 // ── WEIGHT ──
-function logWeight(val) {
+function logWeight(val, dateKey) {
   if (!val || isNaN(parseFloat(val))) return;
   const data = loadHealthData();
   if (!data.weight) data.weight = {};
-  data.weight[dk(new Date())] = parseFloat(val);
+  data.weight[dateKey || dk(new Date())] = parseFloat(val);
   saveHealthData(data);
   renderHealth();
   haptic('light');
@@ -4711,12 +4740,12 @@ function deleteWeight(dateKey) {
 }
 
 // ── BODY FAT ──
-function logBodyFat(val) {
+function logBodyFat(val, dateKey) {
   const n = parseFloat(val);
   if (!val || isNaN(n) || n <= 0 || n >= 100) return;
   const data = loadHealthData();
   if (!data.bodyfat) data.bodyfat = {};
-  data.bodyfat[dk(new Date())] = n;
+  data.bodyfat[dateKey || dk(new Date())] = n;
   saveHealthData(data);
   renderHealth();
   haptic('light');
@@ -4747,12 +4776,18 @@ function renderBodyFatTab() {
     <div class="metric-cell"><div class="metric-val" style="color:${change>0?'var(--red)':change<0?'var(--green)':'var(--text)'}">${change !== null ? (change>0?'+':'')+change+'%' : '—'}</div><div class="metric-unit">Total change</div></div>
   </div>` : '';
 
-  const logHtml = `<div class="weight-input-row">
-    <input class="weight-big-input" type="number" inputmode="decimal" placeholder="${todayVal || '—'}"
-      id="bf-input" value="${todayVal}" step="0.1" min="1" max="60"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();logBodyFat(this.value);}">
-    <span class="weight-unit">%</span>
-    <button class="weight-log-btn" onclick="logBodyFat(document.getElementById('bf-input').value)">Log</button>
+  const logHtml = `<div style="padding:10px 14px 12px;border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <input class="weight-big-input" type="number" inputmode="decimal" placeholder="—"
+        id="bf-input" step="0.1" min="1" max="60" style="flex:1;"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();logBodyFat(this.value,document.getElementById('bf-date').value);}">
+      <span class="weight-unit">%</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <input type="date" id="bf-date" value="${todayKey}"
+        style="flex:1;padding:8px 10px;border-radius:8px;border:2px solid var(--border);background:var(--card);color:var(--ink);font-size:13px;font-weight:600;">
+      <button class="weight-log-btn" onclick="logBodyFat(document.getElementById('bf-input').value,document.getElementById('bf-date').value)">Log</button>
+    </div>
   </div>`;
 
   // 30-day chart
@@ -4762,7 +4797,7 @@ function renderBodyFatTab() {
   const allVals = chartVals.filter(v=>v!==null);
   const chartHtml = allVals.length >= 2 ? renderBodyFatChart(chartVals, last30Keys) : '';
 
-  const recentRowArr = sortedKeys.slice(-10).reverse();
+  const recentRowArr = sortedKeys.slice(-20).reverse();
   const recentRows = recentRowArr.map((k, i) => {
     const d = new Date(k+'T12:00:00');
     const label = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
@@ -4770,6 +4805,7 @@ function renderBodyFatTab() {
     return `<div style="display:flex;align-items:center;padding:10px 14px;${border}">
       <div style="font-size:12px;font-weight:700;color:var(--text3);width:90px;flex-shrink:0;">${label}</div>
       <div style="font-size:16px;font-weight:800;color:var(--ink);flex:1;">${bf[k]}<span style="font-size:12px;font-weight:600;color:var(--text3);margin-left:2px;">%</span></div>
+      <button onclick="openHealthEdit('bodyfat','${k}',${bf[k]})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;font-weight:700;padding:4px 8px;line-height:1;touch-action:manipulation;">Edit</button>
       <button onclick="deleteBodyFat('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:4px 8px;line-height:1;touch-action:manipulation;">×</button>
     </div>`;
   }).join('');
@@ -4840,13 +4876,19 @@ function renderWeightTab() {
     <div class="metric-cell"><div class="metric-val" style="color:${change>0?'var(--red)':change<0?'var(--green)':'var(--text)'}">${change !== null ? (change>0?'+':'')+change : '—'}</div><div class="metric-unit">Total change</div></div>
   </div>` : '';
 
-  // Log today
-  const logHtml = `<div class="weight-input-row">
-    <input class="weight-big-input" type="number" inputmode="decimal" placeholder="${todayVal || '—'}"
-      id="weight-input" value="${todayVal}"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();logWeight(this.value);}">
-    <span class="weight-unit">kg</span>
-    <button class="weight-log-btn" onclick="logWeight(document.getElementById('weight-input').value)">Log</button>
+  // Log input
+  const logHtml = `<div style="padding:10px 14px 12px;border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <input class="weight-big-input" type="number" inputmode="decimal" placeholder="—"
+        id="weight-input" style="flex:1;"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();logWeight(this.value,document.getElementById('weight-date').value);}">
+      <span class="weight-unit">kg</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <input type="date" id="weight-date" value="${todayKey}"
+        style="flex:1;padding:8px 10px;border-radius:8px;border:2px solid var(--border);background:var(--card);color:var(--ink);font-size:13px;font-weight:600;">
+      <button class="weight-log-btn" onclick="logWeight(document.getElementById('weight-input').value,document.getElementById('weight-date').value)">Log</button>
+    </div>
   </div>`;
 
   // 30-day chart
@@ -4860,7 +4902,7 @@ function renderWeightTab() {
   const chartHtml = allVals.length >= 2 ? renderWeightChart(chartVals, last30Keys) : '';
 
   // Recent log
-  const recentRowArr = sortedKeys.slice(-10).reverse();
+  const recentRowArr = sortedKeys.slice(-20).reverse();
   const recentRows = recentRowArr.map((k, i) => {
     const d = new Date(k+'T12:00:00');
     const label = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
@@ -4868,6 +4910,7 @@ function renderWeightTab() {
     return `<div style="display:flex;align-items:center;padding:10px 14px;${border}">
       <div style="font-size:12px;font-weight:700;color:var(--text3);width:90px;flex-shrink:0;">${label}</div>
       <div style="font-size:16px;font-weight:800;color:var(--ink);flex:1;">${weights[k]}<span style="font-size:12px;font-weight:600;color:var(--text3);margin-left:2px;">kg</span></div>
+      <button onclick="openHealthEdit('weight','${k}',${weights[k]})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;font-weight:700;padding:4px 8px;line-height:1;touch-action:manipulation;">Edit</button>
       <button onclick="deleteWeight('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:4px 8px;line-height:1;touch-action:manipulation;">×</button>
     </div>`;
   }).join('');
@@ -5580,6 +5623,41 @@ function openWeekPlanEdit(mode) {
   });
   modal.classList.add('open');
 }
+// ── HEALTH ENTRY EDIT ──
+let healthEditType = '';
+let healthEditOrigKey = '';
+function openHealthEdit(type, dateKey, val) {
+  healthEditType = type;
+  healthEditOrigKey = dateKey;
+  document.getElementById('health-edit-title').textContent = type === 'weight' ? 'Edit Weight Entry' : 'Edit Body Fat Entry';
+  document.getElementById('health-edit-unit').textContent = type === 'weight' ? 'kg' : '%';
+  document.getElementById('health-edit-val').value = val;
+  document.getElementById('health-edit-date').value = dateKey;
+  document.getElementById('health-edit-modal').classList.add('open');
+}
+function closeHealthEdit() {
+  document.getElementById('health-edit-modal').classList.remove('open');
+}
+function saveHealthEdit() {
+  const newVal = parseFloat(document.getElementById('health-edit-val').value);
+  const newDate = document.getElementById('health-edit-date').value;
+  if (!newDate || isNaN(newVal) || newVal <= 0) return;
+  const data = loadHealthData();
+  if (healthEditType === 'weight') {
+    if (!data.weight) data.weight = {};
+    if (newDate !== healthEditOrigKey) delete data.weight[healthEditOrigKey];
+    data.weight[newDate] = newVal;
+  } else {
+    if (!data.bodyfat) data.bodyfat = {};
+    if (newDate !== healthEditOrigKey) delete data.bodyfat[healthEditOrigKey];
+    data.bodyfat[newDate] = newVal;
+  }
+  saveHealthData(data);
+  closeHealthEdit();
+  renderHealth();
+  haptic('light');
+}
+
 function closeWeekPlanEdit() {
   document.getElementById('week-plan-modal').classList.remove('open');
 }

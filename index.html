@@ -4110,9 +4110,14 @@ function renderGymLog() {
         </div>
         ${exRows}
       </div>
-      <button onclick="gymTab='history';renderGym();" style="display:block;width:100%;margin-top:10px;padding:12px;background:var(--card2);color:var(--text2);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:13px;font-weight:600;text-align:center;">
-        View full history &rarr;
-      </button>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button onclick="reopenGymSession(${todayLog.id})" style="flex:1;padding:12px;background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;text-align:center;">
+          Edit session
+        </button>
+        <button onclick="gymTab='history';renderGym();" style="flex:1;padding:12px;background:var(--card2);color:var(--text2);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:-apple-system,sans-serif;font-size:13px;font-weight:600;text-align:center;">
+          View history &rarr;
+        </button>
+      </div>
     </div>`;
   }
 
@@ -4399,6 +4404,37 @@ function finishGymSession() {
   renderGym();
 }
 
+function reopenGymSession(logId) {
+  const data = loadGymData();
+  const idx = (data.logs||[]).findIndex(l => l.id === logId);
+  if (idx === -1) return;
+  const log = data.logs[idx];
+  // Restore sets into active state
+  gymSets = {};
+  Object.entries(log.exercises||{}).forEach(([ex, sets]) => {
+    gymSets[ex] = sets.map(s => ({...s, done: true}));
+  });
+  gymRPE = log.rpe || '';
+  gymSessionNotes = log.notes || '';
+  // Remove from logs
+  data.logs.splice(idx, 1);
+  saveGymData(data);
+  // Save as active draft with original start time
+  const draft = { sessionId: gymSession, sets: gymSets, locked: gymLockedExercises, rpe: gymRPE, notes: gymSessionNotes, savedAt: Date.now(), startedAt: new Date(log.date).getTime() };
+  localStorage.setItem(gymDraftKey(), JSON.stringify(draft));
+  showToast('Session re-opened for editing', 'var(--blue)');
+  renderGym();
+}
+
+function deleteGymSession(logId) {
+  if (!confirm('Delete this session? This cannot be undone.')) return;
+  const data = loadGymData();
+  data.logs = (data.logs||[]).filter(l => l.id !== logId);
+  saveGymData(data);
+  closeGymHistoryModal();
+  renderGym();
+}
+
 // ── HISTORY VIEW ──
 function renderGymHistory() {
   const data = loadGymData();
@@ -4473,7 +4509,10 @@ function openGymHistoryModal(id) {
     </div>
     ${exRows}
     ${notesHtml}
-    <button onclick="closeGymHistoryModal()" style="margin-top:20px;width:100%;padding:13px;background:var(--card2);border:1.5px solid var(--border);border-radius:var(--radius);font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;">Close</button>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button onclick="closeGymHistoryModal()" style="flex:1;padding:13px;background:var(--card2);border:1.5px solid var(--border);border-radius:var(--radius);font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;">Close</button>
+      <button onclick="deleteGymSession(${log.id})" style="padding:13px 18px;background:none;border:1.5px solid var(--red);border-radius:var(--radius);font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;color:var(--red);cursor:pointer;">Delete</button>
+    </div>
   `;
   requestAnimationFrame(() => el.classList.add('open'));
 }

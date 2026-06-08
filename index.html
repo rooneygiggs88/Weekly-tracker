@@ -2353,8 +2353,6 @@ function switchPage(page,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   buildNav();
-  const fab = document.getElementById('quick-add-fab');
-  if (fab) fab.style.display = page === 'week' ? '' : 'none';
   if(page==='week')    renderWeek();
   if(page==='stats')   renderStats();
   if(page==='history') { if(typeof historySubTab==='undefined')window.historySubTab='history'; renderHistory(); }
@@ -8294,10 +8292,6 @@ setTimeout(initModalSwipeDismiss, 500);
 setTimeout(renderAnomalies, 800);
 </script>
 
-<!-- QUICK ADD FAB -->
-<button class="quick-add-fab" id="quick-add-fab" onclick="toggleQuickAdd()">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-</button>
 
 <!-- QUICK ADD INLINE MODALS -->
 <div class="modal-overlay" id="quick-run-modal">

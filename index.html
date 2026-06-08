@@ -4029,17 +4029,16 @@ function renderGymLog() {
       const isDone = !!set.done;
       const isWarmup = !!set.warmup;
       const workingBefore = sets.slice(0,idx).filter(function(s){return !s.warmup;}).length;
-      // Per-set delta vs corresponding last session set
+      // Per-set delta vs PB
       let deltaHtml = '';
-      if (!isWarmup && set.weight) {
-        const lastMatchSet = lastWorkingSets[workingBefore];
-        const lastW = lastMatchSet ? parseFloat(lastMatchSet.weight)||0 : null;
+      if (!isWarmup && set.weight && pr) {
         const curW = parseFloat(set.weight)||0;
-        if (lastW !== null && curW > 0) {
-          const diff = curW - lastW;
+        const pbW  = parseFloat(pr.weight)||0;
+        if (curW > 0 && pbW > 0) {
+          const diff = curW - pbW;
           if      (diff > 0) deltaHtml = '<span class="gym-set-num-delta up">+' + diff.toFixed(1) + '</span>';
           else if (diff < 0) deltaHtml = '<span class="gym-set-num-delta down">' + diff.toFixed(1) + '</span>';
-          else               deltaHtml = '<span class="gym-set-num-delta same">=</span>';
+          else               deltaHtml = '<span class="gym-set-num-delta same">=PB</span>';
         }
       }
       const setLabel = isWarmup

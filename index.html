@@ -1340,7 +1340,7 @@ function renderTrends(){
   el.innerHTML=`
     <div class="metric-row">
       <div class="metric-card accent"><div class="m-label">This Week</div><div class="m-val">${weekScore}</div><div class="m-unit">% complete</div></div>
-      <div class="metric-card ${streak>0?'orange':''}"><div class="m-label">Streak</div><div class="m-val">${streak}</div><div class="m-unit">day${streak===1?'':'s'}</div></div>
+      ${(()=>{const scores=[];for(let i=27;i>=0;i--){const d=addDays(now,-i);scores.push(getDayScore(dk(d)));}const avg=scores.reduce((a,b)=>a+b,0)/scores.length;const stdDev=Math.sqrt(scores.reduce((a,b)=>a+Math.pow(b-avg,2),0)/scores.length);const raw=avg-(stdDev*0.5);const grade=raw>=85?'S':raw>=70?'A':raw>=50?'B':raw>=30?'C':'D';const gradeColor=grade==='S'?'var(--accent2)':grade==='A'?'var(--green)':grade==='B'?'var(--orange)':'var(--text3)';return`<div class="metric-card"><div class="m-label">Consistency</div><div style="font-size:42px;font-weight:800;color:${gradeColor};letter-spacing:-2px;line-height:1;">${grade}</div><div class="m-unit">last 28 days</div></div>`;})()}
     </div>
     <div class="metric-row">
       <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekGym.length}</div><div class="m-unit">sessions this week</div></div>
@@ -1348,7 +1348,6 @@ function renderTrends(){
     </div>
     ${renderWeeklyTrendChart()}
     ${renderDayOfWeekHeatmap()}
-    ${renderConsistencyScore()}
     ${renderPredictedCompletion()}
     ${renderBestWorstWeeks()}
     ${renderTimeOfDay()}

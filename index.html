@@ -1967,7 +1967,10 @@ function renderWeeklyTrendChart(){
     const pct=total?Math.round(done/total*100):null;
     weeks.push({mon,pct,label:mon.toLocaleDateString('en-GB',{month:'short',day:'numeric'})});
   }
-  const validWeeks=weeks.filter(w=>w.pct!==null);
+  // Trim leading weeks with no data
+  let firstNonNull=0;
+  while(firstNonNull<weeks.length-1&&(weeks[firstNonNull].pct===null||weeks[firstNonNull].pct===0))firstNonNull++;
+  const validWeeks=weeks.slice(firstNonNull).filter(w=>w.pct!==null);
   if(validWeeks.length<2)return'';
   const avg=Math.round(validWeeks.reduce((s,w)=>s+w.pct,0)/validWeeks.length);
   const W=300,H=100;const n=validWeeks.length;

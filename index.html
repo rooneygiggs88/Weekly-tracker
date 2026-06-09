@@ -1540,19 +1540,126 @@ function importData(evt){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const data=JSON.parse(e.target.result);
-      if(data.state)localStorage.setItem('wt_v3',JSON.stringify(data.state));
-      if(data.gym)localStorage.setItem('gym_data_v1',JSON.stringify(data.gym));
-      if(data.run)localStorage.setItem('run_data_v2',JSON.stringify(data.run));
-      if(data.health)localStorage.setItem('health_data_v1',JSON.stringify(data.health));
-      if(data.prog)localStorage.setItem('gym_prog_v1',JSON.stringify(data.prog));
-      if(data.vaping)localStorage.setItem('vaping_data_v1',JSON.stringify(data.vaping));
+      const d=JSON.parse(e.target.result);
+      // Detect v1 export (has gymData / healthData / vapingData keys)
+      const isV1=!!(d.gymData||d.healthData||d.vapingData);
+      if(isV1){
+        importV1Format(d);
+      } else {
+        // v2 native format
+        if(d.state)localStorage.setItem('wt_v3',JSON.stringify(d.state));
+        if(d.gym)localStorage.setItem('gym_data_v1',JSON.stringify(d.gym));
+        if(d.run)localStorage.setItem('run_data_v2',JSON.stringify(d.run));
+        if(d.health)localStorage.setItem('health_data_v1',JSON.stringify(d.health));
+        if(d.prog)localStorage.setItem('gym_prog_v1',JSON.stringify(d.prog));
+        if(d.vaping)localStorage.setItem('vaping_data_v1',JSON.stringify(d.vaping));
+      }
       toastMsg('Data imported — reloading…');
       setTimeout(()=>location.reload(),1200);
-    }catch(err){toastMsg('Invalid backup file');}
+    }catch(err){console.error(err);toastMsg('Invalid backup file');}
   };
   reader.readAsText(file);
   evt.target.value='';
+}
+
+function importV1Format(d){
+  // ── STATE (goals + check data) ──
+  const v1State=d.state||{};
+  const newState=loadState();
+  if(v1State.customGoals)newState.customGoals=v1State.customGoals;
+  // Keep only goal check keys from v1 data (strip run/gym session entries — those come from gymData/runData)
+  const newData={};
+  Object.entries(v1State.data||{}).forEach(([k,v])=>{
+    if(k.includes(':entries:session:'))return; // extracted separately below
+    newData[k]=v;
+  });
+  newState.data=newData;
+  // Map gymProgramme {0:"push",...} → weekPlan array
+  const typeMap={push:'Push',pull:'Pull',legs:'Legs',rest:'Rest',custom:'Full Body',run:'Run',core:'Core',off:'Off'};
+  if(d.gymProgramme){
+    newState.weekPlan=Array.from({length:7},(_,i)=>typeMap[(d.gymProgramme[i]||'rest').toLowerCase()]||'Rest');
+  }
+  if(d.raceGoal)newState.race=d.raceGoal;
+  if(d.runMileageTarget)newState.runTarget=d.runMileageTarget;
+  localStorage.setItem('wt_v3',JSON.stringify(newState));
+
+  // ── GYM DATA ──
+  // v1: logs[n].exercises = {ExName:[{reps,weight}]}
+  // v2: [{date,type,exercises:[{name,sets:[{weight,reps,warmup}]}],notes}]
+  if(d.gymData&&d.gymData.logs){
+    const gymArr=d.gymData.logs.map(log=>({
+      date:(log.date||'').split('T')[0],
+      type:log.sessionName||log.sessionId||'Workout',
+      notes:log.notes||'',
+      exercises:Object.entries(log.exercises||{}).map(([name,sets])=>({
+        name,
+        sets:(sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:false}))
+      }))
+    }));
+    localStorage.setItem('gym_data_v1',JSON.stringify(gymArr));
+  }
+
+  // ── RUN DATA ──
+  // Extract from v1 state.data entries: "YYYY-MM-DD:entries:session:run": "[\"6.02km | 32:12 | Easy | note\"]"
+  const runArr=[];
+  Object.entries(v1State.data||{}).forEach(([key,val])=>{
+    if(!key.includes(':entries:session:run'))return;
+    const date=key.split(':')[0];
+    let entries=[];
+    try{entries=JSON.parse(val||'[]');}catch(e){return;}
+    (entries||[]).forEach(entry=>{
+      // format: "6.02km | 32:12 | Easy" or "6.02km | 32:12 | Easy | note"
+      const parts=String(entry).split(' | ');
+      const kmStr=parts[0]||'';
+      const km=parseFloat(kmStr)||null;
+      const time=parts[1]||null;
+      const type=parts[2]||null;
+      const note=parts.slice(3).join(' | ')||null;
+      runArr.push({date,km,time,type,note:note||''});
+    });
+  });
+  if(runArr.length)localStorage.setItem('run_data_v2',JSON.stringify(runArr));
+
+  // ── HEALTH DATA ──
+  // v1: healthData.weight={date:kg}, healthData.bodyfat={date:%}
+  // v2: [{date,weight,bodyFat,note,ts}]
+  if(d.healthData){
+    const wMap=d.healthData.weight||{};
+    const bfMap=d.healthData.bodyfat||{};
+    const allDates=new Set([...Object.keys(wMap),...Object.keys(bfMap)]);
+    const healthArr=[...allDates].sort().map(date=>({
+      date,
+      weight:wMap[date]||null,
+      bodyFat:bfMap[date]||null,
+      note:'',
+      ts:new Date(date).getTime()
+    })).filter(e=>e.weight||e.bodyFat);
+    localStorage.setItem('health_data_v1',JSON.stringify(healthArr));
+  }
+
+  // ── VAPING DATA ──
+  // v1: vapingData.entries={date:{puffs,mg}}
+  // v2: [{date,puffs,mg,ts}]
+  if(d.vapingData&&d.vapingData.entries){
+    const vapingArr=Object.entries(d.vapingData.entries).map(([date,entry])=>({
+      date,puffs:entry.puffs||0,mg:entry.mg||null,ts:new Date(date).getTime()
+    }));
+    localStorage.setItem('vaping_data_v1',JSON.stringify(vapingArr));
+  }
+
+  // ── EXERCISE LIBRARY / GYM PROG ──
+  // v1: exerciseLibrary={Name:[] or Name:{muscles:[],restSeconds,bodyweight}}
+  // v2: gym_prog_v1={Name:{history:[],muscles:[]}}
+  if(d.gymData&&d.gymData.exerciseLibrary){
+    const prog={};
+    Object.entries(d.gymData.exerciseLibrary).forEach(([name,val])=>{
+      let muscles=[];
+      if(Array.isArray(val))muscles=val;
+      else if(val&&Array.isArray(val.muscles))muscles=val.muscles;
+      prog[name]={history:[],muscles};
+    });
+    localStorage.setItem('gym_prog_v1',JSON.stringify(prog));
+  }
 }
 function clearAllData(){
   if(!confirm('Delete ALL data? This cannot be undone.'))return;

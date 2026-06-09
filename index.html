@@ -1490,11 +1490,6 @@ body.dark .run-effort-grid { }
   <div id="health-content" style="padding-bottom:8px;"></div>
 </div>
 
-<!-- VAPING PAGE -->
-<div id="page-vaping" class="page">
-  <div class="header"><h1>Vaping</h1><div class="week-label">Daily puff &amp; nicotine tracking</div></div>
-  <div id="vaping-content" style="padding-bottom:8px;"></div>
-</div>
 
 
 
@@ -2341,7 +2336,6 @@ function switchPage(page,btn){
   if(page==='records') renderRecords();
   if(page==='gym')     renderGym();
   if(page==='health')  renderHealth();
-  if(page==='vaping')  renderVaping();
   if(page==='more')    buildMorePage();
 }
 function changeWeek(dir){
@@ -3760,7 +3754,6 @@ function switchPageFromMore(page) {
   if(page==='records') renderRecords();
   if(page==='gym')     renderGym();
   if(page==='health')  renderHealth();
-  if(page==='vaping')  renderVaping();
 }
 
 
@@ -4702,7 +4695,6 @@ const ALL_NAV_ITEMS = [
   { id:'history', label:'History', emoji:'🕐', svg:'<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>' },
   { id:'analysis',label:'Insights',emoji:'💡', svg:'<path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>' },
   { id:'health',  label:'Health',  emoji:'❤️', svg:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' },
-  { id:'vaping',  label:'Vaping',  emoji:'💨', svg:'<path d="M3 8h14a4 4 0 0 1 0 8H3"/><path d="M3 12h14"/><circle cx="20" cy="12" r="1"/><path d="M6 8V6a2 2 0 0 1 4 0v2"/>' },
 ];
 const NAV_ALWAYS_LAST = 'more'; // More is always last — not in the list but appended
 
@@ -4717,7 +4709,7 @@ function loadNavOrder() {
       return ids;
     }
   } catch(e) {}
-  return ['week','gym','health','records','stats','history','analysis','vaping'];
+  return ['week','gym','health','records','stats','history','analysis'];
 }
 function saveNavOrder(order) { localStorage.setItem('navOrder', JSON.stringify(order)); }
 
@@ -5125,8 +5117,9 @@ function renderHealth() {
   const tabs = `<div class="health-tabs">
     <button class="health-tab${healthTab==='weight'?' active':''}" onclick="setHealthTab('weight')">Weight</button>
     <button class="health-tab${healthTab==='bodyfat'?' active':''}" onclick="setHealthTab('bodyfat')">Body Fat</button>
+    <button class="health-tab${healthTab==='vaping'?' active':''}" onclick="setHealthTab('vaping')">Vaping</button>
   </div>`;
-  const content = healthTab === 'bodyfat' ? renderBodyFatTab() : renderWeightTab();
+  const content = healthTab === 'bodyfat' ? renderBodyFatTab() : healthTab === 'vaping' ? renderVapingTab() : renderWeightTab();
   c.innerHTML = tabs + `<div style="padding-top:4px;">${content}</div>`;
 }
 
@@ -5146,7 +5139,7 @@ function logVaping() {
   if (!data.entries) data.entries = {};
   data.entries[date] = { puffs, mg: isNaN(mg) ? null : mg };
   saveVapingData(data);
-  renderVaping();
+  renderHealth();
   renderVapingNudge();
   haptic('light');
 }
@@ -5155,7 +5148,7 @@ function deleteVapingEntry(dateKey) {
   const data = loadVapingData();
   if (data.entries) delete data.entries[dateKey];
   saveVapingData(data);
-  renderVaping();
+  renderHealth();
   renderVapingNudge();
 }
 
@@ -5171,7 +5164,7 @@ function renderVapingNudge() {
   // Nudge if neither today nor yesterday has been logged
   const logged = entries[todayKey] || entries[yesterdayKey];
   if (logged) { wrap.innerHTML = ''; return; }
-  wrap.innerHTML = `<div onclick="switchPage('vaping')" style="margin:0 16px 4px;padding:12px 16px;background:var(--col2);border:1.5px solid var(--orange);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;cursor:pointer;">
+  wrap.innerHTML = `<div onclick="switchPage('health');setHealthTab('vaping');" style="margin:0 16px 4px;padding:12px 16px;background:var(--col2);border:1.5px solid var(--orange);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;cursor:pointer;">
     <span style="font-size:18px;">💨</span>
     <div style="flex:1;">
       <div style="font-size:13px;font-weight:800;color:var(--orange);">Vaping log due</div>
@@ -5212,9 +5205,7 @@ function renderVapingChart(vals, keys) {
   </div>`;
 }
 
-function renderVaping() {
-  const c = document.getElementById('vaping-content');
-  if (!c) return;
+function renderVapingTab() {
   const data = loadVapingData();
   const entries = data.entries || {};
   const sortedKeys = Object.keys(entries).sort();
@@ -5293,7 +5284,7 @@ function renderVaping() {
     ? `<div class="section"><div class="section-title"><span>Log</span></div><div class="card">${recentRows}</div></div>`
     : `<div class="section"><div class="card"><div class="empty-state">No entries yet — log yesterday's puff count above.</div></div></div>`;
 
-  c.innerHTML = mainCard + logCard;
+  return mainCard + logCard;
 }
 
 // ── WEEKLY REVIEW AI ──

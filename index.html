@@ -1291,7 +1291,7 @@ function renderWeightSection(health){
     ${latest?`<div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:4px;"><span style="font-size:40px;font-weight:800;letter-spacing:-2px;line-height:1;">${latest.weight}</span><span style="font-size:16px;color:var(--text2);font-weight:600;padding-bottom:6px;">kg${diff?` <span style="color:${parseFloat(diff)>0?'var(--red)':'var(--green)'};font-size:13px;">(${parseFloat(diff)>0?'+':''}${diff})</span>`:''}</span></div><div style="font-size:12px;color:var(--text3);font-weight:600;">${latest.date}${latest.note?' · '+esc(latest.note):''}</div>`:
     '<div class="empty-state" style="padding:20px 0;"><strong>No weight logged</strong>Tap + Log to start tracking.</div>'}
     ${chart}
-    ${health.length>1?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">${health.slice(-5).reverse().map(e=>`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.weight}kg</span><span style="font-size:12px;color:var(--text3);">${e.date}${e.note?' · '+esc(e.note):''}</span></div>`).join('')}</div>`:''}
+    ${health.length>1?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">${health.slice(-5).reverse().map(e=>`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.weight}kg${e.bodyFat?` <span style="font-size:12px;color:var(--text2);font-weight:600;">· ${e.bodyFat}% BF</span>`:''}</span><span style="font-size:12px;color:var(--text3);">${e.date}${e.note?' · '+esc(e.note):''}</span></div>`).join('')}</div>`:''}
   </div>`;
 }
 
@@ -1308,7 +1308,7 @@ function renderWeightChart(entries){
 
 function renderBodyFatSection(health){
   const withBf=health.filter(e=>e.bodyFat!=null&&e.bodyFat>0);
-  if(!withBf.length)return'';
+  if(!withBf.length)return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Fat %</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No body fat logged</strong>Add body fat % when logging health.</div></div>`;
   const latest=withBf[withBf.length-1];
   const prev=withBf.length>1?withBf[withBf.length-2]:null;
   const diff=prev?(latest.bodyFat-prev.bodyFat).toFixed(1):null;

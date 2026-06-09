@@ -194,6 +194,52 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:24px;font-size:14px;font-weight:700;z-index:300;opacity:0;transition:all 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.5);white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+/* ANOMALY ALERTS */
+.anomaly-alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.anomaly-banner{border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;position:relative;}
+.anomaly-banner.alert-gym{background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);}
+.anomaly-banner.alert-score{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);}
+.anomaly-banner.alert-streak{background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);}
+.anomaly-banner-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
+.anomaly-banner-body{flex:1;}
+.anomaly-banner-title{font-size:13px;font-weight:800;margin-bottom:2px;}
+.anomaly-banner-desc{font-size:12px;font-weight:500;opacity:0.8;}
+.anomaly-dismiss{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:2px;}
+
+/* RUN TARGET PROGRESS */
+.run-target-bar-wrap{margin-bottom:16px;}
+.run-target-bar-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:4px;}
+.run-target-bar-fill{height:100%;background:var(--green);border-radius:3px;transition:width 0.5s;}
+
+/* WEEK PLAN GRID */
+.week-plan-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px;}
+.week-plan-day{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.week-plan-day-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);}
+.week-plan-pill{width:100%;padding:6px 2px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.week-plan-pill.active-push{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#ef4444;}
+.week-plan-pill.active-pull{background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.4);color:var(--accent2);}
+.week-plan-pill.active-legs{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);color:var(--green);}
+.week-plan-pill.active-core{background:rgba(234,179,8,0.15);border-color:rgba(234,179,8,0.4);color:#eab308;}
+.week-plan-pill.active-full{background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.4);color:#a855f7;}
+.week-plan-pill.active-run{background:rgba(6,182,212,0.15);border-color:rgba(6,182,212,0.4);color:#06b6d4;}
+.week-plan-pill.active-rest{background:var(--surface2);border-color:var(--border);color:var(--text3);}
+.week-plan-pill.active-off{background:var(--surface2);border-color:var(--border);color:var(--text3);}
+
+/* MUSCLE VOLUME BAR */
+.muscle-vol-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.muscle-vol-name{font-size:12px;font-weight:700;min-width:90px;flex-shrink:0;}
+.muscle-vol-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative;}
+.muscle-vol-fill{height:100%;border-radius:4px;transition:width 0.5s;}
+.muscle-vol-label{font-size:11px;font-weight:700;min-width:28px;text-align:right;flex-shrink:0;}
+
+/* MUSCLE TAG CHECKBOXES */
+.muscle-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.muscle-check-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all 0.15s;}
+.muscle-check-item.selected{border-color:var(--accent);background:rgba(99,102,241,0.12);}
+.muscle-check-item span{font-size:13px;font-weight:700;flex:1;}
+.muscle-check-box{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;}
+.muscle-check-item.selected .muscle-check-box{background:var(--accent);border-color:var(--accent);}
+
 /* EMPTY STATE */
 .empty-state{text-align:center;padding:40px 24px;color:var(--text3);font-size:14px;font-weight:500;line-height:1.7;}
 .empty-state strong{color:var(--text2);display:block;font-size:16px;margin-bottom:6px;}
@@ -417,6 +463,36 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
   </div>
 </div>
 
+<!-- DAY POPUP MODAL -->
+<div class="modal-overlay" id="day-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="day-modal-content"></div>
+    <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('day-modal')">Close</button>
+  </div>
+</div>
+
+<!-- SESSION DETAIL MODAL -->
+<div class="modal-overlay" id="session-detail-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="session-detail-content"></div>
+    <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('session-detail-modal')">Close</button>
+  </div>
+</div>
+
+<!-- MUSCLE TAG MODAL -->
+<div class="modal-overlay" id="muscle-tag-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="muscle-tag-modal-title">Tag Muscles</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Which muscles does this exercise target?</p>
+    <div class="muscle-check-grid" id="muscle-check-grid"></div>
+    <button class="btn-primary" onclick="saveMuscleTag()" style="margin-bottom:8px;">Save Tags</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('muscle-tag-modal')">Cancel</button>
+  </div>
+</div>
+
 <!-- REST TIMER BAR -->
 <div class="rest-timer-bar" id="rest-timer-bar">
   <div>
@@ -458,10 +534,13 @@ function loadState(){
       if(!p.archivedWeeks||typeof p.archivedWeeks!=='object')p.archivedWeeks={};
       if(!p.race)p.race=null;
       if(!p.userName)p.userName='';
+      if(!p.runTarget)p.runTarget=0;
+      if(!p.weekPlan)p.weekPlan=null;
+      if(!Array.isArray(p.dismissedAlerts))p.dismissedAlerts=[];
       return p;
     }
   }catch(e){const ok=confirm('Your data could not be loaded. Reset?');if(ok)localStorage.removeItem('wt_v3');}
-  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:''};
+  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,dismissedAlerts:[]};
 }
 let state=loadState();
 let _saveTimer=null;

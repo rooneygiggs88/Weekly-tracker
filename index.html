@@ -176,6 +176,20 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .type-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;}
 .type-btn.active{background:var(--accent);border-color:var(--accent);color:white;}
 
+/* REST TIMER */
+.rest-timer-bar{position:fixed;top:0;left:0;right:0;z-index:150;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:14px;transform:translateY(-100%);transition:transform 0.3s cubic-bezier(0.34,1.2,0.64,1);}
+.rest-timer-bar.active{transform:translateY(0);}
+.rest-timer-display{font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--text);min-width:60px;}
+.rest-timer-display.warning{color:var(--red);}
+.rest-timer-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);flex:1;}
+.rest-timer-progress{position:absolute;bottom:0;left:0;height:2px;background:var(--accent);transition:width 0.5s linear;}
+
+/* PLATE CALCULATOR */
+.plate-calc{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px 14px;margin-top:8px;}
+.plate-calc-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;}
+.plate-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.plate{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
+
 /* TOAST */
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:24px;font-size:14px;font-weight:700;z-index:300;opacity:0;transition:all 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.5);white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -212,6 +226,11 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
       <div class="today-score-max">/ 100</div>
     </div>
     <div class="today-status" id="today-status">Let's get started</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <button onclick="changeWeek(-1)" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div id="week-label" style="flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;"></div>
+      <button onclick="changeWeek(1)" id="week-next-btn" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
     <div class="week-strip" id="week-strip"></div>
     <div id="race-card-wrap"></div>
     <div id="session-card-wrap"></div>
@@ -228,11 +247,13 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
   <div class="train-tabs" id="train-tabs">
     <button class="train-tab active" data-tab="gym" onclick="switchTrainTab('gym')">Gym</button>
     <button class="train-tab" data-tab="run" onclick="switchTrainTab('run')">Run</button>
+    <button class="train-tab" data-tab="prs" onclick="switchTrainTab('prs')">PRs</button>
     <button class="train-tab" data-tab="history" onclick="switchTrainTab('history')">History</button>
   </div>
   <div class="train-content">
     <div class="train-section active" id="train-gym"><div id="gym-content"></div></div>
     <div class="train-section" id="train-run"><div id="run-content"></div></div>
+    <div class="train-section" id="train-prs"><div id="train-prs-content"></div></div>
     <div class="train-section" id="train-history"><div id="train-history-content"></div></div>
   </div>
 </div>
@@ -361,6 +382,18 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
   </div>
 </div>
 
+<!-- REST TIMER BAR -->
+<div class="rest-timer-bar" id="rest-timer-bar">
+  <div>
+    <div class="rest-timer-label">Rest Timer</div>
+    <div class="rest-timer-display" id="rest-timer-display">1:30</div>
+  </div>
+  <div style="flex:1;"></div>
+  <button onclick="restTimerAdd(30)" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+30s</button>
+  <button onclick="restTimerStop()" style="padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Done</button>
+  <div class="rest-timer-progress" id="rest-timer-progress"></div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -375,6 +408,8 @@ function toastMsg(msg,dur=2200){const t=document.getElementById('toast');t.textC
 function haptic(type='light'){if(!navigator.vibrate)return;if(type==='light')navigator.vibrate(8);if(type==='medium')navigator.vibrate(20);if(type==='success')navigator.vibrate([10,50,20]);}
 function getMonday(date){const d=new Date(date),day=d.getDay();d.setDate(d.getDate()+(day===0?-6:1-day));d.setHours(0,0,0,0);return d;}
 function daysUntil(ds){const now=today();now.setHours(0,0,0,0);const t=new Date(ds);return Math.round((t-now)/86400000);}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function fmtShortDate(ds){const d=new Date(ds);return`${d.getDate()}/${d.getMonth()+1}`;}
 
 // ── DATA ──
 function loadState(){
@@ -463,32 +498,59 @@ function showPage(name){
   if(name==='me')renderMe();
 }
 
-// ── TODAY ──
+// ── TODAY + WEEK NAV ──
+let weekOffset=0;
+function changeWeek(dir){
+  const newOff=weekOffset+dir;
+  if(newOff>0)return; // can't go future
+  weekOffset=newOff;
+  renderToday();
+}
 function renderToday(){
-  const now=today();const ds=dk(now);
+  const now=today();
+  const baseMonday=addDays(getMonday(now),weekOffset*7);
+  const viewingToday=weekOffset===0;
+  // "active day" = today if current week, else last day of viewed week
+  const activeDate=viewingToday?now:addDays(baseMonday,6);
+  const ds=dk(activeDate);
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('today-date-label').textContent=`${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`;
+  document.getElementById('today-date-label').textContent=viewingToday
+    ?`${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`
+    :`Week of ${baseMonday.getDate()} ${MONTHS[baseMonday.getMonth()]}`;
 
-  const score=getTodayScore();
+  const score=viewingToday?getTodayScore():getWeekScore();
   document.getElementById('today-score').textContent=score;
   const statusEl=document.getElementById('today-status');
-  if(score===100)statusEl.innerHTML='<span>Perfect day.</span>';
+  if(!viewingToday){statusEl.innerHTML=`Week score · <span>${allGoals().filter(g=>{let d=0;for(let i=0;i<7;i++){const day=addDays(baseMonday,i);if(day<=now&&goalDone(dk(day),g))d++;}return d>0;}).length}/${allGoals().length} goals hit</span>`;}
+  else if(score===100)statusEl.innerHTML='<span>Perfect day.</span>';
   else if(score>=75)statusEl.innerHTML='<span>Strong.</span> Keep pushing.';
   else if(score>=50)statusEl.innerHTML='Good start. <span>Halfway there.</span>';
   else if(score>0)statusEl.innerHTML='You\'ve started. <span>Keep going.</span>';
   else statusEl.textContent='Nothing logged yet. Let\'s go.';
 
+  // Week nav label + next button
+  const endOfWeek=addDays(baseMonday,6);
+  document.getElementById('week-label').textContent=viewingToday?'This week':`${fmtShortDate(dk(baseMonday))} – ${fmtShortDate(dk(endOfWeek))}`;
+  const nextBtn=document.getElementById('week-next-btn');
+  nextBtn.style.opacity=weekOffset===0?'0.2':'1';
+  nextBtn.style.pointerEvents=weekOffset===0?'none':'auto';
+
   // Week strip
-  const mon=getMonday(now);
   const stripEl=document.getElementById('week-strip');
   stripEl.innerHTML='';
   ['M','T','W','T','F','S','S'].forEach((lbl,i)=>{
-    const d=new Date(mon);d.setDate(d.getDate()+i);
-    const dds=dk(d);const isToday=dds===ds;const isPast=d<now&&!isToday;
+    const d=addDays(baseMonday,i);
+    const dds=dk(d);
+    const isActive=dds===ds;
+    const isFuture=d>now;
+    const dayScore=!isFuture?getDayScore(dds):0;
     const el=document.createElement('div');
-    el.className='week-day'+(isToday?' today':isPast&&getDayScore(dds)>=80?' past-done':'');
+    el.className='week-day'+(isActive?' today':!isFuture&&dayScore>=80?' past-done':'');
+    if(isFuture)el.style.opacity='0.3';
     el.innerHTML=`<div class="week-day-label">${lbl}</div><div class="week-day-dot"></div><div class="week-day-num">${d.getDate()}</div>`;
+    // tap a day to view it
+    if(!isFuture){el.onclick=()=>{const clickDs=dds;renderDayGoals(clickDs);};}
     stripEl.appendChild(el);
   });
 
@@ -505,17 +567,19 @@ function renderToday(){
     }else{raceWrap.innerHTML='';}
   }else{raceWrap.innerHTML='';}
 
-  // Session prompt
+  // Session prompt (only for current week)
   const wrap=document.getElementById('session-card-wrap');
-  const gymDone=getSessionDone(ds,'gym');const runDone=getSessionDone(ds,'run');
-  if(!gymDone||!runDone){
-    const t=!gymDone?{title:'Gym',meta:'Log your workout',tab:'gym'}:{title:'Running',meta:'Log your run',tab:'run'};
-    wrap.innerHTML=`<div class="session-card" onclick="showPage('train');switchTrainTab('${t.tab}')">
-      <div class="session-card-label">Today's Session</div>
-      <div class="session-card-title">${esc(t.title)}</div>
-      <div class="session-card-meta">${t.meta}</div>
-      <div class="session-card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </div>`;
+  if(viewingToday){
+    const gymDone=getSessionDone(dk(now),'gym');const runDone=getSessionDone(dk(now),'run');
+    if(!gymDone||!runDone){
+      const t=!gymDone?{title:'Gym',meta:'Log your workout',tab:'gym'}:{title:'Running',meta:'Log your run',tab:'run'};
+      wrap.innerHTML=`<div class="session-card" onclick="showPage('train');switchTrainTab('${t.tab}')">
+        <div class="session-card-label">Today's Session</div>
+        <div class="session-card-title">${esc(t.title)}</div>
+        <div class="session-card-meta">${t.meta}</div>
+        <div class="session-card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>`;
+    }else{wrap.innerHTML='';}
   }else{wrap.innerHTML='';}
 
   // Goal cards
@@ -548,6 +612,87 @@ function renderToday(){
   });
 }
 
+function renderDayGoals(ds){
+  // Re-render just the goal stack for a tapped day
+  const now=today();const isToday=ds===dk(now);
+  const stack=document.getElementById('goal-stack');
+  stack.innerHTML='';
+  // show a subtle header if not today
+  if(!isToday){
+    const d=new Date(ds);
+    const header=document.createElement('div');
+    header.style.cssText='font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;padding:0 4px 10px;';
+    header.textContent=`${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}`;
+    stack.appendChild(header);
+  }
+  allDailyGoals().forEach(g=>{
+    const done=goalDone(ds,g);
+    const card=document.createElement('div');
+    card.className='goal-card'+(done?' done':'');
+    if(g.inputStyle==='check'){
+      card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><div class="goal-card-meta">${done?'Completed':'Not done'}</div></div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
+      if(isToday)card.onclick=()=>toggleCheck(ds,g.id);
+    }else{
+      const val=getTextEntry(ds,g.id);
+      card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div>${isToday?`<input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()">`:val?`<div style="font-size:13px;color:var(--text2);margin-top:2px;">${esc(val)}</div>`:'<div class="goal-card-meta">No entry</div>'}</div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
+      if(isToday)card.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
+    }
+    stack.appendChild(card);
+  });
+  allSessionGoals().forEach(g=>{
+    const done=getSessionDone(ds,g.id);
+    const mon2=getMonday(new Date(ds));let weekDone=0;
+    for(let i=0;i<7;i++){const d=addDays(mon2,i);if(d<=now&&getSessionDone(dk(d),g.id))weekDone++;}
+    const target=(state.builtinTargets&&state.builtinTargets[g.id])||g.weeklyTarget||3;
+    const card=document.createElement('div');
+    card.className='goal-card'+(done?' done':'');
+    card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><div class="goal-card-meta">${weekDone}/${target} this week${done?' · Done':''}</div></div><div style="font-size:12px;font-weight:800;color:${weekDone>=target?'var(--green)':'var(--text3)'};">${weekDone}/${target}</div>`;
+    if(isToday)card.onclick=()=>{showPage('train');switchTrainTab(g.id==='run'?'run':'gym');};
+    stack.appendChild(card);
+  });
+}
+
+// ── REST TIMER ──
+let restInterval=null,restTotal=0,restRemaining=0;
+function startRestTimer(secs){
+  restStop();
+  restTotal=secs;restRemaining=secs;
+  document.getElementById('rest-timer-bar').classList.add('active');
+  updateRestDisplay();
+  restInterval=setInterval(()=>{
+    restRemaining--;
+    if(restRemaining<=0){restStop();haptic('success');toastMsg('Rest done — next set!');return;}
+    updateRestDisplay();
+  },1000);
+}
+function updateRestDisplay(){
+  const m=Math.floor(restRemaining/60),s=restRemaining%60;
+  const el=document.getElementById('rest-timer-display');
+  el.textContent=`${m}:${String(s).padStart(2,'0')}`;
+  el.className='rest-timer-display'+(restRemaining<=10?' warning':'');
+  const pct=((restTotal-restRemaining)/restTotal*100);
+  document.getElementById('rest-timer-progress').style.width=pct+'%';
+}
+function restTimerAdd(s){restRemaining+=s;updateRestDisplay();}
+function restTimerStop(){restStop();toastMsg('Timer stopped');}
+function restStop(){clearInterval(restInterval);restInterval=null;document.getElementById('rest-timer-bar').classList.remove('active');}
+
+// ── PLATE CALCULATOR ──
+const PLATES=[25,20,15,10,5,2.5,1.25];
+const PLATE_COLORS={25:'#ef4444',20:'#3b82f6',15:'#f97316',10:'#eab308',5:'#10b981',2.5:'#e8e8ff','1.25':'#8080a8'};
+function calcPlates(totalKg,barKg=20){
+  let remaining=(totalKg-barKg)/2;if(remaining<=0)return[];
+  const result=[];
+  for(const p of PLATES){while(remaining>=p-0.001){result.push(p);remaining-=p;remaining=Math.round(remaining*1000)/1000;}}
+  return result;
+}
+function renderPlateCalc(weightKg){
+  const w=parseFloat(weightKg);if(!w||w<=20)return'';
+  const plates=calcPlates(w);if(!plates.length)return'';
+  const platesHtml=plates.map(p=>`<div class="plate" style="background:${PLATE_COLORS[p]||'var(--surface2)'};color:${p>=20?'white':'var(--bg)'};border:2px solid ${PLATE_COLORS[p]||'var(--border)'};">${p}</div>`).join('');
+  return`<div class="plate-calc"><div class="plate-calc-title">Each side — ${w}kg total</div><div class="plate-row">${platesHtml}</div></div>`;
+}
+
 // ── TRAIN ──
 let activeTrainTab='gym';
 function switchTrainTab(tab){
@@ -560,6 +705,7 @@ function renderTrain(){renderTrainSection(activeTrainTab);}
 function renderTrainSection(tab){
   if(tab==='gym')renderGymSection();
   if(tab==='run')renderRunSection();
+  if(tab==='prs')renderPRs();
   if(tab==='history')renderTrainHistory();
 }
 
@@ -649,7 +795,11 @@ function renderExBlock(ex,i,lastSame,prog){
         style="padding:10px 12px;${s.warmup?'opacity:0.6;':''}" oninput="gymSetReps(${i},${si},this.value)">
       <button onclick="gymRemoveSet(${i},${si})" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;">×</button>
     </div>`).join('')}
-    <button onclick="gymAddSet(${i})" style="width:100%;padding:8px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button onclick="gymAddSet(${i})" style="flex:1;padding:8px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
+      <button onclick="startRestTimer(90)" style="padding:8px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Start 90s rest timer">Rest</button>
+    </div>
+    ${renderPlateCalc((ex.sets||[]).filter(s=>!s.warmup).reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b||0)?parseFloat(s.weight):b,0))}
   </div>`;
 }
 
@@ -775,6 +925,45 @@ function renderTrainHistory(){
   ).join('')}</div>`;
 }
 
+// ── PRs ──
+function renderPRs(){
+  const el=document.getElementById('train-prs-content');
+  const gym=loadGymData();
+  if(!gym.length){el.innerHTML=`<div class="empty-state"><strong>No sessions yet</strong>Log your first gym session to start tracking PRs.</div>`;return;}
+  // Build PR map: exerciseName → {weight, reps, date, vol1rm}
+  const prs={};
+  gym.forEach(session=>{
+    (session.exercises||[]).forEach(ex=>{
+      if(!ex.name)return;
+      (ex.sets||[]).filter(s=>!s.warmup).forEach(s=>{
+        const w=parseFloat(s.weight||0);const r=parseFloat(s.reps||0);
+        if(!w)return;
+        // Epley 1RM estimate
+        const e1rm=r===1?w:w*(1+r/30);
+        if(!prs[ex.name]||e1rm>prs[ex.name].e1rm){
+          prs[ex.name]={weight:w,reps:r,e1rm:Math.round(e1rm*10)/10,date:session.date};
+        }
+      });
+    });
+  });
+  const sorted=Object.entries(prs).sort((a,b)=>b[1].e1rm-a[1].e1rm);
+  if(!sorted.length){el.innerHTML=`<div class="empty-state"><strong>No PR data</strong>Log weights to track personal records.</div>`;return;}
+  el.innerHTML=`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Personal Records</span><span class="chart-card-val">Est. 1RM</span></div>
+    ${sorted.map(([name,pr])=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+      ${goalAvatarInline(name)}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:1px;">${pr.weight}kg × ${pr.reps} · ${pr.date}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:18px;font-weight:800;color:var(--accent2);">${pr.e1rm}kg</div>
+        <div style="font-size:10px;color:var(--text3);font-weight:700;">est. 1RM</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
 // ── TRENDS ──
 function renderTrends(){
   const el=document.getElementById('trends-content');
@@ -796,7 +985,9 @@ function renderTrends(){
       <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekGym.length}</div><div class="m-unit">sessions this week</div></div>
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week</div></div>
     </div>
+    ${renderConsistencyScore()}
     ${renderWeekChart()}
+    ${renderHeatmap()}
     ${renderWeekBars()}
     ${renderStreakCards()}
     ${renderRunStatsCard(runs)}
@@ -804,6 +995,62 @@ function renderTrends(){
     ${renderGymStatsCard(gym)}
     ${renderVolumeChart(gym)}
   `;
+}
+
+function renderConsistencyScore(){
+  // Look at last 28 days, compute avg completion and variance
+  const now=today();const scores=[];
+  for(let i=27;i>=0;i--){const d=addDays(now,-i);scores.push(getDayScore(dk(d)));}
+  const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
+  const variance=scores.reduce((a,b)=>a+Math.pow(b-avg,2),0)/scores.length;
+  const stdDev=Math.sqrt(variance);
+  // Grade: penalise high variance, reward high avg
+  const raw=avg-(stdDev*0.5);
+  const grade=raw>=85?'S':raw>=70?'A':raw>=50?'B':raw>=30?'C':'D';
+  const gradeColor=grade==='S'?'var(--accent2)':grade==='A'?'var(--green)':grade==='B'?'var(--orange)':'var(--text3)';
+  const R=44,C=54,stroke=8;
+  const circ=2*Math.PI*R;
+  const filled=circ*(avg/100);
+  return`<div class="metric-row">
+    <div class="metric-card" style="grid-column:span 1;">
+      <div class="m-label">Consistency</div>
+      <div style="font-size:48px;font-weight:800;color:${gradeColor};letter-spacing:-2px;line-height:1;">${grade}</div>
+      <div class="m-unit">last 28 days</div>
+    </div>
+    <div class="metric-card accent">
+      <div class="m-label">Avg Daily</div>
+      <div class="m-val">${Math.round(avg)}</div>
+      <div class="m-unit">% · σ ${Math.round(stdDev)}pts</div>
+    </div>
+  </div>`;
+}
+
+function renderHeatmap(){
+  const now=today();
+  // 16 weeks × 7 days = 112 days back
+  const weeks=16;const cells=[];
+  const startMonday=addDays(getMonday(now),-(weeks-1)*7);
+  for(let w=0;w<weeks;w++){
+    const row=[];
+    for(let d=0;d<7;d++){
+      const date=addDays(startMonday,w*7+d);
+      const isFuture=date>now;
+      const score=isFuture?-1:getDayScore(dk(date));
+      row.push({date:dk(date),score,isFuture});
+    }
+    cells.push(row);
+  }
+  const cellSize=16,gap=3;
+  const W=(cellSize+gap)*weeks-gap;const H=(cellSize+gap)*7-gap;
+  const rects=cells.map((row,wi)=>row.map((cell,di)=>{
+    const x=wi*(cellSize+gap);const y=di*(cellSize+gap);
+    if(cell.isFuture)return`<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="3" fill="var(--surface2)" opacity="0.3"/>`;
+    const s=cell.score;
+    const fill=s===0?'var(--surface2)':s<50?'rgba(99,102,241,0.25)':s<80?'rgba(99,102,241,0.55)':'var(--accent)';
+    return`<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="3" fill="${fill}"><title>${cell.date}: ${s}%</title></rect>`;
+  }).join('')).join('');
+  const dayLabels=['M','','W','','F','','S'].map((l,i)=>l?`<text x="-4" y="${i*(cellSize+gap)+cellSize*0.75}" text-anchor="end" fill="var(--text3)" font-size="9" font-weight="700">${l}</text>`:'').join('');
+  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Activity Heatmap</span><span class="chart-card-val">16 weeks</span></div><div style="overflow-x:auto;padding:4px 0;"><svg viewBox="-16 0 ${W+20} ${H}" style="height:${H}px;min-width:${W+16}px;">${dayLabels}${rects}</svg></div></div>`;
 }
 
 function renderWeekChart(){

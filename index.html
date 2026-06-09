@@ -300,7 +300,6 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
     <button class="train-tab" data-tab="history" onclick="switchTrainTab('history')">History</button>
     <button class="train-tab" data-tab="monthly" onclick="switchTrainTab('monthly')">Monthly</button>
     <button class="train-tab" data-tab="volume" onclick="switchTrainTab('volume')">Volume</button>
-    <button class="train-tab" data-tab="library" onclick="switchTrainTab('library')">Library</button>
   </div>
   <div class="train-content">
     <div class="train-section active" id="train-gym"><div id="gym-content"></div></div>
@@ -308,8 +307,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
     <div class="train-section" id="train-prs"><div id="train-prs-content"></div></div>
     <div class="train-section" id="train-history"><div id="train-history-content"></div></div>
     <div class="train-section" id="train-monthly"><div id="train-monthly-content"></div></div>
-    <div class="train-section" id="train-volume"><div id="train-volume-content"></div></div>
-    <div class="train-section" id="train-library"><div id="train-library-content"></div></div>
+    <div class="train-section" id="train-volume"><div id="train-volume-content"></div><div id="train-library-content"></div></div>
   </div>
 </div>
 
@@ -922,8 +920,7 @@ function renderTrainSection(tab){
   if(tab==='prs')renderPRs();
   if(tab==='history')renderTrainHistory();
   if(tab==='monthly')renderMonthlyHistory();
-  if(tab==='volume')renderVolumeTab();
-  if(tab==='library')renderExerciseLibrary();
+  if(tab==='volume'){renderVolumeTab();renderExerciseLibrary();}
 }
 
 // ── GYM ──

@@ -2611,11 +2611,17 @@ function clearAllData(){
 function renderMonthlyHistory(){
   const el=document.getElementById('train-monthly-content');
   const now=today();const months=[];
-  for(let i=5;i>=0;i--){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    months.push({year:d.getFullYear(),month:d.getMonth(),label:d.toLocaleDateString('en-GB',{month:'long',year:'numeric'})});
-  }
   const gym=loadGymData();const runs=loadRunData();
+  const allDates=[...gym.map(s=>s.date),...runs.map(r=>r.date)].filter(Boolean).sort();
+  const firstDate=allDates.length?new Date(allDates[0]+'T12:00:00'):new Date(now.getFullYear(),now.getMonth()-5,1);
+  const startYear=firstDate.getFullYear(),startMonth=firstDate.getMonth();
+  const curYear=now.getFullYear(),curMonth=now.getMonth();
+  let y=startYear,m=startMonth;
+  while(y<curYear||(y===curYear&&m<=curMonth)){
+    const d=new Date(y,m,1);
+    months.push({year:y,month:m,label:d.toLocaleDateString('en-GB',{month:'long',year:'numeric'})});
+    m++;if(m>11){m=0;y++;}
+  }
   const MNAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   el.innerHTML=months.map(({year,month,label})=>{
     const mGym=gym.filter(s=>{const d=new Date(s.date);return d.getFullYear()===year&&d.getMonth()===month;});

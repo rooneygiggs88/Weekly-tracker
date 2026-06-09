@@ -621,6 +621,11 @@ function getWeeklyQuota(){
     return{...g,done,target};
   });
 }
+function toggleQuotaPicker(id){
+  const el=document.getElementById('quota-picker-'+id);
+  if(!el)return;
+  el.style.display=el.style.display==='none'?'flex':'none';
+}
 function setQuotaTarget(id,n){
   if(!state.builtinTargets)state.builtinTargets={};
   state.builtinTargets[id]=n;
@@ -810,16 +815,18 @@ function renderToday(){
         `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${i<g.done?col:'var(--border)'};margin-right:3px;"></span>`
       ).join('');
       const complete=g.done>=g.target;
+      const editId=`quota-picker-${g.id}`;
       const picker=Array.from({length:7},(_,i)=>i+1).map(n=>
-        `<button onclick="event.stopPropagation();setQuotaTarget('${g.id}',${n})" style="width:28px;height:28px;border-radius:50%;border:2px solid ${n===g.target?col:'var(--border)'};background:${n===g.target?col+'22':'transparent'};color:${n===g.target?col:'var(--text2)'};font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;">${n}</button>`
+        `<button onclick="setQuotaTarget('${g.id}',${n})" style="width:30px;height:30px;border-radius:50%;border:2px solid ${n===g.target?col:'var(--border)'};background:${n===g.target?col+'33':'transparent'};color:${n===g.target?col:'var(--text2)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;">${n}</button>`
       ).join('');
-      return`<div style="flex:1;display:flex;flex-direction:column;gap:5px;padding:12px 14px;border-radius:var(--radius-xs);background:var(--surface2);border:1px solid ${complete?col+'44':'var(--border)'};">
-        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')">
-          <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:${complete?col:'var(--text2)'};">${esc(g.name)}</span>
-          <span style="font-size:13px;font-weight:800;color:${complete?col:'var(--text2)'};">${g.done}/${g.target}${complete?' ✓':''}</span>
+      return`<div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:var(--radius-xs);background:var(--surface2);border:1px solid ${complete?col+'44':'var(--border)'};">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:${complete?col:'var(--text2)'};cursor:pointer;flex:1;">${esc(g.name)}</span>
+          <span onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')" style="font-size:13px;font-weight:800;color:${complete?col:'var(--text2)'};cursor:pointer;margin-right:8px;">${g.done}/${g.target}${complete?' ✓':''}</span>
+          <button onclick="toggleQuotaPicker('${g.id}')" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;padding:0;">✎</button>
         </div>
         <div>${dots}</div>
-        <div style="display:flex;gap:4px;margin-top:2px;">${picker}</div>
+        <div id="${editId}" style="display:none;flex-wrap:wrap;gap:4px;margin-top:2px;">${picker}</div>
       </div>`;
     }).join('');
     wrap.innerHTML=planChip+`<div style="display:flex;gap:8px;margin-bottom:4px;">${quotaItems}</div>`;

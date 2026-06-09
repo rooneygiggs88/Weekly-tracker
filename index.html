@@ -1054,6 +1054,9 @@ function renderRunSection(){
       ${['Easy','Tempo','Hard','Long','Race'].map(e=>`<button onclick="selectEffort('${e}')" id="eff-${e}" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
     </div>
     <div style="height:12px;"></div>
+    <label>Start time (optional)</label>
+    <input class="run-field" type="time" id="run-starttime" value="${new Date().toTimeString().slice(0,5)}">
+    <div style="height:12px;"></div>
     <label>Notes (optional)</label>
     <input class="run-field" type="text" id="run-note" placeholder="How did it feel?">
     <div style="height:16px;"></div>
@@ -1085,9 +1088,16 @@ function saveRun(){
   const km=parseFloat(document.getElementById('run-km').value)||0;
   const time=(document.getElementById('run-time').value||'').trim();
   const note=(document.getElementById('run-note').value||'').trim();
+  const startTimeVal=(document.getElementById('run-starttime').value||'').trim();
   if(!km&&!time){toastMsg('Add a distance or time');return;}
+  // Build ts from start time field if provided, otherwise now
+  let ts=Date.now();
+  if(startTimeVal){
+    const [h,m]=startTimeVal.split(':').map(Number);
+    const d=new Date(today());d.setHours(h,m,0,0);ts=d.getTime();
+  }
   const runs=loadRunData();
-  runs.push({date:dk(today()),km,time,note,effort:selectedEffort,ts:Date.now()});
+  runs.push({date:dk(today()),km,time,note,effort:selectedEffort,startTime:startTimeVal||null,ts});
   saveRunData(runs);
   const d=dk(today());
   if(!state.data[`${d}:session:run`])state.data[`${d}:session:run`]=[];
@@ -1776,7 +1786,13 @@ function importV1Format(d){
       const time=parts[1]||null;
       const type=parts[2]||null;
       const note=parts.slice(3).join(' | ')||null;
-      runArr.push({date,km,time,type,note:note||''});
+      // Extract @HH:MM start time from note if present
+      let startTime=null,cleanNote=note||'';
+      const atMatch=cleanNote.match(/@(\d{1,2}:\d{2})/);
+      if(atMatch){startTime=atMatch[1].padStart(5,'0');cleanNote=cleanNote.replace(atMatch[0],'').trim();}
+      let ts=new Date(date).getTime();
+      if(startTime){const[h,m]=startTime.split(':').map(Number);const d2=new Date(date);d2.setHours(h,m,0,0);ts=d2.getTime();}
+      runArr.push({date,km,time,effort:type,note:cleanNote,startTime,ts});
     });
   });
   if(runArr.length)localStorage.setItem('run_data_v2',JSON.stringify(runArr));

@@ -1603,22 +1603,26 @@ function renderTrendsRunAnalysis(){
     const EFFORT_COL=e=>{const el=(e||'').toLowerCase();if(el.includes('easy')||el.includes('recovery')||el.includes('steady'))return'#34d399';if(el.includes('tempo')||el.includes('fartlek'))return'#fb923c';if(el.includes('hard')||el.includes('interval'))return'#f87171';if(el.includes('long'))return'#818cf8';if(el.includes('race'))return'#fbbf24';return'var(--text2)';};
     const paceRuns=[...withTime].sort((a,b)=>a.date.localeCompare(b.date));
     if(paceRuns.length<3) return `<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Pace Progression</span></div><div class="empty-state" style="padding:16px 0 0;">Log 3+ timed runs to see pace progression.</div></div>`;
-    const W=320,H=180,PL=42,PR=10,PT=16,PB=26;
+    const W=320,H=180,PL=48,PR=10,PT=16,PB=26;
     const chartW=W-PL-PR,chartH=H-PT-PB;
     // pace in km/s — higher = faster
     const paceVals=paceRuns.map(r=>r.km/parseTimeToSecs(r.time));
     const bestP=Math.max(...paceVals);
-    // Pad range by 30s worth of pace on each side
-    const pad=1/120;
-    const minP=Math.min(...paceVals)-pad,maxP=Math.max(...paceVals)+pad;
-    const rangeP=Math.max(maxP-minP,0.001);
+    // Work in sec/km for axis math (avoids km/s padding distortion)
+    const secPerKmVals=paceVals.map(p=>Math.round(1/p));
+    const fastestSec=Math.min(...secPerKmVals),slowestSec=Math.max(...secPerKmVals);
+    const padSecs=30;
+    const axisMinSec=fastestSec-padSecs,axisMaxSec=slowestSec+padSecs;
+    const minP=1/axisMaxSec,maxP=1/Math.max(axisMinSec,1);
+    const rangeP=Math.max(maxP-minP,0.00001);
     const py=p=>PT+((maxP-p)/rangeP)*chartH;
     const px=i=>PL+(i/Math.max(paceRuns.length-1,1))*chartW;
     let svg='';
-    // Y-axis gridlines every 30s of pace (1/120 km/s = 30s/km)
-    const tickStep=1/120;
-    const firstTick=Math.ceil(minP/tickStep)*tickStep;
-    for(let t=firstTick;t<=maxP+0.0001;t+=tickStep){
+    // Y-axis gridlines every 30s in sec/km space
+    const tickStepSec=30;
+    const firstTickSec=Math.ceil(axisMinSec/tickStepSec)*tickStepSec;
+    for(let ts=firstTickSec;ts<=axisMaxSec+1;ts+=tickStepSec){
+      const t=1/ts;
       const y=py(t);if(y<PT-2||y>PT+chartH+2)continue;
       svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
       svg+=`<text x="${(PL-5).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${fmtPace(t)}</text>`;

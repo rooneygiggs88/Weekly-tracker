@@ -1673,16 +1673,19 @@ function renderTrendsGymAnalysis(){
     return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>`;
   }
 
-  // Build weekly buckets (12 weeks)
-  const weekPts=[];
+  // Build weekly buckets (12 weeks), trimmed to first week with a session
+  const allWeekPts=[];
   for(let w=11;w>=0;w--){
     const mon=addDays(getMonday(now),-w*7);
     const monStr=dk(mon),sunStr=dk(addDays(mon,6));
     const wSessions=gym.filter(s=>s.date>=monStr&&s.date<=sunStr);
     const sets=wSessions.reduce((a,s)=>(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,a),0);
     const label=`${mon.getDate()}/${mon.getMonth()+1}`;
-    weekPts.push({x:label,count:wSessions.length,sets,mon});
+    allWeekPts.push({x:label,count:wSessions.length,sets,mon});
   }
+  let firstNonZeroGym=0;
+  while(firstNonZeroGym<allWeekPts.length-1&&allWeekPts[firstNonZeroGym].count===0)firstNonZeroGym++;
+  const weekPts=allWeekPts.slice(firstNonZeroGym);
 
   // 1. Session frequency
   const freqPts=weekPts.map(w=>({x:w.x,y:w.count}));

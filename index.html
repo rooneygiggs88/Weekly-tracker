@@ -604,12 +604,22 @@ function goalDone(ds,g){
   }
   return getSessionDone(ds,g.id);
 }
-function getTodayScore(){const d=dk(today());const gs=allGoals();if(!gs.length)return 0;return Math.round(gs.filter(g=>goalDone(d,g)).length/gs.length*100);}
-function getDayScore(ds){const gs=allGoals();if(!gs.length)return 0;return Math.round(gs.filter(g=>goalDone(ds,g)).length/gs.length*100);}
+function getTodayScore(){const d=dk(today());const gs=allDailyGoals();if(!gs.length)return 0;return Math.round(gs.filter(g=>goalDone(d,g)).length/gs.length*100);}
+function getDayScore(ds){const gs=allDailyGoals();if(!gs.length)return 0;return Math.round(gs.filter(g=>goalDone(ds,g)).length/gs.length*100);}
 function getWeekScore(){
   const now=today();const mon=getMonday(now);let total=0,done=0;
-  for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(d.getDate()+i);if(d>now)break;const ds=dk(d);allGoals().forEach(g=>{total++;if(goalDone(ds,g))done++;});}
+  for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(d.getDate()+i);if(d>now)break;const ds=dk(d);allDailyGoals().forEach(g=>{total++;if(goalDone(ds,g))done++;});}
   return total?Math.round(done/total*100):0;
+}
+function getWeeklyQuota(){
+  const now=today();const mon=getMonday(now);
+  const goals=allSessionGoals();
+  return goals.map(g=>{
+    const target=(state.builtinTargets&&state.builtinTargets[g.id])||g.weeklyTarget||3;
+    let done=0;
+    for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(d.getDate()+i);if(d<=now&&getSessionDone(dk(d),g.id))done++;}
+    return{...g,done,target};
+  });
 }
 
 // ── PAGE NAV ──
@@ -763,35 +773,46 @@ function renderToday(){
     }else{raceWrap.innerHTML='';}
   }else{raceWrap.innerHTML='';}
 
-  // Session prompt (only for current week)
+  // Weekly quota tracker + today's plan
   const wrap=document.getElementById('session-card-wrap');
   if(viewingToday){
-    const gymDone=getSessionDone(dk(now),'gym');const runDone=getSessionDone(dk(now),'run');
+    const quota=getWeeklyQuota();
     const todayPlan=getTodayPlanType();
-    const planIsGym=todayPlan&&['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
-    const planIsRun=todayPlan==='Run';
+    const planColor={Push:'#ef4444',Pull:'var(--accent2)',Legs:'var(--green)',Core:'#eab308',Custom:'#a855f7',Run:'#06b6d4'};
+    const planBgColor={Push:'rgba(239,68,68,0.08)',Pull:'rgba(99,102,241,0.08)',Legs:'rgba(16,185,129,0.08)',Core:'rgba(234,179,8,0.08)',Custom:'rgba(139,92,246,0.08)',Run:'rgba(6,182,212,0.08)'};
+    // Plan chip
+    let planChip='';
     if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
-      // Plan-aware prompt
-      const alreadyDone=(planIsRun&&runDone)||(planIsGym&&gymDone);
-      const tab=planIsRun?'run':'gym';
-      const gymPreselect=planIsGym?`;setTimeout(()=>{_gymPickedType='${todayPlan}';renderGymTypeSelector();},50)`:'';
-      const planColor={Push:'#ef4444',Pull:'var(--accent2)',Legs:'var(--green)',Core:'#eab308',Custom:'#a855f7',Run:'#06b6d4'}[todayPlan]||'var(--accent)';
-      const planBg={Push:'rgba(239,68,68,0.08)',Pull:'rgba(99,102,241,0.08)',Legs:'rgba(16,185,129,0.08)',Core:'rgba(234,179,8,0.08)',Custom:'rgba(139,92,246,0.08)',Run:'rgba(6,182,212,0.08)'}[todayPlan]||'rgba(99,102,241,0.08)';
-      wrap.innerHTML=`<div class="session-card" style="background:${planBg};border-color:${planColor}40;" onclick="showPage('train');switchTrainTab('${tab}')${gymPreselect}">
-        <div class="session-card-label" style="color:${planColor};">Today's Plan</div>
+      const pc=planColor[todayPlan]||'var(--accent)';
+      const pb=planBgColor[todayPlan]||'rgba(99,102,241,0.08)';
+      const isGym=['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
+      const tab=isGym?'gym':'run';
+      const gymPreselect=isGym?`;setTimeout(()=>{_gymPickedType='${todayPlan}';renderGymTypeSelector();},50)`:'';
+      const alreadyDone=isGym?getSessionDone(dk(now),'gym'):getSessionDone(dk(now),'run');
+      planChip=`<div class="session-card" style="background:${pb};border-color:${pc}40;margin-bottom:8px;" onclick="showPage('train');switchTrainTab('${tab}')${gymPreselect}">
+        <div class="session-card-label" style="color:${pc};">Today's Plan</div>
         <div class="session-card-title">${esc(todayPlan)}</div>
         <div class="session-card-meta">${alreadyDone?'Session logged ✓':'Tap to start'}</div>
-        <div class="session-card-arrow" style="background:${planColor};box-shadow:0 4px 12px ${planColor}40;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="session-card-arrow" style="background:${pc};box-shadow:0 4px 12px ${pc}40;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
       </div>`;
-    } else if(!gymDone||!runDone){
-      const t=!gymDone?{title:'Gym',meta:'Log your workout',tab:'gym'}:{title:'Running',meta:'Log your run',tab:'run'};
-      wrap.innerHTML=`<div class="session-card" onclick="showPage('train');switchTrainTab('${t.tab}')">
-        <div class="session-card-label">Today's Session</div>
-        <div class="session-card-title">${esc(t.title)}</div>
-        <div class="session-card-meta">${t.meta}</div>
-        <div class="session-card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
+    }
+    // Quota row
+    const quotaItems=quota.map(g=>{
+      const isRun=g.id==='run';
+      const col=isRun?'#06b6d4':'var(--accent2)';
+      const dots=Array.from({length:g.target},(_,i)=>
+        `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${i<g.done?col:'var(--border)'};margin-right:3px;"></span>`
+      ).join('');
+      const complete=g.done>=g.target;
+      return`<div onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')" style="flex:1;display:flex;flex-direction:column;gap:5px;padding:12px 14px;border-radius:var(--radius-xs);background:var(--surface2);border:1px solid ${complete?col+'44':'var(--border)'};cursor:pointer;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:${complete?col:'var(--text2)'};">${esc(g.name)}</span>
+          <span style="font-size:13px;font-weight:800;color:${complete?col:'var(--text2)'};">${g.done}/${g.target}${complete?' ✓':''}</span>
+        </div>
+        <div>${dots}</div>
       </div>`;
-    }else{wrap.innerHTML='';}
+    }).join('');
+    wrap.innerHTML=planChip+`<div style="display:flex;gap:8px;margin-bottom:4px;">${quotaItems}</div>`;
   }else{wrap.innerHTML='';}
 
   // Goal cards
@@ -809,17 +830,6 @@ function renderToday(){
       card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()"></div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
       card.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
     }
-    stack.appendChild(card);
-  });
-  allSessionGoals().forEach(g=>{
-    const done=getSessionDone(ds,g.id);
-    const target=(state.builtinTargets&&state.builtinTargets[g.id])||g.weeklyTarget||3;
-    const mon2=getMonday(now);let weekDone=0;
-    for(let i=0;i<7;i++){const d=new Date(mon2);d.setDate(d.getDate()+i);if(d<=now&&getSessionDone(dk(d),g.id))weekDone++;}
-    const card=document.createElement('div');
-    card.className='goal-card'+(done?' done':'');
-    card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><div class="goal-card-meta">${weekDone}/${target} this week${done?' · Today done':''}</div></div><div style="font-size:12px;font-weight:800;color:${weekDone>=target?'var(--green)':'var(--text3)'};">${weekDone}/${target}</div>`;
-    card.onclick=()=>{showPage('train');switchTrainTab(g.id==='run'?'run':'gym');};
     stack.appendChild(card);
   });
 }
@@ -849,17 +859,6 @@ function renderDayGoals(ds){
       card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div>${isToday?`<input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()">`:val?`<div style="font-size:13px;color:var(--text2);margin-top:2px;">${esc(val)}</div>`:'<div class="goal-card-meta">No entry</div>'}</div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
       if(isToday)card.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
     }
-    stack.appendChild(card);
-  });
-  allSessionGoals().forEach(g=>{
-    const done=getSessionDone(ds,g.id);
-    const mon2=getMonday(new Date(ds));let weekDone=0;
-    for(let i=0;i<7;i++){const d=addDays(mon2,i);if(d<=now&&getSessionDone(dk(d),g.id))weekDone++;}
-    const target=(state.builtinTargets&&state.builtinTargets[g.id])||g.weeklyTarget||3;
-    const card=document.createElement('div');
-    card.className='goal-card'+(done?' done':'');
-    card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><div class="goal-card-meta">${weekDone}/${target} this week${done?' · Done':''}</div></div><div style="font-size:12px;font-weight:800;color:${weekDone>=target?'var(--green)':'var(--text3)'};">${weekDone}/${target}</div>`;
-    if(isToday)card.onclick=()=>{showPage('train');switchTrainTab(g.id==='run'?'run':'gym');};
     stack.appendChild(card);
   });
 }

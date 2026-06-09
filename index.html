@@ -1772,7 +1772,7 @@ function toggleCheck(dateIso,goalId){
 }
 function getText(date,key){return state.data[`${dk(date)}:text:${key}`]||'';}
 function setText(dateIso,key,val){
-  state.data[`${new Date(dateIso).toISOString().slice(0,10)}:text:${key}`]=val;
+  state.data[`${dk(new Date(dateIso))}:text:${key}`]=val;
   saveState();updateProgress();
 }
 
@@ -6160,7 +6160,7 @@ function renderBadgesSection() {
   // Save any newly earned badges
   let newEarned = false;
   Object.entries(earned).forEach(([id,isEarned])=>{
-    if(isEarned && !earnedDates[id]) { earnedDates[id]=new Date().toISOString().slice(0,10); newEarned=true; }
+    if(isEarned && !earnedDates[id]) { earnedDates[id]=dk(new Date()); newEarned=true; }
   });
   if(newEarned) localStorage.setItem('badgeDates', JSON.stringify(earnedDates));
 
@@ -6859,7 +6859,7 @@ function exportCSV() {
   const blob = new Blob([csv], {type:'text/csv'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href=url; a.download=`tracker-export-${new Date().toISOString().slice(0,10)}.csv`;
+  a.href=url; a.download=`tracker-export-${dk(new Date())}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   showToast('CSV exported ✓', 'var(--green)');
 }
@@ -8200,7 +8200,7 @@ function exportData(){
   const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href=url; a.download=`tracker-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.href=url; a.download=`tracker-backup-${dk(new Date())}.json`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 function importData(input){

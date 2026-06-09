@@ -3975,8 +3975,11 @@ function closeExTagModal() {
 // Called after renderGymLog renders. Attaches all events via addEventListener
 // so no exercise names ever appear in onclick strings (avoids iOS Safari crashes)
 function attachGymLogEvents() {
-  const card = document.getElementById('gym-log-card');
-  if (!card) return;
+  const existing = document.getElementById('gym-log-card');
+  if (!existing) return;
+  // Replace with a fresh clone to wipe any previously attached listeners
+  const card = existing.cloneNode(true);
+  existing.parentNode.replaceChild(card, existing);
   const exercises = getSessionExercises(gymSession);
 
   // Helper: get exercise name from a child element
@@ -5985,15 +5988,18 @@ function closeDayPopup() {
 // Attach long press to day cells — called after renderWeek
 function attachLongPress() {
   document.querySelectorAll('.day-cell').forEach(cell => {
-    cell.addEventListener('touchstart', e => {
-      const dateIso = cell.getAttribute('data-date');
+    // Replace cell with a clone to wipe previously attached touch listeners
+    const fresh = cell.cloneNode(true);
+    cell.parentNode.replaceChild(fresh, cell);
+    fresh.addEventListener('touchstart', e => {
+      const dateIso = fresh.getAttribute('data-date');
       if (!dateIso) return;
-      longPressTimer = setTimeout(() => showDayPopup(dateIso, cell), 500);
+      longPressTimer = setTimeout(() => showDayPopup(dateIso, fresh), 500);
     }, {passive:true});
-    cell.addEventListener('touchend', () => {
+    fresh.addEventListener('touchend', () => {
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
     });
-    cell.addEventListener('touchmove', () => {
+    fresh.addEventListener('touchmove', () => {
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
     }, {passive:true});
   });

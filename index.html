@@ -8323,4 +8323,11 @@ setTimeout(renderAnomalies, 800);
   </div>
 </div>
 
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/Weekly-tracker/sw.js');
+  });
+}
+</script>
 </body>

@@ -1533,15 +1533,15 @@ function renderTrendsRunAnalysis(){
   // Summary
   const summary=`<div class="chart-card">
     <div class="chart-card-header"><span class="chart-card-title">Running Summary</span></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
-      <div style="text-align:center;"><div style="font-size:24px;font-weight:800;letter-spacing:-1px;">${runs.length}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Runs</div></div>
-      <div style="text-align:center;"><div style="font-size:24px;font-weight:800;letter-spacing:-1px;">${totalKm.toFixed(0)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Total km</div></div>
-      <div style="text-align:center;"><div style="font-size:24px;font-weight:800;letter-spacing:-1px;">${longestRun?longestRun.toFixed(1):'—'}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Longest km</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div style="text-align:center;"><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${runs.length}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Runs</div></div>
+      <div style="text-align:center;"><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${totalKm.toFixed(0)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Total km</div></div>
+      <div style="text-align:center;"><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${longestRun?longestRun.toFixed(1):'—'}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Longest km</div></div>
+      <div style="text-align:center;"><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${avgPerWeek}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Avg / week</div></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      ${avgPace?`<span style="padding:4px 10px;border-radius:20px;background:rgba(99,102,241,0.12);color:var(--accent2);font-size:11px;font-weight:700;">avg ${fmtPace(avgPace)}/km</span>`:''}
-      ${bestPace?`<span style="padding:4px 10px;border-radius:20px;background:rgba(16,185,129,0.12);color:var(--green);font-size:11px;font-weight:700;">best ${fmtPace(bestPace)}/km</span>`:''}
-      <span style="padding:4px 10px;border-radius:20px;background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;">${avgPerWeek}×/week</span>
+      ${avgPace?`<span style="padding:4px 10px;border-radius:20px;background:rgba(99,102,241,0.12);color:var(--accent2);font-size:11px;font-weight:700;">avg ${fmtPace(avgPace)}</span>`:''}
+      ${bestPace?`<span style="padding:4px 10px;border-radius:20px;background:rgba(16,185,129,0.12);color:var(--green);font-size:11px;font-weight:700;">best ${fmtPace(bestPace)}</span>`:''}
     </div>
   </div>`;
 

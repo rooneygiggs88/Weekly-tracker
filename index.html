@@ -1538,7 +1538,7 @@ function renderTrendsRunAnalysis(){
 
   // 4. Long run progression
   const longRunChart=(()=>{
-    const longRuns=runs.filter(r=>r.km&&(r.effort||'').toLowerCase()==='long').sort((a,b)=>a.date>b.date?1:-1);
+    const longRuns=runs.filter(r=>r.km&&(r.effort||'').toLowerCase().includes('long')).sort((a,b)=>a.date>b.date?1:-1);
     if(longRuns.length<2) return `<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Long Run Progression</span></div><div class="empty-state" style="padding:16px 0 0;">Log 2+ runs tagged as Long to see progression.</div></div>`;
     const W=320,H=120,PT=14,PB=22,PL=8,PR=8;
     const chartH=H-PT-PB,chartW=W-PL-PR;

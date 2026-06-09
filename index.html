@@ -646,12 +646,13 @@ function renderToday(){
   const score=viewingToday?getTodayScore():getWeekScore();
   document.getElementById('today-score').textContent=score;
   const statusEl=document.getElementById('today-status');
+  const _n=state.userName?`, ${state.userName}.`:'.';
   if(!viewingToday){statusEl.innerHTML=`Week score · <span>${allGoals().filter(g=>{let d=0;for(let i=0;i<7;i++){const day=addDays(baseMonday,i);if(day<=now&&goalDone(dk(day),g))d++;}return d>0;}).length}/${allGoals().length} goals hit</span>`;}
-  else if(score===100)statusEl.innerHTML='<span>Perfect day.</span>';
-  else if(score>=75)statusEl.innerHTML='<span>Strong.</span> Keep pushing.';
-  else if(score>=50)statusEl.innerHTML='Good start. <span>Halfway there.</span>';
-  else if(score>0)statusEl.innerHTML='You\'ve started. <span>Keep going.</span>';
-  else statusEl.textContent='Nothing logged yet. Let\'s go.';
+  else if(score===100)statusEl.innerHTML=`<span>Perfect day${_n}</span>`;
+  else if(score>=75)statusEl.innerHTML=`<span>Strong work${_n}</span> Keep it up.`;
+  else if(score>=50)statusEl.innerHTML=`Good start${_n} <span>Keep pushing.</span>`;
+  else if(score>0)statusEl.innerHTML=`You've started${_n} <span>Keep going.</span>`;
+  else statusEl.innerHTML=`Let's get going${_n}`;
 
   // Week nav label + next button
   const endOfWeek=addDays(baseMonday,6);

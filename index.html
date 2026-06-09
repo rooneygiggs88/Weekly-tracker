@@ -905,9 +905,7 @@ function renderGymLogger(){
 }
 function gymSetType(t){
   gymDraft.type=t;
-  // If no exercises yet (or only blank ones), load defaults for the new type
-  const hasRealEx=(gymDraft.exercises||[]).some(e=>(e.name||'').trim());
-  if(!hasRealEx)gymDraft.exercises=getDefaultExercisesForType(t);
+  gymDraft.exercises=getDefaultExercisesForType(t);
   renderGymLogger();
 }
 function gymAddEx(){gymDraft.exercises.push({name:'',sets:[{weight:'',reps:'',warmup:false}]});renderGymLogger();}

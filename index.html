@@ -299,6 +299,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
     <button class="train-tab" data-tab="prs" onclick="switchTrainTab('prs')">PRs</button>
     <button class="train-tab" data-tab="history" onclick="switchTrainTab('history')">History</button>
     <button class="train-tab" data-tab="monthly" onclick="switchTrainTab('monthly')">Monthly</button>
+    <button class="train-tab" data-tab="library" onclick="switchTrainTab('library')">Library</button>
   </div>
   <div class="train-content">
     <div class="train-section active" id="train-gym"><div id="gym-content"></div></div>
@@ -306,6 +307,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
     <div class="train-section" id="train-prs"><div id="train-prs-content"></div></div>
     <div class="train-section" id="train-history"><div id="train-history-content"></div></div>
     <div class="train-section" id="train-monthly"><div id="train-monthly-content"></div></div>
+    <div class="train-section" id="train-library"><div id="train-library-content"></div></div>
   </div>
 </div>
 
@@ -918,6 +920,7 @@ function renderTrainSection(tab){
   if(tab==='prs')renderPRs();
   if(tab==='history')renderTrainHistory();
   if(tab==='monthly')renderMonthlyHistory();
+  if(tab==='library')renderExerciseLibrary();
 }
 
 // ── GYM ──
@@ -1096,7 +1099,7 @@ function renderExBlock(ex,i,lastSame,prog){
     </div>`).join('')}
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="gymAddSet(${i})" style="flex:1;padding:8px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
-      <button onclick="startRestTimer(90)" style="padding:8px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Start 90s rest timer">Rest</button>
+      <button onclick="startRestTimer(getExRestSecs(${JSON.stringify(ex.name||'')}))" style="padding:8px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${(s=>(s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s'))(getExRestSecs(ex.name||''))} rest</button>
     </div>
     ${renderPlateCalc((ex.sets||[]).filter(s=>!s.warmup).reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b||0)?parseFloat(s.weight):b,0))}
   </div>`;
@@ -1858,7 +1861,66 @@ function renderTrendsGymAnalysis(){
     }).join('')}
   </div>`;
 
-  return summary+freqChart+volChart+muscleChart+sessionLog;
+  // 6. Historical muscle volume (last 8 weeks)
+  const MCOLS2={Chest:'#ef4444',Back:'#6366f1',Shoulders:'#f97316',Biceps:'#06b6d4',Triceps:'#a855f7',Quads:'#10b981',Hamstrings:'#eab308',Glutes:'#ec4899',Core:'#64748b',Calves:'#94a3b8'};
+  const muscleHistChart=(()=>{
+    const weeks=8;
+    const weekData=[];
+    for(let w=weeks-1;w>=0;w--){
+      const wMon=getMonday(addDays(now,-w*7));
+      const wEnd=addDays(wMon,6);
+      const wSessions=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=wMon&&d<=wEnd;});
+      const counts={};ALL_MUSCLE_GROUPS.forEach(m=>{counts[m]=0;});
+      wSessions.forEach(s=>(s.exercises||[]).forEach(e=>{
+        const muscles=getExerciseMuscles(e.name);
+        const ws=(e.sets||[]).filter(x=>!x.warmup).length;
+        muscles.forEach(m=>{if(counts[m]!==undefined)counts[m]+=ws;});
+      }));
+      weekData.push({label:wMon.toLocaleDateString('en-GB',{day:'numeric',month:'short'}),counts});
+    }
+    const hasData=weekData.some(w=>Object.values(w.counts).some(v=>v>0));
+    if(!hasData)return'';
+    const W=320,H=140,PL=34,PR=8,PT=10,PB=24;
+    const chartW=W-PL-PR,chartH=H-PT-PB;
+    const maxVal=Math.max(...weekData.flatMap(w=>Object.values(w.counts)),1);
+    const bw=Math.floor(chartW/weeks*0.55);
+    const gap=Math.floor(chartW/weeks);
+    let svg='';
+    // Y gridlines
+    const yStep=maxVal<=10?2:maxVal<=20?5:10;
+    for(let t=0;t<=maxVal;t+=yStep){
+      const y=PT+((maxVal-t)/maxVal)*chartH;
+      svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.7" stroke-dasharray="3,3"/>`;
+      svg+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${t}</text>`;
+    }
+    svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+chartH}" stroke="var(--text3)" stroke-width="1"/>`;
+    svg+=`<line x1="${PL}" y1="${PT+chartH}" x2="${W-PR}" y2="${PT+chartH}" stroke="var(--text3)" stroke-width="1"/>`;
+    // Stacked bars per week
+    weekData.forEach((w,wi)=>{
+      const x=PL+wi*gap+(gap-bw)/2;
+      let stackY=PT+chartH;
+      ALL_MUSCLE_GROUPS.forEach(m=>{
+        const v=w.counts[m];if(!v)return;
+        const h=Math.max(1,(v/maxVal)*chartH);
+        stackY-=h;
+        svg+=`<rect x="${x.toFixed(1)}" y="${stackY.toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" fill="${MCOLS2[m]||'var(--text3)'}" opacity="0.85"/>`;
+      });
+      // X label
+      const parts=w.label.split(' ');
+      svg+=`<text x="${(x+bw/2).toFixed(1)}" y="${PT+chartH+14}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${parts[0]}</text>`;
+    });
+    // Legend
+    const activeMuscles=ALL_MUSCLE_GROUPS.filter(m=>weekData.some(w=>w.counts[m]>0));
+    const legend=activeMuscles.map(m=>`<div style="display:flex;align-items:center;gap:4px;"><div style="width:8px;height:8px;border-radius:2px;background:${MCOLS2[m]};flex-shrink:0;"></div><div style="font-size:10px;font-weight:700;color:var(--text2);">${m}</div></div>`).join('');
+    return`<div class="chart-card">
+      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">last 8 weeks</span></div>
+      <svg viewBox="0 0 ${W} ${H+4}" style="width:100%;height:${H+4}px;overflow:visible;">${svg}</svg>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">${legend}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px;">Work sets per muscle group per week</div>
+    </div>`;
+  })();
+
+  return summary+freqChart+volChart+muscleHistChart+muscleChart+sessionLog;
 }
 
 function renderConsistencyScore(){
@@ -3228,6 +3290,102 @@ function getExerciseMuscles(name){
   return[];
 }
 
+function getExRestSecs(name){
+  if(!name)return 90;
+  const prog=loadGymProg();
+  if(prog[name]&&prog[name].restSeconds)return prog[name].restSeconds;
+  // defaults by likely type
+  const nl=name.toLowerCase();
+  if(/squat|deadlift|press|row/.test(nl))return 180;
+  if(/curl|raise|extension|pushdown|fly/.test(nl))return 60;
+  return 90;
+}
+function saveExRestSecs(name,secs){
+  if(!name)return;
+  const prog=loadGymProg();
+  if(!prog[name])prog[name]={history:[],muscles:[]};
+  prog[name].restSeconds=secs;
+  saveGymProg(prog);
+}
+
+function renderExerciseLibrary(){
+  const el=document.getElementById('train-library-content');
+  if(!el)return;
+  const prog=loadGymProg();
+  // Gather all exercise names: from prog + from all session history
+  const gym=loadGymData();
+  const nameSet=new Set(Object.keys(prog));
+  gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)nameSet.add(e.name);}));
+  const names=[...nameSet].sort((a,b)=>a.localeCompare(b));
+  const searchVal=(document.getElementById('lib-search')||{}).value||'';
+  const filtered=names.filter(n=>n.toLowerCase().includes(searchVal.toLowerCase()));
+
+  const rows=filtered.map(name=>{
+    const muscles=getExerciseMuscles(name);
+    const restSecs=getExRestSecs(name);
+    const restLabel=restSecs>=60?Math.floor(restSecs/60)+'m'+(restSecs%60?restSecs%60+'s':''):restSecs+'s';
+    const musclePills=muscles.length?muscles.map(m=>`<span style="display:inline-block;padding:2px 7px;border-radius:10px;background:rgba(99,102,241,0.12);color:var(--accent2);font-size:10px;font-weight:700;margin-right:4px;">${m}</span>`).join(''):`<span style="font-size:11px;color:var(--text3);">No muscles tagged</span>`;
+    return`<div style="padding:14px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:14px;font-weight:700;">${esc(name)}</div>
+        <button onclick="openExerciseEdit(${JSON.stringify(name)})" style="padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
+      </div>
+      <div style="margin-bottom:4px;">${musclePills}</div>
+      <div style="font-size:11px;color:var(--text3);font-weight:600;">Rest: ${restLabel}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div class="chart-card" style="margin-bottom:10px;">
+      <div class="chart-card-header"><span class="chart-card-title">Exercise Library</span><span class="chart-card-val">${names.length} exercises</span></div>
+      <input id="lib-search" class="modal-input" placeholder="Search exercises…" style="margin-bottom:12px;" oninput="renderExerciseLibrary()" value="${esc(searchVal)}">
+      ${filtered.length?rows:`<div style="font-size:13px;color:var(--text3);padding:12px 0;">No exercises found.</div>`}
+    </div>`;
+}
+
+let _libEditName='';
+let _libRestSecs=90;
+function openExerciseEdit(name){
+  _libEditName=name;
+  _libRestSecs=getExRestSecs(name);
+  const prog=loadGymProg();
+  const muscles=getExerciseMuscles(name);
+  const restSecs=getExRestSecs(name);
+  _muscleTagExercise=name;
+  _muscleTagSelected=[...muscles];
+  document.getElementById('muscle-tag-modal-title').textContent=name;
+  document.getElementById('muscle-check-grid').innerHTML=ALL_MUSCLE_GROUPS.map(m=>{
+    const sel=_muscleTagSelected.includes(m);
+    return`<div class="muscle-check-item${sel?' selected':''}" onclick="toggleMuscleTag('${m}',this)" id="mcheck-${m}">
+      <span>${m}</span>
+      <div class="muscle-check-box">${sel?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+    </div>`;
+  }).join('');
+  // Inject rest timer selector into the modal
+  const restOptions=[60,90,120,180,240];
+  const restHtml=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:8px;">Default Rest Timer</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${restOptions.map(s=>{const lbl=s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s';return`<button id="rest-opt-${s}" onclick="libSetRest(${s})" style="padding:7px 14px;border-radius:12px;border:2px solid ${restSecs===s?'var(--accent)':'var(--border)'};background:${restSecs===s?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${restSecs===s?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${lbl}</button>`;}).join('')}
+    </div>
+  </div>`;
+  const existing=document.getElementById('lib-rest-selector');
+  if(existing)existing.remove();
+  const restDiv=document.createElement('div');restDiv.id='lib-rest-selector';restDiv.innerHTML=restHtml;
+  document.getElementById('muscle-tag-modal').querySelector('.modal-body').appendChild(restDiv);
+  openModal('muscle-tag-modal');
+}
+function libSetRest(secs){
+  _libRestSecs=secs;
+  document.querySelectorAll('[id^="rest-opt-"]').forEach(btn=>{
+    const s=parseInt(btn.id.replace('rest-opt-',''));
+    const active=s===secs;
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(99,102,241,0.15)':'var(--surface2)';
+    btn.style.color=active?'var(--accent2)':'var(--text2)';
+  });
+}
+
 let _muscleTagExercise='';
 let _muscleTagSelected=[];
 function openMuscleTagModal(name){
@@ -3254,8 +3412,14 @@ function saveMuscleTag(){
   const prog=loadGymProg();
   if(!prog[_muscleTagExercise])prog[_muscleTagExercise]={history:[]};
   prog[_muscleTagExercise].muscles=[..._muscleTagSelected];
+  // Save rest seconds if set from library editor
+  const restDiv=document.getElementById('lib-rest-selector');
+  if(restDiv&&_libRestSecs)prog[_muscleTagExercise].restSeconds=_libRestSecs;
   saveGymProg(prog);
-  closeModal('muscle-tag-modal');toastMsg('Muscle tags saved');haptic('success');
+  const restDiv2=document.getElementById('lib-rest-selector');if(restDiv2)restDiv2.remove();
+  closeModal('muscle-tag-modal');toastMsg('Exercise saved');haptic('success');
+  // Refresh library if open
+  if(document.getElementById('train-library-content')&&document.getElementById('train-library').classList.contains('active'))renderExerciseLibrary();
 }
 function renderMuscleVolume(){
   const now=today();const mon=getMonday(now);

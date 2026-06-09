@@ -1835,7 +1835,7 @@ function renderTrendsGymAnalysis(){
       const isBest=p.y===bestV,isLast=i===pts.length-1;
       const col=isBest?'var(--green)':color;
       svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${isBest||isLast?5:3}" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
-      if(isBest||isLast){const anchor=i===0?'start':i===pts.length-1?'end':'middle';svg+=`<text x="${cx.toFixed(1)}" y="${(cy-9).toFixed(1)}" text-anchor="${anchor}" font-size="8.5" fill="${isBest?'var(--green)':'var(--text2)'}" font-family="-apple-system,sans-serif" font-weight="800">${Math.round(p.y)}</text>`;}
+      {const anchor=i===0?'start':i===pts.length-1?'end':'middle';const labelCol=isBest?'var(--green)':isLast?'var(--text)':'var(--text3)';svg+=`<text x="${cx.toFixed(1)}" y="${(cy-9).toFixed(1)}" text-anchor="${anchor}" font-size="8.5" fill="${labelCol}" font-family="-apple-system,sans-serif" font-weight="${isBest||isLast?'800':'700'}">${Math.round(p.y)}</text>`;}
       svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${i===0?'start':i===pts.length-1?'end':'middle'}" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${p.x}</text>`;
     });
     return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>`;

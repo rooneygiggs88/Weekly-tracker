@@ -1435,6 +1435,7 @@ body.dark .run-effort-grid { }
   <div id="today-plan-wrap"></div>
   <div id="race-wrap"></div>
   <div id="anomaly-week-wrap"></div>
+  <div id="vaping-nudge-wrap"></div>
   <div id="week-content"></div>
   <div class="section">
     <button class="add-btn" onclick="openAddModal()">
@@ -1487,6 +1488,12 @@ body.dark .run-effort-grid { }
 <div id="page-health" class="page">
   <div class="header"><h1>Health</h1><div class="week-label">Body weight &amp; body fat</div></div>
   <div id="health-content" style="padding-bottom:8px;"></div>
+</div>
+
+<!-- VAPING PAGE -->
+<div id="page-vaping" class="page">
+  <div class="header"><h1>Vaping</h1><div class="week-label">Daily puff &amp; nicotine tracking</div></div>
+  <div id="vaping-content" style="padding-bottom:8px;"></div>
 </div>
 
 
@@ -1816,6 +1823,7 @@ function _renderWeek(){
   renderTodayPlanCard();
   renderRaceCountdown();
   renderAnomalies();
+  renderVapingNudge();
   if(currentWeekOffset===0) setTimeout(checkBackupReminder, 1500);
   setTimeout(attachLongPress, 50);
   if(runLoggerDateKey) setTimeout(()=>calcRunPace(runLoggerDateKey), 0);
@@ -2333,6 +2341,7 @@ function switchPage(page,btn){
   if(page==='records') renderRecords();
   if(page==='gym')     renderGym();
   if(page==='health')  renderHealth();
+  if(page==='vaping')  renderVaping();
   if(page==='more')    buildMorePage();
 }
 function changeWeek(dir){
@@ -4692,6 +4701,7 @@ const ALL_NAV_ITEMS = [
   { id:'history', label:'History', emoji:'🕐', svg:'<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>' },
   { id:'analysis',label:'Insights',emoji:'💡', svg:'<path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>' },
   { id:'health',  label:'Health',  emoji:'❤️', svg:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' },
+  { id:'vaping',  label:'Vaping',  emoji:'💨', svg:'<path d="M3 8h14a4 4 0 0 1 0 8H3"/><path d="M3 12h14"/><circle cx="20" cy="12" r="1"/><path d="M6 8V6a2 2 0 0 1 4 0v2"/>' },
 ];
 const NAV_ALWAYS_LAST = 'more'; // More is always last — not in the list but appended
 
@@ -4706,7 +4716,7 @@ function loadNavOrder() {
       return ids;
     }
   } catch(e) {}
-  return ['week','gym','health','records','stats','history','analysis'];
+  return ['week','gym','health','records','stats','history','analysis','vaping'];
 }
 function saveNavOrder(order) { localStorage.setItem('navOrder', JSON.stringify(order)); }
 
@@ -5117,6 +5127,172 @@ function renderHealth() {
   </div>`;
   const content = healthTab === 'bodyfat' ? renderBodyFatTab() : renderWeightTab();
   c.innerHTML = tabs + `<div style="padding-top:4px;">${content}</div>`;
+}
+
+// ── VAPING MODULE ──
+function vapingKey() { return 'vaping_v1'; }
+function loadVapingData() {
+  try { return JSON.parse(localStorage.getItem(vapingKey()) || '{}'); } catch(e) { return {}; }
+}
+function saveVapingData(d) { localStorage.setItem(vapingKey(), JSON.stringify(d)); }
+
+function logVaping() {
+  const puffs = parseInt(document.getElementById('vape-puffs-input').value);
+  const mg    = parseFloat(document.getElementById('vape-mg-input').value);
+  const date  = document.getElementById('vape-date-input').value;
+  if (!date || isNaN(puffs) || puffs < 0) return;
+  const data = loadVapingData();
+  if (!data.entries) data.entries = {};
+  data.entries[date] = { puffs, mg: isNaN(mg) ? null : mg };
+  saveVapingData(data);
+  renderVaping();
+  renderVapingNudge();
+  haptic('light');
+}
+
+function deleteVapingEntry(dateKey) {
+  const data = loadVapingData();
+  if (data.entries) delete data.entries[dateKey];
+  saveVapingData(data);
+  renderVaping();
+  renderVapingNudge();
+}
+
+function renderVapingNudge() {
+  const wrap = document.getElementById('vaping-nudge-wrap');
+  if (!wrap) return;
+  // Only show nudge on current week view
+  if (currentWeekOffset !== 0) { wrap.innerHTML = ''; return; }
+  const data = loadVapingData();
+  const entries = data.entries || {};
+  const todayKey = dk(new Date());
+  const yesterdayKey = dk(new Date(Date.now() - 86400000));
+  // Nudge if neither today nor yesterday has been logged
+  const logged = entries[todayKey] || entries[yesterdayKey];
+  if (logged) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div onclick="switchPage('vaping')" style="margin:0 16px 4px;padding:12px 16px;background:var(--col2);border:1.5px solid var(--orange);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;cursor:pointer;">
+    <span style="font-size:18px;">💨</span>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:800;color:var(--orange);">Vaping log due</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:1px;">Tap to log yesterday's puff count</div>
+    </div>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>`;
+}
+
+function renderVapingChart(vals, keys) {
+  const W=320, H=70, PL=8, PR=8, PT=8, PB=16;
+  const filled = vals.map((v,i) => ({v,i})).filter(x => x.v !== null);
+  if (filled.length < 2) return '';
+  const minV = 0;
+  const maxV = Math.max(...filled.map(x => x.v)) || 1;
+  const range = maxV - minV;
+  const chartW=W-PL-PR, chartH=H-PT-PB, n=vals.length;
+  const xStep = chartW/(n-1);
+  function px(i){ return PL+i*xStep; }
+  function py(v){ return PT+chartH-((v-minV)/range)*chartH; }
+  const points = filled.map(x => `${px(x.i)},${py(x.v)}`);
+  const linePath = 'M' + points.join(' L');
+  const areaPath = `M${px(filled[0].i)},${PT+chartH} L${points.join(' L')} L${px(filled[filled.length-1].i)},${PT+chartH} Z`;
+  const dots = filled.map(x => `<circle cx="${px(x.i)}" cy="${py(x.v)}" r="2.5" fill="var(--purple)" opacity="0.9"/>`).join('');
+  const labelStep = Math.max(1, Math.floor(n/4));
+  const labels = keys.map((k,i) => {
+    if (i%labelStep!==0 && i!==n-1) return '';
+    const d = new Date(k+'T12:00:00');
+    return `<text x="${px(i)}" y="${H}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
+  }).join('');
+  return `<div style="padding:10px 14px 0;">
+    <svg width="100%" viewBox="0 0 ${W} ${H+4}" style="height:${H+4}px;overflow:visible;">
+      <defs><linearGradient id="vpGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--purple)" stop-opacity="0.2"/><stop offset="100%" stop-color="var(--purple)" stop-opacity="0"/></linearGradient></defs>
+      <path d="${areaPath}" fill="url(#vpGrad)"/>
+      <path d="${linePath}" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}${labels}
+    </svg>
+  </div>`;
+}
+
+function renderVaping() {
+  const c = document.getElementById('vaping-content');
+  if (!c) return;
+  const data = loadVapingData();
+  const entries = data.entries || {};
+  const sortedKeys = Object.keys(entries).sort();
+
+  // Default date: yesterday
+  const yesterday = dk(new Date(Date.now() - 86400000));
+  const todayKey  = dk(new Date());
+
+  // Stats
+  const last7Keys = [];
+  for (let i=6;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); last7Keys.push(dk(d)); }
+  const last7Puffs = last7Keys.map(k => entries[k] ? entries[k].puffs : 0);
+  const avg7 = last7Keys.filter(k=>entries[k]).length
+    ? (last7Puffs.reduce((a,b)=>a+b,0) / last7Keys.filter(k=>entries[k]).length).toFixed(0)
+    : '—';
+  const todayEntry = entries[todayKey];
+  const todayPuffs = todayEntry ? todayEntry.puffs : '—';
+  const totalDays = sortedKeys.length;
+
+  const statsHtml = `<div class="metric-grid" style="border-bottom:1px solid var(--border);">
+    <div class="metric-cell"><div class="metric-val">${todayPuffs}</div><div class="metric-unit">Today</div></div>
+    <div class="metric-cell"><div class="metric-val">${avg7}</div><div class="metric-unit">7-day avg</div></div>
+    <div class="metric-cell"><div class="metric-val">${totalDays}</div><div class="metric-unit">Days logged</div></div>
+  </div>`;
+
+  // Log form — defaults to yesterday's date
+  const logHtml = `<div style="padding:14px 16px 12px;">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:10px;">Log a day</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">Puffs</label>
+        <input id="vape-puffs-input" type="number" inputmode="numeric" min="0" placeholder="e.g. 120"
+          style="width:90px;font-size:16px;font-weight:800;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--card2);color:var(--text);outline:none;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">Nicotine (mg)</label>
+        <input id="vape-mg-input" type="number" inputmode="decimal" min="0" placeholder="e.g. 6"
+          style="width:100px;font-size:16px;font-weight:800;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--card2);color:var(--text);outline:none;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">Date</label>
+        <input id="vape-date-input" type="date" value="${yesterday}"
+          style="border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;font-family:-apple-system,sans-serif;font-size:13px;background:var(--card2);color:var(--text);outline:none;">
+      </div>
+      <button onclick="logVaping()" style="background:var(--ink);color:white;border:none;border-radius:10px;padding:10px 20px;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Log</button>
+    </div>
+  </div>`;
+
+  // 30-day chart
+  const last30Keys = [];
+  for (let i=29;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); last30Keys.push(dk(d)); }
+  const chartVals = last30Keys.map(k => entries[k] ? entries[k].puffs : null);
+  const chartHtml = chartVals.filter(v=>v!==null).length >= 2 ? renderVapingChart(chartVals, last30Keys) : '';
+
+  const mainCard = `<div class="section" style="padding-top:12px;"><div class="card">
+    ${statsHtml}${logHtml}${chartHtml}
+  </div></div>`;
+
+  // Log history
+  const recentRows = sortedKeys.slice(-20).reverse().map(k => {
+    const d = new Date(k+'T12:00:00');
+    const label = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    const e = entries[k];
+    const mgText = e.mg !== null && e.mg !== undefined ? ` · ${e.mg}mg` : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);width:80px;flex-shrink:0;text-transform:uppercase;">${label}</div>
+      <div style="flex:1;">
+        <span style="font-size:16px;font-weight:800;color:var(--text);">${e.puffs}</span>
+        <span style="font-size:12px;color:var(--text3);margin-left:4px;">puffs${mgText}</span>
+      </div>
+      <button onclick="deleteVapingEntry('${k}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:4px 6px;">×</button>
+    </div>`;
+  }).join('');
+
+  const logCard = sortedKeys.length
+    ? `<div class="section"><div class="section-title"><span>Log</span></div><div class="card">${recentRows}</div></div>`
+    : `<div class="section"><div class="card"><div class="empty-state">No entries yet — log yesterday's puff count above.</div></div></div>`;
+
+  c.innerHTML = mainCard + logCard;
 }
 
 // ── WEEKLY REVIEW AI ──
@@ -8266,6 +8442,7 @@ function exportData(){
     state:            state,
     gymData:          loadGymData(),
     healthData:       loadHealthData(),
+    vapingData:       loadVapingData(),
     gymProgramme:     loadProgramme(),
     raceGoal:         ls(RACE_KEY),
     trash:            ls(TRASH_KEY),
@@ -8294,6 +8471,7 @@ function importData(input){
       state = payload.state; saveState();
       if(payload.gymData)       saveGymData(payload.gymData);
       if(payload.healthData)    saveHealthData(payload.healthData);
+      if(payload.vapingData)    saveVapingData(payload.vapingData);
       if(payload.gymProgramme)  saveProgramme(payload.gymProgramme);
       if(payload.raceGoal)      saveRaceGoal(payload.raceGoal);
       if(payload.trash)         localStorage.setItem(TRASH_KEY, JSON.stringify(payload.trash));

@@ -2175,12 +2175,66 @@ function renderVapingSection(){
 }
 
 function renderVapingChart(data){
-  const recent=data.slice(-14);if(recent.length<2)return'';
-  const vals=recent.map(e=>e.puffs||0);const maxV=Math.max(...vals)||1;
-  const bw=14,gap=4,H=50;
-  const bars=vals.map((v,i)=>{const h=Math.max(2,v/maxV*H);return`<rect x="${i*(bw+gap)}" y="${H-h}" width="${bw}" height="${h}" fill="var(--accent)" rx="3" opacity="0.7"/>`;}).join('');
-  const W=(bw+gap)*14-gap;
-  return`<svg class="svg-chart" viewBox="0 0 ${W} ${H+4}" style="height:60px;">${bars}</svg>`;
+  const sorted=[...data].sort((a,b)=>a.date.localeCompare(b.date));
+  if(sorted.length<2)return'';
+  const W=300,H=120,PL=38,PR=10,PT=12,PB=22;
+  const chartW=W-PL-PR,chartH=H-PT-PB;
+  const vals=sorted.map(e=>e.puffs||0);
+  const maxV=Math.max(...vals,1);
+  const pad=maxV*0.1;
+  const hi=maxV+pad;
+  const py=v=>PT+((hi-v)/hi)*chartH;
+  const px=i=>PL+(i/Math.max(sorted.length-1,1))*chartW;
+  // 7-day rolling avg
+  const rolling=sorted.map((_,i)=>{
+    const slice=vals.slice(Math.max(0,i-6),i+1);
+    return slice.reduce((a,b)=>a+b,0)/slice.length;
+  });
+  let svg='';
+  // Y gridlines
+  const step=maxV<=200?50:maxV<=500?100:200;
+  for(let t=0;t<=hi;t+=step){
+    const y=py(t);if(y<PT-2||y>PT+chartH+2)continue;
+    svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
+    svg+=`<text x="${(PL-4).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="600">${t}</text>`;
+  }
+  svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
+  svg+=`<line x1="${PL}" y1="${(PT+chartH).toFixed(1)}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
+  // Bar for each entry
+  const bw=Math.max(3,Math.floor(chartW/sorted.length*0.6));
+  sorted.forEach((e,i)=>{
+    const x=px(i)-bw/2,bh=Math.max(2,(e.puffs||0)/hi*chartH),by=PT+chartH-bh;
+    svg+=`<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh}" rx="2" fill="var(--accent)" opacity="0.5"/>`;
+  });
+  // Rolling avg line
+  const avgLine=rolling.map((v,i)=>`${i===0?'M':'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
+  svg+=`<path d="${avgLine}" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // X labels on month change
+  let lastMonth=null;
+  sorted.forEach((e,i)=>{
+    const d=new Date(e.date+'T12:00:00');
+    const month=d.toLocaleDateString('en-GB',{month:'short'});
+    if(month!==lastMonth){
+      lastMonth=month;
+      const cx=px(i);
+      const anchor=i===0?'start':i===sorted.length-1?'end':'middle';
+      svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${anchor}" font-size="8" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;
+    }
+  });
+  // Trend indicator
+  const recentAvg=rolling[rolling.length-1];
+  const earlyAvg=rolling[Math.min(6,rolling.length-1)];
+  const improving=recentAvg<earlyAvg;
+  const trendCol=improving?'var(--green)':'var(--orange)';
+  const trendLbl=improving?`↓ Trending down`:`↑ Trending up`;
+  return`<div style="margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <span style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">Puffs per day</span>
+      <span style="font-size:11px;font-weight:700;color:${trendCol};">${trendLbl}</span>
+    </div>
+    <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
+    <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);margin-top:6px;"><div style="width:16px;height:2px;background:var(--accent2);border-radius:1px;"></div>7-day avg</div>
+  </div>`;
 }
 
 function renderRaceSection(){

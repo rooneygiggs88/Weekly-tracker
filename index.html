@@ -2895,21 +2895,24 @@ function renderReadinessCard(){
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     ${hasMorning?'Edit morning data':'Log morning data'}
   </button>`;
+  const bodyHtml=hasMorning
+    ?`<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+        <div style="font-size:42px;font-weight:800;letter-spacing:-2px;color:${col};">${score}</div>
+        <div style="flex:1;">
+          <div style="height:8px;background:var(--surface2);border-radius:4px;margin-bottom:6px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width 0.5s;"></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:${col};">${advice}</div>
+        </div>
+      </div>
+      ${factors.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;">${factors.map(f=>`<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;">${f}</span>`).join('')}</div>`:''}`
+    :`<div style="color:var(--text3);font-size:13px;padding:4px 0 2px;">Log your Garmin sleep & HRV to get a readiness score.</div>`;
   el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${hasMorning?'10':'8'}px;">
       <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Readiness</span>
       ${checkinBtn}
     </div>
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
-      <div style="font-size:42px;font-weight:800;letter-spacing:-2px;color:${score!=null?col:'var(--text3)'};">${score!=null?score:'—'}</div>
-      <div style="flex:1;">
-        <div style="height:8px;background:var(--surface2);border-radius:4px;margin-bottom:6px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width 0.5s;"></div>
-        </div>
-        <div style="font-size:12px;font-weight:700;color:${col};">${advice}</div>
-      </div>
-    </div>
-    ${factors.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;">${factors.map(f=>`<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;">${f}</span>`).join('')}</div>`:''}
+    ${bodyHtml}
   </div>`;
 }
 

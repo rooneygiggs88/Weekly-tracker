@@ -249,12 +249,14 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
     <button class="train-tab" data-tab="run" onclick="switchTrainTab('run')">Run</button>
     <button class="train-tab" data-tab="prs" onclick="switchTrainTab('prs')">PRs</button>
     <button class="train-tab" data-tab="history" onclick="switchTrainTab('history')">History</button>
+    <button class="train-tab" data-tab="monthly" onclick="switchTrainTab('monthly')">Monthly</button>
   </div>
   <div class="train-content">
     <div class="train-section active" id="train-gym"><div id="gym-content"></div></div>
     <div class="train-section" id="train-run"><div id="run-content"></div></div>
     <div class="train-section" id="train-prs"><div id="train-prs-content"></div></div>
     <div class="train-section" id="train-history"><div id="train-history-content"></div></div>
+    <div class="train-section" id="train-monthly"><div id="train-monthly-content"></div></div>
   </div>
 </div>
 
@@ -323,13 +325,46 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 <div class="modal-overlay" id="health-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>Log Weight</h3>
+    <h3>Log Health</h3>
     <label class="modal-label">Weight (kg)</label>
     <input class="modal-input" id="health-weight-input" type="number" inputmode="decimal" step="0.1" placeholder="75.0">
+    <label class="modal-label">Body fat % (optional)</label>
+    <input class="modal-input" id="health-bodyfat-input" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 18.5">
     <label class="modal-label">Note (optional)</label>
     <input class="modal-input" id="health-note-input" placeholder="e.g. Morning, after run…">
     <button class="btn-primary" onclick="saveWeight()" style="margin-bottom:10px;">Save</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('health-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- VAPING LOG MODAL -->
+<div class="modal-overlay" id="vaping-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Log Nicotine</h3>
+    <label class="modal-label">Puffs today</label>
+    <input class="modal-input" id="vaping-puffs-input" type="number" inputmode="numeric" placeholder="e.g. 40">
+    <label class="modal-label">Nicotine (mg, optional)</label>
+    <input class="modal-input" id="vaping-mg-input" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 3.0">
+    <label class="modal-label">Note (optional)</label>
+    <input class="modal-input" id="vaping-note-input" placeholder="e.g. Stressful day…">
+    <button class="btn-primary" onclick="saveVaping()" style="margin-bottom:10px;">Save</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('vaping-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- SESSION COMPARE MODAL -->
+<div class="modal-overlay" id="compare-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Compare Sessions</h3>
+    <label class="modal-label">Session A</label>
+    <select class="modal-input" id="compare-a" style="appearance:auto;"></select>
+    <label class="modal-label">Session B</label>
+    <select class="modal-input" id="compare-b" style="appearance:auto;"></select>
+    <button class="btn-primary" onclick="runCompare()" style="margin-bottom:10px;">Compare</button>
+    <div id="compare-result"></div>
+    <button class="btn-ghost" style="width:100%;margin-top:10px;" onclick="closeModal('compare-modal')">Close</button>
   </div>
 </div>
 
@@ -439,6 +474,8 @@ function loadGymProg(){try{return JSON.parse(localStorage.getItem('gym_prog_v1')
 function saveGymProg(d){localStorage.setItem('gym_prog_v1',JSON.stringify(d));}
 function loadHealthData(){try{return JSON.parse(localStorage.getItem('health_data_v1')||'[]');}catch(e){return[];}}
 function saveHealthData(d){localStorage.setItem('health_data_v1',JSON.stringify(d));}
+function loadVapingData(){try{return JSON.parse(localStorage.getItem('vaping_data_v1')||'[]');}catch(e){return[];}}
+function saveVapingData(d){localStorage.setItem('vaping_data_v1',JSON.stringify(d));}
 
 // ── AVATARS ──
 const AVATAR_COLORS=[
@@ -707,6 +744,7 @@ function renderTrainSection(tab){
   if(tab==='run')renderRunSection();
   if(tab==='prs')renderPRs();
   if(tab==='history')renderTrainHistory();
+  if(tab==='monthly')renderMonthlyHistory();
 }
 
 // ── GYM ──
@@ -916,10 +954,12 @@ function renderRunHistory(runs){
 }
 function renderTrainHistory(){
   const el=document.getElementById('train-history-content');
+  const gymCount=loadGymData().length;
   const all=[...loadGymData().map(s=>({...s,_t:'gym'})),...loadRunData().map(r=>({...r,_t:'run'}))]
     .sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,20);
   if(!all.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
-  el.innerHTML=`<div class="chart-card">${all.map(e=>e._t==='gym'
+  const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare Sessions</button>`:'';
+  el.innerHTML=compareBtn+`<div class="chart-card">${all.map(e=>e._t==='gym'
     ?`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Gym')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(e.type||'Workout')}</div><div style="font-size:12px;color:var(--text3);">${e.date}</div></div><div style="font-size:13px;color:var(--text2);font-weight:600;">${(e.exercises||[]).length} ex</div></div>`
     :`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Running')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.km?e.km+'km':e.time||'Run'}</div><div style="font-size:12px;color:var(--text3);">${e.date}${e.effort?' · '+e.effort:''}</div></div><div style="font-size:13px;color:var(--accent2);font-weight:700;">${e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):''}</div></div>`
   ).join('')}</div>`;
@@ -986,6 +1026,9 @@ function renderTrends(){
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week</div></div>
     </div>
     ${renderConsistencyScore()}
+    ${renderPredictedCompletion()}
+    ${renderBestWorstWeeks()}
+    ${renderActivityLoad()}
     ${renderWeekChart()}
     ${renderHeatmap()}
     ${renderWeekBars()}
@@ -994,6 +1037,7 @@ function renderTrends(){
     ${renderPaceChart(runs)}
     ${renderGymStatsCard(gym)}
     ${renderVolumeChart(gym)}
+    ${renderBadges()}
   `;
 }
 
@@ -1139,6 +1183,8 @@ function renderMe(){
 
   el.innerHTML=`
     ${renderWeightSection(health)}
+    ${renderBodyFatSection(health)}
+    ${renderVapingSection()}
     ${renderRaceSection()}
     ${renderCustomGoalsList()}
     <div class="chart-card">
@@ -1179,6 +1225,59 @@ function renderWeightChart(entries){
   const pts=ws.map((w,i)=>{const x=(i/(n-1))*W;const y=H-((w-minW)/range)*(H-4);return`${x.toFixed(1)},${y.toFixed(1)}`;}).join(' ');
   const last=ws[n-1];const ly=H-((last-minW)/range)*(H-4);
   return`<svg class="svg-chart" viewBox="-4 -8 ${W+8} ${H+12}" style="height:80px;margin-top:10px;"><polyline points="${pts}" fill="none" stroke="var(--orange)" stroke-width="2" opacity="0.8"/><circle cx="${W}" cy="${ly.toFixed(1)}" r="4" fill="var(--orange)"/></svg>`;
+}
+
+function renderBodyFatSection(health){
+  const withBf=health.filter(e=>e.bodyFat!=null&&e.bodyFat>0);
+  if(!withBf.length)return'';
+  const latest=withBf[withBf.length-1];
+  const prev=withBf.length>1?withBf[withBf.length-2]:null;
+  const diff=prev?(latest.bodyFat-prev.bodyFat).toFixed(1):null;
+  const bfs=withBf.slice(-30).map(e=>e.bodyFat);
+  const minBf=Math.min(...bfs),maxBf=Math.max(...bfs),range=maxBf-minBf||1;
+  const W=280,H=50,n=bfs.length;
+  const pts=n>1?bfs.map((b,i)=>{const x=(i/(n-1))*W;const y=H-((b-minBf)/range)*(H-4);return`${x.toFixed(1)},${y.toFixed(1)}`;}).join(' '):'';
+  const lastY=n>1?H-((bfs[n-1]-minBf)/range)*(H-4):H/2;
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Body Fat</span></div>
+    <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:4px;">
+      <span style="font-size:40px;font-weight:800;letter-spacing:-2px;line-height:1;">${latest.bodyFat}</span>
+      <span style="font-size:16px;color:var(--text2);font-weight:600;padding-bottom:6px;">%${diff?` <span style="color:${parseFloat(diff)>0?'var(--red)':'var(--green)'};">(${parseFloat(diff)>0?'+':''}${diff})</span>`:''}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text3);">${latest.date}</div>
+    ${n>1?`<svg class="svg-chart" viewBox="-4 -8 ${W+8} ${H+12}" style="height:70px;margin-top:8px;"><polyline points="${pts}" fill="none" stroke="var(--accent2)" stroke-width="2" opacity="0.8"/><circle cx="${W}" cy="${lastY.toFixed(1)}" r="4" fill="var(--accent2)"/></svg>`:''}
+  </div>`;
+}
+
+function renderVapingSection(){
+  const data=loadVapingData();
+  const today7=data.filter(e=>{const d=new Date(e.date);return d>=addDays(today(),-6);});
+  const totalPuffs7=today7.reduce((s,e)=>s+(e.puffs||0),0);
+  const last=data[data.length-1];
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header">
+      <span class="chart-card-title">Nicotine</span>
+      <button onclick="openVapingModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
+    </div>
+    ${data.length?`
+      <div style="display:flex;gap:16px;margin-bottom:10px;">
+        <div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${totalPuffs7}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs / 7d</div></div>
+        ${last?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${last.puffs||0}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">yesterday</div></div>`:''}
+      </div>
+      ${renderVapingChart(data)}
+      <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px;">
+        ${data.slice(-5).reverse().map(e=>`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.puffs||0} puffs${e.mg?' · '+e.mg+'mg':''}</span><span style="font-size:12px;color:var(--text3);">${e.date}${e.note?' · '+esc(e.note):''}</span></div>`).join('')}
+      </div>`:`<div class="empty-state" style="padding:16px 0;"><strong>No nicotine logged</strong>Tap + Log to start tracking.</div>`}
+  </div>`;
+}
+
+function renderVapingChart(data){
+  const recent=data.slice(-14);if(recent.length<2)return'';
+  const vals=recent.map(e=>e.puffs||0);const maxV=Math.max(...vals)||1;
+  const bw=14,gap=4,H=50;
+  const bars=vals.map((v,i)=>{const h=Math.max(2,v/maxV*H);return`<rect x="${i*(bw+gap)}" y="${H-h}" width="${bw}" height="${h}" fill="var(--accent)" rx="3" opacity="0.7"/>`;}).join('');
+  const W=(bw+gap)*14-gap;
+  return`<svg class="svg-chart" viewBox="0 0 ${W} ${H+4}" style="height:60px;">${bars}</svg>`;
 }
 
 function renderRaceSection(){
@@ -1271,6 +1370,7 @@ function deleteGoal(){
 
 function openHealthModal(){
   document.getElementById('health-weight-input').value='';
+  document.getElementById('health-bodyfat-input').value='';
   document.getElementById('health-note-input').value='';
   openModal('health-modal');
   setTimeout(()=>document.getElementById('health-weight-input').focus(),300);
@@ -1279,11 +1379,30 @@ function openHealthModal(){
 function saveWeight(){
   const w=parseFloat(document.getElementById('health-weight-input').value);
   if(!w||w<20||w>300){toastMsg('Enter a valid weight');return;}
+  const bf=parseFloat(document.getElementById('health-bodyfat-input').value)||null;
   const note=(document.getElementById('health-note-input').value||'').trim();
   const data=loadHealthData();
-  data.push({date:dk(today()),weight:w,note,ts:Date.now()});
+  data.push({date:dk(today()),weight:w,bodyFat:bf,note,ts:Date.now()});
   saveHealthData(data);
-  closeModal('health-modal');toastMsg('Weight logged');haptic('success');
+  closeModal('health-modal');toastMsg('Health logged');haptic('success');
+  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+}
+function openVapingModal(){
+  document.getElementById('vaping-puffs-input').value='';
+  document.getElementById('vaping-mg-input').value='';
+  document.getElementById('vaping-note-input').value='';
+  openModal('vaping-modal');
+  setTimeout(()=>document.getElementById('vaping-puffs-input').focus(),300);
+}
+function saveVaping(){
+  const puffs=parseInt(document.getElementById('vaping-puffs-input').value)||0;
+  const mg=parseFloat(document.getElementById('vaping-mg-input').value)||null;
+  const note=(document.getElementById('vaping-note-input').value||'').trim();
+  if(!puffs&&!mg){toastMsg('Enter puffs or mg');return;}
+  const data=loadVapingData();
+  data.push({date:dk(today()),puffs,mg,note,ts:Date.now()});
+  saveVapingData(data);
+  closeModal('vaping-modal');toastMsg('Logged');haptic('success');
   if(document.getElementById('page-me').classList.contains('active'))renderMe();
 }
 
@@ -1332,7 +1451,7 @@ function saveName(){
   document.getElementById('me-name-heading').textContent=n||'Me';
 }
 function exportData(){
-  const data={state,gym:loadGymData(),run:loadRunData(),health:loadHealthData(),prog:loadGymProg()};
+  const data={state,gym:loadGymData(),run:loadRunData(),health:loadHealthData(),prog:loadGymProg(),vaping:loadVapingData()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`tracker-backup-${dk(today())}.json`;a.click();
   toastMsg('Data exported');
@@ -1348,6 +1467,7 @@ function importData(evt){
       if(data.run)localStorage.setItem('run_data_v2',JSON.stringify(data.run));
       if(data.health)localStorage.setItem('health_data_v1',JSON.stringify(data.health));
       if(data.prog)localStorage.setItem('gym_prog_v1',JSON.stringify(data.prog));
+      if(data.vaping)localStorage.setItem('vaping_data_v1',JSON.stringify(data.vaping));
       toastMsg('Data imported — reloading…');
       setTimeout(()=>location.reload(),1200);
     }catch(err){toastMsg('Invalid backup file');}
@@ -1357,8 +1477,206 @@ function importData(evt){
 }
 function clearAllData(){
   if(!confirm('Delete ALL data? This cannot be undone.'))return;
-  ['wt_v3','gym_data_v1','run_data_v2','health_data_v1','gym_prog_v1'].forEach(k=>localStorage.removeItem(k));
+  ['wt_v3','gym_data_v1','run_data_v2','health_data_v1','gym_prog_v1','vaping_data_v1'].forEach(k=>localStorage.removeItem(k));
   toastMsg('Data cleared — reloading…');setTimeout(()=>location.reload(),1200);
+}
+
+// ── MONTHLY HISTORY ──
+function renderMonthlyHistory(){
+  const el=document.getElementById('train-monthly-content');
+  const now=today();const months=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push({year:d.getFullYear(),month:d.getMonth(),label:d.toLocaleDateString('en-GB',{month:'long',year:'numeric'})});
+  }
+  const gym=loadGymData();const runs=loadRunData();
+  const MNAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  el.innerHTML=months.map(({year,month,label})=>{
+    const mGym=gym.filter(s=>{const d=new Date(s.date);return d.getFullYear()===year&&d.getMonth()===month;});
+    const mRun=runs.filter(r=>{const d=new Date(r.date);return d.getFullYear()===year&&d.getMonth()===month;});
+    const km=mRun.reduce((s,r)=>s+(r.km||0),0);
+    const vol=mGym.reduce((t,s)=>(s.exercises||[]).reduce((tt,e)=>(e.sets||[]).filter(ss=>!ss.warmup).reduce((ttt,ss)=>ttt+(parseFloat(ss.weight||0)*parseFloat(ss.reps||0)),tt),t),0);
+    // Goal completion for the month
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    let goalTotal=0,goalDone=0;
+    for(let d=1;d<=daysInMonth;d++){
+      const date=new Date(year,month,d);if(date>now)break;
+      const ds=dk(date);
+      allGoals().forEach(g=>{goalTotal++;if(goalDone_f(ds,g))goalDone++;});
+    }
+    const pct=goalTotal?Math.round(goalDone/goalTotal*100):0;
+    return`<div class="chart-card" style="margin-bottom:10px;">
+      <div class="chart-card-header"><span class="chart-card-title">${label}</span><span class="chart-card-val" style="color:${pct>=80?'var(--green)':pct>=50?'var(--accent2)':'var(--text3)'};">${pct}%</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:4px 0;">
+        <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${mGym.length}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Gym</div></div>
+        <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${km.toFixed(0)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">km run</div></div>
+        <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${vol>0?Math.round(vol/1000)+'t':'—'}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">volume</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+// alias to avoid name collision with local var
+function goalDone_f(ds,g){return goalDone(ds,g);}
+
+// ── ACTIVITY LOAD ──
+function renderActivityLoad(){
+  const now=today();const gym=loadGymData();const runs=loadRunData();
+  // 7-day rolling load: gym session = 60 pts, run by effort
+  const effortPts={Easy:30,Tempo:50,Hard:70,Long:60,Race:80};
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=addDays(now,-i);const ds=dk(d);
+    const gSessions=gym.filter(s=>s.date===ds).length;
+    const rSessions=runs.filter(r=>r.date===ds);
+    let load=gSessions*60;
+    rSessions.forEach(r=>{load+=(effortPts[r.effort]||40);});
+    days.push({ds,load,label:['M','T','W','T','F','S','S'][(d.getDay()+6)%7]});
+  }
+  const maxLoad=Math.max(...days.map(d=>d.load),1);
+  const totalLoad=days.reduce((s,d)=>s+d.load,0);
+  const zone=totalLoad>400?{label:'High',color:'var(--red)'}:totalLoad>200?{label:'Moderate',color:'var(--orange)'}:{label:'Easy',color:'var(--green)'};
+  const bw=32,gap=10,H=70;
+  const bars=days.map((d,i)=>{
+    const h=Math.max(d.load>0?4:0,d.load/maxLoad*H);
+    const fill=d.load>200?'var(--red)':d.load>100?'var(--orange)':'var(--green)';
+    return`<rect x="${i*(bw+gap)}" y="${H-h}" width="${bw}" height="${h}" fill="${fill}" rx="5" opacity="0.85"/>
+      <text x="${i*(bw+gap)+bw/2}" y="${H+14}" text-anchor="middle" fill="var(--text3)" font-size="10" font-weight="700">${d.label}</text>`;
+  }).join('');
+  const W=(bw+gap)*7-gap;
+  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">7-Day Load</span><span class="chart-card-val" style="color:${zone.color};font-weight:800;">${zone.label}</span></div><svg class="svg-chart" viewBox="0 0 ${W} ${H+20}" style="height:100px;">${bars}</svg></div>`;
+}
+
+// ── BEST / WORST WEEKS ──
+function renderBestWorstWeeks(){
+  const now=today();const weeks=[];
+  // go back 12 weeks
+  for(let w=1;w<=12;w++){
+    const mon=addDays(getMonday(now),-w*7);
+    const sun=addDays(mon,6);
+    let total=0,done=0;
+    for(let i=0;i<7;i++){
+      const d=addDays(mon,i);if(d>now)break;
+      allGoals().forEach(g=>{total++;if(goalDone(dk(d),g))done++;});
+    }
+    if(total>0)weeks.push({mon,sun,pct:Math.round(done/total*100),label:`${mon.getDate()}/${mon.getMonth()+1}`});
+  }
+  if(!weeks.length)return'';
+  const sorted=[...weeks].sort((a,b)=>b.pct-a.pct);
+  const best=sorted[0],worst=sorted[sorted.length-1];
+  return`<div class="metric-row">
+    <div class="metric-card green">
+      <div class="m-label">Best Week</div>
+      <div class="m-val">${best.pct}</div>
+      <div class="m-unit">% · w/c ${best.label}</div>
+    </div>
+    <div class="metric-card">
+      <div class="m-label">Worst Week</div>
+      <div class="m-val" style="color:var(--text3);">${worst.pct}</div>
+      <div class="m-unit">% · w/c ${worst.label}</div>
+    </div>
+  </div>`;
+}
+
+// ── PREDICTED COMPLETION ──
+function renderPredictedCompletion(){
+  const now=today();const mon=getMonday(now);
+  const dayOfWeek=(now.getDay()+6)%7; // 0=Mon
+  if(dayOfWeek===0)return''; // too early on Monday
+  let done=0,total=0;
+  for(let i=0;i<=dayOfWeek;i++){
+    const d=addDays(mon,i);if(d>now)break;
+    allGoals().forEach(g=>{total++;if(goalDone(dk(d),g))done++;});
+  }
+  if(!total)return'';
+  const currentRate=done/total;
+  const remainingDays=6-dayOfWeek;
+  const projDone=done+(currentRate*allGoals().length*remainingDays);
+  const projTotal=(dayOfWeek+1+remainingDays)*allGoals().length;
+  const predicted=Math.round(projDone/projTotal*100);
+  const current=Math.round(done/total*100);
+  return`<div class="metric-card" style="margin-bottom:10px;">
+    <div class="m-label">Predicted Week</div>
+    <div class="m-val" style="color:${predicted>=80?'var(--green)':predicted>=50?'var(--accent2)':'var(--text3)'};">${predicted}</div>
+    <div class="m-unit">% · at current pace (${current}%/day)</div>
+  </div>`;
+}
+
+// ── SESSION COMPARE ──
+function openCompareModal(){
+  const gym=loadGymData();
+  if(gym.length<2){toastMsg('Need at least 2 sessions');return;}
+  const recent=gym.slice(-20).reverse();
+  const opts=recent.map((s,i)=>`<option value="${gym.length-1-(i)}">${s.date} · ${esc(s.type||'Workout')}</option>`).join('');
+  document.getElementById('compare-a').innerHTML=opts;
+  document.getElementById('compare-b').innerHTML=opts;
+  // default B to second session
+  if(document.getElementById('compare-b').options.length>1)document.getElementById('compare-b').selectedIndex=1;
+  document.getElementById('compare-result').innerHTML='';
+  openModal('compare-modal');
+}
+function runCompare(){
+  const gym=loadGymData();
+  const ai=parseInt(document.getElementById('compare-a').value);
+  const bi=parseInt(document.getElementById('compare-b').value);
+  if(ai===bi){toastMsg('Pick two different sessions');return;}
+  const a=gym[ai],b=gym[bi];
+  const aVol=(a.exercises||[]).reduce((t,e)=>(e.sets||[]).filter(s=>!s.warmup).reduce((tt,s)=>tt+(parseFloat(s.weight||0)*parseFloat(s.reps||0)),t),0);
+  const bVol=(b.exercises||[]).reduce((t,e)=>(e.sets||[]).filter(s=>!s.warmup).reduce((tt,s)=>tt+(parseFloat(s.weight||0)*parseFloat(s.reps||0)),t),0);
+  const aSets=(a.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(s=>!s.warmup).length,0);
+  const bSets=(b.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(s=>!s.warmup).length,0);
+  const diff=aVol-bVol;
+  const allEx=new Set([...(a.exercises||[]).map(e=>e.name),...(b.exercises||[]).map(e=>e.name)]);
+  const exRows=[...allEx].filter(Boolean).map(name=>{
+    const aEx=(a.exercises||[]).find(e=>e.name===name);
+    const bEx=(b.exercises||[]).find(e=>e.name===name);
+    const aTop=aEx?(aEx.sets||[]).filter(s=>!s.warmup).reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,{weight:0,reps:0}):null;
+    const bTop=bEx?(bEx.sets||[]).filter(s=>!s.warmup).reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,{weight:0,reps:0}):null;
+    const improved=aTop&&bTop&&parseFloat(aTop.weight||0)>parseFloat(bTop.weight||0);
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="font-size:13px;font-weight:700;flex:1;">${esc(name)}</div>
+      <div style="font-size:12px;color:var(--text3);text-align:right;">${bTop&&bTop.weight?`${bTop.weight}kg × ${bTop.reps||'?'}`:'—'} → ${aTop&&aTop.weight?`<span style="color:${improved?'var(--green)':'var(--text2)'};">${aTop.weight}kg × ${aTop.reps||'?'}</span>`:'—'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('compare-result').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);"><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:4px;">${a.date}</div><div style="font-size:20px;font-weight:800;">${Math.round(aVol)}kg</div><div style="font-size:11px;color:var(--text3);">${aSets} sets</div></div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);"><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:4px;">${b.date}</div><div style="font-size:20px;font-weight:800;">${Math.round(bVol)}kg</div><div style="font-size:11px;color:var(--text3);">${bSets} sets</div></div>
+    </div>
+    <div style="text-align:center;padding:8px;margin-bottom:12px;background:${diff>0?'rgba(16,185,129,0.1)':diff<0?'rgba(239,68,68,0.1)':'var(--surface2)'};border-radius:var(--radius-xs);font-size:14px;font-weight:800;color:${diff>0?'var(--green)':diff<0?'var(--red)':'var(--text3)'};">${diff>0?'+':''}${Math.round(diff)}kg volume ${diff>0?'increase':diff<0?'decrease':'— equal'}</div>
+    ${exRows}`;
+}
+
+// ── MILESTONE BADGES ──
+const BADGES=[
+  {id:'first_gym',icon:'G',name:'First Rep',desc:'Log your first gym session',color:'#6366f1',check:()=>loadGymData().length>=1},
+  {id:'gym_10',icon:'G',name:'10 Sessions',desc:'Complete 10 gym sessions',color:'#8b5cf6',check:()=>loadGymData().length>=10},
+  {id:'gym_50',icon:'G',name:'Iron Regular',desc:'Complete 50 gym sessions',color:'#a855f7',check:()=>loadGymData().length>=50},
+  {id:'first_run',icon:'R',name:'First Mile',desc:'Log your first run',color:'#10b981',check:()=>loadRunData().length>=1},
+  {id:'run_100km',icon:'R',name:'Century',desc:'Run 100km total',color:'#059669',check:()=>loadRunData().reduce((s,r)=>s+(r.km||0),0)>=100},
+  {id:'run_500km',icon:'R',name:'500 Club',desc:'Run 500km total',color:'#047857',check:()=>loadRunData().reduce((s,r)=>s+(r.km||0),0)>=500},
+  {id:'streak_7',icon:'S',name:'Week Streak',desc:'7-day goal streak',color:'#f97316',check:()=>{let s=0;const n=today();for(let i=0;i<365;i++){if(!getDayScore(dk(addDays(n,-i))))break;s++;}return s>=7;}},
+  {id:'streak_30',icon:'S',name:'Month Streak',desc:'30-day goal streak',color:'#ea580c',check:()=>{let s=0;const n=today();for(let i=0;i<365;i++){if(!getDayScore(dk(addDays(n,-i))))break;s++;}return s>=30;}},
+  {id:'perfect_week',icon:'P',name:'Perfect Week',desc:'100% score for a full week',color:'#eab308',check:()=>{for(let w=1;w<=52;w++){const mon=addDays(getMonday(today()),-w*7);let ok=true;for(let d=0;d<7;d++){if(getDayScore(dk(addDays(mon,d)))<100){ok=false;break;}}if(ok)return true;}return false;}},
+  {id:'weight_10',icon:'W',name:'Tracked',desc:'Log weight 10 times',color:'#06b6d4',check:()=>loadHealthData().length>=10},
+];
+function renderBadges(){
+  const earned=BADGES.filter(b=>b.check());
+  const notEarned=BADGES.filter(b=>!b.check());
+  if(!BADGES.length)return'';
+  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Badges</span><span class="chart-card-val">${earned.length}/${BADGES.length}</span></div>
+    ${earned.length?`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:${notEarned.length?'16px':'0'};">
+      ${earned.map(b=>`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:64px;">
+        <div style="width:48px;height:48px;border-radius:14px;background:${b.color}22;border:2px solid ${b.color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:${b.color};">${b.icon}</div>
+        <div style="font-size:10px;font-weight:700;text-align:center;color:var(--text2);line-height:1.2;">${b.name}</div>
+      </div>`).join('')}
+    </div>`:''}
+    ${notEarned.length?`<div style="border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Locked</div>
+      ${notEarned.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:0.5;">
+        <div style="width:36px;height:36px;border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--text3);">${b.icon}</div>
+        <div><div style="font-size:13px;font-weight:700;">${b.name}</div><div style="font-size:11px;color:var(--text3);">${b.desc}</div></div>
+      </div>`).join('')}
+    </div>`:''}
+  </div>`;
 }
 
 // close modals on overlay click

@@ -2790,15 +2790,25 @@ function renderTimeOfDay(){
 // ── ACTIVITY LOAD ──
 function renderActivityLoad(){
   const now=today();const gym=loadGymData();const runs=loadRunData();
-  const effortPts={Easy:30,Tempo:50,Intervals:65,Hard:70,Long:60,Race:80,Recovery:20};
+  // Intensity multipliers per effort zone (simplified TRIMP)
+  const effortMult={Recovery:0.6,Easy:1.0,'Long Run':1.1,Long:1.1,Tempo:1.75,Intervals:2.0,Hard:2.0,Race:2.2};
+  function runLoad(r){
+    const mult=effortMult[r.effort]||1.0;
+    if(r.time){
+      const secs=parseTimeToSecs(r.time);
+      if(secs>0)return Math.round((secs/60)*mult); // minutes × intensity
+    }
+    if(r.km){return Math.round(r.km*6*mult);} // fallback: assume 6 min/km
+    return Math.round(30*mult);
+  }
   function gymSessionLoad(s){
     const sets=(s.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);
-    return sets>0?sets*2:30; // 2pts per work set; fallback 30 if no set data
+    return sets>0?sets*2:30;
   }
   function dayLoad(ds){
     let l=0;
     gym.filter(s=>s.date===ds).forEach(s=>{l+=gymSessionLoad(s);});
-    runs.filter(r=>r.date===ds).forEach(r=>{l+=(effortPts[r.effort]||40);});
+    runs.filter(r=>r.date===ds).forEach(r=>{l+=runLoad(r);});
     return l;
   }
   // 7-day and 28-day average daily load
@@ -2836,7 +2846,7 @@ function renderActivityLoad(){
       <span>7-day load: <span style="color:var(--text);">${avg7.toFixed(1)}/day</span></span>
       <span>28-day avg: <span style="color:var(--text);">${avg28.toFixed(1)}/day</span></span>
     </div>
-    ${sessionDesc?`<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">${sessionDesc} · Gym scored by work sets (2pts each), runs by effort.</div>`:''}
+    ${sessionDesc?`<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">${sessionDesc} · Gym: 2pts/set · Runs: mins × intensity (TRIMP)</div>`:''}
     <div style="padding:10px 14px;border-radius:var(--radius-xs);border:1px solid ${adviceColor};background:${isHigh?'rgba(249,115,22,0.08)':isRest?'rgba(99,102,241,0.08)':'rgba(16,185,129,0.08)'};font-size:13px;font-weight:700;color:${adviceColor};">${advice}</div>
   </div>`;
 }

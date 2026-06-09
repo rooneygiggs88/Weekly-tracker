@@ -845,15 +845,41 @@ function renderGymSection(){
     </div>
     <button class="btn-secondary" onclick="gymDraft={type:'Push',exercises:[]};renderGymLogger();">+ Add another session</button>`;
   }else{
-    el.innerHTML=`<div class="gym-start-card"><h2>Ready to train?</h2><p>Log sets, track weights, build on last time.</p><button class="btn-primary" onclick="startGymSession()">Start Session</button></div>${renderRecentGymCard()}`;
+    const hasPrev=loadGymData().length>0;
+    el.innerHTML=`<div class="gym-start-card">
+      <h2>Ready to train?</h2>
+      <p>Log sets, track weights, build on last time.</p>
+      ${hasPrev?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
+      <button class="btn-primary" onclick="startGymSession()">Start new session</button>
+    </div>${renderRecentGymCard()}`;
   }
+}
+function getDefaultExercisesForType(type){
+  // Default exercise lists per session type — uses user's exercise names from prog if they match
+  const DEFAULTS={
+    push:['Overhead Press','Lateral Raises','Tricep Pushdowns','Plate bench press','Incline plate press','Dips'],
+    pull:['Barbell Row','Lat pulldown','Seated row','EZ Bar Curl','Hammer Curls','Face Pulls'],
+    legs:['Seated leg press','Leg extension','Seated leg curl','Calf Raises','Hip abductor IN','Hip abductor OUT','Glute Hip Thrust'],
+    core:['Plank','Decline Sit Up With Plate','Hammer Ab Crunch Machine'],
+    'full body':['Squat','Deadlift','Bench Press','Overhead Press','Barbell Row'],
+    custom:[],
+  };
+  const key=type.toLowerCase();
+  const list=DEFAULTS[key]||[];
+  if(!list.length)return[{name:'',sets:[{weight:'',reps:'',warmup:false}]}];
+  // Prefer exact name from user's prog history if available
+  const progNames=Object.keys(loadGymProg());
+  return list.map(name=>{
+    const match=progNames.find(n=>n.toLowerCase()===name.toLowerCase())||name;
+    return{name:match,sets:[{weight:'',reps:'',warmup:false}]};
+  });
 }
 function startGymSession(){
   const sessions=loadGymData();
   const types=['Push','Pull','Legs'];
   let t='Push';
   if(sessions.length){const idx=types.indexOf(sessions[sessions.length-1].type);if(idx>=0)t=types[(idx+1)%types.length];}
-  gymDraft={type:t,exercises:[]};
+  gymDraft={type:t,exercises:getDefaultExercisesForType(t)};
   renderGymLogger();
 }
 function renderGymLogger(){
@@ -868,13 +894,22 @@ function renderGymLogger(){
       ${['Push','Pull','Legs','Core','Full Body','Custom'].map(t=>`<button onclick="gymSetType('${t}')" style="padding:7px 14px;border-radius:20px;border:1px solid ${gymDraft.type===t?'var(--accent)':'var(--border)'};background:${gymDraft.type===t?'var(--accent)':'transparent'};color:${gymDraft.type===t?'white':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${t}</button>`).join('')}
     </div>
   </div>
-  ${lastSame?`<div style="font-size:12px;color:var(--text3);padding:0 4px 10px;font-weight:600;">Last ${esc(gymDraft.type)}: ${lastSame.date} · ${(lastSame.exercises||[]).length} exercises</div>`:''}
+  ${lastSame?`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px;">
+    <div style="font-size:12px;color:var(--text3);font-weight:600;">Last ${esc(gymDraft.type)}: ${lastSame.date} · ${(lastSame.exercises||[]).length} ex</div>
+    <button onclick="copyLastSameSession()" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(99,102,241,0.12);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Copy this</button>
+  </div>`:''}
   <div id="gym-exercises">${gymDraft.exercises.map((ex,i)=>renderExBlock(ex,i,lastSame,prog)).join('')}</div>
   <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
   <button class="btn-primary" onclick="saveGymSession()" style="margin-bottom:8px;">Save Session</button>
   <button class="btn-ghost" style="width:100%;" onclick="gymDraft=null;renderGymSection();">Cancel</button>`;
 }
-function gymSetType(t){gymDraft.type=t;renderGymLogger();}
+function gymSetType(t){
+  gymDraft.type=t;
+  // If no exercises yet (or only blank ones), load defaults for the new type
+  const hasRealEx=(gymDraft.exercises||[]).some(e=>(e.name||'').trim());
+  if(!hasRealEx)gymDraft.exercises=getDefaultExercisesForType(t);
+  renderGymLogger();
+}
 function gymAddEx(){gymDraft.exercises.push({name:'',sets:[{weight:'',reps:'',warmup:false}]});renderGymLogger();}
 function gymRemoveEx(i){gymDraft.exercises.splice(i,1);renderGymLogger();}
 function gymAddSet(i){gymDraft.exercises[i].sets.push({weight:'',reps:'',warmup:false});renderGymLogger();}
@@ -1972,6 +2007,16 @@ function copyLastSession(){
   };
   renderGymLogger();toastMsg('Last session copied — edit before saving');haptic('light');
 }
+function copyLastSameSession(){
+  if(!gymDraft)return;
+  const last=loadGymData().filter(s=>s.type===gymDraft.type).slice(-1)[0];
+  if(!last){toastMsg('No previous '+gymDraft.type+' session');return;}
+  gymDraft.exercises=(last.exercises||[]).map(e=>({
+    name:e.name,
+    sets:(e.sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:s.warmup||false}))
+  }));
+  renderGymLogger();toastMsg(gymDraft.type+' session copied');haptic('light');
+}
 
 // ── DAY POPUP MODAL ──
 function openDayModal(ds){
@@ -2272,27 +2317,7 @@ renderRunSection=function(){
   }
 };
 
-// ── PATCH renderGymSection to inject copy last session button ──
-const _origRenderGymSection=renderGymSection;
-renderGymSection=function(){
-  _origRenderGymSection();
-  // After render, if we're showing the start card, inject copy button
-  const gymContent=document.getElementById('gym-content');
-  if(gymContent&&!gymDraft){
-    const startCard=gymContent.querySelector('.gym-start-card');
-    if(startCard){
-      const startBtn=startCard.querySelector('.btn-primary');
-      if(startBtn&&!startCard.querySelector('.copy-last-btn')){
-        const copyBtn=document.createElement('button');
-        copyBtn.className='btn-secondary copy-last-btn';
-        copyBtn.style.marginTop='8px';
-        copyBtn.textContent='Copy last session';
-        copyBtn.onclick=copyLastSession;
-        startBtn.after(copyBtn);
-      }
-    }
-  }
-};
+
 
 // ── PATCH renderGymLogger to inject notes field and auto-select plan type ──
 const _origRenderGymLogger=renderGymLogger;

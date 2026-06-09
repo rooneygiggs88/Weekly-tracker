@@ -1348,7 +1348,7 @@ function renderTrends(){
     ${renderVolumeChart(gym)}
     ${renderProgressiveOverload()}
     ${renderMuscleVolume()}
-    ${renderBadges()}
+
   `;
 }
 
@@ -2362,37 +2362,6 @@ function runCompare(){
 }
 
 // ── MILESTONE BADGES ──
-const BADGES=[
-  {id:'first_gym',icon:'G',name:'First Rep',desc:'Log your first gym session',color:'#6366f1',check:()=>loadGymData().length>=1},
-  {id:'gym_10',icon:'G',name:'10 Sessions',desc:'Complete 10 gym sessions',color:'#8b5cf6',check:()=>loadGymData().length>=10},
-  {id:'gym_50',icon:'G',name:'Iron Regular',desc:'Complete 50 gym sessions',color:'#a855f7',check:()=>loadGymData().length>=50},
-  {id:'first_run',icon:'R',name:'First Mile',desc:'Log your first run',color:'#10b981',check:()=>loadRunData().length>=1},
-  {id:'run_100km',icon:'R',name:'Century',desc:'Run 100km total',color:'#059669',check:()=>loadRunData().reduce((s,r)=>s+(r.km||0),0)>=100},
-  {id:'run_500km',icon:'R',name:'500 Club',desc:'Run 500km total',color:'#047857',check:()=>loadRunData().reduce((s,r)=>s+(r.km||0),0)>=500},
-  {id:'streak_7',icon:'S',name:'Week Streak',desc:'7-day goal streak',color:'#f97316',check:()=>{let s=0;const n=today();for(let i=0;i<365;i++){if(!getDayScore(dk(addDays(n,-i))))break;s++;}return s>=7;}},
-  {id:'streak_30',icon:'S',name:'Month Streak',desc:'30-day goal streak',color:'#ea580c',check:()=>{let s=0;const n=today();for(let i=0;i<365;i++){if(!getDayScore(dk(addDays(n,-i))))break;s++;}return s>=30;}},
-  {id:'perfect_week',icon:'P',name:'Perfect Week',desc:'100% score for a full week',color:'#eab308',check:()=>{for(let w=1;w<=52;w++){const mon=addDays(getMonday(today()),-w*7);let ok=true;for(let d=0;d<7;d++){if(getDayScore(dk(addDays(mon,d)))<100){ok=false;break;}}if(ok)return true;}return false;}},
-  {id:'weight_10',icon:'W',name:'Tracked',desc:'Log weight 10 times',color:'#06b6d4',check:()=>loadHealthData().length>=10},
-];
-function renderBadges(){
-  const earned=BADGES.filter(b=>b.check());
-  const notEarned=BADGES.filter(b=>!b.check());
-  if(!BADGES.length)return'';
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Badges</span><span class="chart-card-val">${earned.length}/${BADGES.length}</span></div>
-    ${earned.length?`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:${notEarned.length?'16px':'0'};">
-      ${earned.map(b=>`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:64px;">
-        <div style="width:48px;height:48px;border-radius:14px;background:${b.color}22;border:2px solid ${b.color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:${b.color};">${b.icon}</div>
-        <div style="font-size:10px;font-weight:700;text-align:center;color:var(--text2);line-height:1.2;">${b.name}</div>
-      </div>`).join('')}
-    </div>`:''}
-    ${notEarned.length?`<div style="border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Locked</div>
-      ${notEarned.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:0.5;">
-        <div style="width:36px;height:36px;border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--text3);">${b.icon}</div>
-        <div><div style="font-size:13px;font-weight:700;">${b.name}</div><div style="font-size:11px;color:var(--text3);">${b.desc}</div></div>
-      </div>`).join('')}
-    </div>`:''}
-  </div>`;
-}
 
 // ── ANOMALY ALERTS ──
 function getAnomalyAlerts(){

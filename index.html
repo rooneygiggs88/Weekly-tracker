@@ -3451,7 +3451,7 @@ function renderExerciseLibrary(){
     return`<div style="padding:14px 0;border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div style="font-size:14px;font-weight:700;">${esc(name)}</div>
-        <button onclick="openExerciseEdit(${JSON.stringify(name)})" style="padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
+        <button onclick='openExerciseEdit(${JSON.stringify(name)})' style="padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
       </div>
       <div style="margin-bottom:4px;">${musclePills}</div>
       <div style="font-size:11px;color:var(--text3);font-weight:600;">Rest: ${restLabel}</div>

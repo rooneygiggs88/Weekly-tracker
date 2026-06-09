@@ -3546,20 +3546,94 @@ saveGymSession=function(){
   toastMsg('Session saved');haptic('success');renderGymSection();
 };
 
-// ── PATCH renderTrainHistory to make gym rows tappable ──
-const _origRenderTrainHistory=renderTrainHistory;
+// ── Session type colour map ──
+const SESSION_TYPE_COL={
+  Push:{bg:'rgba(239,68,68,0.12)',border:'rgba(239,68,68,0.35)',text:'#ef4444'},
+  Pull:{bg:'rgba(99,102,241,0.12)',border:'rgba(99,102,241,0.35)',text:'var(--accent2)'},
+  Legs:{bg:'rgba(16,185,129,0.12)',border:'rgba(16,185,129,0.35)',text:'var(--green)'},
+  Core:{bg:'rgba(234,179,8,0.12)',border:'rgba(234,179,8,0.35)',text:'#eab308'},
+  Custom:{bg:'rgba(139,92,246,0.12)',border:'rgba(139,92,246,0.35)',text:'#a855f7'},
+  Run:{bg:'rgba(6,182,212,0.12)',border:'rgba(6,182,212,0.35)',text:'#06b6d4'},
+};
+function sessionTypeTag(type){
+  const c=SESSION_TYPE_COL[type]||{bg:'rgba(128,128,168,0.12)',border:'rgba(128,128,168,0.3)',text:'var(--text2)'};
+  return`<span style="display:inline-block;padding:3px 9px;border-radius:20px;background:${c.bg};border:1px solid ${c.border};color:${c.text};font-size:11px;font-weight:800;">${esc(type)}</span>`;
+}
+let _expandedHistoryId=null;
+function toggleHistoryRow(id){_expandedHistoryId=_expandedHistoryId===id?null:id;renderTrainHistory();}
+
 renderTrainHistory=function(){
   const el=document.getElementById('train-history-content');
-  const gymData=loadGymData();
+  const gymData=loadGymData();const runData=loadRunData();
   const gymCount=gymData.length;
-  const all=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...loadRunData().map(r=>({...r,_t:'run'}))]
-    .sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,20);
+  const all=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...runData.map((r,i)=>({...r,_t:'run',_idx:i}))]
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(!all.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
   const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare Sessions</button>`:'';
-  el.innerHTML=compareBtn+`<div class="chart-card">${all.map(e=>e._t==='gym'
-    ?`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openSessionDetail(${e._idx})">${goalAvatarInline('Gym')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(e.type||'Workout')}</div><div style="font-size:12px;color:var(--text3);">${e.date}</div></div><div style="font-size:13px;color:var(--text2);font-weight:600;">${(e.exercises||[]).length} ex</div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>`
-    :`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Running')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.km?e.km+'km':e.time||'Run'}</div><div style="font-size:12px;color:var(--text3);">${e.date}${e.effort?' · '+e.effort:''}</div></div><div style="font-size:13px;color:var(--accent2);font-weight:700;">${e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):''}</div></div>`
-  ).join('')}</div>`;
+  const rows=all.map((e,ri)=>{
+    const id=`${e._t}-${e._idx}-${e.date}`;
+    const expanded=_expandedHistoryId===id;
+    const d=new Date(e.date+'T12:00:00');
+    const dateLabel=d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    if(e._t==='gym'){
+      const sets=(e.exercises||[]).reduce((t,ex)=>t+(ex.sets||[]).filter(s=>!s.warmup).length,0);
+      const vol=(e.exercises||[]).reduce((t,ex)=>(ex.sets||[]).filter(s=>!s.warmup).reduce((tt,s)=>tt+(parseFloat(s.weight||0)*parseFloat(s.reps||0)),t),0);
+      const detail=expanded?`<div style="padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px;">
+        ${(e.exercises||[]).map(ex=>{
+          const ws=(ex.sets||[]).filter(s=>!s.warmup);
+          const top=ws.length?ws.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,ws[0]):null;
+          return`<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:13px;font-weight:700;">${esc(ex.name||'Exercise')}</span>
+              ${top&&top.weight?`<span style="font-size:12px;color:var(--accent2);font-weight:700;">${top.weight}kg × ${top.reps}</span>`:''}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">${(ex.sets||[]).filter(s=>!s.warmup).map(s=>`<span style="padding:3px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);">${s.weight}kg×${s.reps}</span>`).join('')}</div>
+          </div>`;
+        }).join('')}
+        ${e.notes?`<div style="font-size:12px;color:var(--text3);margin-top:8px;font-style:italic;">"${esc(e.notes)}"</div>`:''}
+        ${vol>0?`<div style="font-size:11px;color:var(--text3);margin-top:8px;">Total volume: ${Math.round(vol).toLocaleString()}kg</div>`:''}
+      </div>`:'';
+      return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleHistoryRow('${id}')">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              ${sessionTypeTag(e.type||'Workout')}
+              <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text2);">${(e.exercises||[]).length} exercises · ${sets} sets</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="transform:rotate(${expanded?90:0}deg);transition:transform 0.2s;flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        ${detail}
+      </div>`;
+    } else {
+      const pace=e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):'';
+      const effortTag=e.effort?sessionTypeTag('Run'):'';
+      const detail=expanded?`<div style="padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+          ${e.km?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.km}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">km</div></div>`:''}
+          ${e.time?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.time}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">time</div></div>`:''}
+          ${pace?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${pace}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">/km</div></div>`:''}
+        </div>
+        ${e.note?`<div style="font-size:12px;color:var(--text3);font-style:italic;">"${esc(e.note)}"</div>`:''}
+      </div>`:'';
+      return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleHistoryRow('${id}')">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              ${sessionTypeTag('Run')}
+              ${e.effort?`<span style="padding:3px 9px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${esc(e.effort)}</span>`:''}
+              <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text2);">${e.km?e.km+'km':''}${e.km&&e.time?' · ':''}${e.time||''}${pace?' · '+pace+'/km':''}</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="transform:rotate(${expanded?90:0}deg);transition:transform 0.2s;flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        ${detail}
+      </div>`;
+    }
+  }).join('');
+  el.innerHTML=compareBtn+`<div class="chart-card">${rows}</div>`;
 };
 
 

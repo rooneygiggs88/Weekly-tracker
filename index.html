@@ -8470,6 +8470,21 @@ function importData(input){
     try{
       const payload = JSON.parse(e.target.result);
       if(!payload.state||!payload.state.data) throw new Error('Invalid');
+      // Warn if the backup is older than the current data's most recent entry
+      if(payload.exported){
+        const backupDate = new Date(payload.exported);
+        const currentKeys = Object.keys(state.data||{});
+        if(currentKeys.length){
+          const latestKey = currentKeys.filter(k=>/^\d{4}-\d{2}-\d{2}/.test(k)).sort().pop();
+          const latestDate = latestKey ? new Date(latestKey.slice(0,10)) : null;
+          if(latestDate && backupDate < latestDate){
+            const backupStr = backupDate.toLocaleDateString();
+            const latestStr = latestDate.toLocaleDateString();
+            const ok = confirm(`This backup is from ${backupStr}, but your current data has entries up to ${latestStr}.\n\nImporting will overwrite your more recent data. Continue?`);
+            if(!ok){ input.value=''; return; }
+          }
+        }
+      }
       // ── Core data ──
       state = payload.state; saveState();
       if(payload.gymData)       saveGymData(payload.gymData);

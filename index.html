@@ -621,6 +621,12 @@ function getWeeklyQuota(){
     return{...g,done,target};
   });
 }
+function setQuotaTarget(id,n){
+  if(!state.builtinTargets)state.builtinTargets={};
+  state.builtinTargets[id]=n;
+  saveState();
+  renderToday();
+}
 
 // ── PAGE NAV ──
 function showPage(name){
@@ -804,12 +810,16 @@ function renderToday(){
         `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${i<g.done?col:'var(--border)'};margin-right:3px;"></span>`
       ).join('');
       const complete=g.done>=g.target;
-      return`<div onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')" style="flex:1;display:flex;flex-direction:column;gap:5px;padding:12px 14px;border-radius:var(--radius-xs);background:var(--surface2);border:1px solid ${complete?col+'44':'var(--border)'};cursor:pointer;">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
+      const picker=Array.from({length:7},(_,i)=>i+1).map(n=>
+        `<button onclick="event.stopPropagation();setQuotaTarget('${g.id}',${n})" style="width:28px;height:28px;border-radius:50%;border:2px solid ${n===g.target?col:'var(--border)'};background:${n===g.target?col+'22':'transparent'};color:${n===g.target?col:'var(--text2)'};font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;">${n}</button>`
+      ).join('');
+      return`<div style="flex:1;display:flex;flex-direction:column;gap:5px;padding:12px 14px;border-radius:var(--radius-xs);background:var(--surface2);border:1px solid ${complete?col+'44':'var(--border)'};">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')">
           <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:${complete?col:'var(--text2)'};">${esc(g.name)}</span>
           <span style="font-size:13px;font-weight:800;color:${complete?col:'var(--text2)'};">${g.done}/${g.target}${complete?' ✓':''}</span>
         </div>
         <div>${dots}</div>
+        <div style="display:flex;gap:4px;margin-top:2px;">${picker}</div>
       </div>`;
     }).join('');
     wrap.innerHTML=planChip+`<div style="display:flex;gap:8px;margin-bottom:4px;">${quotaItems}</div>`;

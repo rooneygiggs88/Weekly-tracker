@@ -1722,23 +1722,34 @@ let currentPage = 'week';
 let navOrder = [];
 let progOrder = [];
 
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
 function loadState(){
   const fallback={customGoals:[],data:{},builtinTargets:{},archivedWeeks:{}};
   try{
     const s=localStorage.getItem('wt_v3');
     if(s){
       const parsed=JSON.parse(s);
-      // Ensure all required keys exist
       if(!Array.isArray(parsed.customGoals)) parsed.customGoals=[];
       if(!parsed.data||typeof parsed.data!=='object') parsed.data={};
       if(!parsed.builtinTargets||typeof parsed.builtinTargets!=='object') parsed.builtinTargets={};
       if(!parsed.archivedWeeks||typeof parsed.archivedWeeks!=='object') parsed.archivedWeeks={};
       return parsed;
     }
-  }catch(e){}
+  }catch(e){
+    console.error('loadState failed:',e);
+    const recover=confirm('Your tracker data could not be loaded (it may be corrupted).\n\nPress OK to reset to a clean state, or Cancel to try refreshing the page first.');
+    if(recover) localStorage.removeItem('wt_v3');
+    return fallback;
+  }
   return fallback;
 }
-function saveState(){localStorage.setItem('wt_v3',JSON.stringify(state));}
+
+let _saveTimer=null;
+function saveState(){
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>localStorage.setItem('wt_v3',JSON.stringify(state)),400);
+}
 function allDailyGoals(){const cg=Array.isArray(state.customGoals)?state.customGoals:[];return[...BUILTIN_DAILY,...cg.filter(g=>g.type==='daily')];}
 function allSessionGoals(){const cg=Array.isArray(state.customGoals)?state.customGoals:[];return[...BUILTIN_SESSIONS,...cg.filter(g=>g.type==='weekly')];}
 function allAnalyticsGoals(){return[...allDailyGoals().map(g=>({...g,atype:'daily'})),...allSessionGoals().map(g=>({...g,atype:'session'}))];}
@@ -1840,14 +1851,14 @@ function renderDailyGrid(goal,dates){
       </div>`;
     }).join('');
     return`<div class="section">
-      <div class="section-title"><span>${goal.icon?goal.icon+' ':''}${goal.name}${delBtn}</span></div>
+      <div class="section-title"><span>${goal.icon?goal.icon+' ':''}${esc(goal.name)}${delBtn}</span></div>
       <div class="card"><div class="days-grid" style="cursor:pointer;">${gridHeader}</div>${renderEntryList(activeDate,storeKey,'Add a note, press Return…')}</div>
     </div>`;
   }
 
   // Default: checkbox grid
   return `<div class="section">
-    <div class="section-title"><span>${goal.icon?goal.icon+' ':''}${goal.name}${delBtn}</span></div>
+    <div class="section-title"><span>${goal.icon?goal.icon+' ':''}${esc(goal.name)}${delBtn}</span></div>
     <div class="card">
       <div class="days-grid">${dates.map((d,i)=>`<div class="day-col"><div class="day-header${isToday(d)?' today':''}">${DAYS[i]}</div></div>`).join('')}</div>
       <div class="days-grid">${dates.map(d=>`<div class="day-col"><div class="day-cell${getCheck(d,goal.id)?' checked':''}" data-date="${d.toISOString()}" onclick="toggleCheck('${d.toISOString()}','${goal.id}')"><div class="dot">${getCheck(d,goal.id)?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div></div></div>`).join('')}</div>
@@ -1883,7 +1894,7 @@ function renderSession(goal,dates){
     const dotRow=Array.from({length:target},(_,i)=>`<div style="width:8px;height:8px;border-radius:50%;background:${i<done?'var(--green)':'var(--border)'}"></div>`).join('');
     return`<div class="section">
       <div class="section-title">
-        <span>${goal.icon} ${goal.name}${delBtn}</span>
+        <span>${goal.icon} ${esc(goal.name)}${delBtn}</span>
         <div style="display:flex;align-items:center;gap:6px;">
           <div style="display:flex;gap:4px;align-items:center;">${dotRow}</div>
           <span class="session-count">${done}/${target}</span>
@@ -1917,7 +1928,7 @@ function renderSession(goal,dates){
 
   return`<div class="section">
     <div class="section-title">
-      <span>${goal.icon} ${goal.name}${delBtn}</span>
+      <span>${goal.icon} ${esc(goal.name)}${delBtn}</span>
       <div style="display:flex;align-items:center;gap:6px;">
         <div style="display:flex;gap:4px;align-items:center;">${dotRow}</div>
         <span class="session-count">${done}/${target}</span>
@@ -2115,7 +2126,7 @@ function renderTrendSection(weeks){
   // Dots — only show if ≤20 weeks
   const dots = n<=20 ? series.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="2.5" fill="#6c63ff"/>`).join('') : '';
 
-  const tabsHtml=trendGoals.map(g=>`<button class="trend-tab${selectedTrendGoal===g.id?' active':''}" onclick="setTrendGoal('${g.id}')">${g.icon} ${g.name}</button>`).join('');
+  const tabsHtml=trendGoals.map(g=>`<button class="trend-tab${selectedTrendGoal===g.id?' active':''}" onclick="setTrendGoal('${g.id}')">${g.icon} ${esc(g.name)}</button>`).join('');
   return`<div class="section"><div class="section-title"><span>Weekly trend</span><span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:none;letter-spacing:0;">${n} weeks · avg ${avg}%</span></div>
   <div class="card">
     <div class="trend-tabs" style="padding-bottom:8px;">${tabsHtml}</div>
@@ -2149,7 +2160,7 @@ function renderHeatmapSection(dates,goals){
       const lvl=s.total===0?0:s.rate<0.2?1:s.rate<0.4?2:s.rate<0.6?3:s.rate<0.8?4:5;
       return`<td><div class="hm-cell l${lvl}"></div></td>`;
     }).join('');
-    return`<tr><td class="act-label">${g.icon||''} ${g.name}</td>${cells}</tr>`;
+    return`<tr><td class="act-label">${g.icon||''} ${esc(g.name)}</td>${cells}</tr>`;
   }).join('');
 
   // ── Smart pattern analysis ──
@@ -2257,7 +2268,7 @@ function renderHeatmapSection(dates,goals){
 function renderStreaksSection(goals){
   const rows=[{id:'all',name:'Overall',icon:'📊'},...goals].map(g=>{
     const cur=currentStreak(g.id),best=bestStreak(g.id);
-    return`<div class="streak-row"><div class="streak-name">${g.icon||''} ${g.name}</div><div class="streak-badges"><div class="streak-badge hot">🔥 ${cur}d</div><div class="streak-badge best">⭐ ${best}d best</div></div></div>`;
+    return`<div class="streak-row"><div class="streak-name">${g.icon||''} ${esc(g.name)}</div><div class="streak-badges"><div class="streak-badge hot">🔥 ${cur}d</div><div class="streak-badge best">⭐ ${best}d best</div></div></div>`;
   }).join('');
   return`<div class="section"><div class="section-title"><span>Streaks</span></div><div class="card">${rows}</div></div>`;
 }
@@ -2313,7 +2324,7 @@ function renderHistory(){
         else{d=Math.min(w.dates.filter(date=>getEntries(date,`session:${g.id}`).length>0).length,t);}
       }
       const gPct=t?Math.round((d/t)*100):0;
-      return`<div class="history-bar-row"><div class="hb-name">${g.icon||''} ${g.name}</div><div class="history-bar-track"><div class="history-bar-fill" style="width:${gPct}%"></div></div><div class="hb-val">${gPct}%</div></div>`;
+      return`<div class="history-bar-row"><div class="hb-name">${g.icon||''} ${esc(g.name)}</div><div class="history-bar-track"><div class="history-bar-fill" style="width:${gPct}%"></div></div><div class="hb-val">${gPct}%</div></div>`;
     }).join('');
     const archiveBtn=`<button onclick="toggleArchiveWeek('${weekKey}')" style="background:none;border:none;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);padding:2px 6px;border-radius:6px;border:1px solid var(--border);">${isArchived?'Unarchive':'Archive'}</button>`;
     return`<div class="section${isArchived?' archived-week':''}"><div class="history-week"><div class="history-week-header"><div class="wk-label">${label}${isArchived?'<span class="archived-badge">Archived</span>':''}</div><div style="display:flex;align-items:center;gap:8px;">${archiveBtn}<div class="wk-pct">${pct}%</div></div></div><div class="history-bars">${bars}</div></div></div>`;
@@ -2570,7 +2581,7 @@ function renderAnalysis() {
   if(!analysisTabs.find(g=>g.id===selectedAnalysisGoal)) selectedAnalysisGoal = analysisTabs[0].id;
 
   const tabsHtml = analysisTabs.map(g =>
-    `<button class="ga-tab${g.id===selectedAnalysisGoal?' active':''}" onclick="setAnalysisGoal('${g.id}')">${g.icon} ${g.name}</button>`
+    `<button class="ga-tab${g.id===selectedAnalysisGoal?' active':''}" onclick="setAnalysisGoal('${g.id}')">${g.icon} ${esc(g.name)}</button>`
   ).join('');
 
   let html = `<div class="section" style="padding-top:20px;">
@@ -3255,7 +3266,7 @@ function renderGenericAnalysis(goalId) {
     });
   }
 
-  if(!allEntries.length) return `<div class="section"><div class="card"><div class="empty-state" style="padding:20px;">No entries yet for ${goal.name}.</div></div></div>`;
+  if(!allEntries.length) return `<div class="section"><div class="card"><div class="empty-state" style="padding:20px;">No entries yet for ${esc(goal.name)}.</div></div></div>`;
 
   // Entry count per week (last 8 weeks)
   const weekCounts = [];
@@ -3267,7 +3278,7 @@ function renderGenericAnalysis(goalId) {
     weekLabels.push(`${dates[0].getDate()}/${dates[0].getMonth()+1}`);
   }
 
-  const summary = `<div class="section"><div class="section-title"><span>${goal.name} summary</span></div>
+  const summary = `<div class="section"><div class="section-title"><span>${esc(goal.name)} summary</span></div>
     <div class="card"><div class="metric-grid">
       <div class="metric-cell"><div class="metric-val">${allEntries.length}</div><div class="metric-unit">entries</div></div>
       <div class="metric-cell"><div class="metric-val">${Math.round(allEntries.length/Math.max(1,Math.ceil(allEntries.length/7)*1))}</div><div class="metric-unit">avg/week</div></div>
@@ -5406,7 +5417,7 @@ function renderMonthlySummary() {
       if(g.atype==='daily'){days.forEach(date=>{t++;if(goalDone(date,g))d++;});}
       else{t=Math.ceil((g.weeklyTarget||3)*(days.length/7));d=Math.min(days.filter(date=>getEntries(date,`session:${g.id}`).length>0).length,t);}
       const gPct=t?Math.round((d/t)*100):0;
-      return `<div class="history-bar-row"><div class="hb-name">${g.icon||''} ${g.name}</div><div class="history-bar-track"><div class="history-bar-fill" style="width:${gPct}%"></div></div><div class="hb-val">${gPct}%</div></div>`;
+      return `<div class="history-bar-row"><div class="hb-name">${g.icon||''} ${esc(g.name)}</div><div class="history-bar-track"><div class="history-bar-fill" style="width:${gPct}%"></div></div><div class="hb-val">${gPct}%</div></div>`;
     }).join('');
 
     return `<div class="month-card">
@@ -5770,7 +5781,7 @@ function showDayPopup(dateIso, anchorEl) {
     return `<div class="day-popup-row">
       <div class="day-popup-dot" style="background:${color};"></div>
       <div style="flex:1;">
-        <div style="font-weight:600;">${g.icon||''} ${g.name}</div>
+        <div style="font-weight:600;">${g.icon||''} ${esc(g.name)}</div>
         ${detail&&detail!=='Done'&&detail!=='Not done'?`<div style="font-size:11px;color:var(--text3);">${detail}</div>`:''}
       </div>
       <div style="font-size:12px;color:${done?'var(--green)':'var(--text3)'};">${done?'✓':'—'}</div>
@@ -5920,7 +5931,7 @@ function renderShareCard() {
     else{t=g.weeklyTarget||3;d=Math.min(dates.filter(date=>getEntries(date,`session:${g.id}`).length>0).length,t);}
     const gPct=t?Math.round((d/t)*100):0;
     return `<div class="share-card-bar-row">
-      <div class="share-card-bar-name">${g.icon||''} ${g.name}</div>
+      <div class="share-card-bar-name">${g.icon||''} ${esc(g.name)}</div>
       <div class="share-card-bar-track"><div class="share-card-bar-fill" style="width:${gPct}%;"></div></div>
       <div class="share-card-bar-pct">${gPct}%</div>
     </div>`;

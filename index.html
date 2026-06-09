@@ -647,19 +647,22 @@ function showPage(name){
 
 // ── TODAY + WEEK NAV ──
 let weekOffset=0;
+let _selectedDs=null;
 function changeWeek(dir){
   const newOff=weekOffset+dir;
   if(newOff>0)return; // can't go future
   weekOffset=newOff;
+  _selectedDs=null;
   renderToday();
 }
 function renderToday(){
   const now=today();
   const baseMonday=addDays(getMonday(now),weekOffset*7);
   const viewingToday=weekOffset===0;
-  // "active day" = today if current week, else last day of viewed week
-  const activeDate=viewingToday?now:addDays(baseMonday,6);
+  // "active day" = selected day if set, else today for current week, else last day of viewed week
+  const activeDate=_selectedDs?new Date(_selectedDs):(viewingToday?now:addDays(baseMonday,6));
   const ds=dk(activeDate);
+  if(!_selectedDs)_selectedDs=ds;
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('today-date-label').textContent=viewingToday
@@ -765,6 +768,7 @@ function renderToday(){
     const el=document.createElement('div');
     el.className='week-day'+(isActive?' today':!isFuture&&dayScore>=80?' past-done':'');
     if(isFuture)el.style.opacity='0.3';
+    el.dataset.ds=dds;
     el.innerHTML=`<div class="week-day-label">${lbl}</div><div class="week-day-dot"></div><div class="week-day-num">${d.getDate()}</div>${planShort?`<div class="week-day-plan" style="color:${planColor};">${planShort}</div>`:'<div class="week-day-plan"></div>'}`;
     // tap a day to view it
     if(!isFuture){el.onclick=()=>{const clickDs=dds;renderDayGoals(clickDs);};}
@@ -852,6 +856,21 @@ function renderToday(){
 }
 
 function renderDayGoals(ds){
+  _selectedDs=ds;
+  // Update strip highlight
+  const stripEl=document.getElementById('week-strip');
+  if(stripEl){
+    const now=today();
+    Array.from(stripEl.children).forEach(el=>{
+      const cellDs=el.dataset.ds;
+      if(!cellDs)return;
+      const cellDate=new Date(cellDs);
+      const isFuture=cellDate>now;
+      const dayScore=!isFuture?getDayScore(cellDs):0;
+      el.className='week-day'+(cellDs===ds?' today':!isFuture&&dayScore>=80?' past-done':'');
+      if(isFuture)el.style.opacity='0.3'; else el.style.opacity='';
+    });
+  }
   // Re-render just the goal stack for a tapped day
   const now=today();const isToday=ds===dk(now);
   const stack=document.getElementById('goal-stack');

@@ -1341,7 +1341,6 @@ function renderTrends(){
     ${renderTimeOfDay()}
     ${renderActivityLoad()}
     ${renderWeekChart()}
-    ${renderHeatmap()}
     ${renderWeekBars()}
     ${renderStreakCards()}
     ${renderRunStatsCard(runs)}
@@ -1513,7 +1512,7 @@ function renderDayOfWeekHeatmap(){
   }).join('');
 
   return `<div class="chart-card">
-    <div class="card-header"><span class="card-title">Day of Week Patterns</span><span class="card-sub">${WEEKS} weeks</span></div>
+    <div class="chart-card-header"><span class="chart-card-title">Day of Week Patterns</span><span class="chart-card-val">${WEEKS} weeks</span></div>
     <div class="dow-header-row">
       <div></div>
       <div class="dow-header-cells">${headerCells}</div>

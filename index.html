@@ -843,19 +843,46 @@ function renderGymSection(){
         return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;font-weight:700;">${esc(e.name)}</span><span style="font-size:13px;color:var(--text2);font-weight:600;">${ws.length} sets${top&&top.weight?` · ${top.weight}kg×${top.reps||'?'}`:''}</span></div>`;
       }).join('')}
     </div>
-    <button class="btn-secondary" onclick="gymDraft={type:'Push',exercises:[]};renderGymLogger();">+ Add another session</button>`;
+    <button class="btn-secondary" onclick="_gymPickedType=null;renderGymTypeSelector();">+ Add another session</button>`;
   }else{
-    const hasPrev=loadGymData().length>0;
-    el.innerHTML=`<div class="gym-start-card">
-      <h2>Ready to train?</h2>
-      <p>Log sets, track weights, build on last time.</p>
-      ${hasPrev?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
-      <button class="btn-primary" onclick="startGymSession()">Start new session</button>
-    </div>${renderRecentGymCard()}`;
+    renderGymTypeSelector();
   }
 }
+
+// Step 1: pick the session type
+let _gymPickedType='Push';
+function renderGymTypeSelector(){
+  const el=document.getElementById('gym-content');
+  const sessions=loadGymData();
+  const types=['Push','Pull','Legs','Core','Full Body','Custom'];
+  // Suggest next in PPL rotation
+  if(!_gymPickedType){
+    const ppl=['Push','Pull','Legs'];
+    if(sessions.length){const idx=ppl.indexOf(sessions[sessions.length-1].type);_gymPickedType=idx>=0?ppl[(idx+1)%3]:'Push';}
+    else _gymPickedType='Push';
+  }
+  const hasPrev=sessions.length>0;
+  el.innerHTML=`
+    <div class="chart-card" style="margin-bottom:10px;">
+      <div class="chart-card-header"><span class="chart-card-title">Select Session Type</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?'var(--accent)':'var(--border)'};background:${_gymPickedType===t?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${_gymPickedType===t?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
+      </div>
+      ${hasPrev?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
+      <button class="btn-primary" style="width:100%;" onclick="confirmGymSession()">Start ${esc(_gymPickedType)} session →</button>
+    </div>
+    ${renderRecentGymCard()}`;
+}
+function gymPickType(t){
+  _gymPickedType=t;
+  renderGymTypeSelector();
+}
+function confirmGymSession(){
+  gymDraft={type:_gymPickedType,exercises:getDefaultExercisesForType(_gymPickedType),startedAt:Date.now()};
+  renderGymLogger();
+}
+
 function getDefaultExercisesForType(type){
-  // Default exercise lists per session type — uses user's exercise names from prog if they match
   const DEFAULTS={
     push:['Overhead Press','Lateral Raises','Tricep Pushdowns','Plate bench press','Incline plate press','Dips'],
     pull:['Barbell Row','Lat pulldown','Seated row','EZ Bar Curl','Hammer Curls','Face Pulls'],
@@ -867,31 +894,46 @@ function getDefaultExercisesForType(type){
   const key=type.toLowerCase();
   const list=DEFAULTS[key]||[];
   if(!list.length)return[{name:'',sets:[{weight:'',reps:'',warmup:false}]}];
-  // Prefer exact name from user's prog history if available
   const progNames=Object.keys(loadGymProg());
   return list.map(name=>{
     const match=progNames.find(n=>n.toLowerCase()===name.toLowerCase())||name;
     return{name:match,sets:[{weight:'',reps:'',warmup:false}]};
   });
 }
-function startGymSession(){
-  const sessions=loadGymData();
-  const types=['Push','Pull','Legs'];
-  let t='Push';
-  if(sessions.length){const idx=types.indexOf(sessions[sessions.length-1].type);if(idx>=0)t=types[(idx+1)%types.length];}
-  gymDraft={type:t,exercises:getDefaultExercisesForType(t)};
-  renderGymLogger();
+function startGymSession(){confirmGymSession();}
+
+// Session elapsed timer
+let _gymTimerInterval=null;
+function gymElapsed(){
+  if(!gymDraft||!gymDraft.startedAt)return'';
+  const mins=Math.floor((Date.now()-gymDraft.startedAt)/60000);
+  return mins<1?'just started':mins===1?'1 min':mins+' mins';
 }
+function startGymTimer(){
+  if(_gymTimerInterval)clearInterval(_gymTimerInterval);
+  _gymTimerInterval=setInterval(()=>{
+    const el=document.getElementById('gym-session-elapsed');
+    if(el&&gymDraft)el.textContent=gymElapsed();
+    else{clearInterval(_gymTimerInterval);_gymTimerInterval=null;}
+  },30000);
+}
+
 function renderGymLogger(){
   const el=document.getElementById('gym-content');
   const sessions=loadGymData();
   const lastSame=sessions.filter(s=>s.type===gymDraft.type).slice(-1)[0];
   const prog=loadGymProg();
   el.innerHTML=`
-  <div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Session Type</span></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      ${['Push','Pull','Legs','Core','Full Body','Custom'].map(t=>`<button onclick="gymSetType('${t}')" style="padding:7px 14px;border-radius:20px;border:1px solid ${gymDraft.type===t?'var(--accent)':'var(--border)'};background:${gymDraft.type===t?'var(--accent)':'transparent'};color:${gymDraft.type===t?'white':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${t}</button>`).join('')}
+  <div class="chart-card" style="margin-bottom:10px;background:linear-gradient(135deg,rgba(99,102,241,0.12) 0%,rgba(99,102,241,0.04) 100%);border-color:rgba(99,102,241,0.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent2);margin-bottom:4px;">Session in progress</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">${esc(gymDraft.type)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;color:var(--text3);font-weight:700;" id="gym-session-elapsed">${gymElapsed()}</div>
+        <div style="font-size:10px;color:var(--text3);">elapsed</div>
+      </div>
     </div>
   </div>
   ${lastSame?`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px;">
@@ -900,14 +942,13 @@ function renderGymLogger(){
   </div>`:''}
   <div id="gym-exercises">${gymDraft.exercises.map((ex,i)=>renderExBlock(ex,i,lastSame,prog)).join('')}</div>
   <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
+  <label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label>
+  <textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;margin-bottom:10px;" oninput="gymDraft.notes=this.value;">${esc(gymDraft.notes||'')}</textarea>
   <button class="btn-primary" onclick="saveGymSession()" style="margin-bottom:8px;">Save Session</button>
-  <button class="btn-ghost" style="width:100%;" onclick="gymDraft=null;renderGymSection();">Cancel</button>`;
+  <button class="btn-ghost" style="width:100%;" onclick="gymDraft=null;_gymPickedType=null;renderGymSection();">Discard session</button>`;
+  startGymTimer();
 }
-function gymSetType(t){
-  gymDraft.type=t;
-  gymDraft.exercises=getDefaultExercisesForType(t);
-  renderGymLogger();
-}
+function gymSetType(t){gymDraft.type=t;renderGymLogger();}
 function gymAddEx(){gymDraft.exercises.push({name:'',sets:[{weight:'',reps:'',warmup:false}]});renderGymLogger();}
 function gymRemoveEx(i){gymDraft.exercises.splice(i,1);renderGymLogger();}
 function gymAddSet(i){gymDraft.exercises[i].sets.push({weight:'',reps:'',warmup:false});renderGymLogger();}
@@ -2155,7 +2196,7 @@ function renderTodayPlanCard(){
   const isGym=['Push','Pull','Legs','Core','Full Body'].includes(t);
   const isRun=t==='Run';
   const tab=isRun?'run':'gym';
-  return`<div class="session-card" style="background:linear-gradient(135deg,rgba(16,185,129,0.12) 0%,rgba(16,185,129,0.04) 100%);border-color:rgba(16,185,129,0.3);" onclick="showPage('train');switchTrainTab('${tab}')${isGym?`;gymSetType('${t}')`:''}>
+  return`<div class="session-card" style="background:linear-gradient(135deg,rgba(16,185,129,0.12) 0%,rgba(16,185,129,0.04) 100%);border-color:rgba(16,185,129,0.3);" onclick="showPage('train');switchTrainTab('${tab}')${isGym?`;setTimeout(()=>{_gymPickedType='${t}';renderGymTypeSelector();},50)`:''}>
     <div class="session-card-label" style="color:var(--green);">Today's Plan</div>
     <div class="session-card-title">${esc(t)}</div>
     <div class="session-card-meta">Tap to start</div>
@@ -2317,35 +2358,6 @@ renderRunSection=function(){
 
 
 
-// ── PATCH renderGymLogger to inject notes field and auto-select plan type ──
-const _origRenderGymLogger=renderGymLogger;
-renderGymLogger=function(){
-  // Auto-select planned type if weekPlan set and user hasn't manually changed
-  if(state.weekPlan&&gymDraft&&!gymDraft._typeManual){
-    const planned=getTodayPlanType();
-    if(planned&&planned!=='Rest'&&planned!=='Off'&&planned!=='Run')gymDraft.type=planned;
-  }
-  _origRenderGymLogger();
-  // Inject notes field at bottom (before save button row)
-  const gymContent=document.getElementById('gym-content');
-  if(gymContent&&gymDraft){
-    const saveBtn=gymContent.querySelector('.btn-primary');
-    if(saveBtn&&!gymContent.querySelector('#gym-notes-field')){
-      const notesWrap=document.createElement('div');
-      notesWrap.style.marginBottom='10px';
-      notesWrap.innerHTML=`<label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label><textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;">${esc(gymDraft.notes||'')}</textarea>`;
-      saveBtn.parentNode.insertBefore(notesWrap,saveBtn);
-      document.getElementById('gym-notes-field').oninput=function(){gymDraft.notes=this.value;};
-    }
-  }
-};
-
-// ── PATCH gymSetType to mark manual selection ──
-const _origGymSetType=gymSetType;
-gymSetType=function(t){
-  if(gymDraft)gymDraft._typeManual=true;
-  _origGymSetType(t);
-};
 
 // ── PATCH saveGymSession to preserve notes ──
 const _origSaveGymSession=saveGymSession;

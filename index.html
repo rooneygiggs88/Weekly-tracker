@@ -646,13 +646,77 @@ function renderToday(){
   const score=viewingToday?getTodayScore():getWeekScore();
   document.getElementById('today-score').textContent=score;
   const statusEl=document.getElementById('today-status');
-  const _n=state.userName?`, ${state.userName}.`:'.';
+  const _n=state.userName?`, ${state.userName}`:'';;
+  // Date-seeded pick so message is stable all day but rotates daily
+  const _seed=parseInt(dk(now).replace(/-/g,''))%997;
+  function pickMsg(arr){return arr[_seed%arr.length];}
+  const _msgs={
+    zero:[
+      `Nothing logged yet${_n}. Let's go.`,
+      `Day's not going to track itself${_n}.`,
+      `Zero so far${_n}. Change that.`,
+      `Fresh slate${_n}. Make it count.`,
+      `Get moving${_n}.`,
+      `It starts with one${_n}.`,
+      `Still waiting on you${_n}.`,
+      `Clock's ticking${_n}. Let's go.`,
+      `No excuses${_n}. Start now.`,
+      `Today's wide open${_n}. Fill it.`,
+    ],
+    started:[
+      `You've started${_n}. Keep going.`,
+      `Momentum building${_n}. Don't stop.`,
+      `Off the mark${_n}. Push on.`,
+      `Good — now keep it up${_n}.`,
+      `One down${_n}. More to do.`,
+      `You're in motion${_n}. Stay there.`,
+      `Progress made${_n}. Finish strong.`,
+      `Started${_n}. Don't let up now.`,
+      `Small steps${_n}. Keep stacking.`,
+    ],
+    halfway:[
+      `Halfway there${_n}. Push through.`,
+      `Good start${_n}. Finish what you started.`,
+      `More done than not${_n}. Keep going.`,
+      `Solid effort${_n}. Don't stop here.`,
+      `You're in the middle of a good day${_n}.`,
+      `Past the halfway mark${_n}. Finish it.`,
+      `Over 50${_n}. Make it count.`,
+      `Good progress${_n}. The rest is in reach.`,
+      `Getting there${_n}. Don't ease off.`,
+      `Building something good${_n}. See it through.`,
+    ],
+    strong:[
+      `Strong work${_n}. Keep it up.`,
+      `Almost there${_n}. Don't drop it now.`,
+      `Quality day${_n}. Finish it off.`,
+      `You're on it${_n}. Close it out.`,
+      `Nearly perfect${_n}. One last push.`,
+      `Dialled in${_n}. See it through.`,
+      `Firing on most cylinders${_n}.`,
+      `This is a good day${_n}. Lock it in.`,
+      `So close${_n}. Don't leave it here.`,
+      `High scorer${_n}. Finish strong.`,
+    ],
+    perfect:[
+      `Perfect day${_n}. Outstanding.`,
+      `100%. Nothing left on the table${_n}.`,
+      `Nailed it${_n}. Enjoy the rest of the day.`,
+      `Full marks${_n}. That's how it's done.`,
+      `Everything done${_n}. Brilliant.`,
+      `Flawless${_n}. Come back tomorrow.`,
+      `Complete${_n}. Seriously well done.`,
+      `Perfect score${_n}. Proud of that.`,
+      `Nothing missed${_n}. That's a rare day.`,
+      `All boxes ticked${_n}. Go rest.`,
+    ],
+  };
   if(!viewingToday){statusEl.innerHTML=`Week score · <span>${allGoals().filter(g=>{let d=0;for(let i=0;i<7;i++){const day=addDays(baseMonday,i);if(day<=now&&goalDone(dk(day),g))d++;}return d>0;}).length}/${allGoals().length} goals hit</span>`;}
-  else if(score===100)statusEl.innerHTML=`<span>Perfect day${_n}</span>`;
-  else if(score>=75)statusEl.innerHTML=`<span>Strong work${_n}</span> Keep it up.`;
-  else if(score>=50)statusEl.innerHTML=`Good start${_n} <span>Keep pushing.</span>`;
-  else if(score>0)statusEl.innerHTML=`You've started${_n} <span>Keep going.</span>`;
-  else statusEl.innerHTML=`Let's get going${_n}`;
+  else if(score===100)statusEl.innerHTML=`<span>${pickMsg(_msgs.perfect)}</span>`;
+  else if(score>=75)statusEl.innerHTML=`<span>${pickMsg(_msgs.strong)}</span>`;
+  else if(score>=50)statusEl.innerHTML=pickMsg(_msgs.halfway);
+  else if(score>0)statusEl.innerHTML=pickMsg(_msgs.started);
+  else statusEl.innerHTML=pickMsg(_msgs.zero);
 
   // Week nav label + next button
   const endOfWeek=addDays(baseMonday,6);

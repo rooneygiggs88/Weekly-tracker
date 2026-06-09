@@ -1710,38 +1710,7 @@ function renderTrendsGymAnalysis(){
       ${lineChartSvg(volPts,'var(--green)')}
     </div>`;
 
-  // 3. Key lift 1RM progression
-  const KEY_LIFTS=[{name:'Bench Press',col:'#6366f1'},{name:'Squat',col:'#ef4444'},{name:'Deadlift',col:'#f97316'},{name:'Overhead Press',col:'#8b5cf6'},{name:'Romanian Deadlift',col:'#10b981'}];
-  const epley=(w,r)=>r===1?w:w*(1+r/30);
-  const liftCharts=KEY_LIFTS.map(lift=>{
-    const weekMap={};
-    gym.forEach(s=>{
-      const weekKey=dk(getMonday(new Date(s.date+'T12:00:00')));
-      const mon=getMonday(new Date(s.date+'T12:00:00'));
-      const label=`${mon.getDate()}/${mon.getMonth()+1}`;
-      (s.exercises||[]).forEach(e=>{
-        if(!e.name.toLowerCase().includes(lift.name.toLowerCase().split(' ')[0])) return;
-        (e.sets||[]).filter(x=>!x.warmup).forEach(set=>{
-          const w=parseFloat(set.weight)||0,r=parseInt(set.reps)||0;
-          if(!w||!r||r>20)return;
-          const orm=epley(w,r);
-          if(!weekMap[weekKey]||orm>weekMap[weekKey].y)weekMap[weekKey]={x:label,y:Math.round(orm)};
-        });
-      });
-    });
-    const pts=Object.entries(weekMap).sort((a,b)=>a[0]>b[0]?1:-1).map(([,v])=>v);
-    if(pts.length<2)return'';
-    const latest=pts[pts.length-1].y,prev=pts[pts.length-2].y;
-    const delta=latest-prev;
-    const trendLbl=delta>=0?`↑ +${delta}kg`:`↓ ${Math.abs(delta)}kg`;
-    return `<div class="chart-card">
-      <div class="chart-card-header"><span class="chart-card-title">${lift.name} — est. 1RM</span><span class="chart-card-val" style="color:${delta>=0?'var(--green)':'var(--orange)'};">${trendLbl}</span></div>
-      ${lineChartSvg(pts,lift.col)}
-      <div style="font-size:10px;color:var(--text3);font-weight:700;margin-top:6px;">Latest ~${latest}kg · PB ~${Math.max(...pts.map(p=>p.y))}kg</div>
-    </div>`;
-  }).filter(Boolean).join('');
-
-  // 4. Muscle group balance — donut
+  // 3. Muscle group balance — donut
   const MUSCLE_MAP={Chest:['bench','chest','fly','push'],Shoulders:['shoulder','lateral','front raise','overhead press','ohp'],Triceps:['tricep','skull','dip'],Back:['row','pull','lat','pulldown','deadlift'],Biceps:['bicep','curl'],Legs:['squat','leg press','leg extension','lunge','step','hack'],Hamstrings:['hamstring','rdl','romanian','leg curl','glute'],Core:['plank','crunch','ab','core']};
   const muscleTotals={};Object.keys(MUSCLE_MAP).forEach(m=>muscleTotals[m]=0);
   gym.forEach(s=>(s.exercises||[]).forEach(e=>{
@@ -1799,9 +1768,7 @@ function renderTrendsGymAnalysis(){
     }).join('')}
   </div>`;
 
-  const liftSection=liftCharts?liftCharts:`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Lift Progression</span></div><div class="empty-state" style="padding:16px 0 0;">Log bench, squat or deadlift across 2+ sessions to see progression.</div></div>`;
-
-  return summary+freqChart+volChart+liftSection+muscleChart+sessionLog;
+  return summary+freqChart+volChart+muscleChart+sessionLog;
 }
 
 function renderConsistencyScore(){

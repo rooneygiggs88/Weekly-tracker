@@ -55,6 +55,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .week-day.today .week-day-dot{background:var(--accent);box-shadow:0 0 6px rgba(99,102,241,0.5);}
 .week-day-num{font-size:13px;font-weight:800;color:var(--text2);}
 .week-day.today .week-day-num{color:var(--text);}
+.week-day-plan{font-size:8px;font-weight:800;letter-spacing:0.04em;margin-top:-2px;}
 
 /* RACE CARD */
 .race-card{background:linear-gradient(135deg,rgba(249,115,22,0.12) 0%,rgba(249,115,22,0.04) 100%);border:1px solid rgba(249,115,22,0.25);border-radius:var(--radius);padding:18px 20px;margin-bottom:10px;cursor:pointer;}
@@ -669,16 +670,21 @@ function renderToday(){
   // Week strip
   const stripEl=document.getElementById('week-strip');
   stripEl.innerHTML='';
+  const planTypeColor={Push:'#ef4444',Pull:'var(--accent2)',Legs:'var(--green)',Core:'#eab308',Custom:'#a855f7',Run:'#06b6d4'};
+  const planTypeShort={Push:'PSH',Pull:'PLL',Legs:'LEG',Core:'COR',Custom:'CST',Run:'RUN',Rest:'',Off:''};
   ['M','T','W','T','F','S','S'].forEach((lbl,i)=>{
     const d=addDays(baseMonday,i);
     const dds=dk(d);
     const isActive=dds===ds;
     const isFuture=d>now;
     const dayScore=!isFuture?getDayScore(dds):0;
+    const planType=state.weekPlan?state.weekPlan[i]:null;
+    const planShort=planType?planTypeShort[planType]||'':'';
+    const planColor=planType?planTypeColor[planType]||'':'';
     const el=document.createElement('div');
     el.className='week-day'+(isActive?' today':!isFuture&&dayScore>=80?' past-done':'');
     if(isFuture)el.style.opacity='0.3';
-    el.innerHTML=`<div class="week-day-label">${lbl}</div><div class="week-day-dot"></div><div class="week-day-num">${d.getDate()}</div>`;
+    el.innerHTML=`<div class="week-day-label">${lbl}</div><div class="week-day-dot"></div><div class="week-day-num">${d.getDate()}</div>${planShort?`<div class="week-day-plan" style="color:${planColor};">${planShort}</div>`:'<div class="week-day-plan"></div>'}`;
     // tap a day to view it
     if(!isFuture){el.onclick=()=>{const clickDs=dds;renderDayGoals(clickDs);};}
     stripEl.appendChild(el);
@@ -701,7 +707,23 @@ function renderToday(){
   const wrap=document.getElementById('session-card-wrap');
   if(viewingToday){
     const gymDone=getSessionDone(dk(now),'gym');const runDone=getSessionDone(dk(now),'run');
-    if(!gymDone||!runDone){
+    const todayPlan=getTodayPlanType();
+    const planIsGym=todayPlan&&['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
+    const planIsRun=todayPlan==='Run';
+    if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
+      // Plan-aware prompt
+      const alreadyDone=(planIsRun&&runDone)||(planIsGym&&gymDone);
+      const tab=planIsRun?'run':'gym';
+      const gymPreselect=planIsGym?`;setTimeout(()=>{_gymPickedType='${todayPlan}';renderGymTypeSelector();},50)`:'';
+      const planColor={Push:'#ef4444',Pull:'var(--accent2)',Legs:'var(--green)',Core:'#eab308',Custom:'#a855f7',Run:'#06b6d4'}[todayPlan]||'var(--accent)';
+      const planBg={Push:'rgba(239,68,68,0.08)',Pull:'rgba(99,102,241,0.08)',Legs:'rgba(16,185,129,0.08)',Core:'rgba(234,179,8,0.08)',Custom:'rgba(139,92,246,0.08)',Run:'rgba(6,182,212,0.08)'}[todayPlan]||'rgba(99,102,241,0.08)';
+      wrap.innerHTML=`<div class="session-card" style="background:${planBg};border-color:${planColor}40;" onclick="showPage('train');switchTrainTab('${tab}')${gymPreselect}">
+        <div class="session-card-label" style="color:${planColor};">Today's Plan</div>
+        <div class="session-card-title">${esc(todayPlan)}</div>
+        <div class="session-card-meta">${alreadyDone?'Session logged ✓':'Tap to start'}</div>
+        <div class="session-card-arrow" style="background:${planColor};box-shadow:0 4px 12px ${planColor}40;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>`;
+    } else if(!gymDone||!runDone){
       const t=!gymDone?{title:'Gym',meta:'Log your workout',tab:'gym'}:{title:'Running',meta:'Log your run',tab:'run'};
       wrap.innerHTML=`<div class="session-card" onclick="showPage('train');switchTrainTab('${t.tab}')">
         <div class="session-card-label">Today's Session</div>
@@ -3035,26 +3057,46 @@ function getTodayPlanType(){
   return state.weekPlan[dow]||null;
 }
 function renderWeekPlanSection(){
-  const plan=state.weekPlan||(new Array(7).fill('Rest'));
+  const plan=state.weekPlan;
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};
+  const planColor={Push:'#ef4444',Pull:'var(--accent2)',Legs:'var(--green)',Core:'#eab308',Custom:'#a855f7',Run:'#06b6d4'};
+  const planShort={Push:'PSH',Pull:'PLL',Legs:'LEG',Core:'COR',Custom:'CST',Run:'RUN',Rest:'—',Off:'—'};
+  const summary=plan?days.map((d,i)=>{
+    const t=plan[i]||'Rest';const c=planColor[t]||'var(--text3)';const s=planShort[t]||'—';
+    return`<div style="text-align:center;"><div style="font-size:8px;font-weight:800;color:var(--text3);margin-bottom:3px;">${d.slice(0,1)}</div><div style="font-size:10px;font-weight:800;color:${c};">${s}</div></div>`;
+  }).join(''):'';
   return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Training Plan</span></div>
-    <div class="week-plan-grid" id="week-plan-grid">
-      ${days.map((day,i)=>{
-        const cur=plan[i]||'Rest';
-        const cls=typeColorClass[cur]||'active-rest';
-        return`<div class="week-plan-day">
-          <div class="week-plan-day-label">${day}</div>
-          <select class="week-plan-pill ${cls}" id="wplan-${i}" onchange="updateWeekPlanPill(${i},this.value)">
-            ${PLAN_TYPES.map(t=>`<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('')}
-          </select>
-        </div>`;
-      }).join('')}
+    <div class="chart-card-header">
+      <span class="chart-card-title">Training Plan</span>
+      <button onclick="toggleWeekPlanEditor()" id="wplan-edit-btn" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">${plan?'Edit':'Set Plan'}</button>
     </div>
-    <button class="btn-primary" onclick="saveWeekPlan()" style="margin-top:8px;">Save Plan</button>
-    ${state.weekPlan?`<button class="btn-ghost" style="width:100%;color:var(--red);" onclick="clearWeekPlan()">Remove Plan</button>`:''}
+    ${plan?`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">${summary}</div>`:`<div style="font-size:13px;color:var(--text3);padding:4px 0 8px;">No plan set. Tap Set Plan to assign workout types to each day.</div>`}
+    <div id="wplan-editor" style="display:none;margin-top:10px;">
+      <div class="week-plan-grid" id="week-plan-grid">
+        ${days.map((day,i)=>{
+          const cur=(plan&&plan[i])||'Rest';
+          const cls=typeColorClass[cur]||'active-rest';
+          return`<div class="week-plan-day">
+            <div class="week-plan-day-label">${day}</div>
+            <select class="week-plan-pill ${cls}" id="wplan-${i}" onchange="updateWeekPlanPill(${i},this.value)">
+              ${PLAN_TYPES.map(t=>`<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="btn-primary" onclick="saveWeekPlan()" style="margin-top:8px;width:100%;">Save Plan</button>
+      ${plan?`<button class="btn-ghost" style="width:100%;color:var(--red);margin-top:6px;" onclick="clearWeekPlan()">Remove Plan</button>`:''}
+    </div>
   </div>`;
+}
+function toggleWeekPlanEditor(){
+  const ed=document.getElementById('wplan-editor');
+  const btn=document.getElementById('wplan-edit-btn');
+  if(!ed)return;
+  const open=ed.style.display==='none';
+  ed.style.display=open?'block':'none';
+  if(btn)btn.textContent=open?'Done':(state.weekPlan?'Edit':'Set Plan');
 }
 let _weekPlanDraft=null;
 function updateWeekPlanPill(idx,val){
@@ -3219,16 +3261,6 @@ renderToday=function(){
     if(scoreWrap&&!document.querySelector('.anomaly-alerts')){
       const div=document.createElement('div');div.innerHTML=alertHtml;
       scoreWrap.parentNode.insertBefore(div.firstChild,scoreWrap);
-    }
-  }
-  // Inject today's plan card
-  if(state.weekPlan){
-    const planHtml=renderTodayPlanCard();
-    if(planHtml){
-      const wrap=document.getElementById('session-card-wrap');
-      if(wrap&&!wrap.querySelector('.session-card[style*="green"]')){
-        wrap.insertAdjacentHTML('afterbegin',planHtml);
-      }
     }
   }
 };

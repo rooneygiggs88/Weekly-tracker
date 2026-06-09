@@ -1325,6 +1325,7 @@ function renderTrends(){
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week</div></div>
     </div>
     ${renderWeeklyTrendChart()}
+    ${renderDayOfWeekHeatmap()}
     ${renderConsistencyScore()}
     ${renderPredictedCompletion()}
     ${renderBestWorstWeeks()}
@@ -1416,6 +1417,112 @@ function renderWeekChart(){
   }).join('');
   const W=(bw+gap)*7-gap;
   return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Daily Completion</span></div><svg class="svg-chart" viewBox="0 0 ${W} ${H+24}" style="height:120px;">${bars}</svg></div>`;
+}
+
+// ── DAY-OF-WEEK PATTERN HEATMAP ──
+function renderDayOfWeekHeatmap(){
+  const now=today();
+  const goals=allGoals();
+  if(!goals.length) return '';
+
+  // Look back 13 weeks (91 days) for enough signal
+  const WEEKS=13;
+  const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  // For each goal + "All", compute completion rate per day-of-week (0=Mon…6=Sun)
+  // rows: [{id, name, rates:[7 values 0-1]}]
+  const rows=[];
+
+  // "All" row
+  const allRates=Array(7).fill(0).map(()=>({done:0,total:0}));
+  for(let d=0;d<WEEKS*7;d++){
+    const date=addDays(now,-d);
+    const dow=(date.getDay()+6)%7; // 0=Mon
+    const ds=dk(date);
+    goals.forEach(g=>{
+      allRates[dow].total++;
+      if(goalDone(ds,g)) allRates[dow].done++;
+    });
+  }
+  rows.push({id:'all',name:'All Goals',rates:allRates.map(r=>r.total?r.done/r.total:null)});
+
+  // Per-goal rows
+  goals.forEach(g=>{
+    const rates=Array(7).fill(0).map(()=>({done:0,total:0}));
+    for(let d=0;d<WEEKS*7;d++){
+      const date=addDays(now,-d);
+      const dow=(date.getDay()+6)%7;
+      const ds=dk(date);
+      rates[dow].total++;
+      if(goalDone(ds,g)) rates[dow].done++;
+    }
+    rows.push({id:g.id,name:g.name,rates:rates.map(r=>r.total?r.done/r.total:null)});
+  });
+
+  // Smart insights from the "All" row
+  const allRow=rows[0].rates;
+  const validDays=allRow.map((r,i)=>({i,r})).filter(x=>x.r!==null);
+  let insight='';
+  if(validDays.length>=4){
+    const best=validDays.reduce((a,b)=>b.r>a.r?b:a);
+    const worst=validDays.reduce((a,b)=>b.r<a.r?b:a);
+    const wedIdx=2; // Wednesday
+    const wedRate=allRow[wedIdx];
+    const neighbourAvg=((allRow[1]||0)+(allRow[3]||0))/2;
+    const slump=wedRate!==null&&wedRate<neighbourAvg-0.15;
+    insight=`<p class="dow-insight">Strongest day: <strong>${DAYS[best.i]}</strong> (${Math.round(best.r*100)}%)`;
+    if(best.i!==worst.i) insight+=` · Weakest: <strong>${DAYS[worst.i]}</strong> (${Math.round(worst.r*100)}%)`;
+    if(slump) insight+=` · Wednesday slump detected`;
+    insight+='</p>';
+  }
+
+  // Colour scale: null=empty, 0=0%, >0 = green intensity
+  function cellColor(r){
+    if(r===null) return 'var(--surface2)';
+    if(r===0) return 'var(--surface2)';
+    const lightness=Math.round(20+r*55); // 20%–75% lightness in hsl of accent
+    return `hsl(${142},${Math.round(40+r*50)}%,${lightness}%)`; // green hue
+  }
+  function cellText(r){
+    if(r===null||r===0) return '';
+    return Math.round(r*100)+'%';
+  }
+
+  const headerCells=DAYS.map(d=>`<div class="dow-header">${d}</div>`).join('');
+
+  const rowsHtml=rows.map(row=>{
+    const cells=row.rates.map(r=>{
+      const bg=cellColor(r);
+      const tx=cellText(r);
+      const bright=r!==null&&r>0.55;
+      return `<div class="dow-cell" style="background:${bg};color:${bright?'#fff':'var(--text2)'}">${tx}</div>`;
+    }).join('');
+    return `<div class="dow-row">
+      <div class="dow-label" title="${esc(row.name)}">${esc(row.name)}</div>
+      <div class="dow-grid">${cells}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="chart-card">
+    <div class="card-header"><span class="card-title">Day of Week Patterns</span><span class="card-sub">${WEEKS} weeks</span></div>
+    <style>
+      .dow-header-row{display:grid;grid-template-columns:80px 1fr;gap:4px;margin-bottom:2px}
+      .dow-header-cells{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+      .dow-header{font-size:10px;color:var(--text3);text-align:center;font-weight:600}
+      .dow-row{display:grid;grid-template-columns:80px 1fr;gap:4px;margin-bottom:3px;align-items:center}
+      .dow-label{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .dow-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+      .dow-cell{border-radius:5px;height:28px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;transition:opacity .2s}
+      .dow-insight{font-size:12px;color:var(--text2);margin:10px 0 0;line-height:1.6}
+      .dow-insight strong{color:var(--text)}
+    </style>
+    <div class="dow-header-row">
+      <div></div>
+      <div class="dow-header-cells">${headerCells}</div>
+    </div>
+    ${rowsHtml}
+    ${insight}
+  </div>`;
 }
 
 // ── WEEKLY TREND CHART (filterable) ──

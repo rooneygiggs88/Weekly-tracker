@@ -280,6 +280,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
       <div id="week-label" style="flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;"></div>
       <button onclick="changeWeek(1)" id="week-next-btn" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
     </div>
+    <div id="readiness-card"></div>
     <div class="week-strip" id="week-strip"></div>
     <div id="race-card-wrap"></div>
     <div id="session-card-wrap"></div>
@@ -502,6 +503,23 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
     <div class="muscle-check-grid" id="muscle-check-grid"></div>
     <button class="btn-primary" onclick="saveMuscleTag()" style="margin-bottom:8px;">Save Tags</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('muscle-tag-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- MORNING CHECK-IN MODAL -->
+<div class="modal-overlay" id="morning-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Morning Check-in</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:20px;">Log your Garmin scores from this morning.</p>
+    <label class="modal-label">Sleep Score <span style="color:var(--text3);font-weight:600;">(Garmin, 0–100)</span></label>
+    <input class="modal-input" id="morning-sleep" type="number" inputmode="numeric" placeholder="e.g. 74" min="0" max="100">
+    <div style="height:14px;"></div>
+    <label class="modal-label">HRV Status <span style="color:var(--text3);font-weight:600;">(ms, from Garmin morning report)</span></label>
+    <input class="modal-input" id="morning-hrv" type="number" inputmode="numeric" placeholder="e.g. 52" min="0" max="200">
+    <div style="height:20px;"></div>
+    <button class="btn-primary" onclick="saveMorningCheckin()" style="margin-bottom:10px;">Save</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('morning-modal')">Cancel</button>
   </div>
 </div>
 
@@ -2559,7 +2577,7 @@ function saveName(){
   document.getElementById('me-name-heading').textContent=n||'Me';
 }
 function exportData(){
-  const data={state,gym:loadGymData(),run:loadRunData(),health:loadHealthData(),prog:loadGymProg(),vaping:loadVapingData()};
+  const data={state,gym:loadGymData(),run:loadRunData(),health:loadHealthData(),prog:loadGymProg(),vaping:loadVapingData(),morning:loadMorningData()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`tracker-backup-${dk(today())}.json`;a.click();
   toastMsg('Data exported');
@@ -2582,6 +2600,7 @@ function importData(evt){
         if(d.health)localStorage.setItem('health_data_v1',JSON.stringify(d.health));
         if(d.prog)localStorage.setItem('gym_prog_v1',JSON.stringify(d.prog));
         if(d.vaping)localStorage.setItem('vaping_data_v1',JSON.stringify(d.vaping));
+        if(d.morning)localStorage.setItem('morning_data_v1',JSON.stringify(d.morning));
       }
       toastMsg('Data imported — reloading…');
       setTimeout(()=>location.reload(),1200);
@@ -2698,7 +2717,7 @@ function importV1Format(d){
 }
 function clearAllData(){
   if(!confirm('Delete ALL data? This cannot be undone.'))return;
-  ['wt_v3','gym_data_v1','run_data_v2','health_data_v1','gym_prog_v1','vaping_data_v1'].forEach(k=>localStorage.removeItem(k));
+  ['wt_v3','gym_data_v1','run_data_v2','health_data_v1','gym_prog_v1','vaping_data_v1','morning_data_v1'].forEach(k=>localStorage.removeItem(k));
   toastMsg('Data cleared — reloading…');setTimeout(()=>location.reload(),1200);
 }
 
@@ -2784,6 +2803,113 @@ function renderTimeOfDay(){
     <div style="font-size:13px;color:var(--text2);font-weight:600;padding-top:12px;line-height:1.5;">
       You train most in the <strong>${best.label.toLowerCase()}</strong> — <strong>${best.count} session${best.count===1?'':'s'}</strong> logged${best.gym||best.run?` (${[best.gym?best.gym+' gym':'',best.run?best.run+' run':''].filter(Boolean).join(', ')})`:''}.
     </div>
+  </div>`;
+}
+
+// ── MORNING CHECK-IN ──
+function loadMorningData(){try{return JSON.parse(localStorage.getItem('morning_data_v1')||'{}');}catch(e){return{};}}
+function saveMorningData(d){localStorage.setItem('morning_data_v1',JSON.stringify(d));}
+
+function saveMorningCheckin(){
+  const sleep=parseInt(document.getElementById('morning-sleep').value)||null;
+  const hrv=parseInt(document.getElementById('morning-hrv').value)||null;
+  if(!sleep&&!hrv){toastMsg('Enter at least one value');return;}
+  const d=loadMorningData();
+  d[dk(today())]={sleep,hrv};
+  saveMorningData(d);
+  closeModal('morning-modal');
+  toastMsg('Morning data saved');haptic('success');
+  renderReadinessCard();
+}
+
+function calcReadiness(){
+  const ds=dk(today());
+  const morning=loadMorningData();
+  const todayMorning=morning[ds]||null;
+  const gym=loadGymData();const runs=loadRunData();
+
+  // Load signals
+  const now=today();
+  const effortMult={Recovery:0.6,Easy:1.0,'Long Run':1.1,Long:1.1,Tempo:1.75,Intervals:2.0,Hard:2.0,Race:2.2};
+  function rLoad(r){if(r.time){const s=parseTimeToSecs(r.time);if(s>0)return Math.round((s/60)*(effortMult[r.effort]||1.0));}return Math.round((r.km||5)*6*(effortMult[r.effort]||1.0));}
+  function gLoad(s){const sets=(s.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);return sets>0?sets*2:30;}
+  function dayLoad(d){let l=0;gym.filter(s=>s.date===d).forEach(s=>{l+=gLoad(s);});runs.filter(r=>r.date===d).forEach(r=>{l+=rLoad(r);});return l;}
+
+  let load7=0,load28=0;
+  for(let i=0;i<7;i++)load7+=dayLoad(dk(addDays(now,-i)));
+  for(let i=0;i<28;i++)load28+=dayLoad(dk(addDays(now,-i)));
+  const avg7=load7/7,avg28=load28/28;
+  const ratio=avg28>0?avg7/avg28:1;
+
+  // Last 2 days load
+  const recent2=dayLoad(dk(addDays(now,-1)))+dayLoad(dk(addDays(now,-2)));
+  const avgDailyLoad=avg28||40;
+  const recentFatigue=recent2>(avgDailyLoad*2*1.5); // last 2 days >150% of normal
+
+  // Score components (each 0–100)
+  // 1. Load score: penalise overreaching, penalise undertraining
+  const loadScore=ratio>1.5?20:ratio>1.3?45:ratio>0.7?90:75;
+
+  // 2. Recent fatigue
+  const fatigueScore=recentFatigue?50:100;
+
+  // 3. Sleep score (Garmin 0–100 direct)
+  const sleepScore=todayMorning&&todayMorning.sleep!=null?todayMorning.sleep:null;
+
+  // 4. HRV score — normalise to 0–100 (typical range 20–100ms; higher=better)
+  const hrvRaw=todayMorning&&todayMorning.hrv!=null?todayMorning.hrv:null;
+  const hrvScore=hrvRaw!=null?Math.min(100,Math.round((hrvRaw/80)*100)):null;
+
+  // Weighted composite
+  let totalWeight=0,totalScore=0;
+  const add=(val,w)=>{if(val!=null){totalScore+=val*w;totalWeight+=w;}};
+  add(loadScore,2);
+  add(fatigueScore,1);
+  add(sleepScore,3);
+  add(hrvScore,4);
+  const score=totalWeight>0?Math.round(totalScore/totalWeight):null;
+
+  // Labels
+  const factors=[];
+  if(sleepScore!=null)factors.push(sleepScore>=80?'Great sleep':sleepScore>=60?'OK sleep':'Poor sleep');
+  if(hrvRaw!=null)factors.push(hrvRaw>=60?'HRV elevated':hrvRaw>=40?'HRV normal':'HRV suppressed');
+  if(ratio>1.3)factors.push('High load');else if(ratio<0.7)factors.push('Low load');else factors.push('Balanced load');
+  if(recentFatigue)factors.push('Heavy last 2 days');
+
+  let advice,col;
+  if(score==null){advice='Log sleep & HRV for readiness score';col='var(--text3)';}
+  else if(score>=80){advice='Ready to train hard';col='var(--green)';}
+  else if(score>=60){advice='Good for a moderate session';col='var(--accent2)';}
+  else if(score>=40){advice='Easy session or rest recommended';col='var(--orange)';}
+  else{advice='Rest day — recovery priority';col='var(--red)';}
+
+  return{score,factors,advice,col,hasMorning:!!todayMorning};
+}
+
+function renderReadinessCard(){
+  const el=document.getElementById('readiness-card');
+  if(!el)return;
+  const {score,factors,advice,col,hasMorning}=calcReadiness();
+  const pct=score!=null?score:0;
+  const checkinBtn=`<button onclick="openModal('morning-modal')" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:14px;border:1px solid ${hasMorning?'var(--border)':'var(--accent)'};background:${hasMorning?'transparent':'rgba(99,102,241,0.1)'};color:${hasMorning?'var(--text3)':'var(--accent2)'};font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    ${hasMorning?'Edit morning data':'Log morning data'}
+  </button>`;
+  el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Readiness</span>
+      ${checkinBtn}
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+      <div style="font-size:42px;font-weight:800;letter-spacing:-2px;color:${score!=null?col:'var(--text3)'};">${score!=null?score:'—'}</div>
+      <div style="flex:1;">
+        <div style="height:8px;background:var(--surface2);border-radius:4px;margin-bottom:6px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width 0.5s;"></div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:${col};">${advice}</div>
+      </div>
+    </div>
+    ${factors.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;">${factors.map(f=>`<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;">${f}</span>`).join('')}</div>`:''}
   </div>`;
 }
 
@@ -3615,6 +3741,7 @@ function renderMuscleVolume(){
 const _origRenderToday=renderToday;
 renderToday=function(){
   _origRenderToday();
+  renderReadinessCard();
   // Inject anomaly alerts below date label, above score
   const alertHtml=renderAnomalyAlerts();
   if(alertHtml){

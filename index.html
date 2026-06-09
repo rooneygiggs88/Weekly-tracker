@@ -299,6 +299,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
     <button class="train-tab" data-tab="prs" onclick="switchTrainTab('prs')">PRs</button>
     <button class="train-tab" data-tab="history" onclick="switchTrainTab('history')">History</button>
     <button class="train-tab" data-tab="monthly" onclick="switchTrainTab('monthly')">Monthly</button>
+    <button class="train-tab" data-tab="volume" onclick="switchTrainTab('volume')">Volume</button>
     <button class="train-tab" data-tab="library" onclick="switchTrainTab('library')">Library</button>
   </div>
   <div class="train-content">
@@ -307,6 +308,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
     <div class="train-section" id="train-prs"><div id="train-prs-content"></div></div>
     <div class="train-section" id="train-history"><div id="train-history-content"></div></div>
     <div class="train-section" id="train-monthly"><div id="train-monthly-content"></div></div>
+    <div class="train-section" id="train-volume"><div id="train-volume-content"></div></div>
     <div class="train-section" id="train-library"><div id="train-library-content"></div></div>
   </div>
 </div>
@@ -920,6 +922,7 @@ function renderTrainSection(tab){
   if(tab==='prs')renderPRs();
   if(tab==='history')renderTrainHistory();
   if(tab==='monthly')renderMonthlyHistory();
+  if(tab==='volume')renderVolumeTab();
   if(tab==='library')renderExerciseLibrary();
 }
 
@@ -1861,66 +1864,8 @@ function renderTrendsGymAnalysis(){
     }).join('')}
   </div>`;
 
-  // 6. Historical muscle volume (last 8 weeks)
-  const MCOLS2={Chest:'#ef4444',Back:'#6366f1',Shoulders:'#f97316',Biceps:'#06b6d4',Triceps:'#a855f7',Quads:'#10b981',Hamstrings:'#eab308',Glutes:'#ec4899',Core:'#64748b',Calves:'#94a3b8'};
-  const muscleHistChart=(()=>{
-    const weeks=8;
-    const weekData=[];
-    for(let w=weeks-1;w>=0;w--){
-      const wMon=getMonday(addDays(now,-w*7));
-      const wEnd=addDays(wMon,6);
-      const wSessions=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=wMon&&d<=wEnd;});
-      const counts={};ALL_MUSCLE_GROUPS.forEach(m=>{counts[m]=0;});
-      wSessions.forEach(s=>(s.exercises||[]).forEach(e=>{
-        const muscles=getExerciseMuscles(e.name);
-        const ws=(e.sets||[]).filter(x=>!x.warmup).length;
-        muscles.forEach(m=>{if(counts[m]!==undefined)counts[m]+=ws;});
-      }));
-      weekData.push({label:wMon.toLocaleDateString('en-GB',{day:'numeric',month:'short'}),counts});
-    }
-    const hasData=weekData.some(w=>Object.values(w.counts).some(v=>v>0));
-    if(!hasData)return'';
-    const W=320,H=140,PL=34,PR=8,PT=10,PB=24;
-    const chartW=W-PL-PR,chartH=H-PT-PB;
-    const maxVal=Math.max(...weekData.flatMap(w=>Object.values(w.counts)),1);
-    const bw=Math.floor(chartW/weeks*0.55);
-    const gap=Math.floor(chartW/weeks);
-    let svg='';
-    // Y gridlines
-    const yStep=maxVal<=10?2:maxVal<=20?5:10;
-    for(let t=0;t<=maxVal;t+=yStep){
-      const y=PT+((maxVal-t)/maxVal)*chartH;
-      svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.7" stroke-dasharray="3,3"/>`;
-      svg+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${t}</text>`;
-    }
-    svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+chartH}" stroke="var(--text3)" stroke-width="1"/>`;
-    svg+=`<line x1="${PL}" y1="${PT+chartH}" x2="${W-PR}" y2="${PT+chartH}" stroke="var(--text3)" stroke-width="1"/>`;
-    // Stacked bars per week
-    weekData.forEach((w,wi)=>{
-      const x=PL+wi*gap+(gap-bw)/2;
-      let stackY=PT+chartH;
-      ALL_MUSCLE_GROUPS.forEach(m=>{
-        const v=w.counts[m];if(!v)return;
-        const h=Math.max(1,(v/maxVal)*chartH);
-        stackY-=h;
-        svg+=`<rect x="${x.toFixed(1)}" y="${stackY.toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" fill="${MCOLS2[m]||'var(--text3)'}" opacity="0.85"/>`;
-      });
-      // X label
-      const parts=w.label.split(' ');
-      svg+=`<text x="${(x+bw/2).toFixed(1)}" y="${PT+chartH+14}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${parts[0]}</text>`;
-    });
-    // Legend
-    const activeMuscles=ALL_MUSCLE_GROUPS.filter(m=>weekData.some(w=>w.counts[m]>0));
-    const legend=activeMuscles.map(m=>`<div style="display:flex;align-items:center;gap:4px;"><div style="width:8px;height:8px;border-radius:2px;background:${MCOLS2[m]};flex-shrink:0;"></div><div style="font-size:10px;font-weight:700;color:var(--text2);">${m}</div></div>`).join('');
-    return`<div class="chart-card">
-      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">last 8 weeks</span></div>
-      <svg viewBox="0 0 ${W} ${H+4}" style="width:100%;height:${H+4}px;overflow:visible;">${svg}</svg>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">${legend}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:6px;">Work sets per muscle group per week</div>
-    </div>`;
-  })();
 
-  return summary+freqChart+volChart+muscleHistChart+muscleChart+sessionLog;
+  return summary+freqChart+volChart+muscleChart+sessionLog;
 }
 
 function renderConsistencyScore(){
@@ -3306,6 +3251,73 @@ function saveExRestSecs(name,secs){
   if(!prog[name])prog[name]={history:[],muscles:[]};
   prog[name].restSeconds=secs;
   saveGymProg(prog);
+}
+
+const MUSCLE_COLS={Chest:'#ef4444',Back:'#6366f1',Shoulders:'#f97316',Biceps:'#06b6d4',Triceps:'#a855f7',Quads:'#10b981',Hamstrings:'#eab308',Glutes:'#ec4899',Core:'#64748b',Calves:'#94a3b8'};
+
+let _volPeriod='week';
+function renderVolumeTab(){
+  const el=document.getElementById('train-volume-content');
+  if(!el)return;
+  const now=today();
+  const gym=loadGymData();
+
+  const periods=[
+    {id:'week',label:'This Week'},
+    {id:'lastweek',label:'Last Week'},
+    {id:'4weeks',label:'4 Weeks'},
+    {id:'8weeks',label:'8 Weeks'},
+    {id:'all',label:'All Time'},
+  ];
+
+  // Compute date range for selected period
+  function getRange(pid){
+    const mon=getMonday(now);
+    if(pid==='week')return{from:mon,to:now};
+    if(pid==='lastweek'){const lm=addDays(mon,-7);return{from:lm,to:addDays(lm,6)};}
+    if(pid==='4weeks')return{from:addDays(mon,-27),to:now};
+    if(pid==='8weeks')return{from:addDays(mon,-55),to:now};
+    return{from:new Date('2000-01-01'),to:now};
+  }
+
+  const {from,to}=getRange(_volPeriod);
+  const sessions=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=from&&d<=to;});
+
+  // Count work sets per muscle group
+  const counts={};
+  ALL_MUSCLE_GROUPS.forEach(m=>{counts[m]=0;});
+  sessions.forEach(s=>(s.exercises||[]).forEach(e=>{
+    const muscles=getExerciseMuscles(e.name);
+    const ws=(e.sets||[]).filter(x=>!x.warmup).length;
+    muscles.forEach(m=>{if(counts[m]!==undefined)counts[m]+=ws;});
+  }));
+
+  const maxSets=Math.max(...Object.values(counts),1);
+  const totalSets=Object.values(counts).reduce((a,b)=>a+b,0);
+  const activeMuscles=ALL_MUSCLE_GROUPS.filter(m=>counts[m]>0);
+
+  const periodBtns=periods.map(p=>`<button onclick="_volPeriod='${p.id}';renderVolumeTab();" style="padding:7px 14px;border-radius:20px;border:none;background:${_volPeriod===p.id?'var(--accent)':'var(--surface2)'};color:${_volPeriod===p.id?'#fff':'var(--text2)'};font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${p.label}</button>`).join('');
+
+  const bars=ALL_MUSCLE_GROUPS.map(m=>{
+    const v=counts[m];
+    const pct=Math.round(v/maxSets*100);
+    const col=MUSCLE_COLS[m]||'var(--text3)';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
+      <div style="width:88px;flex-shrink:0;font-size:13px;font-weight:700;color:${v>0?'var(--text)':'var(--text3)'};">${m}</div>
+      <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${col};border-radius:5px;transition:width 0.4s;"></div>
+      </div>
+      <div style="width:32px;text-align:right;font-size:13px;font-weight:800;color:${v>0?col:'var(--text3)'};">${v}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div class="chart-card" style="margin-bottom:10px;">
+      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} sessions · ${totalSets} sets</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">${periodBtns}</div>
+      ${totalSets>0?bars:`<div class="empty-state" style="padding:20px 0;"><strong>No sessions in this period</strong></div>`}
+      ${totalSets>0?`<div style="font-size:10px;color:var(--text3);margin-top:8px;">Work sets only — warmup sets excluded</div>`:''}
+    </div>`;
 }
 
 function renderExerciseLibrary(){

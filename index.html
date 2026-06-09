@@ -575,7 +575,7 @@ function loadState(){
 let state=loadState();
 let _saveTimer=null;
 function saveState(){clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>localStorage.setItem('wt_v3',JSON.stringify(state)),400);}
-function loadGymData(){try{return JSON.parse(localStorage.getItem('gym_data_v1')||'[]');}catch(e){return[];}}
+function loadGymData(){try{const d=JSON.parse(localStorage.getItem('gym_data_v1')||'[]');return d.sort((a,b)=>(a.date||'').localeCompare(b.date||''));}catch(e){return[];}}
 function saveGymData(d){localStorage.setItem('gym_data_v1',JSON.stringify(d));}
 function loadRunData(){try{return JSON.parse(localStorage.getItem('run_data_v2')||'[]');}catch(e){return[];}}
 function saveRunData(d){localStorage.setItem('run_data_v2',JSON.stringify(d));}

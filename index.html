@@ -1117,15 +1117,143 @@ function renderRunHistory(runs){
 }
 function renderTrainHistory(){
   const el=document.getElementById('train-history-content');
-  const gymCount=loadGymData().length;
-  const all=[...loadGymData().map(s=>({...s,_t:'gym'})),...loadRunData().map(r=>({...r,_t:'run'}))]
+  const gymData=loadGymData();const runData=loadRunData();
+  const gymCount=gymData.length;
+  const all=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...runData.map(r=>({...r,_t:'run'}))]
     .sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,20);
   if(!all.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
   const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare Sessions</button>`:'';
-  el.innerHTML=compareBtn+`<div class="chart-card">${all.map(e=>e._t==='gym'
-    ?`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Gym')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(e.type||'Workout')}</div><div style="font-size:12px;color:var(--text3);">${e.date}</div></div><div style="font-size:13px;color:var(--text2);font-weight:600;">${(e.exercises||[]).length} ex</div></div>`
-    :`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Running')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.km?e.km+'km':e.time||'Run'}</div><div style="font-size:12px;color:var(--text3);">${e.date}${e.effort?' · '+e.effort:''}</div></div><div style="font-size:13px;color:var(--accent2);font-weight:700;">${e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):''}</div></div>`
-  ).join('')}</div>`;
+  el.innerHTML=compareBtn+
+    renderGymAnalysis(gymData)+
+    renderRunAnalysis(runData)+
+    `<div class="chart-card-header" style="padding:16px 0 8px;"><span class="chart-card-title">Recent Sessions</span></div>`+
+    `<div class="chart-card">${all.map(e=>e._t==='gym'
+      ?`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openSessionDetail(${e._idx})">${goalAvatarInline('Gym')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(e.type||'Workout')}</div><div style="font-size:12px;color:var(--text3);">${e.date}</div></div><div style="font-size:13px;color:var(--text2);font-weight:600;">${(e.exercises||[]).length} ex</div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>`
+      :`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Running')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.km?e.km+'km':e.time||'Run'}</div><div style="font-size:12px;color:var(--text3);">${e.date}${e.effort?' · '+e.effort:''}</div></div><div style="font-size:13px;color:var(--accent2);font-weight:700;">${e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):''}</div></div>`
+    ).join('')}</div>`;
+}
+
+// ── GYM ANALYSIS ──
+function renderGymAnalysis(gym){
+  if(gym.length<2)return'';
+  const now=today();
+  // Session frequency: weekly count last 12 weeks
+  const freqWeeks=[];
+  for(let w=11;w>=0;w--){
+    const mon=addDays(getMonday(now),-w*7);const sun=addDays(mon,6);
+    const count=gym.filter(s=>new Date(s.date)>=mon&&new Date(s.date)<=sun).length;
+    freqWeeks.push({label:`${mon.getDate()}/${mon.getMonth()+1}`,count});
+  }
+  const maxFreq=Math.max(...freqWeeks.map(w=>w.count),1);
+  const freqBars=freqWeeks.map((w,i)=>{
+    const bw=18,gap=5,H=50;
+    const h=Math.max(w.count>0?3:0,w.count/maxFreq*H);
+    return`<rect x="${i*(bw+gap)}" y="${H-h}" width="${bw}" height="${h}" fill="var(--accent)" rx="3" opacity="0.85"/>
+      ${w.count>0?`<text x="${i*(bw+gap)+bw/2}" y="${H-h-4}" text-anchor="middle" fill="var(--accent2)" font-size="9" font-weight="800">${w.count}</text>`:''}
+      <text x="${i*(bw+gap)+bw/2}" y="65" text-anchor="middle" fill="var(--text3)" font-size="8">${i%3===0?w.label:''}</text>`;
+  }).join('');
+  const freqW=freqWeeks.length*23-5;
+  // Weekly volume last 12 weeks
+  const volWeeks=[];
+  for(let w=11;w>=0;w--){
+    const mon=addDays(getMonday(now),-w*7);const sun=addDays(mon,6);
+    const sessions=gym.filter(s=>new Date(s.date)>=mon&&new Date(s.date)<=sun);
+    const vol=sessions.reduce((t,s)=>(s.exercises||[]).reduce((tt,e)=>(e.sets||[]).filter(ss=>!ss.warmup).reduce((ttt,ss)=>ttt+(parseFloat(ss.weight||0)*parseFloat(ss.reps||0)),tt),t),0);
+    volWeeks.push({vol:Math.round(vol/1000*10)/10});
+  }
+  const maxVol=Math.max(...volWeeks.map(w=>w.vol),1);
+  const volBars=volWeeks.map((w,i)=>{
+    const bw=18,gap=5,H=50;
+    const h=Math.max(w.vol>0?3:0,w.vol/maxVol*H);
+    return`<rect x="${i*(bw+gap)}" y="${H-h}" width="${bw}" height="${h}" fill="var(--green)" rx="3" opacity="0.85"/>`;
+  }).join('');
+  // Lift progression: top 4 exercises by session count
+  const exFreq={};
+  gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)exFreq[e.name]=(exFreq[e.name]||0)+1;}));
+  const topEx=Object.entries(exFreq).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([name])=>name);
+  const liftCharts=topEx.map(name=>{
+    const pts=gym.filter(s=>s.exercises&&s.exercises.find(e=>e.name===name)).slice(-10).map(s=>{
+      const ex=s.exercises.find(e=>e.name===name);
+      const best=(ex.sets||[]).filter(ss=>!ss.warmup).reduce((b,ss)=>parseFloat(ss.weight||0)>parseFloat(b.weight||0)?ss:b,{weight:0});
+      return{date:s.date,weight:parseFloat(best.weight||0)};
+    }).filter(p=>p.weight>0);
+    if(pts.length<2)return'';
+    const ws=pts.map(p=>p.weight);
+    const minW=Math.min(...ws),maxW=Math.max(...ws),rng=maxW-minW||1;
+    const W=120,H=35,n=pts.length;
+    const pathPts=pts.map((p,i)=>`${((i/(n-1))*W).toFixed(1)},${(H-((p.weight-minW)/rng)*(H-4)).toFixed(1)}`).join(' ');
+    const latest=pts[pts.length-1];const prev=pts[pts.length-2];
+    const delta=latest.weight-prev.weight;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div><div style="font-size:11px;color:var(--text3);">${latest.weight}kg</div></div>
+      <svg viewBox="0 0 ${W} ${H+4}" style="width:80px;height:28px;flex-shrink:0;"><polyline points="${pathPts}" fill="none" stroke="${delta>=0?'var(--green)':'var(--red)'}" stroke-width="1.5" opacity="0.9"/><circle cx="${W}" cy="${(H-((latest.weight-minW)/rng)*(H-4)).toFixed(1)}" r="3" fill="${delta>=0?'var(--green)':'var(--red)')"/></svg>
+      <div style="font-size:12px;font-weight:700;color:${delta>0?'var(--green)':delta<0?'var(--red)':'var(--text3)'};min-width:48px;text-align:right;">${delta>0?'+':''}${delta.toFixed(delta%1?1:0)}kg</div>
+    </div>`;
+  }).filter(Boolean).join('');
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Gym Analysis</span><span class="chart-card-val">${gym.length} sessions</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div><div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:6px;">Sessions / week</div>
+        <svg viewBox="0 0 ${freqW} 68" style="width:100%;height:60px;">${freqBars}</svg></div>
+      <div><div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:6px;">Volume (t) / week</div>
+        <svg viewBox="0 0 ${freqW} 55" style="width:100%;height:60px;">${volBars}</svg></div>
+    </div>
+    ${liftCharts?`<div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Lift Progression</div>${liftCharts}`:''}
+  </div>`;
+}
+
+// ── RUN ANALYSIS ──
+function renderRunAnalysis(runs){
+  if(!runs.length)return'';
+  const now=today();
+  // Weekly km: last 26 weeks
+  const kmWeeks=[];
+  for(let w=25;w>=0;w--){
+    const mon=addDays(getMonday(now),-w*7);const sun=addDays(mon,6);
+    const wRuns=runs.filter(r=>new Date(r.date)>=mon&&new Date(r.date)<=sun);
+    const km=wRuns.reduce((s,r)=>s+(r.km||0),0);
+    kmWeeks.push({km,label:`${mon.getDate()}/${mon.getMonth()+1}`});
+  }
+  // trim leading zeros
+  const firstNonZero=kmWeeks.findIndex(w=>w.km>0);
+  const trimmed=firstNonZero>=0?kmWeeks.slice(firstNonZero):kmWeeks.slice(-8);
+  const maxKm=Math.max(...trimmed.map(w=>w.km),1);
+  const n=trimmed.length;
+  const bw=Math.max(6,Math.floor(280/n)-3),gap=3,H=60;
+  const kmBars=trimmed.map((w,i)=>{
+    const h=Math.max(w.km>0?3:0,w.km/maxKm*H);
+    return`<rect x="${i*(bw+gap)}" y="${H-h}" width="${bw}" height="${h}" fill="${w.km>=50?'var(--green)':w.km>=20?'var(--accent)':'var(--accent2)'}" rx="2" opacity="0.85"/>
+      ${i%Math.ceil(n/6)===0?`<text x="${i*(bw+gap)+bw/2}" y="${H+14}" text-anchor="middle" fill="var(--text3)" font-size="8">${w.label}</text>`:''}
+      ${w.km>0?`<text x="${i*(bw+gap)+bw/2}" y="${H-h-3}" text-anchor="middle" fill="var(--text2)" font-size="8">${w.km>=1?Math.round(w.km):''}</text>`:''}`;
+  }).join('');
+  const kmW=n*(bw+gap)-gap;
+  // Effort balance
+  const effortCounts={Easy:0,Tempo:0,Hard:0,Long:0,Race:0,Other:0};
+  runs.forEach(r=>{const k=r.effort||r.type||'Other';if(effortCounts[k]!==undefined)effortCounts[k]++;else effortCounts.Other++;});
+  const effortColors={Easy:'var(--green)',Tempo:'var(--accent)',Hard:'var(--red)',Long:'var(--orange)',Race:'#f59e0b',Other:'var(--text3)'};
+  const totalRuns=runs.length||1;
+  const effortBars=Object.entries(effortCounts).filter(([,v])=>v>0).map(([k,v])=>`
+    <div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;font-weight:700;">${k}</span><span style="font-size:12px;color:var(--text3);">${v} (${Math.round(v/totalRuns*100)}%)</span></div>
+    <div style="height:5px;background:var(--surface2);border-radius:3px;"><div style="height:100%;width:${Math.round(v/totalRuns*100)}%;background:${effortColors[k]};border-radius:3px;"></div></div></div>`).join('');
+  // Long run progression: max km per week
+  const longRuns=trimmed.map((w,i)=>{
+    const mon=addDays(getMonday(now),-(trimmed.length-1-i)*7);const sun=addDays(mon,6);
+    const wRuns=runs.filter(r=>new Date(r.date)>=mon&&new Date(r.date)<=sun);
+    return Math.max(0,...wRuns.map(r=>r.km||0));
+  });
+  const maxLR=Math.max(...longRuns,1);
+  const lrPts=longRuns.map((v,i)=>`${((i/(n-1||1))*260).toFixed(1)},${(50-v/maxLR*46).toFixed(1)}`).join(' ');
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Run Analysis</span><span class="chart-card-val">${runs.length} runs · ${runs.reduce((s,r)=>s+(r.km||0),0).toFixed(0)}km total</span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:6px;">Weekly km (${trimmed.length} weeks)</div>
+    <svg viewBox="0 0 ${kmW} ${H+18}" style="width:100%;height:80px;margin-bottom:14px;">${kmBars}</svg>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div><div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Effort Balance</div>${effortBars}</div>
+      <div><div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;margin-bottom:6px;">Long Run Trend</div>
+        ${n>=2?`<svg viewBox="0 0 260 54" style="width:100%;height:60px;"><polyline points="${lrPts}" fill="none" stroke="var(--orange)" stroke-width="2" opacity="0.9"/><circle cx="260" cy="${(50-longRuns[n-1]/maxLR*46).toFixed(1)}" r="3.5" fill="var(--orange)"/></svg>`:'<div style="font-size:12px;color:var(--text3);">More data needed</div>'}
+      </div>
+    </div>
+  </div>`;
 }
 
 // ── PRs ──

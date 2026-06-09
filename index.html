@@ -1151,8 +1151,22 @@ let selectedEffort='';
 function renderRunSection(){
   const el=document.getElementById('run-content');
   const runs=loadRunData();const last=runs[runs.length-1];
+  const now=today();const mon=getMonday(now);
+  if(!_runLogDate||_runLogDate>dk(now))_runLogDate=dk(now);
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dayBtns=days.map((d,i)=>{
+    const date=addDays(mon,i);
+    const ds=dk(date);
+    const isFuture=date>now;
+    const isActive=ds===_runLogDate;
+    return`<button onclick="selectRunDay('${ds}')" ${isFuture?'disabled':''} style="flex:1;padding:8px 2px;border-radius:8px;border:2px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${isFuture?'var(--text3)':isActive?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:11px;font-weight:800;cursor:${isFuture?'default':'pointer'};opacity:${isFuture?0.3:1};transition:all 0.15s;">
+      <div style="font-size:8px;font-weight:800;text-transform:uppercase;color:inherit;margin-bottom:2px;">${d}</div>
+      <div style="font-size:13px;font-weight:800;">${date.getDate()}</div>
+    </button>`;
+  }).join('');
   el.innerHTML=`
   <div class="run-input-card">
+    <div style="display:flex;gap:4px;margin-bottom:16px;">${dayBtns}</div>
     <label>Distance (km)</label>
     <input class="run-field" type="number" id="run-km" inputmode="decimal" placeholder="0.0" step="0.1" oninput="updatePacePreview()">
     <div style="height:12px;"></div>
@@ -1161,8 +1175,8 @@ function renderRunSection(){
     <div id="pace-preview" style="font-size:13px;color:var(--accent2);font-weight:700;min-height:20px;margin-top:6px;"></div>
     <div style="height:12px;"></div>
     <label>Effort</label>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
-      ${['Easy','Tempo','Hard','Long','Race'].map(e=>`<button onclick="selectEffort('${e}')" id="eff-${e}" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
+      ${['Easy','Tempo','Intervals','Race','Long Run','Recovery'].map(e=>`<button onclick="selectEffort('${e}')" id="eff-${e.replace(' ','-')}" style="padding:8px 6px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
     </div>
     <div style="height:12px;"></div>
     <label>Start time (optional)</label>
@@ -1181,10 +1195,12 @@ function renderRunSection(){
   ${renderRunHistory(runs)}`;
   selectedEffort='';
 }
+let _runLogDate=null;
+function selectRunDay(ds){_runLogDate=ds;renderRunSection();}
 function selectEffort(e){
   selectedEffort=e===selectedEffort?'':e;
   document.querySelectorAll('[id^="eff-"]').forEach(b=>{
-    const a=b.id===`eff-${selectedEffort}`;
+    const a=b.id===`eff-${selectedEffort.replace(' ','-')}`;
     b.style.background=a?'var(--accent)':'transparent';
     b.style.color=a?'white':'var(--text2)';
     b.style.borderColor=a?'var(--accent)':'var(--border)';
@@ -1208,11 +1224,12 @@ function saveRun(){
     const d=new Date(today());d.setHours(h,m,0,0);ts=d.getTime();
   }
   const runs=loadRunData();
-  runs.push({date:dk(today()),km,time,note,effort:selectedEffort,startTime:startTimeVal||null,ts});
+  const logDate=_runLogDate||dk(today());
+  runs.push({date:logDate,km,time,note,effort:selectedEffort,startTime:startTimeVal||null,ts});
   saveRunData(runs);
-  const d=dk(today());
-  if(!state.data[`${d}:session:run`])state.data[`${d}:session:run`]=[];
-  state.data[`${d}:session:run`].push(`${km}km`);
+  if(!state.data[`${logDate}:session:run`])state.data[`${logDate}:session:run`]=[];
+  state.data[`${logDate}:session:run`].push(`${km}km`);
+  _runLogDate=dk(today());
   saveState();selectedEffort='';toastMsg('Run saved');haptic('success');renderRunSection();
 }
 function renderRunHistory(runs){

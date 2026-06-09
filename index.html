@@ -3343,27 +3343,33 @@ function renderVolumeTab(){
     {id:'all',label:'All Time'},
   ];
 
-  // Compute date range for selected period
+  // Compute date range for selected period + equivalent previous period
   function getRange(pid){
     const mon=getMonday(now);
-    if(pid==='week')return{from:mon,to:now};
-    if(pid==='lastweek'){const lm=addDays(mon,-7);return{from:lm,to:addDays(lm,6)};}
-    if(pid==='4weeks')return{from:addDays(mon,-27),to:now};
-    if(pid==='8weeks')return{from:addDays(mon,-55),to:now};
-    return{from:new Date('2000-01-01'),to:now};
+    if(pid==='week')return{from:mon,to:now,days:7};
+    if(pid==='lastweek'){const lm=addDays(mon,-7);return{from:lm,to:addDays(lm,6),days:7};}
+    if(pid==='4weeks')return{from:addDays(mon,-27),to:now,days:28};
+    if(pid==='8weeks')return{from:addDays(mon,-55),to:now,days:56};
+    return{from:new Date('2000-01-01'),to:now,days:null};
+  }
+  function countMuscles(sessList){
+    const c={};ALL_MUSCLE_GROUPS.forEach(m=>{c[m]=0;});
+    sessList.forEach(s=>(s.exercises||[]).forEach(e=>{
+      const muscles=getExerciseMuscles(e.name);
+      const ws=(e.sets||[]).filter(x=>!x.warmup).length;
+      muscles.forEach(m=>{if(c[m]!==undefined)c[m]+=ws;});
+    }));
+    return c;
   }
 
-  const {from,to}=getRange(_volPeriod);
+  const {from,to,days}=getRange(_volPeriod);
   const sessions=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=from&&d<=to;});
+  // Previous equivalent period for trend arrows
+  const prevSessions=days?gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=addDays(from,-days)&&d<from;}):[];
+  const prevCounts=countMuscles(prevSessions);
 
   // Count work sets per muscle group
-  const counts={};
-  ALL_MUSCLE_GROUPS.forEach(m=>{counts[m]=0;});
-  sessions.forEach(s=>(s.exercises||[]).forEach(e=>{
-    const muscles=getExerciseMuscles(e.name);
-    const ws=(e.sets||[]).filter(x=>!x.warmup).length;
-    muscles.forEach(m=>{if(counts[m]!==undefined)counts[m]+=ws;});
-  }));
+  const counts=countMuscles(sessions);
 
   const totalSets=Object.values(counts).reduce((a,b)=>a+b,0);
 
@@ -3379,27 +3385,26 @@ function renderVolumeTab(){
   const periodBtns=periods.map(p=>`<button onclick="_volPeriod='${p.id}';renderVolumeTab();" style="padding:7px 14px;border-radius:20px;border:none;background:${_volPeriod===p.id?'var(--accent)':'var(--surface2)'};color:${_volPeriod===p.id?'#fff':'var(--text2)'};font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${p.label}</button>`).join('');
 
   const bars=ALL_MUSCLE_GROUPS.map(m=>{
-    const v=counts[m];
+    const v=counts[m],pv=prevCounts[m]||0;
     const pct=Math.round(v/barMax*100);
     const col=MUSCLE_COLS[m]||'var(--text3)';
-    const isLow=v<minTarget,isHigh=v>maxTarget,isOk=v>=minTarget&&v<=maxTarget;
+    const isLow=v<minTarget,isHigh=v>maxTarget;
+    const barCol=(!isLow&&v>0)?'var(--green)':col;
     const badge=v===0?''
       :isLow?`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--orange);color:var(--orange);font-size:10px;font-weight:800;">LOW</span>`
       :isHigh?`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--accent2);color:var(--accent2);font-size:10px;font-weight:800;">HIGH</span>`
-      :`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--green);color:var(--green);font-size:10px;font-weight:800;">✓</span>`;
-    const arrow=v===0?`<span style="color:var(--text3);font-size:13px;">↓</span>`
-      :isLow?`<span style="color:var(--orange);font-size:13px;">↓</span>`
-      :isHigh?`<span style="color:var(--accent2);font-size:13px;">↑</span>`
-      :`<span style="color:var(--green);font-size:13px;">✓</span>`;
+      :`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--green);color:var(--green);font-size:10px;font-weight:800;">GOOD</span>`;
+    const trendCol=v>pv?'var(--green)':v<pv?'var(--orange)':'var(--text3)';
+    const trendArrow=v>pv?'↑':v<pv?'↓':'=';
     return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);">
       <div style="width:82px;flex-shrink:0;font-size:13px;font-weight:700;color:${v>0?'var(--text)':'var(--text3)'};">${m}</div>
       <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;position:relative;">
-        <div style="height:100%;width:${pct}%;background:${v>0?col:'transparent'};border-radius:5px;transition:width 0.4s;"></div>
+        <div style="height:100%;width:${pct}%;background:${v>0?barCol:'transparent'};border-radius:5px;transition:width 0.4s;"></div>
         <div style="position:absolute;top:-2px;left:${minPct}%;width:2px;height:14px;background:rgba(255,255,255,0.25);border-radius:1px;"></div>
       </div>
-      <div style="width:28px;text-align:right;font-size:13px;font-weight:800;color:${v>0?col:'var(--text3)'};">${v}</div>
-      <div style="width:36px;text-align:center;">${v>0?badge:''}</div>
-      <div style="width:14px;text-align:center;">${arrow}</div>
+      <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:${v>0?barCol:'var(--text3)'};">${v} sets</div>
+      <div style="width:40px;text-align:center;">${v>0?badge:''}</div>
+      <div style="width:14px;text-align:center;font-size:13px;font-weight:800;color:${trendCol};">${trendArrow}</div>
     </div>`;
   }).join('');
 
@@ -3417,9 +3422,9 @@ function renderVolumeTab(){
           <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;position:relative;">
             <div style="position:absolute;top:-2px;left:${minPct}%;width:2px;height:14px;background:rgba(255,255,255,0.25);border-radius:1px;"></div>
           </div>
-          <div style="width:28px;text-align:right;font-size:13px;font-weight:800;color:var(--text3);">0</div>
-          <div style="width:36px;"></div>
-          <div style="width:14px;text-align:center;color:var(--text3);font-size:13px;">↓</div>
+          <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:var(--text3);">0 sets</div>
+          <div style="width:40px;"></div>
+          <div style="width:14px;text-align:center;color:var(--orange);font-size:13px;font-weight:800;">↓</div>
         </div>`;
       }).join('')}
       <div style="font-size:10px;color:var(--text3);margin-top:8px;">Work sets only — warmup sets excluded</div>

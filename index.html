@@ -1200,6 +1200,7 @@ function renderTrends(){
     ${renderConsistencyScore()}
     ${renderPredictedCompletion()}
     ${renderBestWorstWeeks()}
+    ${renderTimeOfDay()}
     ${renderActivityLoad()}
     ${renderWeekChart()}
     ${renderHeatmap()}
@@ -1880,6 +1881,45 @@ function renderMonthlyHistory(){
 }
 // alias to avoid name collision with local var
 function goalDone_f(ds,g){return goalDone(ds,g);}
+
+// ── BEST TIME OF DAY ──
+function renderTimeOfDay(){
+  const gym=loadGymData();const runs=loadRunData();
+  const sessions=[
+    ...gym.map(s=>({ts:s.ts,type:'gym'})),
+    ...runs.map(r=>({ts:r.ts,type:'run'}))
+  ].filter(s=>s.ts);
+  if(!sessions.length)return'';
+  const slots=[
+    {label:'Morning',sub:'6am–12pm',icon:'🌅',color:'#f97316',test:h=>h>=6&&h<12},
+    {label:'Afternoon',sub:'12pm–5pm',icon:'☀️',color:'#10b981',test:h=>h>=12&&h<17},
+    {label:'Evening',sub:'5pm–9pm',icon:'🌆',color:'#6366f1',test:h=>h>=17&&h<21},
+    {label:'Night',sub:'9pm–6am',icon:'🌙',color:'#a855f7',test:h=>h>=21||h<6},
+  ];
+  const counts=slots.map(slot=>{
+    const matches=sessions.filter(s=>{const h=new Date(s.ts).getHours();return slot.test(h);});
+    return{...slot,count:matches.length,gym:matches.filter(s=>s.type==='gym').length,run:matches.filter(s=>s.type==='run').length};
+  });
+  const total=sessions.length||1;
+  const best=counts.reduce((a,b)=>b.count>a.count?b:a,counts[0]);
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Best Time of Day</span><span class="chart-card-val">${sessions.length} sessions</span></div>
+    ${counts.map(s=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div style="width:32px;text-align:center;font-size:20px;">${s.icon}</div>
+      <div style="min-width:80px;">
+        <div style="font-size:14px;font-weight:800;">${s.label}</div>
+        <div style="font-size:11px;color:var(--text3);font-weight:600;">${s.sub}</div>
+      </div>
+      <div style="flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${Math.round(s.count/total*100)}%;background:${s.color};border-radius:4px;transition:width 0.6s;"></div>
+      </div>
+      <div style="font-size:14px;font-weight:800;min-width:38px;text-align:right;color:${s.count===best.count?s.color:'var(--text2)'};">${Math.round(s.count/total*100)}%</div>
+    </div>`).join('')}
+    <div style="font-size:13px;color:var(--text2);font-weight:600;padding-top:12px;line-height:1.5;">
+      You train most in the <strong>${best.label.toLowerCase()}</strong> — <strong>${best.count} session${best.count===1?'':'s'}</strong> logged${best.gym||best.run?` (${[best.gym?best.gym+' gym':'',best.run?best.run+' run':''].filter(Boolean).join(', ')})`:''}.
+    </div>
+  </div>`;
+}
 
 // ── ACTIVITY LOAD ──
 function renderActivityLoad(){

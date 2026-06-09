@@ -132,12 +132,6 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .svg-chart{width:100%;overflow:visible;display:block;margin-top:8px;}
 
 /* STREAK LIST */
-.streak-list{display:flex;flex-direction:column;gap:1px;}
-.streak-item{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
-.streak-item:last-child{border-bottom:none;}
-.streak-item-name{flex:1;font-size:14px;font-weight:700;}
-.streak-item-val{font-size:22px;font-weight:800;color:var(--accent2);letter-spacing:-0.5px;}
-.streak-item-label{font-size:11px;color:var(--text3);font-weight:600;text-align:right;}
 
 /* HEALTH */
 .health-entry{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
@@ -200,7 +194,6 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .anomaly-banner{border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;position:relative;}
 .anomaly-banner.alert-gym{background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);}
 .anomaly-banner.alert-score{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);}
-.anomaly-banner.alert-streak{background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);}
 .anomaly-banner-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
 .anomaly-banner-body{flex:1;}
 .anomaly-banner-title{font-size:13px;font-weight:800;margin-bottom:2px;}
@@ -1357,8 +1350,6 @@ function renderTrends(){
   const weekRuns=runs.filter(r=>{const d=new Date(r.date);return d>=mon&&d<=now;});
   const weekKm=weekRuns.reduce((s,r)=>s+(r.km||0),0);
   const weekGym=gym.filter(s=>{const d=new Date(s.date);return d>=mon&&d<=now;});
-  let streak=0;const sd=new Date(now);
-  while(streak<365){const dds=dk(sd);const s=getDayScore(dds);if(s===0&&dds!==dk(now))break;if(s>0)streak++;sd.setDate(sd.getDate()-1);}
   el.innerHTML=`
     <div class="metric-row">
       <div class="metric-card accent"><div class="m-label">This Week</div><div class="m-val">${weekScore}</div><div class="m-unit">% complete</div></div>
@@ -2040,12 +2031,6 @@ function renderWeekBars(){
   return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Goal Progress</span></div>${bars}</div>`;
 }
 
-function renderStreakCards(){
-  const goals=allGoals();if(!goals.length)return'';
-  const rows=goals.map(g=>{let streak=0;const d=new Date(today());while(streak<365){if(!goalDone(dk(d),g))break;streak++;d.setDate(d.getDate()-1);}return{g,streak};}).filter(x=>x.streak>0).sort((a,b)=>b.streak-a.streak);
-  if(!rows.length)return'';
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Active Streaks</span></div><div class="streak-list">${rows.map(({g,streak})=>`<div class="streak-item">${goalAvatarInline(g.name)}<div class="streak-item-name">${esc(g.name)}</div><div><div class="streak-item-val">${streak}</div><div class="streak-item-label">day streak</div></div></div>`).join('')}</div></div>`;
-}
 
 function renderRunStatsCard(runs){
   if(!runs.length)return'';
@@ -2884,16 +2869,6 @@ function getAnomalyAlerts(){
   const lastWeekScore=lastWeekTotal?Math.round(lastWeekDone/lastWeekTotal*100):0;
   if(lastWeekScore>0&&thisWeekScore<lastWeekScore-25){
     alerts.push({id:`score_drop_${ds}`,type:'alert-score',icon:'📉',title:'Score dip',desc:`This week ${thisWeekScore}% vs last week ${lastWeekScore}% (−${lastWeekScore-thisWeekScore}pts)`});
-  }
-  // 3) Current streak shorter than personal best
-  let curStreak=0;const sd=new Date(now);
-  while(curStreak<365){const dds=dk(sd);const s=getDayScore(dds);if(s===0&&dds!==ds)break;if(s>0)curStreak++;sd.setDate(sd.getDate()-1);}
-  // Find personal best streak
-  let pbStreak=0,runStreak=0;
-  const daysBack=365;
-  for(let i=daysBack;i>=0;i--){const dds=dk(addDays(now,-i));if(getDayScore(dds)>0)runStreak++;else runStreak=0;if(runStreak>pbStreak)pbStreak=runStreak;}
-  if(pbStreak>7&&curStreak<pbStreak&&curStreak<pbStreak*0.5){
-    alerts.push({id:`streak_drop_${ds}`,type:'alert-streak',icon:'🔥',title:'Streak below best',desc:`Current ${curStreak} days vs personal best ${pbStreak} days`});
   }
   // Filter dismissed
   const dismissed=state.dismissedAlerts||[];

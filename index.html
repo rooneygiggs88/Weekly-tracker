@@ -3297,12 +3297,22 @@ const DEFAULT_MUSCLE_MAP={
 };
 const ALL_MUSCLE_GROUPS=['Chest','Back','Shoulders','Biceps','Triceps','Quads','Hamstrings','Glutes','Calves','Core'];
 const MUSCLE_COLS={Chest:'#6366f1',Back:'#ef4444',Shoulders:'#8b5cf6',Biceps:'#f97316',Triceps:'#10b981',Quads:'#22c55e',Hamstrings:'#eab308',Glutes:'#ec4899',Calves:'#06b6d4',Core:'#64748b'};
+const V1_MUSCLE_MAP={'Legs / Quads':['Quads'],'Hamstrings / Glutes':['Hamstrings','Glutes'],'Legs':['Quads'],'Glutes':['Glutes'],'Calves':['Calves'],'Abs':['Core'],'Chest':['Chest'],'Back':['Back'],'Shoulders':['Shoulders'],'Biceps':['Biceps'],'Triceps':['Triceps'],'Core':['Core']};
+function normaliseMuscles(arr){
+  if(!arr||!arr.length)return arr;
+  const out=[];
+  arr.forEach(m=>{
+    if(ALL_MUSCLE_GROUPS.includes(m)){out.push(m);}
+    else if(V1_MUSCLE_MAP[m]){V1_MUSCLE_MAP[m].forEach(n=>{if(!out.includes(n))out.push(n);});}
+  });
+  return out.length?out:arr;
+}
 function getExerciseMuscles(name){
   if(!name)return[];
   const prog=loadGymProg();
   const nameLower=name.toLowerCase();
-  // Check user tags first
-  if(prog[name]&&prog[name].muscles&&prog[name].muscles.length)return prog[name].muscles;
+  // Check user tags first (normalise v1 muscle names on the fly)
+  if(prog[name]&&prog[name].muscles&&prog[name].muscles.length)return normaliseMuscles(prog[name].muscles);
   // Case-insensitive partial match against DEFAULT_MUSCLE_MAP
   for(const [key,muscles] of Object.entries(DEFAULT_MUSCLE_MAP)){
     if(key.toLowerCase()===nameLower||key.toLowerCase().includes(nameLower)||nameLower.includes(key.toLowerCase()))return muscles;

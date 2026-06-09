@@ -1758,6 +1758,553 @@ function renderBadges(){
   </div>`;
 }
 
+// ── ANOMALY ALERTS ──
+function getAnomalyAlerts(){
+  const alerts=[];
+  const now=today();const ds=dk(now);
+  const gym=loadGymData();
+  // 1) Days since last gym > avg gap × 1.8
+  if(gym.length>=2){
+    const dates=gym.map(s=>new Date(s.date)).sort((a,b)=>a-b);
+    const gaps=[];
+    for(let i=1;i<dates.length;i++)gaps.push((dates[i]-dates[i-1])/86400000);
+    const avgGap=gaps.reduce((a,b)=>a+b,0)/gaps.length;
+    const lastGymDate=dates[dates.length-1];
+    const daysSinceLast=Math.floor((now-lastGymDate)/86400000);
+    if(daysSinceLast>avgGap*1.8){
+      alerts.push({id:`gym_gap_${ds}`,type:'alert-gym',icon:'⚠️',title:'Gym gap detected',desc:`${daysSinceLast} days since last session (avg gap: ${Math.round(avgGap)} days)`});
+    }
+  }
+  // 2) This week's score >25pts below last week
+  const thisWeekScore=getWeekScore();
+  const lastMon=addDays(getMonday(now),-7);
+  let lastWeekTotal=0,lastWeekDone=0;
+  for(let i=0;i<7;i++){const d=addDays(lastMon,i);const dds=dk(d);allGoals().forEach(g=>{lastWeekTotal++;if(goalDone(dds,g))lastWeekDone++;});}
+  const lastWeekScore=lastWeekTotal?Math.round(lastWeekDone/lastWeekTotal*100):0;
+  if(lastWeekScore>0&&thisWeekScore<lastWeekScore-25){
+    alerts.push({id:`score_drop_${ds}`,type:'alert-score',icon:'📉',title:'Score dip',desc:`This week ${thisWeekScore}% vs last week ${lastWeekScore}% (−${lastWeekScore-thisWeekScore}pts)`});
+  }
+  // 3) Current streak shorter than personal best
+  let curStreak=0;const sd=new Date(now);
+  while(curStreak<365){const dds=dk(sd);const s=getDayScore(dds);if(s===0&&dds!==ds)break;if(s>0)curStreak++;sd.setDate(sd.getDate()-1);}
+  // Find personal best streak
+  let pbStreak=0,runStreak=0;
+  const daysBack=365;
+  for(let i=daysBack;i>=0;i--){const dds=dk(addDays(now,-i));if(getDayScore(dds)>0)runStreak++;else runStreak=0;if(runStreak>pbStreak)pbStreak=runStreak;}
+  if(pbStreak>7&&curStreak<pbStreak&&curStreak<pbStreak*0.5){
+    alerts.push({id:`streak_drop_${ds}`,type:'alert-streak',icon:'🔥',title:'Streak below best',desc:`Current ${curStreak} days vs personal best ${pbStreak} days`});
+  }
+  // Filter dismissed
+  const dismissed=state.dismissedAlerts||[];
+  return alerts.filter(a=>!dismissed.includes(a.id));
+}
+function renderAnomalyAlerts(){
+  const alerts=getAnomalyAlerts();
+  if(!alerts.length)return'';
+  return`<div class="anomaly-alerts">${alerts.map(a=>`<div class="anomaly-banner ${esc(a.type)}" id="anomaly-${esc(a.id)}">
+    <div class="anomaly-banner-icon">${a.icon}</div>
+    <div class="anomaly-banner-body"><div class="anomaly-banner-title">${esc(a.title)}</div><div class="anomaly-banner-desc">${esc(a.desc)}</div></div>
+    <button class="anomaly-dismiss" onclick="dismissAlert('${esc(a.id)}')">×</button>
+  </div>`).join('')}</div>`;
+}
+function dismissAlert(id){
+  if(!Array.isArray(state.dismissedAlerts))state.dismissedAlerts=[];
+  state.dismissedAlerts.push(id);saveState();
+  const el=document.getElementById('anomaly-'+id);if(el)el.remove();
+}
+
+// ── WEEKLY KM TARGET ──
+function renderRunTarget(){
+  const target=state.runTarget||0;
+  const now=today();const mon=getMonday(now);
+  const runs=loadRunData();
+  const weekKm=runs.filter(r=>{const d=new Date(r.date);return d>=mon&&d<=now;}).reduce((s,r)=>s+(r.km||0),0);
+  const pct=target>0?Math.min(100,Math.round(weekKm/target*100)):0;
+  return`<div class="run-target-bar-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Weekly Target</span>
+        ${target>0?`<span style="font-size:13px;font-weight:700;color:${pct>=100?'var(--green)':'var(--accent2)'};">${weekKm.toFixed(1)} / ${target} km</span>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" inputmode="decimal" step="1" placeholder="km" value="${target||''}"
+          style="width:60px;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;font-weight:700;outline:none;text-align:center;"
+          id="run-target-input" onchange="saveRunTarget(this.value)">
+        <span style="font-size:11px;color:var(--text3);font-weight:600;">km/wk</span>
+      </div>
+    </div>
+    ${target>0?`<div class="run-target-bar-track"><div class="run-target-bar-fill" style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent)'};" ></div></div>`:''}
+  </div>`;
+}
+function saveRunTarget(val){
+  const v=parseFloat(val)||0;
+  state.runTarget=v;saveState();
+  toastMsg(v>0?`Target: ${v} km/week`:'Target cleared');
+}
+
+// ── COPY LAST SESSION ──
+function copyLastSession(){
+  const sessions=loadGymData();if(!sessions.length){toastMsg('No previous session found');return;}
+  const last=sessions[sessions.length-1];
+  gymDraft={
+    type:last.type||'Push',
+    exercises:(last.exercises||[]).map(e=>({
+      name:e.name,
+      sets:(e.sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:s.warmup||false}))
+    }))
+  };
+  renderGymLogger();toastMsg('Last session copied — edit before saving');haptic('light');
+}
+
+// ── DAY POPUP MODAL ──
+function openDayModal(ds){
+  renderDayGoals(ds);
+  const content=renderDayModalContent(ds);
+  document.getElementById('day-modal-content').innerHTML=content;
+  openModal('day-modal');
+}
+function renderDayModalContent(ds){
+  const d=new Date(ds);
+  const dayScore=getDayScore(ds);
+  const gym=loadGymData().filter(s=>s.date===ds);
+  const runs=loadRunData().filter(r=>r.date===ds);
+  const goals=allGoals();
+  const scoreColor=dayScore>=80?'var(--green)':dayScore>=50?'var(--accent2)':'var(--text3)';
+  let html=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+    <div>
+      <div style="font-size:13px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;">${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}</div>
+      <div style="font-size:64px;font-weight:800;line-height:1;letter-spacing:-3px;color:${scoreColor};">${dayScore}</div>
+      <div style="font-size:13px;color:var(--text2);font-weight:600;">/ 100 points</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+    ${goals.map(g=>{
+      const done=goalDone(ds,g);
+      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:${done?'rgba(16,185,129,0.07)':'var(--surface2)'};border:1px solid ${done?'rgba(16,185,129,0.25)':'var(--border)'};">
+        ${goalAvatarInline(g.name,28)}
+        <span style="flex:1;font-size:14px;font-weight:700;">${esc(g.name)}</span>
+        <span style="font-size:16px;">${done?'✅':'❌'}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+  if(gym.length){
+    html+=`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px;">Gym</div>
+    ${gym.map(s=>{
+      const workSets=(s.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(ss=>!ss.warmup).length,0);
+      return`<div style="padding:10px 0;border-bottom:1px solid var(--border);"><div style="font-size:14px;font-weight:800;margin-bottom:4px;">${esc(s.type||'Workout')} · ${workSets} sets</div>
+      ${(s.exercises||[]).map(e=>{const ws=(e.sets||[]).filter(ss=>!ss.warmup);const top=ws.length?ws.reduce((b,ss)=>parseFloat(ss.weight||0)>parseFloat(b.weight||0)?ss:b,ws[0]):null;return`<div style="font-size:13px;color:var(--text2);margin-bottom:2px;">${esc(e.name)}${top&&top.weight?` · ${top.weight}kg×${top.reps||'?'}`:''}</div>`}).join('')}</div>`;
+    }).join('')}</div>`;
+  }
+  if(runs.length){
+    html+=`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px;">Running</div>
+    ${runs.map(r=>{
+      const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):'';
+      return`<div style="font-size:14px;font-weight:700;padding:8px 0;border-bottom:1px solid var(--border);">${r.km?r.km+'km':''}${r.time?' · '+r.time:''}${pace?' · '+pace:''}${r.effort?' · '+r.effort:''}</div>`;
+    }).join('')}</div>`;
+  }
+  return html;
+}
+
+// ── SESSION DETAIL MODAL ──
+function openSessionDetail(sessionIdx){
+  const sessions=loadGymData();
+  const s=sessions[sessionIdx];if(!s)return;
+  const workSets=(s.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(ss=>!ss.warmup).length,0);
+  const vol=(s.exercises||[]).reduce((t,e)=>(e.sets||[]).filter(ss=>!ss.warmup).reduce((tt,ss)=>tt+(parseFloat(ss.weight||0)*parseFloat(ss.reps||0)),t),0);
+  let html=`<h3>${esc(s.type||'Workout')}</h3>
+  <div style="font-size:13px;color:var(--text3);font-weight:600;margin-bottom:16px;">${s.date} · ${workSets} sets · ${vol?Math.round(vol)+'kg vol':''}</div>
+  ${(s.exercises||[]).map(e=>{
+    const sets=e.sets||[];
+    return`<div style="margin-bottom:14px;"><div style="font-size:14px;font-weight:800;margin-bottom:8px;">${esc(e.name)}</div>
+      ${sets.map((ss,si)=>`<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:10px;font-weight:800;color:${ss.warmup?'var(--orange)':'var(--text3)'};min-width:20px;">${ss.warmup?'W':si+1}</span>
+        <span style="font-size:14px;font-weight:700;">${ss.weight?ss.weight+'kg':'—'}</span>
+        <span style="font-size:13px;color:var(--text2);">× ${ss.reps||'?'}</span>
+        ${ss.warmup?`<span style="font-size:10px;color:var(--orange);font-weight:700;margin-left:auto;">Warmup</span>`:''}
+      </div>`).join('')}
+    </div>`;
+  }).join('')}
+  <div style="margin-top:8px;">
+    <label class="modal-label">Session Notes</label>
+    <textarea class="modal-input" id="session-notes-input" placeholder="Add notes…" rows="3" style="resize:vertical;">${esc(s.notes||'')}</textarea>
+    <button class="btn-secondary" onclick="saveSessionNotes(${sessionIdx})">Save Notes</button>
+  </div>`;
+  document.getElementById('session-detail-content').innerHTML=html;
+  openModal('session-detail-modal');
+}
+function saveSessionNotes(idx){
+  const sessions=loadGymData();if(!sessions[idx])return;
+  sessions[idx].notes=(document.getElementById('session-notes-input').value||'').trim();
+  saveGymData(sessions);toastMsg('Notes saved');haptic('light');
+}
+
+// ── WEEK PLAN ──
+const PLAN_TYPES=['Push','Pull','Legs','Core','Full Body','Run','Rest','Off'];
+function getTodayPlanType(){
+  if(!state.weekPlan||!Array.isArray(state.weekPlan))return null;
+  const dow=(today().getDay()+6)%7; // 0=Mon
+  return state.weekPlan[dow]||null;
+}
+function renderWeekPlanSection(){
+  const plan=state.weekPlan||(new Array(7).fill('Rest'));
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core','Full Body':'active-full',Run:'active-run',Rest:'active-rest',Off:'active-off'};
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Training Plan</span></div>
+    <div class="week-plan-grid" id="week-plan-grid">
+      ${days.map((day,i)=>{
+        const cur=plan[i]||'Rest';
+        const cls=typeColorClass[cur]||'active-rest';
+        return`<div class="week-plan-day">
+          <div class="week-plan-day-label">${day}</div>
+          <select class="week-plan-pill ${cls}" id="wplan-${i}" onchange="updateWeekPlanPill(${i},this.value)">
+            ${PLAN_TYPES.map(t=>`<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn-primary" onclick="saveWeekPlan()" style="margin-top:8px;">Save Plan</button>
+    ${state.weekPlan?`<button class="btn-ghost" style="width:100%;color:var(--red);" onclick="clearWeekPlan()">Remove Plan</button>`:''}
+  </div>`;
+}
+let _weekPlanDraft=null;
+function updateWeekPlanPill(idx,val){
+  if(!_weekPlanDraft)_weekPlanDraft=[...(state.weekPlan||new Array(7).fill('Rest'))];
+  _weekPlanDraft[idx]=val;
+  // Update pill color class
+  const el=document.getElementById(`wplan-${idx}`);if(!el)return;
+  const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core','Full Body':'active-full',Run:'active-run',Rest:'active-rest',Off:'active-off'};
+  el.className=`week-plan-pill ${typeColorClass[val]||'active-rest'}`;
+}
+function saveWeekPlan(){
+  const plan=[];
+  for(let i=0;i<7;i++){
+    const el=document.getElementById(`wplan-${i}`);
+    plan.push(el?el.value:'Rest');
+  }
+  state.weekPlan=plan;_weekPlanDraft=null;saveState();toastMsg('Plan saved');haptic('success');
+  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+}
+function clearWeekPlan(){
+  if(!confirm('Remove training plan?'))return;
+  state.weekPlan=null;_weekPlanDraft=null;saveState();toastMsg('Plan removed');
+  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+}
+function renderTodayPlanCard(){
+  const t=getTodayPlanType();if(!t||t==='Rest'||t==='Off')return'';
+  const isGym=['Push','Pull','Legs','Core','Full Body'].includes(t);
+  const isRun=t==='Run';
+  const tab=isRun?'run':'gym';
+  return`<div class="session-card" style="background:linear-gradient(135deg,rgba(16,185,129,0.12) 0%,rgba(16,185,129,0.04) 100%);border-color:rgba(16,185,129,0.3);" onclick="showPage('train');switchTrainTab('${tab}')${isGym?`;gymSetType('${t}')`:''}>
+    <div class="session-card-label" style="color:var(--green);">Today's Plan</div>
+    <div class="session-card-title">${esc(t)}</div>
+    <div class="session-card-meta">Tap to start</div>
+    <div class="session-card-arrow" style="background:var(--green);box-shadow:0 4px 12px rgba(16,185,129,0.4);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </div>`;
+}
+
+// ── EXERCISE LIBRARY & MUSCLE TRACKING ──
+const DEFAULT_MUSCLE_MAP={
+  'Bench Press':['Chest','Triceps','Shoulders'],
+  'Incline Bench Press':['Chest','Triceps','Shoulders'],
+  'Dumbbell Fly':['Chest'],
+  'Cable Fly':['Chest'],
+  'Dip':['Chest','Triceps'],
+  'Squat':['Quads','Glutes','Hamstrings'],
+  'Leg Press':['Quads','Glutes'],
+  'Lunge':['Quads','Glutes'],
+  'Romanian Deadlift':['Hamstrings','Glutes'],
+  'Leg Curl':['Hamstrings'],
+  'Leg Extension':['Quads'],
+  'Calf Raise':['Calves'],
+  'Deadlift':['Back','Hamstrings','Glutes'],
+  'Pull Up':['Back','Biceps'],
+  'Chin Up':['Back','Biceps'],
+  'Barbell Row':['Back','Biceps'],
+  'Cable Row':['Back','Biceps'],
+  'Lat Pulldown':['Back','Biceps'],
+  'Face Pull':['Shoulders','Back'],
+  'Overhead Press':['Shoulders','Triceps'],
+  'Lateral Raise':['Shoulders'],
+  'Front Raise':['Shoulders'],
+  'Bicep Curl':['Biceps'],
+  'Hammer Curl':['Biceps'],
+  'Tricep Pushdown':['Triceps'],
+  'Skull Crusher':['Triceps'],
+  'Plank':['Core'],
+  'Ab Wheel':['Core'],
+  'Cable Crunch':['Core'],
+  'Hip Thrust':['Glutes','Hamstrings'],
+};
+const ALL_MUSCLE_GROUPS=['Chest','Back','Shoulders','Biceps','Triceps','Quads','Hamstrings','Glutes','Calves','Core'];
+function getExerciseMuscles(name){
+  if(!name)return[];
+  const prog=loadGymProg();
+  const nameLower=name.toLowerCase();
+  // Check user tags first
+  if(prog[name]&&prog[name].muscles&&prog[name].muscles.length)return prog[name].muscles;
+  // Case-insensitive partial match against DEFAULT_MUSCLE_MAP
+  for(const [key,muscles] of Object.entries(DEFAULT_MUSCLE_MAP)){
+    if(key.toLowerCase()===nameLower||key.toLowerCase().includes(nameLower)||nameLower.includes(key.toLowerCase()))return muscles;
+  }
+  return[];
+}
+
+let _muscleTagExercise='';
+let _muscleTagSelected=[];
+function openMuscleTagModal(name){
+  _muscleTagExercise=name;
+  const prog=loadGymProg();
+  _muscleTagSelected=[...((prog[name]&&prog[name].muscles)||getExerciseMuscles(name)||[])];
+  document.getElementById('muscle-tag-modal-title').textContent=`Tag: ${name}`;
+  document.getElementById('muscle-check-grid').innerHTML=ALL_MUSCLE_GROUPS.map(m=>{
+    const sel=_muscleTagSelected.includes(m);
+    return`<div class="muscle-check-item${sel?' selected':''}" onclick="toggleMuscleTag('${m}',this)" id="mcheck-${m}">
+      <span>${m}</span>
+      <div class="muscle-check-box">${sel?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+    </div>`;
+  }).join('');
+  openModal('muscle-tag-modal');
+}
+function toggleMuscleTag(muscle,el){
+  const idx=_muscleTagSelected.indexOf(muscle);
+  if(idx>=0){_muscleTagSelected.splice(idx,1);el.classList.remove('selected');el.querySelector('.muscle-check-box').innerHTML='';}
+  else{_muscleTagSelected.push(muscle);el.classList.add('selected');el.querySelector('.muscle-check-box').innerHTML='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';}
+}
+function saveMuscleTag(){
+  if(!_muscleTagExercise)return;
+  const prog=loadGymProg();
+  if(!prog[_muscleTagExercise])prog[_muscleTagExercise]={history:[]};
+  prog[_muscleTagExercise].muscles=[..._muscleTagSelected];
+  saveGymProg(prog);
+  closeModal('muscle-tag-modal');toastMsg('Muscle tags saved');haptic('success');
+}
+function renderMuscleVolume(){
+  const now=today();const mon=getMonday(now);
+  const gym=loadGymData().filter(s=>{const d=new Date(s.date);return d>=mon&&d<=now;});
+  if(!gym.length)return'';
+  // Count work sets per muscle group
+  const counts={};ALL_MUSCLE_GROUPS.forEach(m=>{counts[m]=0;});
+  gym.forEach(s=>{
+    (s.exercises||[]).forEach(e=>{
+      const muscles=getExerciseMuscles(e.name);
+      const workSets=(e.sets||[]).filter(ss=>!ss.warmup).length;
+      muscles.forEach(m=>{if(counts[m]!==undefined)counts[m]+=workSets;});
+    });
+  });
+  const largeMuscles=['Chest','Back','Quads','Hamstrings','Glutes','Shoulders'];
+  const smallMuscles=['Biceps','Triceps','Calves','Core'];
+  const hasAny=Object.values(counts).some(v=>v>0);
+  if(!hasAny)return'';
+  const targetMin={};const targetMax={};
+  ALL_MUSCLE_GROUPS.forEach(m=>{
+    if(largeMuscles.includes(m)){targetMin[m]=10;targetMax[m]=20;}
+    else{targetMin[m]=6;targetMax[m]=14;}
+  });
+  function barColor(sets,min,max){if(sets===0)return'var(--text3)';if(sets<min)return'var(--red)';if(sets===min)return'var(--orange)';if(sets<=max)return'var(--green)';return'#a855f7';}
+  const rows=ALL_MUSCLE_GROUPS.map(m=>{
+    const sets=counts[m];const min=targetMin[m];const max=targetMax[m];
+    const pct=Math.min(100,Math.round(sets/max*100));
+    const color=barColor(sets,min,max);
+    return`<div class="muscle-vol-row">
+      <span class="muscle-vol-name">${m}</span>
+      <div class="muscle-vol-track"><div class="muscle-vol-fill" style="width:${pct}%;background:${color};"></div></div>
+      <span class="muscle-vol-label" style="color:${color};">${sets}</span>
+    </div>`;
+  }).join('');
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Muscle Volume</span><span class="chart-card-val">this week</span></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Work sets · red=below target, green=in range, purple=above max</div>
+    ${rows}
+  </div>`;
+}
+
+// ── PATCH renderToday to inject alerts + today's plan ──
+const _origRenderToday=renderToday;
+renderToday=function(){
+  _origRenderToday();
+  // Inject anomaly alerts below date label, above score
+  const alertHtml=renderAnomalyAlerts();
+  if(alertHtml){
+    const scoreWrap=document.querySelector('.today-score-wrap');
+    if(scoreWrap&&!document.querySelector('.anomaly-alerts')){
+      const div=document.createElement('div');div.innerHTML=alertHtml;
+      scoreWrap.parentNode.insertBefore(div.firstChild,scoreWrap);
+    }
+  }
+  // Inject today's plan card
+  if(state.weekPlan){
+    const planHtml=renderTodayPlanCard();
+    if(planHtml){
+      const wrap=document.getElementById('session-card-wrap');
+      if(wrap&&!wrap.querySelector('.session-card[style*="green"]')){
+        wrap.insertAdjacentHTML('afterbegin',planHtml);
+      }
+    }
+  }
+};
+
+// ── PATCH renderRunSection to inject run target ──
+const _origRenderRunSection=renderRunSection;
+renderRunSection=function(){
+  _origRenderRunSection();
+  const el=document.getElementById('run-content');
+  if(el){
+    const targetHtml=renderRunTarget();
+    el.insertAdjacentHTML('afterbegin',targetHtml);
+  }
+};
+
+// ── PATCH renderGymSection to inject copy last session button ──
+const _origRenderGymSection=renderGymSection;
+renderGymSection=function(){
+  _origRenderGymSection();
+  // After render, if we're showing the start card, inject copy button
+  const gymContent=document.getElementById('gym-content');
+  if(gymContent&&!gymDraft){
+    const startCard=gymContent.querySelector('.gym-start-card');
+    if(startCard){
+      const startBtn=startCard.querySelector('.btn-primary');
+      if(startBtn&&!startCard.querySelector('.copy-last-btn')){
+        const copyBtn=document.createElement('button');
+        copyBtn.className='btn-secondary copy-last-btn';
+        copyBtn.style.marginTop='8px';
+        copyBtn.textContent='Copy last session';
+        copyBtn.onclick=copyLastSession;
+        startBtn.after(copyBtn);
+      }
+    }
+  }
+};
+
+// ── PATCH renderGymLogger to inject notes field and auto-select plan type ──
+const _origRenderGymLogger=renderGymLogger;
+renderGymLogger=function(){
+  // Auto-select planned type if weekPlan set and user hasn't manually changed
+  if(state.weekPlan&&gymDraft&&!gymDraft._typeManual){
+    const planned=getTodayPlanType();
+    if(planned&&planned!=='Rest'&&planned!=='Off'&&planned!=='Run')gymDraft.type=planned;
+  }
+  _origRenderGymLogger();
+  // Inject notes field at bottom (before save button row)
+  const gymContent=document.getElementById('gym-content');
+  if(gymContent&&gymDraft){
+    const saveBtn=gymContent.querySelector('.btn-primary');
+    if(saveBtn&&!gymContent.querySelector('#gym-notes-field')){
+      const notesWrap=document.createElement('div');
+      notesWrap.style.marginBottom='10px';
+      notesWrap.innerHTML=`<label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label><textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;">${esc(gymDraft.notes||'')}</textarea>`;
+      saveBtn.parentNode.insertBefore(notesWrap,saveBtn);
+      document.getElementById('gym-notes-field').oninput=function(){gymDraft.notes=this.value;};
+    }
+  }
+};
+
+// ── PATCH gymSetType to mark manual selection ──
+const _origGymSetType=gymSetType;
+gymSetType=function(t){
+  if(gymDraft)gymDraft._typeManual=true;
+  _origGymSetType(t);
+};
+
+// ── PATCH saveGymSession to preserve notes ──
+const _origSaveGymSession=saveGymSession;
+saveGymSession=function(){
+  const notesEl=document.getElementById('gym-notes-field');
+  if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
+  // Save notes on the pushed session
+  const exercises=(gymDraft.exercises||[]).filter(e=>(e.name||'').trim()&&(e.sets||[]).length);
+  if(!exercises.length){toastMsg('Add at least one exercise');return;}
+  const sessions=loadGymData();
+  sessions.push({date:dk(today()),type:gymDraft.type,exercises,notes:gymDraft.notes||'',ts:Date.now()});
+  saveGymData(sessions);
+  const prog=loadGymProg();
+  exercises.forEach(e=>{if(!prog[e.name])prog[e.name]={history:[]};prog[e.name].history.push({date:dk(today()),sets:e.sets});});
+  saveGymProg(prog);
+  const d=dk(today());
+  if(!state.data[`${d}:session:gym`])state.data[`${d}:session:gym`]=[];
+  state.data[`${d}:session:gym`].push(gymDraft.type);
+  saveState();gymDraft=null;
+  toastMsg('Session saved');haptic('success');renderGymSection();
+};
+
+// ── PATCH renderTrainHistory to make gym rows tappable ──
+const _origRenderTrainHistory=renderTrainHistory;
+renderTrainHistory=function(){
+  const el=document.getElementById('train-history-content');
+  const gymData=loadGymData();
+  const gymCount=gymData.length;
+  const all=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...loadRunData().map(r=>({...r,_t:'run'}))]
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,20);
+  if(!all.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
+  const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare Sessions</button>`:'';
+  el.innerHTML=compareBtn+`<div class="chart-card">${all.map(e=>e._t==='gym'
+    ?`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openSessionDetail(${e._idx})">${goalAvatarInline('Gym')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(e.type||'Workout')}</div><div style="font-size:12px;color:var(--text3);">${e.date}</div></div><div style="font-size:13px;color:var(--text2);font-weight:600;">${(e.exercises||[]).length} ex</div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>`
+    :`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Running')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.km?e.km+'km':e.time||'Run'}</div><div style="font-size:12px;color:var(--text3);">${e.date}${e.effort?' · '+e.effort:''}</div></div><div style="font-size:13px;color:var(--accent2);font-weight:700;">${e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):''}</div></div>`
+  ).join('')}</div>`;
+};
+
+// ── PATCH renderMe to add week plan + training plan section ──
+const _origRenderMe=renderMe;
+renderMe=function(){
+  _origRenderMe();
+  const el=document.getElementById('me-content');
+  // Insert training plan section before settings row
+  const settingsCard=el.querySelector('.chart-card:last-of-type');
+  if(settingsCard){
+    const planDiv=document.createElement('div');
+    planDiv.innerHTML=renderWeekPlanSection();
+    settingsCard.parentNode.insertBefore(planDiv.firstChild,settingsCard);
+  }
+};
+
+// ── PATCH renderTrends to add muscle volume ──
+const _origRenderTrends=renderTrends;
+renderTrends=function(){
+  _origRenderTrends();
+  const el=document.getElementById('trends-content');
+  const mv=renderMuscleVolume();
+  if(mv){el.insertAdjacentHTML('afterbegin',mv);}
+};
+
+// ── PATCH week strip day tap to open day modal ──
+// Override the onclick handlers in renderToday
+const _origRenderToday2=renderToday;
+renderToday=function(){
+  _origRenderToday2();
+  // Override strip onclick to open day modal
+  document.querySelectorAll('.week-day').forEach(el=>{
+    if(el.onclick){
+      const origClick=el.onclick;
+      el.onclick=function(){
+        // Extract ds from original onclick by running it then opening modal
+        origClick.call(this);
+        // find ds from data or re-derive
+        const num=el.querySelector('.week-day-num');if(!num)return;
+        const dayNum=parseInt(num.textContent);
+        const now=today();
+        const baseMonday=addDays(getMonday(now),weekOffset*7);
+        for(let i=0;i<7;i++){const d=addDays(baseMonday,i);if(d.getDate()===dayNum&&d<=now){openDayModal(dk(d));break;}}
+      };
+    }
+  });
+};
+
+// ── PATCH train subhead to show today's plan ──
+function updateTrainSubhead(){
+  const planType=getTodayPlanType();
+  const subhead=document.getElementById('train-subhead');
+  if(subhead){
+    if(planType&&planType!=='Rest'&&planType!=='Off')subhead.textContent=`Today: ${planType}`;
+    else subhead.textContent='Log your workout';
+  }
+}
+const _origRenderTrain=renderTrain;
+renderTrain=function(){
+  _origRenderTrain();
+  updateTrainSubhead();
+};
+
 // close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open');});

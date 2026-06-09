@@ -1441,59 +1441,75 @@ function renderTrendsRunAnalysis(){
     </div>`;
   })();
 
-  // 2. Pace progression — line chart
+  // 2. Pace progression — individual run dots
   const paceChart=(()=>{
-    const weeks=trimmed.filter(w=>w.avgPace);
-    if(weeks.length<2) return `<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Pace Progression</span></div><div class="empty-state" style="padding:16px 0 0;">Log timed runs over 2+ weeks to see pace trend.</div></div>`;
-    const W=320,H=150,PL=38,PR=10,PT=14,PB=24;
+    const EFFORT_COL=e=>{const el=(e||'').toLowerCase();if(el.includes('easy')||el.includes('recovery')||el.includes('steady'))return'#34d399';if(el.includes('tempo')||el.includes('fartlek'))return'#fb923c';if(el.includes('hard')||el.includes('interval'))return'#f87171';if(el.includes('long'))return'#818cf8';if(el.includes('race'))return'#fbbf24';return'var(--text2)';};
+    const paceRuns=[...withTime].sort((a,b)=>a.date.localeCompare(b.date));
+    if(paceRuns.length<3) return `<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Pace Progression</span></div><div class="empty-state" style="padding:16px 0 0;">Log 3+ timed runs to see pace progression.</div></div>`;
+    const W=320,H=180,PL=42,PR=10,PT=16,PB=26;
     const chartW=W-PL-PR,chartH=H-PT-PB;
-    const paceVals=weeks.map(w=>w.avgPace);
-    const minP=Math.min(...paceVals)-0.002,maxP=Math.max(...paceVals)+0.002;
-    const range=Math.max(maxP-minP,0.001);
+    // pace in km/s — higher = faster
+    const paceVals=paceRuns.map(r=>r.km/parseTimeToSecs(r.time));
     const bestP=Math.max(...paceVals);
-    const py=p=>PT+((maxP-p)/range)*chartH;
-    const px=i=>PL+(i/Math.max(weeks.length-1,1))*chartW;
+    // Pad range by 30s worth of pace on each side
+    const pad=1/120;
+    const minP=Math.min(...paceVals)-pad,maxP=Math.max(...paceVals)+pad;
+    const rangeP=Math.max(maxP-minP,0.001);
+    const py=p=>PT+((maxP-p)/rangeP)*chartH;
+    const px=i=>PL+(i/Math.max(paceRuns.length-1,1))*chartW;
     let svg='';
-    // Gridlines
-    const tickStep=1/180;
-    for(let t=Math.ceil(minP/tickStep)*tickStep;t<=maxP;t+=tickStep){
+    // Y-axis gridlines every 30s of pace (1/120 km/s = 30s/km)
+    const tickStep=1/120;
+    const firstTick=Math.ceil(minP/tickStep)*tickStep;
+    for(let t=firstTick;t<=maxP+0.0001;t+=tickStep){
       const y=py(t);if(y<PT-2||y>PT+chartH+2)continue;
-      svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`;
-      svg+=`<text x="${(PL-4).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${fmtPace(t)}</text>`;
+      svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
+      svg+=`<text x="${(PL-5).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${fmtPace(t)}</text>`;
     }
-    svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--border)" stroke-width="1.5"/>`;
-    svg+=`<line x1="${PL}" y1="${(PT+chartH).toFixed(1)}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--border)" stroke-width="1.5"/>`;
-    // Area + line
-    const areaD=`M${px(0).toFixed(1)},${py(weeks[0].avgPace).toFixed(1)} `+weeks.slice(1).map((_,i)=>`L${px(i+1).toFixed(1)},${py(weeks[i+1].avgPace).toFixed(1)}`).join(' ')+` L${px(weeks.length-1).toFixed(1)},${(PT+chartH).toFixed(1)} L${px(0).toFixed(1)},${(PT+chartH).toFixed(1)} Z`;
-    svg+=`<path d="${areaD}" fill="var(--accent)" opacity="0.07"/>`;
-    const lineD=`M${px(0).toFixed(1)},${py(weeks[0].avgPace).toFixed(1)} `+weeks.slice(1).map((_,i)=>`L${px(i+1).toFixed(1)},${py(weeks[i+1].avgPace).toFixed(1)}`).join(' ');
-    svg+=`<path d="${lineD}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`;
-    // Dots
-    const lastIdx=weeks.length-1;
-    weeks.forEach((w,i)=>{
-      const cx=px(i),cy=py(w.avgPace);
-      const isBest=w.avgPace===bestP,isLast=i===lastIdx;
-      const col=isBest?'var(--green)':'var(--accent)';
-      svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${isBest||isLast?5:3}" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
+    // Axes
+    svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
+    svg+=`<line x1="${PL}" y1="${(PT+chartH).toFixed(1)}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
+    // Connect dots with a thin line
+    const lineD=`M${px(0).toFixed(1)},${py(paceVals[0]).toFixed(1)} `+paceVals.slice(1).map((_,i)=>`L${px(i+1).toFixed(1)},${py(paceVals[i+1]).toFixed(1)}`).join(' ');
+    svg+=`<path d="${lineD}" fill="none" stroke="var(--text3)" stroke-width="1" opacity="0.3" stroke-linejoin="round"/>`;
+    // Dots coloured by effort
+    paceRuns.forEach((r,i)=>{
+      const p=paceVals[i];
+      const cx=px(i),cy=py(p);
+      const isBest=p===bestP,isLast=i===paceRuns.length-1;
+      const col=isBest?'#fbbf24':EFFORT_COL(r.effort);
+      const radius=isBest?6:isLast?5:4;
+      svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius}" fill="${col}" stroke="var(--surface)" stroke-width="1.5" opacity="0.9"/>`;
       if(isBest||isLast){
-        const anchor=i===0?'start':i===lastIdx?'end':'middle';
-        svg+=`<text x="${cx.toFixed(1)}" y="${(cy-9).toFixed(1)}" text-anchor="${anchor}" font-size="8.5" fill="${isBest?'var(--green)':'var(--text2)'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(w.avgPace)}</text>`;
+        const anchor=i===0?'start':i===paceRuns.length-1?'end':'middle';
+        const labelY=cy-(radius+5);
+        svg+=`<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="${isBest?'#fbbf24':'var(--text)'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(p)}</text>`;
       }
     });
-    // X labels (month on change)
+    // X-axis: show date on month change
     let lastMonth=null;
-    weeks.forEach((w,i)=>{
-      const d=new Date(w.monStr+'T12:00:00');
+    paceRuns.forEach((r,i)=>{
+      const d=new Date(r.date+'T12:00:00');
       const month=d.toLocaleDateString('en-GB',{month:'short'});
-      if(month!==lastMonth){lastMonth=month;const cx=px(i);const anchor=i===0?'start':i===weeks.length-1?'end':'middle';svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${anchor}" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;}
+      if(month!==lastMonth){
+        lastMonth=month;
+        const cx=px(i);
+        const anchor=i===0?'start':i===paceRuns.length-1?'end':'middle';
+        svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+16).toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;
+      }
     });
-    const improving=weeks[lastIdx].avgPace>=weeks[0].avgPace;
+    const recentPace=paceVals.slice(-3).reduce((a,b)=>a+b,0)/3;
+    const earlyPace=paceVals.slice(0,3).reduce((a,b)=>a+b,0)/3;
+    const improving=recentPace>=earlyPace;
     return `<div class="chart-card">
       <div class="chart-card-header"><span class="chart-card-title">Pace Progression</span><span class="chart-card-val" style="color:${improving?'var(--green)':'var(--orange)'};">${improving?'↑ Getting faster':'↓ Pace slowing'}</span></div>
       <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
-      <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:var(--green);"></div>Best week</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:var(--accent);opacity:0.7;"></div>Latest</div>
+      <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#34d399;"></div>Easy</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#818cf8;"></div>Long</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#fb923c;"></div>Tempo</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#f87171;"></div>Hard</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#fbbf24;"></div>Best</div>
       </div>
     </div>`;
   })();

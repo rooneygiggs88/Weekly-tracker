@@ -1827,13 +1827,6 @@ function renderTrendsRunAnalysis(){
     const cxArr=longRuns.map((_,i)=>PL+slotW*i+slotW/2);
     const cyArr=longRuns.map(r=>PT+chartH-Math.max(4,Math.round((r.km/maxKm)*chartH)));
     const trendLineD=cxArr.map((x,i)=>`${i===0?'M':'L'}${x.toFixed(1)},${cyArr[i].toFixed(1)}`).join(' ');
-    // Linear regression for trend line
-    const n2=longRuns.length;
-    const xs=cxArr,ys=cyArr;
-    const mx=xs.reduce((a,b)=>a+b,0)/n2,my=ys.reduce((a,b)=>a+b,0)/n2;
-    const slope=xs.reduce((a,x,i)=>a+(x-mx)*(ys[i]-my),0)/xs.reduce((a,x)=>a+(x-mx)**2,0);
-    const intercept=my-slope*mx;
-    const tx1=xs[0],ty1=slope*tx1+intercept,tx2=xs[n2-1],ty2=slope*tx2+intercept;
     const bars=longRuns.map((r,i)=>{
       const cx=cxArr[i],x=cx-barW/2;
       const bh=Math.max(4,Math.round((r.km/maxKm)*chartH));
@@ -1842,9 +1835,9 @@ function renderTrendsRunAnalysis(){
       const fill=isPB?'var(--orange)':'var(--green)';
       const d=new Date(r.date+'T12:00:00');
       const dl=`${d.getDate()}/${d.getMonth()+1}`;
-      const pbBadge=isPB?`<text x="${cx.toFixed(1)}" y="${(by-5).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--orange)" font-family="-apple-system,sans-serif" font-weight="800">PB</text>`:'';
-      const valLabel=`<text x="${cx.toFixed(1)}" y="${(by-2).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="${isPB?'var(--orange)':isLast?'var(--text)':'var(--text2)'}" font-family="-apple-system,sans-serif" font-weight="800">${r.km.toFixed(1)}</text>`;
-      return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${fill}" opacity="0.85"/>${pbBadge}${valLabel}<text x="${cx.toFixed(1)}" y="${(H-1).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif">${dl}</text>`;
+      const labelY=(by-4).toFixed(1);
+      const valLabel=`<text x="${cx.toFixed(1)}" y="${labelY}" text-anchor="middle" font-size="8.5" fill="${isPB?'var(--orange)':isLast?'var(--text)':'var(--text2)'}" font-family="-apple-system,sans-serif" font-weight="800">${isPB?'★ ':''  }${r.km.toFixed(1)}</text>`;
+      return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${fill}" opacity="0.85"/>${valLabel}<text x="${cx.toFixed(1)}" y="${(H-1).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif">${dl}</text>`;
     }).join('');
     const latest=longRuns[longRuns.length-1],prev=longRuns[longRuns.length-2];
     const diff=latest.km-prev.km;
@@ -1853,7 +1846,6 @@ function renderTrendsRunAnalysis(){
       <div class="chart-card-header"><span class="chart-card-title">Long Run Progression</span><span class="chart-card-val" style="color:${diff>=0?'var(--green)':'var(--text3)'};">${trend}</span></div>
       <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;">
         ${bars}
-        <line x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-dasharray="5,4"/>
       </svg>
     </div>`;
   })();

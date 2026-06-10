@@ -2367,54 +2367,44 @@ function renderBodyCompCard(health){
   if(!latestW&&!latestBf){
     return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div></div>`;
   }
-  // Scatter plot: weight (X) vs body fat % (Y), only entries with both values
-  const scatterPts=health.filter(e=>e.weight&&e.bodyFat!=null&&e.bodyFat>0).slice(-40);
-  const W=300,H=160,PL=30,PR=12,PT=10,PB=24;
-  const chartW=W-PL-PR,chartH=H-PT-PB;
-  let chart='';
-  if(scatterPts.length>=2){
-    const sws=scatterPts.map(e=>e.weight),sbf=scatterPts.map(e=>e.bodyFat);
-    const minW=Math.min(...sws),maxW=Math.max(...sws);
-    const minBf=Math.min(...sbf),maxBf=Math.max(...sbf);
-    const wPad=(maxW-minW)*0.15||0.5,bfPad=(maxBf-minBf)*0.15||0.5;
-    const axMinW=minW-wPad,axMaxW=maxW+wPad,axMinBf=minBf-bfPad,axMaxBf=maxBf+bfPad;
-    const px=w=>PL+((w-axMinW)/(axMaxW-axMinW))*chartW;
-    const py=b=>PT+((axMaxBf-b)/(axMaxBf-axMinBf))*chartH;
-    const total=scatterPts.length;
-    // Gridlines
-    let grid='';
-    const wTick=((axMaxW-axMinW)/4);
-    for(let i=0;i<=4;i++){const x=PL+i*(chartW/4);grid+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${PT+chartH}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2,3"/>`;const val=axMinW+i*wTick;grid+=`<text x="${x.toFixed(1)}" y="${PT+chartH+14}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${val.toFixed(1)}</text>`;}
-    const bfTick=((axMaxBf-axMinBf)/3);
-    for(let i=0;i<=3;i++){const y=PT+i*(chartH/3);grid+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+chartW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2,3"/>`;const val=axMaxBf-i*bfTick;grid+=`<text x="${(PL-4).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${val.toFixed(1)}</text>`;}
-    // Axis labels
-    grid+=`<text x="${(PL+chartW/2).toFixed(1)}" y="${H}" text-anchor="middle" font-size="8" font-weight="700" fill="var(--text3)" font-family="-apple-system,sans-serif">kg</text>`;
-    grid+=`<text x="6" y="${(PT+chartH/2).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="700" fill="var(--text3)" font-family="-apple-system,sans-serif" transform="rotate(-90,6,${(PT+chartH/2).toFixed(1)})">bf%</text>`;
-    // Dots — faded oldest to bright newest, connected by thin path
-    const pathD=scatterPts.map((e,i)=>`${i===0?'M':'L'}${px(e.weight).toFixed(1)},${py(e.bodyFat).toFixed(1)}`).join(' ');
-    grid+=`<path d="${pathD}" fill="none" stroke="var(--accent2)" stroke-width="1" opacity="0.2"/>`;
-    const dots=scatterPts.map((e,i)=>{
-      const isLast=i===total-1;
-      const opacity=(0.25+(i/total)*0.75).toFixed(2);
-      const r=isLast?5:3;
-      const col=isLast?'#818cf8':'#6366f1';
-      const label=isLast?`<text x="${(px(e.weight)+7).toFixed(1)}" y="${(py(e.bodyFat)+4).toFixed(1)}" font-size="8" font-weight="800" fill="#818cf8" font-family="-apple-system,sans-serif">${e.weight}kg · ${e.bodyFat}%</text>`:'';
-      return`<circle cx="${px(e.weight).toFixed(1)}" cy="${py(e.bodyFat).toFixed(1)}" r="${r}" fill="${col}" opacity="${opacity}"/>${label}`;
-    }).join('');
-    chart=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;margin-top:12px;overflow:visible;">${grid}${dots}</svg>`;
+  // Two sparklines: weight over time, body fat over time
+  function sparkline(pts,col,unit,W=300,H=56){
+    if(pts.length<2)return'';
+    const PL=32,PR=8,PT=6,PB=18;
+    const cW=W-PL-PR,cH=H-PT-PB;
+    const vals=pts.map(p=>p[1]);
+    const mn=Math.min(...vals),mx=Math.max(...vals);
+    const pad=(mx-mn)*0.2||0.3;
+    const axMn=mn-pad,axMx=mx+pad,rng=axMx-axMn;
+    const px=(i)=>PL+(i/(pts.length-1))*cW;
+    const py=(v)=>PT+((axMx-v)/rng)*cH;
+    const pathD=pts.map((p,i)=>`${i===0?'M':'L'}${px(i).toFixed(1)},${py(p[1]).toFixed(1)}`).join(' ');
+    // Y axis ticks (3)
+    let svg='';
+    for(let i=0;i<=2;i++){const v=axMx-i*(rng/2);const y=PT+i*(cH/2);svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+cW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;svg+=`<text x="${(PL-3).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${v.toFixed(1)}</text>`;}
+    // Date labels first and last
+    const fmt=d=>{const dt=new Date(d+'T12:00:00');return`${dt.getDate()}/${dt.getMonth()+1}`;};
+    svg+=`<text x="${PL}" y="${H-2}" text-anchor="start" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${fmt(pts[0][0])}</text>`;
+    svg+=`<text x="${PL+cW}" y="${H-2}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${fmt(pts[pts.length-1][0])}</text>`;
+    // Line + last dot + last label
+    const lastX=px(pts.length-1),lastY=py(pts[pts.length-1][1]);
+    svg+=`<path d="${pathD}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
+    svg+=`<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3" fill="${col}"/>`;
+    svg+=`<text x="${(lastX+5).toFixed(1)}" y="${(lastY+3).toFixed(1)}" font-size="8" font-weight="800" fill="${col}" font-family="-apple-system,sans-serif">${pts[pts.length-1][1]}${unit}</text>`;
+    return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible;">${svg}</svg>`;
   }
+  const wPts=health.filter(e=>e.weight).map(e=>[e.date,e.weight]);
+  const bPts=health.filter(e=>e.bodyFat>0).map(e=>[e.date,e.bodyFat]);
+  const chart=`<div style="margin-top:10px;">
+    ${wPts.length>=2?`<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Weight</div>${sparkline(wPts,'#ef4444','kg')}</div>`:''}
+    ${bPts.length>=2?`<div><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Body Fat</div>${sparkline(bPts,'#818cf8','%')}</div>`:''}
+  </div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);margin-bottom:12px;padding-bottom:12px;">
       <div>${latestW?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestW.weight}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div>${wDiff?`<div style="font-size:13px;font-weight:700;color:${parseFloat(wDiff)>0?'var(--red)':'var(--green)'};margin-top:2px;">${parseFloat(wDiff)>0?'+':''}${wDiff} kg</div>`:''}<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Weight</div>`:'<div style="font-size:13px;color:var(--text3);">No weight yet</div>'}</div>
       <div style="text-align:right;">${latestBf?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestBf.bodyFat}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:2px;">%</span></div>${bDiff?`<div style="font-size:13px;font-weight:700;color:${parseFloat(bDiff)>0?'var(--red)':'var(--green)'};margin-top:2px;text-align:right;">${parseFloat(bDiff)>0?'+':''}${bDiff}%</div>`:''}<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Body Fat</div>`:'<div style="font-size:13px;color:var(--text3);">No body fat yet</div>'}
         <button onclick="openHealthModal()" style="margin-top:6px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
       </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-      <div style="width:8px;height:8px;border-radius:50%;background:#6366f1;opacity:0.4;flex-shrink:0;"></div>
-      <span style="font-size:10px;color:var(--text3);font-weight:600;">Older</span>
-      <div style="width:8px;height:8px;border-radius:50%;background:#818cf8;flex-shrink:0;margin-left:6px;"></div>
-      <span style="font-size:10px;color:var(--text3);font-weight:600;">Most recent</span>
     </div>
     ${chart}
     ${(()=>{

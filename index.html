@@ -2519,7 +2519,7 @@ function renderVapingSection(){
       </div>
       ${renderVapingChart(data)}
       <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px;">
-        ${data.slice(-5).reverse().map(e=>`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.puffs||0} puffs${e.mg?' · '+e.mg+'mg':''}</span><span style="font-size:12px;color:var(--text3);">${e.date}${e.note?' · '+esc(e.note):''}</span></div>`).join('')}
+        ${data.slice(-5).reverse().map(e=>{const dt=new Date(e.date+'T12:00:00');const dl=`${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;return`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.puffs||0} puffs${e.mg?' · '+e.mg+'mg':''}</span><span style="font-size:12px;color:var(--text3);">${dl}${e.note?' · '+esc(e.note):''}</span></div>`;}).join('')}
       </div>`:`<div class="empty-state" style="padding:16px 0;"><strong>No nicotine logged</strong>Tap + Log to start tracking.</div>`}
   </div>`;
 }
@@ -2573,7 +2573,7 @@ function renderVapingChart(data){
   });
   // Trend indicator
   const recentAvg=rolling[rolling.length-1];
-  const earlyAvg=rolling[Math.min(6,rolling.length-1)];
+  const earlyAvg=rolling[0];
   const improving=recentAvg<earlyAvg;
   const trendCol=improving?'var(--green)':'var(--orange)';
   const trendLbl=improving?`↓ Trending down`:`↑ Trending up`;

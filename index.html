@@ -633,15 +633,24 @@ function loadVapingData(){try{return JSON.parse(localStorage.getItem('vaping_dat
 function saveVapingData(d){localStorage.setItem('vaping_data_v1',JSON.stringify(d));}
 
 // ── AVATARS ──
-const AVATAR_COLORS=[
-  ['#6366f1','rgba(99,102,241,0.15)'],['#10b981','rgba(16,185,129,0.15)'],
-  ['#f97316','rgba(249,115,22,0.15)'],['#8b5cf6','rgba(139,92,246,0.15)'],
-  ['#06b6d4','rgba(6,182,212,0.15)'],['#ec4899','rgba(236,72,153,0.15)'],
-  ['#eab308','rgba(234,179,8,0.15)'],['#14b8a6','rgba(20,184,166,0.15)'],
+const GOAL_ICONS=[
+  {kw:['step','walk'],                          col:'#10b981',bg:'rgba(16,185,129,0.12)', d:'M12 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 8l-2.5 10M12 10l2.5 10M9 14h6'},
+  {kw:['run','jog','cardio'],                   col:'#06b6d4',bg:'rgba(6,182,212,0.12)',  d:'M13 4a1 1 0 1 1-2 0 1 1 0 0 1 2 0M7.5 20.5l2.5-7 2 3 1.5-4 3 8M15.5 9c-1.5.5-2.5 1-4 1'},
+  {kw:['gym','lift','weight','strength','press'],col:'#ef4444',bg:'rgba(239,68,68,0.12)',  d:'M6.5 6.5v11M17.5 6.5v11M6.5 12h11M4 9.5h2.5M17.5 9.5H20M4 14.5h2.5M17.5 14.5H20'},
+  {kw:['sleep','bed','rest','nap'],             col:'#818cf8',bg:'rgba(129,140,248,0.12)', d:'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'},
+  {kw:['water','hydrat','drink'],               col:'#06b6d4',bg:'rgba(6,182,212,0.12)',  d:'M12 2L8 10a6 6 0 1 0 8 0L12 2z'},
+  {kw:['read','book','study','learn'],          col:'#f97316',bg:'rgba(249,115,22,0.12)', d:'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z'},
+  {kw:['supplement','vitamin','tablet','pill'], col:'#f97316',bg:'rgba(249,115,22,0.12)', d:'M10.5 20.5L3.5 13.5a5 5 0 0 1 7.07-7.07l7 7a5 5 0 0 1-7.07 7.07zM8.5 8.5l7 7'},
+  {kw:['meditat','mindful','breath','calm','yoga','stretch'],col:'#8b5cf6',bg:'rgba(139,92,246,0.12)',d:'M12 22V12M8 22v-4M16 22v-4M12 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 12a7 7 0 0 1 14 0'},
+  {kw:['diet','nutrition','food','eat','meal'], col:'#10b981',bg:'rgba(16,185,129,0.12)', d:'M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3'},
+  {kw:['vap','smok','cigaret','nicotine'],      col:'#ef4444',bg:'rgba(239,68,68,0.12)',  d:'M18.36 5.64a9 9 0 1 0-12.73 12.73A9 9 0 0 0 18.36 5.64zM5.64 5.64l12.73 12.73'},
+  {kw:['health','heart','hrv'],                 col:'#ec4899',bg:'rgba(236,72,153,0.12)', d:'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'},
+  {kw:['protein','macro','calorie','calori'],   col:'#eab308',bg:'rgba(234,179,8,0.12)',  d:'M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7zm0 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'},
 ];
-function goalColorPair(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))&0xffff;return AVATAR_COLORS[h%AVATAR_COLORS.length];}
-function goalAvatar(name,size=42){const[fg,bg]=goalColorPair(name);const l=(name||'?')[0].toUpperCase();return`<div style="width:${size}px;height:${size}px;border-radius:${Math.round(size*0.28)}px;background:${bg};border:1px solid ${fg}44;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:${Math.round(size*0.43)}px;font-weight:800;color:${fg};">${l}</div>`;}
-function goalAvatarInline(name,size=36){const[fg,bg]=goalColorPair(name);const l=(name||'?')[0].toUpperCase();return`<div style="width:${size}px;height:${size}px;border-radius:${Math.round(size*0.28)}px;background:${bg};border:1px solid ${fg}44;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:${Math.round(size*0.43)}px;font-weight:800;color:${fg};">${l}</div>`;}
+const _ICON_DEFAULT={col:'#6366f1',bg:'rgba(99,102,241,0.12)',d:'M20 6L9 17l-5-5'};
+function _goalIconData(name){const n=(name||'').toLowerCase();return GOAL_ICONS.find(i=>i.kw.some(k=>n.includes(k)))||_ICON_DEFAULT;}
+function goalAvatar(name,size=42){const{col,bg,d}=_goalIconData(name);const r=Math.round(size*0.28);const ic=Math.round(size*0.5);return`<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${bg};border:1px solid ${col}33;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="${ic}" height="${ic}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg></div>`;}
+function goalAvatarInline(name,size=36){return goalAvatar(name,size);}
 
 // ── GOALS ──
 const EFFORT_COLS={Recovery:{text:'#34d399',bg:'rgba(52,211,153,0.12)'},Easy:{text:'#34d399',bg:'rgba(52,211,153,0.12)'},'Long Run':{text:'#818cf8',bg:'rgba(129,140,248,0.12)'},'Long run':{text:'#818cf8',bg:'rgba(129,140,248,0.12)'},Long:{text:'#818cf8',bg:'rgba(129,140,248,0.12)'},Tempo:{text:'#fb923c',bg:'rgba(251,146,60,0.12)'},Fartlek:{text:'#fb923c',bg:'rgba(251,146,60,0.12)'},Intervals:{text:'#f87171',bg:'rgba(248,113,113,0.12)'},Hard:{text:'#f87171',bg:'rgba(248,113,113,0.12)'},Race:{text:'#fbbf24',bg:'rgba(251,191,36,0.12)'}};

@@ -4393,7 +4393,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
 
 // ── MUSCLE TAG MIGRATION ──
 (function applyMuscleTagMigration(){
-  if(localStorage.getItem('muscle_tag_migration_v3')==='done')return;
+  if(localStorage.getItem('muscle_tag_migration_v4')==='done')return;
   const prog=loadGymProg();
   const corrections={
     'Plate bench press':   ['Chest'],
@@ -4407,32 +4407,45 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
     'Seated leg curl':     ['Hamstrings'],
     'Seated leg press':    ['Quads','Glutes'],
     'Glute Hip Thrust':    ['Glutes','Hamstrings'],
+    'Leg extension':       ['Quads'],
+    'Calf Raises':         ['Calves'],
+    'Lateral Raises':      ['Shoulders'],
+    'Face Pulls':          ['Shoulders','Back'],
+    'Tricep Pushdowns':    ['Triceps'],
+    'EZ Bar Curl':         ['Biceps'],
+    'Hammer Curls':        ['Biceps'],
+    'Incline Dumbbell Curl':['Biceps'],
+    'Decline Sit Up With Plate':['Core'],
+    'Hammer Ab Crunch Machine': ['Core'],
+    'Plank':               ['Core'],
   };
   Object.entries(corrections).forEach(([name,muscles])=>{
     if(prog[name]){prog[name].muscles=muscles;}
   });
   saveGymProg(prog);
-  localStorage.setItem('muscle_tag_migration_v3','done');
+  localStorage.setItem('muscle_tag_migration_v4','done');
 })();
 
 (function applyRestTimeMigration(){
-  if(localStorage.getItem('rest_time_migration_v1')==='done')return;
+  if(localStorage.getItem('rest_time_migration_v2')==='done')return;
   const defaults={
     'Plate bench press':180,'Incline plate press':180,'Overhead Press':180,
     'Barbell Row':150,'Dips':150,
     'Seated row':120,'Lat pulldown':120,
     'Glute Hip Thrust':120,
-    'Seated leg press':180,'Seated leg curl':90,
+    'Seated leg press':180,'Seated leg curl':90,'Leg extension':90,
     'Hip abductor IN':60,'Hip abductor OUT':60,
-    'Lateral Raise':60,'Face Pull':60,
-    'Bicep Curl':75,'Tricep Pushdown':75,
+    'Lateral Raises':60,'Face Pulls':60,'Calf Raises':60,
+    'Decline Sit Up With Plate':60,'Hammer Ab Crunch Machine':60,'Plank':60,
+    'EZ Bar Curl':75,'Hammer Curls':75,'Incline Dumbbell Curl':75,
+    'Tricep Pushdowns':75,
   };
   const prog=loadGymProg();
   Object.entries(defaults).forEach(([name,secs])=>{
-    if(prog[name]&&!prog[name].restSeconds){prog[name].restSeconds=secs;}
+    if(prog[name]){prog[name].restSeconds=secs;}
   });
   saveGymProg(prog);
-  localStorage.setItem('rest_time_migration_v1','done');
+  localStorage.setItem('rest_time_migration_v2','done');
 })();
 
 // ── INIT ──

@@ -1302,7 +1302,7 @@ function renderRunSection(){
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           ${r.km?`<span style="font-size:12px;font-weight:700;color:var(--green);">${r.km}km</span>`:''}
           ${r.time?`<span style="font-size:12px;color:var(--text2);font-weight:600;">${r.time}</span>`:''}
-          ${pace?`<span style="font-size:12px;color:var(--orange);font-weight:600;">${pace}/km</span>`:''}
+          ${pace?`<span style="font-size:12px;color:var(--orange);font-weight:600;">${pace}</span>`:''}
           ${r.effort?`<span style="padding:2px 7px;border-radius:8px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
         </div>
         <button onclick="openRunEdit(${globalIdx})" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(16,185,129,0.3);background:transparent;color:var(--green);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
@@ -1867,7 +1867,7 @@ function renderTrendsRunAnalysis(){
             ${r.effort?`<span style="padding:2px 8px;border-radius:20px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
             <span style="font-size:11px;color:var(--text3);font-weight:600;">${dl}</span>
           </div>
-          <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace?pace+'/km':''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
+          <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
         </div>
         <button onclick="openRunEdit(${globalIdx})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>
       </div>`;
@@ -3458,7 +3458,7 @@ function renderDayModalContent(ds){
         ${r.effort?`<span style="padding:3px 9px;border-radius:10px;background:${effortBg};color:${effortCol};font-size:12px;font-weight:700;">${esc(r.effort)}</span>`:''}
         ${r.startTime?`<span style="font-size:11px;color:var(--text3);font-weight:600;">🕐 ${r.startTime}</span>`:''}
       </div>
-      <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace?pace+'/km':''].filter(Boolean).join(' · ')}</div>
+      <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}</div>
       ${r.note?`<div style="font-size:12px;color:var(--text3);margin-top:5px;font-style:italic;">${esc(r.note)}</div>`:''}
     </div>`;
   });
@@ -4034,7 +4034,7 @@ renderTrainHistory=function(){
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
           ${e.km?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.km}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">km</div></div>`:''}
           ${e.time?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.time}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">time</div></div>`:''}
-          ${pace?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${pace}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">/km</div></div>`:''}
+          ${pace?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${pace}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">pace</div></div>`:''}
         </div>
         ${e.note?`<div style="font-size:12px;color:var(--text3);font-style:italic;">"${esc(e.note)}"</div>`:''}
       </div>`:'';
@@ -4046,7 +4046,7 @@ renderTrainHistory=function(){
               ${e.effort?`<span style="padding:3px 9px;border-radius:20px;background:${effortStyle(e.effort).bg};font-size:11px;font-weight:700;color:${effortStyle(e.effort).text};">${esc(e.effort)}</span>`:''}
               <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
             </div>
-            <div style="font-size:12px;color:var(--text2);">${e.km?e.km+'km':''}${e.km&&e.time?' · ':''}${e.time||''}${pace?' · '+pace+'/km':''}</div>
+            <div style="font-size:12px;color:var(--text2);">${e.km?e.km+'km':''}${e.km&&e.time?' · ':''}${e.time||''}${pace?' · '+pace:''}</div>
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="transform:rotate(${expanded?90:0}deg);transition:transform 0.2s;flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
         </div>

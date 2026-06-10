@@ -1860,15 +1860,12 @@ function renderTrendsRunAnalysis(){
       const dl=d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
       const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):null;
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-        <div style="font-size:12px;color:var(--text3);font-weight:600;width:50px;flex-shrink:0;">${dl}</div>
         <div style="flex:1;">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            ${r.km?`<span style="padding:2px 8px;border-radius:20px;background:rgba(16,185,129,0.12);color:var(--green);font-size:11px;font-weight:700;">${r.km}km</span>`:''}
-            ${r.time?`<span style="padding:2px 8px;border-radius:20px;background:rgba(99,102,241,0.12);color:var(--accent2);font-size:11px;font-weight:700;">${r.time}</span>`:''}
-            ${pace?`<span style="padding:2px 8px;border-radius:20px;background:rgba(249,115,22,0.12);color:var(--orange);font-size:11px;font-weight:700;">${pace}/km</span>`:''}
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
             ${r.effort?`<span style="padding:2px 8px;border-radius:20px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
-            ${r.startTime?`<span style="padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text3);font-size:11px;font-weight:600;">🕐 ${r.startTime}</span>`:''}
+            <span style="font-size:11px;color:var(--text3);font-weight:600;">${dl}</span>
           </div>
+          <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace?pace+'/km':''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
         </div>
         <button onclick="openRunEdit(${globalIdx})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>
       </div>`;

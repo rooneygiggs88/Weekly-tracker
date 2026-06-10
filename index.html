@@ -2881,15 +2881,14 @@ function renderMonthlyHistory(){
     m++;if(m>11){m=0;y++;}
   }
   const MNAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  el.innerHTML=months.map(({year,month,label})=>{
+  el.innerHTML=months.slice().reverse().map(({year,month,label})=>{
     const mGym=gym.filter(s=>{const d=new Date(s.date);return d.getFullYear()===year&&d.getMonth()===month;});
     const mRun=runs.filter(r=>{const d=new Date(r.date);return d.getFullYear()===year&&d.getMonth()===month;});
     const km=mRun.reduce((s,r)=>s+(r.km||0),0);
     let bestLift=null,bestLiftName='';
     mGym.forEach(s=>(s.exercises||[]).forEach(e=>(e.sets||[]).filter(ss=>!ss.warmup).forEach(ss=>{const w=parseFloat(ss.weight||0);if(w>0&&(bestLift===null||w>bestLift)){bestLift=w;bestLiftName=e.name||'';};})));
-    const bestLiftDisplay=bestLift?`${bestLift}kg`:'—';
+    const bestLiftDisplay=bestLift?`${bestLift}<span style="font-size:10px;font-weight:600;margin-left:2px;">kg</span>`:'—';
     const bestLiftLabel=bestLiftName?bestLiftName.split(' ').slice(0,2).join(' '):'Best lift';
-    // Goal completion for the month
     const daysInMonth=new Date(year,month+1,0).getDate();
     let goalTotal=0,goalDone=0;
     for(let d=1;d<=daysInMonth;d++){
@@ -2898,12 +2897,24 @@ function renderMonthlyHistory(){
       allGoals().forEach(g=>{goalTotal++;if(goalDone_f(ds,g))goalDone++;});
     }
     const pct=goalTotal?Math.round(goalDone/goalTotal*100):0;
-    return`<div class="chart-card" style="margin-bottom:10px;">
-      <div class="chart-card-header"><span class="chart-card-title">${label}</span><span class="chart-card-val" style="color:${pct>=80?'var(--green)':pct>=50?'var(--accent2)':'var(--text3)'};">${pct}%</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:4px 0;">
-        <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${mGym.length}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Gym</div></div>
-        <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${km.toFixed(0)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">km run</div></div>
-        <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${bestLiftDisplay}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(bestLiftLabel)}</div></div>
+    return`<div class="chart-card" style="margin-bottom:8px;padding:12px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:800;">${label}</span>
+        <span style="font-size:12px;font-weight:700;color:${pct>=80?'var(--green)':pct>=50?'var(--accent2)':'var(--text3)'};">${pct}% goals</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+        <div style="text-align:center;background:var(--surface2);border-radius:6px;padding:6px 4px;">
+          <div style="font-size:16px;font-weight:800;">${mGym.length}</div>
+          <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:1px;">Gym</div>
+        </div>
+        <div style="text-align:center;background:var(--surface2);border-radius:6px;padding:6px 4px;">
+          <div style="font-size:16px;font-weight:800;">${km.toFixed(0)}<span style="font-size:10px;font-weight:600;margin-left:1px;">km</span></div>
+          <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:1px;">Run</div>
+        </div>
+        <div style="text-align:center;background:var(--surface2);border-radius:6px;padding:6px 4px;overflow:hidden;">
+          <div style="font-size:16px;font-weight:800;">${bestLiftDisplay}</div>
+          <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(bestLiftLabel)}</div>
+        </div>
       </div>
     </div>`;
   }).join('');

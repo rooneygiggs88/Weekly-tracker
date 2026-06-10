@@ -3452,14 +3452,12 @@ function renderDayModalContent(ds){
         <span style="font-size:15px;font-weight:800;color:#06b6d4;">Run</span>
         <button onclick="closeModal('day-modal');setTimeout(()=>openRunEdit(${runIdx}),200)" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(6,182,212,0.3);background:transparent;color:#06b6d4;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        ${r.km?`<span style="padding:3px 9px;border-radius:10px;background:rgba(16,185,129,0.12);color:var(--green);font-size:12px;font-weight:700;">${r.km}km</span>`:''}
-        ${r.time?`<span style="padding:3px 9px;border-radius:10px;background:rgba(99,102,241,0.12);color:var(--accent2);font-size:12px;font-weight:700;">${r.time}</span>`:''}
-        ${pace?`<span style="padding:3px 9px;border-radius:10px;background:rgba(249,115,22,0.12);color:var(--orange);font-size:12px;font-weight:700;">${pace}/km</span>`:''}
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
         ${r.effort?`<span style="padding:3px 9px;border-radius:10px;background:${effortBg};color:${effortCol};font-size:12px;font-weight:700;">${esc(r.effort)}</span>`:''}
-        ${r.startTime?`<span style="padding:3px 9px;border-radius:10px;background:var(--surface2);color:var(--text3);font-size:11px;font-weight:600;">🕐 ${r.startTime}</span>`:''}
+        ${r.startTime?`<span style="font-size:11px;color:var(--text3);font-weight:600;">🕐 ${r.startTime}</span>`:''}
       </div>
-      ${r.note?`<div style="font-size:12px;color:var(--text2);margin-top:8px;font-style:italic;">${esc(r.note)}</div>`:''}
+      <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace?pace+'/km':''].filter(Boolean).join(' · ')}</div>
+      ${r.note?`<div style="font-size:12px;color:var(--text3);margin-top:5px;font-style:italic;">${esc(r.note)}</div>`:''}
     </div>`;
   });
 

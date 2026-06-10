@@ -1378,24 +1378,33 @@ function saveRun(){
   _runLogDate=dk(today());
   saveState();selectedEffort='';toastMsg('Run saved');haptic('success');renderRunSection();
 }
+let _runHistoryExpanded=false;
 function renderRunHistory(runs){
   if(!runs||!runs.length)return'';
-  const recent=runs.slice(-8).reverse();
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Run History</span></div>${recent.map(r=>{
+  const all=runs.slice().reverse();
+  const limit=_runHistoryExpanded?all.length:5;
+  const shown=all.slice(0,limit);
+  const rows=shown.map(r=>{
     const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):'';
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);">
       <div><div style="font-size:14px;font-weight:700;">${r.km?r.km+'km':r.time||'Run'}</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${r.date}${r.effort?' · '+r.effort:''}</div></div>
       <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:var(--accent2);">${pace}</div>${r.time?`<div style="font-size:11px;color:var(--text3);">${r.time}</div>`:''}</div>
     </div>`;
-  }).join('')}</div>`;
+  }).join('');
+  const toggle=all.length>5?`<div onclick="_runHistoryExpanded=!_runHistoryExpanded;renderRunSection();" style="text-align:center;padding:10px 0;font-size:12px;font-weight:700;color:var(--accent2);cursor:pointer;">${_runHistoryExpanded?'Show less ↑':`Show all ${all.length} runs ↓`}</div>`:'';
+  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Run History</span></div>${rows}${toggle}</div>`;
 }
+let _trainHistoryExpanded=false;
 function renderTrainHistory(){
   const el=document.getElementById('train-history-content');
   const gymData=loadGymData();const runData=loadRunData();
   const gymCount=gymData.length;
-  const all=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...runData.map(r=>({...r,_t:'run'}))]
-    .sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,20);
-  if(!all.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
+  const allSessions=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...runData.map(r=>({...r,_t:'run'}))]
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(!allSessions.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
+  const limit=_trainHistoryExpanded?allSessions.length:5;
+  const all=allSessions.slice(0,limit);
+  const toggle=allSessions.length>5?`<div onclick="_trainHistoryExpanded=!_trainHistoryExpanded;renderTrainHistory();" style="text-align:center;padding:10px 0;font-size:12px;font-weight:700;color:var(--accent2);cursor:pointer;">${_trainHistoryExpanded?'Show less ↑':`Show all ${allSessions.length} sessions ↓`}</div>`:'';
   const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare Sessions</button>`:'';
   el.innerHTML=compareBtn+
     renderGymAnalysis(gymData)+
@@ -1404,7 +1413,7 @@ function renderTrainHistory(){
     `<div class="chart-card">${all.map(e=>e._t==='gym'
       ?`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openSessionDetail(${e._idx})">${goalAvatarInline('Gym')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(e.type||'Workout')}</div><div style="font-size:12px;color:var(--text3);">${e.date}</div></div><div style="font-size:13px;color:var(--text2);font-weight:600;">${(e.exercises||[]).length} ex</div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>`
       :`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Running')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.km?e.km+'km':e.time||'Run'}</div><div style="font-size:12px;color:var(--text3);">${e.date}${e.effort?' · '+e.effort:''}</div></div><div style="font-size:13px;color:var(--accent2);font-weight:700;">${e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):''}</div></div>`
-    ).join('')}</div>`;
+    ).join('')}${toggle}</div>`;
 }
 
 // ── GYM ANALYSIS ──

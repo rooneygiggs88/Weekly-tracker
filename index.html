@@ -1023,6 +1023,8 @@ function startRestTimer(secs){
   document.getElementById('rest-ring-unit').textContent='remaining';
   document.getElementById('rest-overlay').classList.remove('rest-done');
   document.getElementById('rest-overlay').classList.add('active');
+  // Reset arc transition in case _restDone cleared it
+  document.getElementById('rest-ring-arc').style.transition='';
   // Haptic on start
   if(navigator.vibrate)navigator.vibrate(20);
   updateRestDisplay();

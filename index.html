@@ -1501,9 +1501,15 @@ function renderRunAnalysis(runs){
   }).join('');
   const kmW=n*(bw+gap)-gap;
   // Effort balance
-  const effortCounts={Easy:0,Tempo:0,Hard:0,Long:0,Race:0,Other:0};
-  runs.forEach(r=>{const k=r.effort||r.type||'Other';if(effortCounts[k]!==undefined)effortCounts[k]++;else effortCounts.Other++;});
-  const effortColors={Easy:effortStyle('Easy').text,Tempo:effortStyle('Tempo').text,Hard:effortStyle('Hard').text,Long:effortStyle('Long Run').text,Race:effortStyle('Race').text,Other:'var(--text3)'};
+  const effortCounts={'Easy / Long':0,Tempo:0,Hard:0,Other:0};
+  runs.forEach(r=>{
+    const eff=(r.effort||r.type||'').toLowerCase();
+    if(['easy','recovery','steady','long'].some(k=>eff===k||eff.includes(k)))effortCounts['Easy / Long']++;
+    else if(['tempo','fartlek','parkrun'].some(k=>eff===k||eff.includes(k)))effortCounts.Tempo++;
+    else if(['hard','intervals','race'].some(k=>eff===k||eff.includes(k)))effortCounts.Hard++;
+    else effortCounts.Other++;
+  });
+  const effortColors={'Easy / Long':effortStyle('Easy').text,Tempo:effortStyle('Tempo').text,Hard:effortStyle('Hard').text,Other:'var(--text3)'};
   const totalRuns=runs.length||1;
   const effortBars=Object.entries(effortCounts).filter(([,v])=>v>0).map(([k,v])=>`
     <div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;font-weight:700;">${k}</span><span style="font-size:12px;color:var(--text3);">${v} (${Math.round(v/totalRuns*100)}%)</span></div>
@@ -1775,8 +1781,8 @@ function renderTrendsRunAnalysis(){
   const effortChart=(()=>{
     const tagged=runs.filter(r=>r.effort);
     if(tagged.length<2) return `<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Effort Balance</span></div><div class="empty-state" style="padding:16px 0 0;">Tag runs as Easy/Tempo/Hard/Long to see your effort split.</div></div>`;
-    const GROUPS={Easy:{keywords:['easy','recovery','steady'],col:'#34d399'},Tempo:{keywords:['tempo','fartlek','parkrun'],col:'#fb923c'},Hard:{keywords:['hard','intervals','race'],col:'#f87171'},Long:{keywords:['long'],col:'#818cf8'}};
-    const counts={Easy:0,Tempo:0,Hard:0,Long:0,Other:0};
+    const GROUPS={Easy:{keywords:['easy','recovery','steady','long'],col:'#34d399'},Tempo:{keywords:['tempo','fartlek','parkrun'],col:'#fb923c'},Hard:{keywords:['hard','intervals','race'],col:'#f87171'}};
+    const counts={Easy:0,Tempo:0,Hard:0,Other:0};
     tagged.forEach(r=>{
       const eff=(r.effort||'').toLowerCase();
       let matched=false;
@@ -1784,7 +1790,7 @@ function renderTrendsRunAnalysis(){
       if(!matched)counts.Other++;
     });
     const total=tagged.length;
-    const segs=[{label:'Easy',count:counts.Easy,col:'#34d399'},{label:'Long',count:counts.Long,col:'#818cf8'},{label:'Tempo',count:counts.Tempo,col:'#fb923c'},{label:'Hard',count:counts.Hard,col:'#f87171'},{label:'Other',count:counts.Other,col:'var(--text3)'}].filter(s=>s.count>0);
+    const segs=[{label:'Easy / Long',count:counts.Easy,col:'#34d399'},{label:'Tempo',count:counts.Tempo,col:'#fb923c'},{label:'Hard',count:counts.Hard,col:'#f87171'},{label:'Other',count:counts.Other,col:'var(--text3)'}].filter(s=>s.count>0);
     const R=52,cx=70,cy=68,stroke=18,circ=2*Math.PI*R;
     let offset=-0.25*circ;
     const arcs=segs.map(s=>{const dash=(s.count/total)*circ;const arc=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.col}" stroke-width="${stroke}" stroke-dasharray="${(dash-2).toFixed(1)} ${(circ-dash+2).toFixed(1)}" stroke-dashoffset="${(-offset).toFixed(1)}" opacity="0.9"/>`;offset+=dash;return arc;}).join('');

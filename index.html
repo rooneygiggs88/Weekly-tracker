@@ -1316,11 +1316,10 @@ function saveRun(){
   const note=(document.getElementById('run-note').value||'').trim();
   const startTimeVal=(document.getElementById('run-starttime').value||'').trim();
   if(!km&&!time){toastMsg('Add a distance or time');return;}
-  // Build ts from start time field if provided, otherwise now
-  let ts=Date.now();
+  let ts=null;
   if(startTimeVal){
     const [h,m]=startTimeVal.split(':').map(Number);
-    const d=new Date(today());d.setHours(h,m,0,0);ts=d.getTime();
+    const d=new Date(_runLogDate||dk(today()));d.setHours(h,m,0,0);ts=d.getTime();
   }
   const runs=loadRunData();
   const logDate=_runLogDate||dk(today());
@@ -2688,6 +2687,7 @@ function importV1Format(d){
   if(d.gymData&&d.gymData.logs){
     const gymArr=d.gymData.logs.map(log=>({
       date:(log.date||'').split('T')[0],
+      ts:log.date?new Date(log.date).getTime():null,
       type:log.sessionName||log.sessionId||'Workout',
       notes:log.notes||'',
       exercises:Object.entries(log.exercises||{}).map(([name,sets])=>({
@@ -2718,7 +2718,7 @@ function importV1Format(d){
       let startTime=null,cleanNote=note||'';
       const atMatch=cleanNote.match(/@(\d{1,2}:\d{2})/);
       if(atMatch){startTime=atMatch[1].padStart(5,'0');cleanNote=cleanNote.replace(atMatch[0],'').trim();}
-      let ts=new Date(date).getTime();
+      let ts=null;
       if(startTime){const[h,m]=startTime.split(':').map(Number);const d2=new Date(date);d2.setHours(h,m,0,0);ts=d2.getTime();}
       runArr.push({date,km,time,effort:type,note:cleanNote,startTime,ts});
     });

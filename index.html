@@ -175,13 +175,19 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .type-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;}
 .type-btn.active{background:var(--accent);border-color:var(--accent);color:white;}
 
-/* REST TIMER */
-.rest-timer-bar{position:fixed;top:0;left:0;right:0;z-index:150;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:14px;transform:translateY(-100%);transition:transform 0.3s cubic-bezier(0.34,1.2,0.64,1);}
-.rest-timer-bar.active{transform:translateY(0);}
-.rest-timer-display{font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--text);min-width:60px;}
-.rest-timer-display.warning{color:var(--red);}
-.rest-timer-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);flex:1;}
-.rest-timer-progress{position:absolute;bottom:0;left:0;height:2px;background:var(--accent);transition:width 0.5s linear;}
+/* REST TIMER OVERLAY */
+.rest-overlay{position:fixed;inset:0;z-index:300;background:rgba(7,7,15,0.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;opacity:0;pointer-events:none;transition:opacity 0.25s ease;}
+.rest-overlay.active{opacity:1;pointer-events:all;}
+.rest-overlay-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);}
+.rest-ring-wrap{position:relative;display:flex;align-items:center;justify-content:center;}
+.rest-ring-wrap svg{transform:rotate(-90deg);}
+.rest-ring-bg{fill:none;stroke:var(--border);stroke-width:10;}
+.rest-ring-arc{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 0.9s linear,stroke 0.5s ease;}
+.rest-ring-time{position:absolute;font-size:52px;font-weight:900;letter-spacing:-2px;color:var(--text);line-height:1;}
+.rest-ring-unit{position:absolute;bottom:34px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);}
+.rest-overlay-actions{display:flex;gap:14px;}
+.rest-btn{padding:12px 28px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:0.02em;}
+.rest-btn-skip{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.3);color:var(--red);}
 
 /* PLATE CALCULATOR */
 .plate-calc{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px 14px;margin-top:8px;}
@@ -571,16 +577,24 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
-<!-- REST TIMER BAR -->
-<div class="rest-timer-bar" id="rest-timer-bar">
-  <div>
-    <div class="rest-timer-label">Rest Timer</div>
-    <div class="rest-timer-display" id="rest-timer-display">1:30</div>
+<!-- REST TIMER OVERLAY -->
+<div class="rest-overlay" id="rest-overlay">
+  <div class="rest-overlay-label">Rest Timer</div>
+  <div class="rest-ring-wrap">
+    <svg id="rest-ring-svg" width="220" height="220" viewBox="0 0 220 220">
+      <circle class="rest-ring-bg" cx="110" cy="110" r="96"/>
+      <circle class="rest-ring-arc" id="rest-ring-arc" cx="110" cy="110" r="96"
+        stroke="#10b981"
+        stroke-dasharray="603"
+        stroke-dashoffset="0"/>
+    </svg>
+    <div class="rest-ring-time" id="rest-ring-time">3:00</div>
+    <div class="rest-ring-unit">remaining</div>
   </div>
-  <div style="flex:1;"></div>
-  <button onclick="restTimerAdd(30)" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+30s</button>
-  <button onclick="restTimerStop()" style="padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Done</button>
-  <div class="rest-timer-progress" id="rest-timer-progress"></div>
+  <div class="rest-overlay-actions">
+    <button class="rest-btn" onclick="restTimerAdd(30)">+30s</button>
+    <button class="rest-btn rest-btn-skip" onclick="restTimerSkip()">Skip</button>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -974,11 +988,12 @@ function renderDayGoals(ds){
 }
 
 // ── REST TIMER ──
+const REST_CIRC=2*Math.PI*96; // circumference of r=96 ring ≈ 603.2
 let restInterval=null,restTotal=0,restRemaining=0;
 function startRestTimer(secs){
   restStop();
   restTotal=secs;restRemaining=secs;
-  document.getElementById('rest-timer-bar').classList.add('active');
+  document.getElementById('rest-overlay').classList.add('active');
   updateRestDisplay();
   restInterval=setInterval(()=>{
     restRemaining--;
@@ -988,15 +1003,18 @@ function startRestTimer(secs){
 }
 function updateRestDisplay(){
   const m=Math.floor(restRemaining/60),s=restRemaining%60;
-  const el=document.getElementById('rest-timer-display');
-  el.textContent=`${m}:${String(s).padStart(2,'0')}`;
-  el.className='rest-timer-display'+(restRemaining<=10?' warning':'');
-  const pct=((restTotal-restRemaining)/restTotal*100);
-  document.getElementById('rest-timer-progress').style.width=pct+'%';
+  document.getElementById('rest-ring-time').textContent=`${m}:${String(s).padStart(2,'0')}`;
+  const pct=restRemaining/restTotal;
+  const arc=document.getElementById('rest-ring-arc');
+  arc.style.strokeDasharray=REST_CIRC.toFixed(1);
+  arc.style.strokeDashoffset=((1-pct)*REST_CIRC).toFixed(1);
+  // green → amber (below 50%) → red (below 20%)
+  arc.style.stroke=pct>0.5?'#10b981':pct>0.2?'#f97316':'#ef4444';
 }
-function restTimerAdd(s){restRemaining+=s;updateRestDisplay();}
-function restTimerStop(){restStop();toastMsg('Timer stopped');}
-function restStop(){clearInterval(restInterval);restInterval=null;document.getElementById('rest-timer-bar').classList.remove('active');}
+function restTimerAdd(s){restRemaining=Math.min(restRemaining+s,restTotal+s);updateRestDisplay();}
+function restTimerSkip(){restStop();toastMsg('Rest skipped — go!');}
+function restTimerStop(){restStop();}
+function restStop(){clearInterval(restInterval);restInterval=null;document.getElementById('rest-overlay').classList.remove('active');}
 
 // ── PLATE CALCULATOR ──
 const PLATES=[25,20,15,10,5,2.5,1.25];

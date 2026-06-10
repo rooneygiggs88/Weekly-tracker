@@ -188,6 +188,9 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .rest-overlay-actions{display:flex;gap:14px;}
 .rest-btn{padding:12px 28px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:0.02em;}
 .rest-btn-skip{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.3);color:var(--red);}
+@keyframes rest-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
+.rest-overlay.rest-done .rest-ring-wrap{animation:rest-pulse 0.8s ease-in-out infinite;}
+.rest-overlay.rest-done .rest-ring-time{color:#10b981;}
 
 /* PLATE CALCULATOR */
 .plate-calc{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px 14px;margin-top:8px;}
@@ -591,7 +594,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div class="rest-ring-time" id="rest-ring-time">3:00</div>
     <div class="rest-ring-unit">remaining</div>
   </div>
-  <div class="rest-overlay-actions">
+  <div class="rest-overlay-actions" id="rest-overlay-actions">
     <button class="rest-btn" onclick="restTimerAdd(30)">+30s</button>
     <button class="rest-btn rest-btn-skip" onclick="restTimerSkip()">Skip</button>
   </div>
@@ -989,34 +992,45 @@ function renderDayGoals(ds){
 
 // ── REST TIMER ──
 const REST_CIRC=2*Math.PI*96;
-let restInterval=null,restTotal=0,restEndsAt=0,_restNotifTimeout=null;
+let restInterval=null,restTotal=0,restEndsAt=0;
 
-async function _requestNotifPermission(){
-  if(!('Notification' in window))return;
-  if(Notification.permission==='default')await Notification.requestPermission();
+function _restDone(){
+  clearInterval(restInterval);restInterval=null;
+  // Strong triple haptic burst
+  if(navigator.vibrate)navigator.vibrate([80,60,80,60,120]);
+  // Switch overlay to "REST OVER" state
+  document.getElementById('rest-ring-time').textContent='GO';
+  document.getElementById('rest-ring-unit').textContent='next set';
+  const arc=document.getElementById('rest-ring-arc');
+  arc.style.strokeDashoffset='0';
+  arc.style.stroke='#10b981';
+  arc.style.transition='none';
+  // Pulse animation
+  document.getElementById('rest-overlay').classList.add('rest-done');
+  // Replace actions with single GO button
+  document.getElementById('rest-overlay-actions').innerHTML=
+    `<button class="rest-btn" style="background:rgba(16,185,129,0.2);border-color:rgba(16,185,129,0.5);color:#10b981;font-size:18px;padding:14px 48px;" onclick="restStop()">Let's go</button>`;
 }
-function _scheduleRestNotif(secsFromNow){
-  if(_restNotifTimeout)clearTimeout(_restNotifTimeout);
-  if(!('Notification' in window)||Notification.permission!=='granted')return;
-  _restNotifTimeout=setTimeout(()=>{
-    new Notification('Rest over — next set!',{body:'Time to go again 💪',icon:'/Weekly-tracker/icon-192.png',silent:false});
-  },secsFromNow*1000);
-}
-function _cancelRestNotif(){if(_restNotifTimeout){clearTimeout(_restNotifTimeout);_restNotifTimeout=null;}}
 
-async function startRestTimer(secs){
+function startRestTimer(secs){
   restStop();
   restTotal=secs;
   restEndsAt=Date.now()+secs*1000;
+  // Reset overlay to countdown state
+  document.getElementById('rest-overlay-actions').innerHTML=
+    `<button class="rest-btn" onclick="restTimerAdd(30)">+30s</button>
+     <button class="rest-btn rest-btn-skip" onclick="restTimerSkip()">Skip</button>`;
+  document.getElementById('rest-ring-unit').textContent='remaining';
+  document.getElementById('rest-overlay').classList.remove('rest-done');
   document.getElementById('rest-overlay').classList.add('active');
+  // Haptic on start
+  if(navigator.vibrate)navigator.vibrate(20);
   updateRestDisplay();
   restInterval=setInterval(()=>{
     const rem=Math.ceil((restEndsAt-Date.now())/1000);
-    if(rem<=0){restStop();haptic('success');toastMsg('Rest done — next set!');return;}
+    if(rem<=0){_restDone();return;}
     updateRestDisplay();
   },500);
-  await _requestNotifPermission();
-  _scheduleRestNotif(secs);
 }
 function updateRestDisplay(){
   const rem=Math.max(0,Math.ceil((restEndsAt-Date.now())/1000));
@@ -1031,23 +1045,23 @@ function updateRestDisplay(){
 function restTimerAdd(s){
   if(!restEndsAt)return;
   restEndsAt+=s*1000;
-  _cancelRestNotif();
-  _scheduleRestNotif(Math.ceil((restEndsAt-Date.now())/1000));
   updateRestDisplay();
 }
-function restTimerSkip(){restStop();toastMsg('Rest skipped — go!');}
+function restTimerSkip(){
+  if(navigator.vibrate)navigator.vibrate(20);
+  restStop();
+}
 function restTimerStop(){restStop();}
 function restStop(){
   clearInterval(restInterval);restInterval=null;
-  _cancelRestNotif();
   restEndsAt=0;
-  document.getElementById('rest-overlay').classList.remove('active');
+  document.getElementById('rest-overlay').classList.remove('active','rest-done');
 }
-// Resync when app comes back into focus after being backgrounded
+// Resync when app comes back into focus — catch expired timer
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&restEndsAt){
     const rem=Math.ceil((restEndsAt-Date.now())/1000);
-    if(rem<=0){restStop();haptic('success');toastMsg('Rest done — next set!');}
+    if(rem<=0)_restDone();
     else updateRestDisplay();
   }
 });

@@ -582,7 +582,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 
 <!-- REST TIMER OVERLAY -->
 <div class="rest-overlay" id="rest-overlay">
-  <div class="rest-overlay-label">Rest Timer</div>
+  <div class="rest-overlay-label" id="rest-overlay-label">Rest Timer</div>
   <div class="rest-ring-wrap">
     <svg id="rest-ring-svg" width="220" height="220" viewBox="0 0 220 220">
       <circle class="rest-ring-bg" cx="110" cy="110" r="96"/>
@@ -592,11 +592,14 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
         stroke-dashoffset="0"/>
     </svg>
     <div class="rest-ring-time" id="rest-ring-time">3:00</div>
-    <div class="rest-ring-unit">remaining</div>
+    <div class="rest-ring-unit" id="rest-ring-unit">remaining</div>
   </div>
-  <div class="rest-overlay-actions" id="rest-overlay-actions">
+  <div class="rest-overlay-actions" id="rest-overlay-actions-counting">
     <button class="rest-btn" onclick="restTimerAdd(30)">+30s</button>
     <button class="rest-btn rest-btn-skip" onclick="restTimerSkip()">Skip</button>
+  </div>
+  <div class="rest-overlay-actions" id="rest-overlay-actions-done" style="display:none;">
+    <button class="rest-btn" style="background:rgba(16,185,129,0.2);border-color:rgba(16,185,129,0.5);color:#10b981;font-size:18px;padding:14px 48px;" onclick="restStop()">Let's go</button>
   </div>
 </div>
 
@@ -994,43 +997,35 @@ function renderDayGoals(ds){
 const REST_CIRC=2*Math.PI*96;
 let restInterval=null,restTotal=0,restEndsAt=0;
 
-function _restDone(){
+function _setRestDoneState(){
   clearInterval(restInterval);restInterval=null;
-  // Strong triple haptic burst
   if(navigator.vibrate)navigator.vibrate([80,60,80,60,120]);
-  // Switch overlay to "REST OVER" state
   document.getElementById('rest-ring-time').textContent='GO';
   document.getElementById('rest-ring-unit').textContent='next set';
   const arc=document.getElementById('rest-ring-arc');
+  arc.style.strokeDasharray=REST_CIRC.toFixed(1);
   arc.style.strokeDashoffset='0';
   arc.style.stroke='#10b981';
-  arc.style.transition='none';
-  // Pulse animation
   document.getElementById('rest-overlay').classList.add('rest-done');
-  // Replace actions with single GO button
-  document.getElementById('rest-overlay-actions').innerHTML=
-    `<button class="rest-btn" style="background:rgba(16,185,129,0.2);border-color:rgba(16,185,129,0.5);color:#10b981;font-size:18px;padding:14px 48px;" onclick="restStop()">Let's go</button>`;
+  document.getElementById('rest-overlay-actions-counting').style.display='none';
+  document.getElementById('rest-overlay-actions-done').style.display='flex';
 }
 
 function startRestTimer(secs){
   restStop();
   restTotal=secs;
   restEndsAt=Date.now()+secs*1000;
-  // Reset overlay to countdown state
-  document.getElementById('rest-overlay-actions').innerHTML=
-    `<button class="rest-btn" onclick="restTimerAdd(30)">+30s</button>
-     <button class="rest-btn rest-btn-skip" onclick="restTimerSkip()">Skip</button>`;
+  document.getElementById('rest-ring-time').textContent='';
   document.getElementById('rest-ring-unit').textContent='remaining';
+  document.getElementById('rest-overlay-actions-counting').style.display='flex';
+  document.getElementById('rest-overlay-actions-done').style.display='none';
   document.getElementById('rest-overlay').classList.remove('rest-done');
   document.getElementById('rest-overlay').classList.add('active');
-  // Reset arc transition in case _restDone cleared it
-  document.getElementById('rest-ring-arc').style.transition='';
-  // Haptic on start
   if(navigator.vibrate)navigator.vibrate(20);
   updateRestDisplay();
   restInterval=setInterval(()=>{
     const rem=Math.ceil((restEndsAt-Date.now())/1000);
-    if(rem<=0){_restDone();return;}
+    if(rem<=0){_setRestDoneState();return;}
     updateRestDisplay();
   },500);
 }
@@ -1057,13 +1052,13 @@ function restTimerStop(){restStop();}
 function restStop(){
   clearInterval(restInterval);restInterval=null;
   restEndsAt=0;
-  document.getElementById('rest-overlay').classList.remove('active','rest-done');
+  document.getElementById('rest-overlay').classList.remove('active');
+  document.getElementById('rest-overlay').classList.remove('rest-done');
 }
-// Resync when app comes back into focus — catch expired timer
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&restEndsAt){
     const rem=Math.ceil((restEndsAt-Date.now())/1000);
-    if(rem<=0)_restDone();
+    if(rem<=0)_setRestDoneState();
     else updateRestDisplay();
   }
 });

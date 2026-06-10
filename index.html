@@ -901,15 +901,14 @@ function renderToday(){
       const picker=Array.from({length:7},(_,i)=>i+1).map(n=>
         `<button onclick="setQuotaTarget('${g.id}',${n})" style="width:30px;height:30px;border-radius:50%;border:2px solid ${n===g.target?col:'var(--border)'};background:${n===g.target?col+'33':'transparent'};color:${n===g.target?col:'var(--text2)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;">${n}</button>`
       ).join('');
-      return`<div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:var(--radius-xs);background:var(--surface2);border:1px solid ${complete?col+'44':'var(--border)'};">
+      return`<div onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')" style="flex:1;display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:var(--radius-xs);background:var(--surface2);border:1px solid ${complete?col+'44':'var(--border)'};cursor:pointer;">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);">${esc(g.name)}</span>
           <span style="font-size:13px;font-weight:800;color:${complete?col:'var(--text2)'};">${g.done}<span style="font-size:11px;color:var(--text3);font-weight:600;">/${g.target}</span>${complete?`<span style="color:${col};margin-left:3px;">✓</span>`:''}</span>
         </div>
         <div style="display:flex;gap:4px;align-items:center;">${dots}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:-2px;">
-          <span onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')" style="font-size:11px;color:${col};font-weight:700;cursor:pointer;">Open →</span>
-          <button onclick="toggleQuotaPicker('${g.id}')" style="background:none;border:none;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;padding:0;">Set target</button>
+        <div style="text-align:right;margin-top:-2px;">
+          <button onclick="event.stopPropagation();toggleQuotaPicker('${g.id}')" style="background:none;border:none;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;padding:0;">Set target</button>
         </div>
         <div id="${editId}" style="display:none;flex-wrap:wrap;gap:4px;margin-top:2px;">${picker}</div>
       </div>`;

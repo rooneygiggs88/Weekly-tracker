@@ -504,6 +504,28 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
+<!-- NEW EXERCISE MODAL -->
+<div class="modal-overlay" id="new-ex-modal" onclick="if(event.target===this)closeModal('new-ex-modal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Add Exercise</h3>
+
+    <label class="modal-label">Exercise name</label>
+    <input class="modal-input" id="new-ex-name" placeholder="e.g. Barbell Row"
+      oninput="newExNameChange(this.value)" autocomplete="off" list="new-ex-suggestions" style="margin-bottom:14px;">
+    <datalist id="new-ex-suggestions"></datalist>
+
+    <label class="modal-label">Muscle groups</label>
+    <div class="muscle-check-grid" id="new-ex-muscles" style="margin-bottom:16px;"></div>
+
+    <label class="modal-label">Rest timer</label>
+    <div id="new-ex-rest" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;"></div>
+
+    <button class="btn-primary" onclick="confirmNewEx()" style="margin-bottom:8px;">Add to Session</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('new-ex-modal')">Cancel</button>
+  </div>
+</div>
+
 <!-- MUSCLE TAG MODAL -->
 <div class="modal-overlay" id="muscle-tag-modal">
   <div class="modal">
@@ -1261,7 +1283,70 @@ function gymConfirmTypeChange(t){
   if(!confirm(`Change session type to ${t}? Your logged exercises will be kept.`))return;
   gymDraft.type=t;_gymPickedType=t;renderGymLogger();
 }
-function gymAddEx(){gymDraft.exercises.push({name:'',sets:[{weight:'',reps:'',warmup:false}]});renderGymLogger();}
+let _newExRestSecs=90;
+function gymAddEx(){
+  _newExRestSecs=90;
+  // Populate suggestions
+  const seen=new Set();
+  loadGymData().forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)seen.add(e.name);}));
+  const prog=loadGymProg();Object.keys(prog).forEach(n=>seen.add(n));
+  document.getElementById('new-ex-suggestions').innerHTML=[...seen].map(n=>`<option value="${esc(n)}">`).join('');
+  document.getElementById('new-ex-name').value='';
+  _newExMusclesSelected=[];
+  _renderNewExMuscles([]);
+  _renderNewExRest(90);
+  openModal('new-ex-modal');
+  setTimeout(()=>document.getElementById('new-ex-name').focus(),300);
+}
+let _newExMusclesSelected=[];
+function newExNameChange(val){
+  const muscles=getExerciseMuscles(val)||[];
+  _newExMusclesSelected=[...muscles];
+  _renderNewExMuscles(muscles);
+  const secs=getExRestSecs(val);
+  _newExRestSecs=secs;
+  _renderNewExRest(secs);
+}
+function _renderNewExMuscles(selected){
+  document.getElementById('new-ex-muscles').innerHTML=ALL_MUSCLE_GROUPS.map(m=>{
+    const sel=selected.includes(m);
+    const c=MUSCLE_COLS[m]||'var(--accent)';
+    return`<div class="muscle-check-item${sel?' selected':''}" onclick="_toggleNewExMuscle('${m}',this)"
+      style="${sel?`border-color:${c};background:${c}22;`:''}">
+      <span style="font-size:13px;font-weight:700;flex:1;color:${sel?c:'var(--text2)'};">${m}</span>
+      <div class="muscle-check-box">${sel?`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`:''}</div>
+    </div>`;
+  }).join('');
+}
+function _toggleNewExMuscle(m,el){
+  const idx=_newExMusclesSelected.indexOf(m);
+  if(idx>-1)_newExMusclesSelected.splice(idx,1);else _newExMusclesSelected.push(m);
+  _renderNewExMuscles(_newExMusclesSelected);
+}
+function _renderNewExRest(active){
+  const opts=[60,90,120,180,240];
+  document.getElementById('new-ex-rest').innerHTML=opts.map(s=>{
+    const lbl=s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s';
+    const sel=active===s;
+    return`<button onclick="_setNewExRest(${s})" style="padding:8px 16px;border-radius:12px;border:2px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${sel?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${lbl}</button>`;
+  }).join('');
+}
+function _setNewExRest(s){_newExRestSecs=s;_renderNewExRest(s);}
+function confirmNewEx(){
+  const name=document.getElementById('new-ex-name').value.trim();
+  if(!name){toastMsg('Enter an exercise name');return;}
+  // Save tags + rest to prog
+  const prog=loadGymProg();
+  if(!prog[name])prog[name]={history:[]};
+  if(_newExMusclesSelected.length)prog[name].muscles=[..._newExMusclesSelected];
+  prog[name].restSeconds=_newExRestSecs;
+  saveGymProg(prog);
+  // Add to session
+  gymDraft.exercises.push({name,sets:[{weight:'',reps:'',warmup:false}]});
+  closeModal('new-ex-modal');
+  renderGymLogger();
+  haptic('success');
+}
 function gymRemoveEx(i){gymDraft.exercises.splice(i,1);renderGymLogger();}
 function gymAddSet(i){gymDraft.exercises[i].sets.push({weight:'',reps:'',warmup:false});renderGymLogger();}
 function gymRemoveSet(i,si){gymDraft.exercises[i].sets.splice(si,1);renderGymLogger();}

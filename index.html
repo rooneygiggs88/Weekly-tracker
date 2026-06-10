@@ -3393,40 +3393,78 @@ function renderDayModalContent(ds){
   const dayScore=getDayScore(ds);
   const gym=loadGymData().filter(s=>s.date===ds);
   const runs=loadRunData().filter(r=>r.date===ds);
+  const allRuns=loadRunData();
   const goals=goalsActiveOn(ds).filter(g=>g.type==='daily'||g.inputStyle==='check');
   const scoreColor=dayScore>=80?'var(--green)':dayScore>=50?'var(--accent2)':'var(--text3)';
+  const EFFORT_COL={Recovery:'#10b981',Easy:'#10b981','Long Run':'#6366f1',Long:'#6366f1',Tempo:'#f97316',Intervals:'#ef4444',Hard:'#ef4444',Race:'#ef4444'};
+
   let html=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
     <div>
       <div style="font-size:13px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;">${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}</div>
       <div style="font-size:64px;font-weight:800;line-height:1;letter-spacing:-3px;color:${scoreColor};">${dayScore}</div>
       <div style="font-size:13px;color:var(--text2);font-weight:600;">/ 100 points</div>
     </div>
-  </div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-    ${goals.map(g=>{
-      const done=goalDone(ds,g);
-      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:${done?'rgba(16,185,129,0.07)':'var(--surface2)'};border:1px solid ${done?'rgba(16,185,129,0.25)':'var(--border)'};">
-        ${goalAvatarInline(g.name,28)}
-        <span style="flex:1;font-size:14px;font-weight:700;">${esc(g.name)}</span>
-        <span style="font-size:16px;">${done?'✅':'❌'}</span>
-      </div>`;
-    }).join('')}
   </div>`;
-  if(gym.length){
-    html+=`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px;">Gym</div>
-    ${gym.map(s=>{
-      const workSets=(s.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(ss=>!ss.warmup).length,0);
-      return`<div style="padding:10px 0;border-bottom:1px solid var(--border);"><div style="font-size:14px;font-weight:800;margin-bottom:4px;">${esc(s.type||'Workout')} · ${workSets} sets</div>
-      ${(s.exercises||[]).map(e=>{const ws=(e.sets||[]).filter(ss=>!ss.warmup);const top=ws.length?ws.reduce((b,ss)=>parseFloat(ss.weight||0)>parseFloat(b.weight||0)?ss:b,ws[0]):null;return`<div style="font-size:13px;color:var(--text2);margin-bottom:2px;">${esc(e.name)}${top&&top.weight?` · ${top.weight}kg×${top.reps||'?'}`:''}</div>`}).join('')}</div>`;
-    }).join('')}</div>`;
+
+  // Habits
+  if(goals.length){
+    html+=`<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      ${goals.map(g=>{
+        const done=goalDone(ds,g);
+        return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:${done?'rgba(16,185,129,0.07)':'var(--surface2)'};border:1px solid ${done?'rgba(16,185,129,0.25)':'var(--border)'};">
+          ${goalAvatarInline(g.name,28)}
+          <span style="flex:1;font-size:14px;font-weight:700;">${esc(g.name)}</span>
+          <span style="font-size:16px;">${done?'✅':'❌'}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
   }
-  if(runs.length){
-    html+=`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px;">Running</div>
-    ${runs.map(r=>{
-      const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):'';
-      return`<div style="font-size:14px;font-weight:700;padding:8px 0;border-bottom:1px solid var(--border);">${r.km?r.km+'km':''}${r.time?' · '+r.time:''}${pace?' · '+pace:''}${r.effort?' · '+r.effort:''}</div>`;
-    }).join('')}</div>`;
-  }
+
+  // Gym sessions
+  gym.forEach(s=>{
+    const c=SESSION_TYPE_COL[s.type]||SESSION_TYPE_COL.Custom;
+    const workSets=(s.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(ss=>!ss.warmup).length,0);
+    const vol=(s.exercises||[]).reduce((t,e)=>(e.sets||[]).filter(ss=>!ss.warmup).reduce((tt,ss)=>tt+(parseFloat(ss.weight||0)*parseFloat(ss.reps||0)),t),0);
+    html+=`<div style="border-radius:12px;background:${c.bg};border:1px solid ${c.border};padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:15px;font-weight:800;color:${c.text};">${esc(s.type||'Workout')}</span>
+        <div style="display:flex;gap:6px;">
+          <span style="padding:2px 8px;border-radius:10px;background:${c.border};color:${c.text};font-size:11px;font-weight:700;">${workSets} sets</span>
+          ${vol?`<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;">${Math.round(vol)}kg vol</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">
+        ${(s.exercises||[]).map(e=>{
+          const ws=(e.sets||[]).filter(ss=>!ss.warmup);
+          const top=ws.length?ws.reduce((b,ss)=>parseFloat(ss.weight||0)>parseFloat(b.weight||0)?ss:b,ws[0]):null;
+          return`<span style="padding:3px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);font-size:11px;font-weight:600;">${esc(e.name)}${top&&top.weight?' · '+top.weight+'kg':''}</span>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  // Run sessions
+  runs.forEach(r=>{
+    const runIdx=allRuns.indexOf(r);
+    const effortCol=EFFORT_COL[r.effort]||'var(--accent2)';
+    const effortBg=effortCol==='var(--accent2)'?'rgba(99,102,241,0.12)':`${effortCol}18`;
+    const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):null;
+    html+=`<div style="border-radius:12px;background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.25);padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:15px;font-weight:800;color:#06b6d4;">Run</span>
+        <button onclick="closeModal('day-modal');setTimeout(()=>openRunEdit(${runIdx}),200)" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(6,182,212,0.3);background:transparent;color:#06b6d4;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${r.km?`<span style="padding:3px 9px;border-radius:10px;background:rgba(16,185,129,0.12);color:var(--green);font-size:12px;font-weight:700;">${r.km}km</span>`:''}
+        ${r.time?`<span style="padding:3px 9px;border-radius:10px;background:rgba(99,102,241,0.12);color:var(--accent2);font-size:12px;font-weight:700;">${r.time}</span>`:''}
+        ${pace?`<span style="padding:3px 9px;border-radius:10px;background:rgba(249,115,22,0.12);color:var(--orange);font-size:12px;font-weight:700;">${pace}/km</span>`:''}
+        ${r.effort?`<span style="padding:3px 9px;border-radius:10px;background:${effortBg};color:${effortCol};font-size:12px;font-weight:700;">${esc(r.effort)}</span>`:''}
+        ${r.startTime?`<span style="padding:3px 9px;border-radius:10px;background:var(--surface2);color:var(--text3);font-size:11px;font-weight:600;">🕐 ${r.startTime}</span>`:''}
+      </div>
+      ${r.note?`<div style="font-size:12px;color:var(--text2);margin-top:8px;font-style:italic;">${esc(r.note)}</div>`:''}
+    </div>`;
+  });
+
   return html;
 }
 

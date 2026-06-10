@@ -2317,16 +2317,35 @@ function renderBodyCompCard(health){
   const minBf=bfAll.length?Math.min(...bfAll):0,maxBf=bfAll.length?Math.max(...bfAll):1,rangeBf=maxBf-minBf||1;
   function rollingAvg(arr,w=7){return arr.map((_,i)=>{const slice=arr.slice(Math.max(0,i-w+1),i+1).filter(v=>v!=null);return slice.length?slice.reduce((a,b)=>a+b,0)/slice.length:null;});}
   const wAvg=rollingAvg(ws);const bfAvg=rollingAvg(bfVals);
-  const W=300,H=80,LW=36;
-  function toPts(vals,min,range){return vals.map((v,i)=>{if(v==null)return null;return[(i/(n-1))*(W-LW),H-((v-min)/range)*(H-4)];});}
+  const W=320,H=90,PL=36,PR=40,PT=6,PB=22;
+  const chartW=W-PL-PR,chartH=H-PT-PB;
+  function toPts(vals,min,range){return vals.map((v,i)=>{if(v==null)return null;const x=PL+(i/(Math.max(n-1,1)))*chartW;const y=PT+((max-v)/(range||1))*chartH;return[x,y];});}
+  // Use padded range for weight axis
+  const wPad=(maxW-minW)*0.15||0.5;
+  const axMinW=minW-wPad,axMaxW=maxW+wPad,wRange=axMaxW-axMinW;
+  function toWPts(vals){return vals.map((v,i)=>{if(v==null)return null;return[PL+(i/(Math.max(n-1,1)))*chartW, PT+((axMaxW-v)/wRange)*chartH];});}
+  function toBfPts(vals){const bfPad=(maxBf-minBf)*0.15||0.5;const mn=minBf-bfPad,mx=maxBf+bfPad,rng=mx-mn||1;return vals.map((v,i)=>{if(v==null)return null;return[PL+(i/(Math.max(n-1,1)))*chartW, PT+((mx-v)/rng)*chartH];});}
   function polyline(points,stroke,sw,dash){const segs=[];let seg=[];points.forEach(p=>{if(p)seg.push(p);else{if(seg.length>1)segs.push(seg);seg=[];}});if(seg.length>1)segs.push(seg);return segs.map(s=>`<polyline points="${s.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-dasharray="${dash}" opacity="0.9"/>`).join('');}
-  const wPts=toPts(ws,minW,rangeW),wAvgPts=toPts(wAvg,minW,rangeW);
-  const bfPts=toPts(bfVals,minBf,rangeBf),bfAvgPts=toPts(bfAvg,minBf,rangeBf);
+  const wPts=toWPts(ws),wAvgPts=toWPts(wAvg);
+  const bfPts=toBfPts(bfVals),bfAvgPts=toBfPts(bfAvg);
   const lastWPt=wPts.filter(Boolean).slice(-1)[0];
   const lastBfPt=bfPts.filter(Boolean).slice(-1)[0];
-  const lx=W-LW+4;
-  const axisLabels=[0,Math.floor(n/2),n-1].filter((v,i,a)=>a.indexOf(v)===i).map(i=>{const d=new Date(entries[i].date);return`<text x="${((i/(n-1))*(W-LW)).toFixed(0)}" y="${H+20}" text-anchor="middle" fill="var(--text3)" font-size="9" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;}).join('');
-  const chart=n>=2?`<svg class="svg-chart" viewBox="0 0 ${W} ${H+26}" style="height:110px;margin-top:12px;overflow:visible;">
+  const lx=PL+chartW+4;
+  // Y axis ticks for weight (left)
+  const wStep=wRange<=1?0.2:wRange<=3?0.5:1;
+  const firstTick=Math.ceil(axMinW/wStep)*wStep;
+  let yAxisSvg='';
+  yAxisSvg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+chartH}" stroke="var(--border)" stroke-width="1"/>`;
+  for(let t=firstTick;t<=axMaxW+0.01;t=Math.round((t+wStep)*100)/100){
+    const y=PT+((axMaxW-t)/wRange)*chartH;
+    if(y<PT-2||y>PT+chartH+2)continue;
+    yAxisSvg+=`<line x1="${PL-3}" y1="${y.toFixed(1)}" x2="${PL}" y2="${y.toFixed(1)}" stroke="var(--text3)" stroke-width="1"/>`;
+    yAxisSvg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+chartW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2,3" opacity="0.6"/>`;
+    yAxisSvg+=`<text x="${(PL-5).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${t.toFixed(1)}</text>`;
+  }
+  const axisLabels=[0,Math.floor(n/2),n-1].filter((v,i,a)=>a.indexOf(v)===i).map(i=>{const d=new Date(entries[i].date);const x=(PL+(i/(Math.max(n-1,1)))*chartW).toFixed(0);const anchor=i===0?'start':i===n-1?'end':'middle';return`<text x="${x}" y="${PT+chartH+14}" text-anchor="${anchor}" fill="var(--text3)" font-size="9" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;}).join('');
+  const chart=n>=2?`<svg class="svg-chart" viewBox="0 0 ${W} ${H+8}" style="height:120px;margin-top:12px;overflow:visible;">
+    ${yAxisSvg}
     ${polyline(wPts,'#ef4444',1,'4 3')}${polyline(wAvgPts,'#ef4444',2.5,'')}
     ${polyline(bfPts,'#60a5fa',1,'4 3')}${polyline(bfAvgPts,'#818cf8',2.5,'')}
     ${lastWPt?`<circle cx="${lastWPt[0].toFixed(1)}" cy="${lastWPt[1].toFixed(1)}" r="3.5" fill="#ef4444"/><text x="${lx}" y="${(lastWPt[1]+4).toFixed(1)}" fill="#ef4444" font-size="9" font-weight="800" font-family="-apple-system,sans-serif">${latestW.weight}kg</text>`:''}

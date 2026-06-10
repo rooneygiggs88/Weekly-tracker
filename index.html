@@ -893,31 +893,21 @@ function renderToday(){
         <div class="session-card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
       </div>`;
     }
-    // Quota row
-    const quotaItems=quota.map(g=>{
+    // Slim quota row
+    const quotaRow=quota.map(g=>{
       const isRun=g.id==='run';
       const col=isRun?'#06b6d4':'var(--accent2)';
-      const dots=Array.from({length:g.target},(_,i)=>
-        `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${i<g.done?col:'var(--border)'};margin-right:3px;"></span>`
-      ).join('');
       const complete=g.done>=g.target;
-      const editId=`quota-picker-${g.id}`;
-      const picker=Array.from({length:7},(_,i)=>i+1).map(n=>
-        `<button onclick="setQuotaTarget('${g.id}',${n})" style="width:30px;height:30px;border-radius:50%;border:2px solid ${n===g.target?col:'var(--border)'};background:${n===g.target?col+'33':'transparent'};color:${n===g.target?col:'var(--text2)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;">${n}</button>`
+      const dots=Array.from({length:g.target},(_,i)=>
+        `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${i<g.done?col:'var(--border)'};" ></span>`
       ).join('');
-      return`<div onclick="showPage('train');switchTrainTab('${isRun?'run':'gym'}')" style="flex:1;display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:var(--radius-xs);background:var(--surface2);border:1px solid ${complete?col+'44':'var(--border)'};cursor:pointer;">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);">${esc(g.name)}</span>
-          <span style="font-size:13px;font-weight:800;color:${complete?col:'var(--text2)'};">${g.done}<span style="font-size:11px;color:var(--text3);font-weight:600;">/${g.target}</span>${complete?`<span style="color:${col};margin-left:3px;">✓</span>`:''}</span>
-        </div>
-        <div style="display:flex;gap:4px;align-items:center;">${dots}</div>
-        <div style="text-align:right;margin-top:-2px;">
-          <button onclick="event.stopPropagation();toggleQuotaPicker('${g.id}')" style="background:none;border:none;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;padding:0;">Set target</button>
-        </div>
-        <div id="${editId}" style="display:none;flex-wrap:wrap;gap:4px;margin-top:2px;">${picker}</div>
+      return`<div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);width:26px;">${isRun?'Run':'Gym'}</span>
+        <div style="display:flex;gap:3px;align-items:center;">${dots}</div>
+        ${complete?`<span style="font-size:10px;font-weight:800;color:${col};">✓</span>`:''}
       </div>`;
     }).join('');
-    wrap.innerHTML=planChip+`<div style="display:flex;gap:8px;margin-bottom:4px;">${quotaItems}</div>`;
+    wrap.innerHTML=planChip+`<div style="display:flex;gap:16px;padding:6px 2px 10px;">${quotaRow}</div>`;
   }else{wrap.innerHTML='';}
 
   // Goal cards

@@ -3728,20 +3728,20 @@ function renderTodayPlanCard(){
 // ── EXERCISE LIBRARY & MUSCLE TRACKING ──
 const DEFAULT_MUSCLE_MAP={
   // Chest
-  'Bench Press':['Chest','Triceps'],
-  'Incline Bench Press':['Chest','Triceps'],
+  'Bench Press':['Chest'],
+  'Incline Bench Press':['Chest'],
   'Dumbbell Fly':['Chest'],
   'Cable Fly':['Chest'],
-  'Chest Press':['Chest','Triceps'],
+  'Chest Press':['Chest'],
   'Dip':['Chest','Triceps'],
   // Back
   'Deadlift':['Back','Hamstrings','Glutes'],
-  'Pull Up':['Back','Biceps'],
-  'Chin Up':['Back','Biceps'],
-  'Barbell Row':['Back','Biceps'],
-  'Cable Row':['Back','Biceps'],
-  'Seated Row':['Back','Biceps'],
-  'Lat Pulldown':['Back','Biceps'],
+  'Pull Up':['Back'],
+  'Chin Up':['Back'],
+  'Barbell Row':['Back'],
+  'Cable Row':['Back'],
+  'Seated Row':['Back'],
+  'Lat Pulldown':['Back'],
   'Face Pull':['Shoulders','Back'],
   // Shoulders
   'Overhead Press':['Shoulders','Triceps'],
@@ -4293,14 +4293,15 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
 
 // ── MUSCLE TAG MIGRATION ──
 (function applyMuscleTagMigration(){
-  if(localStorage.getItem('muscle_tag_migration_v2')==='done')return;
+  if(localStorage.getItem('muscle_tag_migration_v3')==='done')return;
   const prog=loadGymProg();
   const corrections={
-    'Plate bench press':   ['Chest','Triceps'],
+    'Plate bench press':   ['Chest'],
+    'Incline plate press': ['Chest'],
     'Overhead Press':      ['Shoulders','Triceps'],
-    'Barbell Row':         ['Back','Biceps'],
-    'Seated row':          ['Back','Biceps'],
-    'Lat pulldown':        ['Back','Biceps'],
+    'Barbell Row':         ['Back'],
+    'Seated row':          ['Back'],
+    'Lat pulldown':        ['Back'],
     'Hip abductor IN':     ['Glutes'],
     'Hip abductor OUT':    ['Glutes'],
     'Seated leg curl':     ['Hamstrings'],
@@ -4311,7 +4312,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
     if(prog[name]){prog[name].muscles=muscles;}
   });
   saveGymProg(prog);
-  localStorage.setItem('muscle_tag_migration_v2','done');
+  localStorage.setItem('muscle_tag_migration_v3','done');
 })();
 
 // ── INIT ──

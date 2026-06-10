@@ -664,7 +664,7 @@ function parseTimeToSecs(t){if(!t)return 0;const p=t.split(':').map(Number);if(p
 function toastMsg(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function haptic(type='light'){if(!navigator.vibrate)return;if(type==='light')navigator.vibrate(8);if(type==='medium')navigator.vibrate(20);if(type==='success')navigator.vibrate([10,50,20]);}
 function getMonday(date){const d=new Date(date),day=d.getDay();d.setDate(d.getDate()+(day===0?-6:1-day));d.setHours(0,0,0,0);return d;}
-function daysUntil(ds){const now=today();now.setHours(0,0,0,0);const t=new Date(ds);return Math.round((t-now)/86400000);}
+function daysUntil(ds){const now=today();now.setHours(0,0,0,0);const t=new Date(ds+'T12:00:00');return Math.round((t-now)/86400000);}
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function fmtShortDate(ds){const d=new Date(ds);return`${d.getDate()}/${d.getMonth()+1}`;}
 
@@ -691,6 +691,7 @@ function loadState(){
 let state=loadState();
 let _saveTimer=null;
 function saveState(){clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>localStorage.setItem('wt_v3',JSON.stringify(state)),400);}
+window.addEventListener('beforeunload',()=>{clearTimeout(_saveTimer);localStorage.setItem('wt_v3',JSON.stringify(state));});
 function loadGymData(){try{const d=JSON.parse(localStorage.getItem('gym_data_v1')||'[]');return d.sort((a,b)=>(a.date||'').localeCompare(b.date||''));}catch(e){return[];}}
 function saveGymData(d){localStorage.setItem('gym_data_v1',JSON.stringify(d));}
 function loadRunData(){try{return JSON.parse(localStorage.getItem('run_data_v2')||'[]');}catch(e){return[];}}
@@ -733,7 +734,7 @@ function allGoals(){return[...allDailyGoals(),...allSessionGoals()];}
 
 // ── CHECKS ──
 function getCheck(ds,id){return!!state.data[`${ds}:check:${id}`];}
-function toggleCheck(ds,id){state.data[`${ds}:check:${id}`]=!state.data[`${ds}:check:${id}`];saveState();haptic('light');renderToday();}
+function toggleCheck(ds,id){state.data[`${ds}:check:${id}`]=!state.data[`${ds}:check:${id}`];saveState();haptic('light');if(weekOffset===0)renderToday();else{renderDayGoals(ds);}}
 function getSessionDone(ds,id){
   if((state.data[`${ds}:session:${id}`]||[]).length>0)return true;
   if(id==='gym')return loadGymData().some(s=>s.date===ds);
@@ -820,7 +821,7 @@ function renderToday(){
   const score=viewingToday?getTodayScore():getWeekScore();
   document.getElementById('today-score').textContent=score;
   const statusEl=document.getElementById('today-status');
-  const _n=state.userName?`, ${state.userName}`:'';;
+  const _n=state.userName?`, ${esc(state.userName)}`:'';
   // Date-seeded pick so message is stable all day but rotates daily
   const _seed=parseInt(dk(now).replace(/-/g,''))%997;
   function pickMsg(arr){return arr[_seed%arr.length];}
@@ -1151,6 +1152,7 @@ let gymDraft=null;
 function renderGymSection(){
   const el=document.getElementById('gym-content');
   if(gymDraft){renderGymLogger();return;}
+  _gymPickedType=null;
   const sessions=loadGymData();
   const todaySessions=sessions.filter(s=>s.date===dk(today()));
   if(todaySessions.length){
@@ -2905,13 +2907,13 @@ function importData(evt){
         importV1Format(d);
       } else {
         // v2 native format
-        if(d.state)localStorage.setItem('wt_v3',JSON.stringify(d.state));
-        if(d.gym)localStorage.setItem('gym_data_v1',JSON.stringify(d.gym));
-        if(d.run)localStorage.setItem('run_data_v2',JSON.stringify(d.run));
-        if(d.health)localStorage.setItem('health_data_v1',JSON.stringify(d.health));
-        if(d.prog)localStorage.setItem('gym_prog_v1',JSON.stringify(d.prog));
-        if(d.vaping)localStorage.setItem('vaping_data_v1',JSON.stringify(d.vaping));
-        if(d.morning)localStorage.setItem('morning_data_v1',JSON.stringify(d.morning));
+        if(d.state&&typeof d.state==='object'&&!Array.isArray(d.state))localStorage.setItem('wt_v3',JSON.stringify(d.state));
+        if(Array.isArray(d.gym))localStorage.setItem('gym_data_v1',JSON.stringify(d.gym));
+        if(Array.isArray(d.run))localStorage.setItem('run_data_v2',JSON.stringify(d.run));
+        if(Array.isArray(d.health))localStorage.setItem('health_data_v1',JSON.stringify(d.health));
+        if(d.prog&&typeof d.prog==='object'&&!Array.isArray(d.prog))localStorage.setItem('gym_prog_v1',JSON.stringify(d.prog));
+        if(Array.isArray(d.vaping))localStorage.setItem('vaping_data_v1',JSON.stringify(d.vaping));
+        if(Array.isArray(d.morning))localStorage.setItem('morning_data_v1',JSON.stringify(d.morning));
       }
       toastMsg('Data imported — reloading…');
       setTimeout(()=>location.reload(),1200);
@@ -3029,6 +3031,7 @@ function importV1Format(d){
 }
 function clearAllData(){
   if(!confirm('Delete ALL data? This cannot be undone.'))return;
+  clearTimeout(_saveTimer);
   ['wt_v3','gym_data_v1','run_data_v2','health_data_v1','gym_prog_v1','vaping_data_v1','morning_data_v1'].forEach(k=>localStorage.removeItem(k));
   toastMsg('Data cleared — reloading…');setTimeout(()=>location.reload(),1200);
 }
@@ -3279,6 +3282,7 @@ function deleteRunEntry(){
   closeModal('run-edit-modal');
   toastMsg('Run deleted');haptic('success');
   if(document.getElementById('page-trends').classList.contains('active'))renderTrends();
+  if(document.getElementById('page-train').classList.contains('active'))renderRunSection();
 }
 
 // ── ACTIVITY LOAD ──
@@ -3588,6 +3592,7 @@ function copyLastSession(){
   const last=sessions[sessions.length-1];
   gymDraft={
     type:last.type||'Push',
+    startedAt:Date.now(),
     exercises:(last.exercises||[]).map(e=>({
       name:e.name,
       sets:(e.sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:s.warmup||false}))

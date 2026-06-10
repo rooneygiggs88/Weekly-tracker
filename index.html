@@ -1197,6 +1197,7 @@ function gymSetWeight(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].se
 function gymSetReps(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si])gymDraft.exercises[i].sets[si].reps=v;}
 
 function renderExBlock(ex,i,lastSame,prog){
+  const _restSecs=getExRestSecs(ex.name||'');
   const lastEx=lastSame&&lastSame.exercises?lastSame.exercises.find(e=>e.name.toLowerCase()===ex.name.toLowerCase()):null;
   const lastSets=lastEx?(lastEx.sets||[]).filter(s=>!s.warmup):[];
   const topLast=lastSets.length?lastSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,lastSets[0]):null;
@@ -1235,7 +1236,7 @@ function renderExBlock(ex,i,lastSame,prog){
     </div>`).join('')}
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="gymAddSet(${i})" style="flex:1;padding:8px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
-      <button onclick="startRestTimer(getExRestSecs(${JSON.stringify(ex.name||'')}))" style="padding:8px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${(s=>(s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s'))(getExRestSecs(ex.name||''))} rest</button>
+      <button onclick="startRestTimer(${_restSecs})" style="padding:8px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${_restSecs>=60?Math.floor(_restSecs/60)+'m'+(_restSecs%60?_restSecs%60+'s':''):_restSecs+'s'} rest</button>
     </div>
     ${renderPlateCalc((ex.sets||[]).filter(s=>!s.warmup).reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b||0)?parseFloat(s.weight):b,0))}
   </div>`;

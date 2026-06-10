@@ -3731,8 +3731,8 @@ function saveMuscleTag(){
   saveGymProg(prog);
   const restDiv2=document.getElementById('lib-rest-selector');if(restDiv2)restDiv2.remove();
   closeModal('muscle-tag-modal');toastMsg('Exercise saved');haptic('success');
-  // Refresh library if open
-  if(document.getElementById('train-library-content')&&document.getElementById('train-library').classList.contains('active'))renderExerciseLibrary();
+  if(document.getElementById('train-library-content'))renderExerciseLibrary();
+  const volEl=document.getElementById('train-volume-content');if(volEl)volEl.innerHTML=renderMuscleVolume();
 }
 function renderMuscleVolume(){
   const now=today();const mon=getMonday(now);

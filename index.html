@@ -1017,7 +1017,7 @@ function switchTrainTab(tab){
   document.querySelectorAll('.train-section').forEach(s=>s.classList.toggle('active',s.id===`train-${tab}`));
   renderTrainSection(tab);
 }
-function renderTrain(){renderTrainSection(activeTrainTab);}
+function renderTrain(){switchTrainTab(activeTrainTab);}
 function renderTrainSection(tab){
   if(tab==='gym')renderGymSection();
   if(tab==='run')renderRunSection();

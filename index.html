@@ -2627,24 +2627,48 @@ function renderBodyCompCard(health){
 
 function renderWeightChart(entries){return'';}
 
+function estimateNicotineMg(puffs, mg){
+  if(!puffs||!mg)return null;
+  return Math.round(puffs*mg*0.005*10)/10;
+}
+function vapingEntryDateLabel(dateStr){
+  const todayStr=dk(today());
+  const yestStr=dk(addDays(today(),-1));
+  if(dateStr===todayStr)return'today';
+  if(dateStr===yestStr)return'yesterday';
+  const dt=new Date(dateStr+'T12:00:00');
+  return`${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;
+}
 function renderVapingSection(){
   const data=loadVapingData();
-  const today7=data.filter(e=>{const d=new Date(e.date);return d>=addDays(today(),-6);});
+  const todayStr=dk(today());
+  const today7=data.filter(e=>{const d=new Date(e.date+'T12:00:00');return d>=addDays(today(),-6);});
+  const prev7=data.filter(e=>{const d=new Date(e.date+'T12:00:00');return d>=addDays(today(),-13)&&d<addDays(today(),-6);});
   const totalPuffs7=today7.reduce((s,e)=>s+(e.puffs||0),0);
-  const last=data[data.length-1];
+  const totalPuffs7prev=prev7.reduce((s,e)=>s+(e.puffs||0),0);
+  const totalNic7=today7.reduce((s,e)=>s+(estimateNicotineMg(e.puffs,e.mg)||0),0);
+  const wowPct=totalPuffs7prev>0?Math.round((totalPuffs7-totalPuffs7prev)/totalPuffs7prev*100):null;
+  const wowStr=wowPct!=null?`<span style="font-size:11px;font-weight:700;color:${wowPct<=0?'var(--green)':'var(--red)'};">${wowPct>0?'+':''}${wowPct}% vs prev week</span>`:'';
+  const last=data.length?data.slice().sort((a,b)=>b.date.localeCompare(a.date))[0]:null;
+  const lastLabel=last?vapingEntryDateLabel(last.date):'';
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header">
       <span class="chart-card-title">Nicotine</span>
       <button onclick="openVapingModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
     </div>
     ${data.length?`
-      <div style="display:flex;gap:16px;margin-bottom:10px;">
+      <div style="display:flex;gap:16px;margin-bottom:6px;flex-wrap:wrap;">
         <div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${totalPuffs7}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs / 7d</div></div>
-        ${last?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${last.puffs||0}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">yesterday</div></div>`:''}
+        ${totalNic7>0?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">~${totalNic7.toFixed(1)}<span style="font-size:14px;font-weight:700;">mg</span></div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">nicotine / 7d</div></div>`:''}
+        ${last?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${last.puffs||0}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">${lastLabel}</div></div>`:''}
       </div>
+      ${wowStr?`<div style="margin-bottom:10px;">${wowStr}</div>`:''}
       ${renderVapingChart(data)}
       <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px;">
-        ${data.slice(-5).reverse().map(e=>{const dt=new Date(e.date+'T12:00:00');const dl=`${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;return`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.puffs||0} puffs${e.mg?' · '+e.mg+'mg':''}</span><span style="font-size:12px;color:var(--text3);">${dl}${e.note?' · '+esc(e.note):''}</span></div>`;}).join('')}
+        ${data.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5).map(e=>{
+          const nic=estimateNicotineMg(e.puffs,e.mg);
+          return`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.puffs||0} puffs${nic!=null?' · ~'+nic+'mg nicotine':''}${e.mg?' · '+e.mg+'mg/ml':''}</span><span style="font-size:12px;color:var(--text3);">${vapingEntryDateLabel(e.date)}${e.note?' · '+esc(e.note):''}</span></div>`;
+        }).join('')}
       </div>`:`<div class="empty-state" style="padding:16px 0;"><strong>No nicotine logged</strong>Tap + Log to start tracking.</div>`}
   </div>`;
 }

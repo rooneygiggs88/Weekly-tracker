@@ -3807,6 +3807,7 @@ function renderVolumeTab(){
   if(!el)return;
   const now=today();
   const gym=loadGymData();
+  const run=loadRunData();
 
   const periods=[
     {id:'week',label:'This Week'},
@@ -3825,6 +3826,24 @@ function renderVolumeTab(){
     if(pid==='8weeks')return{from:addDays(mon,-55),to:now,days:56};
     return{from:new Date('2000-01-01'),to:now,days:null};
   }
+  // Per-muscle weekly targets (min, max) — realistic for 1 session/muscle/week
+  const MUSCLE_TARGETS={
+    Chest:{min:8,max:12},Back:{min:8,max:12},Shoulders:{min:6,max:10},
+    Biceps:{min:6,max:10},Triceps:{min:6,max:10},Quads:{min:6,max:10},
+    Hamstrings:{min:4,max:8},Glutes:{min:4,max:8},Calves:{min:3,max:6},Core:{min:3,max:6}
+  };
+  // Run contribution: equivalent sets per muscle by effort type
+  const RUN_CONTRIB={
+    easy:    {Quads:1,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+    long:    {Quads:1,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+    tempo:   {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+    fartlek: {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+    parkrun: {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+    intervals:{Quads:2,Hamstrings:2,Glutes:1,Calves:2,Core:2},
+    race:    {Quads:2,Hamstrings:2,Glutes:1,Calves:2,Core:2},
+  };
+  function effortKey(e){const el=(e||'').toLowerCase();if(el.includes('race'))return'race';if(el.includes('interval')||el.includes('hard'))return'intervals';if(el.includes('tempo'))return'tempo';if(el.includes('fartlek'))return'fartlek';if(el.includes('parkrun'))return'parkrun';if(el.includes('long'))return'long';return'easy';}
+
   function countMuscles(sessList){
     const c={};ALL_MUSCLE_GROUPS.forEach(m=>{c[m]=0;});
     sessList.forEach(s=>(s.exercises||[]).forEach(e=>{
@@ -3834,66 +3853,82 @@ function renderVolumeTab(){
     }));
     return c;
   }
+  function countRunMuscles(runList){
+    const c={};ALL_MUSCLE_GROUPS.forEach(m=>{c[m]=0;});
+    runList.forEach(r=>{
+      const contrib=RUN_CONTRIB[effortKey(r.effort)]||RUN_CONTRIB.easy;
+      Object.entries(contrib).forEach(([m,v])=>{if(c[m]!==undefined)c[m]+=v;});
+    });
+    return c;
+  }
 
   const {from,to,days}=getRange(_volPeriod);
   const sessions=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=from&&d<=to;});
-  // Previous equivalent period for trend arrows
+  const runsInPeriod=run.filter(r=>{const d=new Date(r.date+'T12:00:00');return d>=from&&d<=to;});
   const prevSessions=days?gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=addDays(from,-days)&&d<from;}):[];
   const prevCounts=countMuscles(prevSessions);
 
-  // Count work sets per muscle group
-  const counts=countMuscles(sessions);
+  const gymCounts=countMuscles(sessions);
+  const runCounts=countRunMuscles(runsInPeriod);
+  const counts={};ALL_MUSCLE_GROUPS.forEach(m=>{counts[m]=(gymCounts[m]||0)+(runCounts[m]||0);});
 
-  const totalSets=Object.values(counts).reduce((a,b)=>a+b,0);
+  const totalSets=Object.values(gymCounts).reduce((a,b)=>a+b,0);
+  const totalRunSets=Object.values(runCounts).reduce((a,b)=>a+b,0);
 
-  // Target range scaled by period weeks
   const periodWeeks={week:1,lastweek:1,'4weeks':4,'8weeks':8,all:null};
-  const wks=periodWeeks[_volPeriod];
-  const minTarget=wks?10*wks:10; // 10 sets/week minimum
-  const maxTarget=wks?20*wks:20; // 20 sets/week maximum
-  // Bar scale: cap at maxTarget*1.5 so bars don't dwarf everything
-  const barMax=Math.max(...Object.values(counts),maxTarget*1.2);
-  const minPct=Math.round(minTarget/barMax*100);
+  const wks=periodWeeks[_volPeriod]||1;
+  const barMax=Math.max(...Object.values(counts),16*wks,1);
 
   const periodBtns=periods.map(p=>`<button onclick="_volPeriod='${p.id}';renderVolumeTab();" style="padding:7px 14px;border-radius:20px;border:none;background:${_volPeriod===p.id?'var(--accent)':'var(--surface2)'};color:${_volPeriod===p.id?'#fff':'var(--text2)'};font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${p.label}</button>`).join('');
 
   const bars=ALL_MUSCLE_GROUPS.map(m=>{
-    const v=counts[m],pv=prevCounts[m]||0;
-    const pct=Math.round(v/barMax*100);
-    const col=MUSCLE_COLS[m]||'var(--text3)';
-    const isLow=v<minTarget,isHigh=v>maxTarget;
-    const barCol=(!isLow&&v>0)?'var(--green)':col;
+    const gv=gymCounts[m]||0,rv=runCounts[m]||0,v=gv+rv;
+    const pv=prevCounts[m]||0;
+    const tgt=MUSCLE_TARGETS[m]||{min:6,max:10};
+    const minT=tgt.min*wks,maxT=tgt.max*wks;
+    const gymPct=Math.round(gv/barMax*100);
+    const runPct=Math.round(rv/barMax*100);
+    const minPctM=Math.round(minT/barMax*100);
+    const isLow=v<minT&&v>0,isGood=v>=minT&&v<=maxT,isHigh=v>maxT;
+    const gymCol='var(--accent2)';
+    const runCol='#06b6d4';
     const badge=v===0?''
       :isLow?`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--orange);color:var(--orange);font-size:10px;font-weight:800;">LOW</span>`
       :isHigh?`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--accent2);color:var(--accent2);font-size:10px;font-weight:800;">HIGH</span>`
       :`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--green);color:var(--green);font-size:10px;font-weight:800;">GOOD</span>`;
     const trendCol=v>pv?'var(--green)':v<pv?'var(--orange)':'var(--text3)';
-    const trendArrow=v>pv?'↑':v<pv?'↓':'=';
+    const trendArrow=v>pv?'↑':v<pv?'↓':'—';
     return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);">
       <div style="width:82px;flex-shrink:0;font-size:13px;font-weight:700;color:${v>0?'var(--text)':'var(--text3)'};">${m}</div>
-      <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;position:relative;">
-        <div style="height:100%;width:${pct}%;background:${v>0?barCol:'transparent'};border-radius:5px;transition:width 0.4s;"></div>
-        <div style="position:absolute;top:-2px;left:${minPct}%;width:2px;height:14px;background:rgba(255,255,255,0.25);border-radius:1px;"></div>
+      <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;position:relative;overflow:hidden;">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${gymPct}%;background:${gymCol};border-radius:5px 0 0 5px;"></div>
+        <div style="position:absolute;left:${gymPct}%;top:0;height:100%;width:${runPct}%;background:${runCol};${gymPct===0?'border-radius:5px 0 0 5px;':''}"></div>
+        <div style="position:absolute;top:-2px;left:${minPctM}%;width:2px;height:14px;background:rgba(255,255,255,0.3);border-radius:1px;"></div>
       </div>
-      <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:${v>0?barCol:'var(--text3)'};">${v} sets</div>
+      <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:${v>0?(isGood?'var(--green)':isLow?'var(--orange)':'var(--accent2)'):'var(--text3)'};">${v} sets</div>
       <div style="width:40px;text-align:center;">${v>0?badge:''}</div>
       <div style="width:14px;text-align:center;font-size:13px;font-weight:800;color:${trendCol};">${trendArrow}</div>
     </div>`;
   }).join('');
 
-  const targetLabel=wks?`Target: ${minTarget}–${maxTarget} sets · marker = minimum`:`Target: 10–20 sets/week · marker = minimum`;
+  const legend=`<div style="display:flex;gap:14px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--accent2);"></span><span style="font-size:11px;color:var(--text3);font-weight:700;">Gym</span></div>
+    <div style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#06b6d4;"></span><span style="font-size:11px;color:var(--text3);font-weight:700;">Running</span></div>
+    <div style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:2px;height:10px;border-radius:1px;background:rgba(255,255,255,0.3);"></span><span style="font-size:11px;color:var(--text3);font-weight:700;">Min target</span></div>
+  </div>`;
 
   el.innerHTML=`
     <div class="chart-card" style="margin-bottom:10px;">
-      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} sessions · ${totalSets} sets</span></div>
+      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} sessions · ${totalSets} gym sets${totalRunSets>0?' · '+runsInPeriod.length+' runs':''}</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">${periodBtns}</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">${targetLabel}</div>
-      ${totalSets>0?bars:ALL_MUSCLE_GROUPS.map(m=>{
-        const col=MUSCLE_COLS[m]||'var(--text3)';
+      ${legend}
+      ${totalSets>0||totalRunSets>0?bars:ALL_MUSCLE_GROUPS.map(m=>{
+        const tgt=MUSCLE_TARGETS[m]||{min:6,max:10};
+        const minPctM=Math.round(tgt.min/Math.max(16,1)*100);
         return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);">
           <div style="width:82px;flex-shrink:0;font-size:13px;font-weight:700;color:var(--text3);">${m}</div>
           <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;position:relative;">
-            <div style="position:absolute;top:-2px;left:${minPct}%;width:2px;height:14px;background:rgba(255,255,255,0.25);border-radius:1px;"></div>
+            <div style="position:absolute;top:-2px;left:${minPctM}%;width:2px;height:14px;background:rgba(255,255,255,0.25);border-radius:1px;"></div>
           </div>
           <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:var(--text3);">0 sets</div>
           <div style="width:40px;"></div>

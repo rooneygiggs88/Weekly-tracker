@@ -3727,11 +3727,34 @@ function renderTodayPlanCard(){
 
 // ── EXERCISE LIBRARY & MUSCLE TRACKING ──
 const DEFAULT_MUSCLE_MAP={
-  'Bench Press':['Chest','Triceps','Shoulders'],
-  'Incline Bench Press':['Chest','Triceps','Shoulders'],
+  // Chest
+  'Bench Press':['Chest','Triceps'],
+  'Incline Bench Press':['Chest','Triceps'],
   'Dumbbell Fly':['Chest'],
   'Cable Fly':['Chest'],
+  'Chest Press':['Chest','Triceps'],
   'Dip':['Chest','Triceps'],
+  // Back
+  'Deadlift':['Back','Hamstrings','Glutes'],
+  'Pull Up':['Back','Biceps'],
+  'Chin Up':['Back','Biceps'],
+  'Barbell Row':['Back','Biceps'],
+  'Cable Row':['Back','Biceps'],
+  'Seated Row':['Back','Biceps'],
+  'Lat Pulldown':['Back','Biceps'],
+  'Face Pull':['Shoulders','Back'],
+  // Shoulders
+  'Overhead Press':['Shoulders','Triceps'],
+  'Lateral Raise':['Shoulders'],
+  'Front Raise':['Shoulders'],
+  'Arnold Press':['Shoulders','Triceps'],
+  // Arms
+  'Bicep Curl':['Biceps'],
+  'Hammer Curl':['Biceps'],
+  'Tricep Pushdown':['Triceps'],
+  'Skull Crusher':['Triceps'],
+  'Close Grip Bench':['Triceps','Chest'],
+  // Legs
   'Squat':['Quads','Glutes','Hamstrings'],
   'Leg Press':['Quads','Glutes'],
   'Lunge':['Quads','Glutes'],
@@ -3739,24 +3762,15 @@ const DEFAULT_MUSCLE_MAP={
   'Leg Curl':['Hamstrings'],
   'Leg Extension':['Quads'],
   'Calf Raise':['Calves'],
-  'Deadlift':['Back','Hamstrings','Glutes'],
-  'Pull Up':['Back','Biceps'],
-  'Chin Up':['Back','Biceps'],
-  'Barbell Row':['Back','Biceps'],
-  'Cable Row':['Back','Biceps'],
-  'Lat Pulldown':['Back','Biceps'],
-  'Face Pull':['Shoulders','Back'],
-  'Overhead Press':['Shoulders','Triceps'],
-  'Lateral Raise':['Shoulders'],
-  'Front Raise':['Shoulders'],
-  'Bicep Curl':['Biceps'],
-  'Hammer Curl':['Biceps'],
-  'Tricep Pushdown':['Triceps'],
-  'Skull Crusher':['Triceps'],
+  'Hip Thrust':['Glutes','Hamstrings'],
+  'Glute Bridge':['Glutes','Hamstrings'],
+  'Hip Abductor':['Glutes'],
+  // Core
   'Plank':['Core'],
   'Ab Wheel':['Core'],
   'Cable Crunch':['Core'],
-  'Hip Thrust':['Glutes','Hamstrings'],
+  'Sit Up':['Core'],
+  'Crunch':['Core'],
 };
 const ALL_MUSCLE_GROUPS=['Chest','Back','Shoulders','Biceps','Triceps','Quads','Hamstrings','Glutes','Calves','Core'];
 const MUSCLE_COLS={Chest:'#6366f1',Back:'#ef4444',Shoulders:'#8b5cf6',Biceps:'#f97316',Triceps:'#10b981',Quads:'#22c55e',Hamstrings:'#eab308',Glutes:'#ec4899',Calves:'#06b6d4',Core:'#64748b'};
@@ -4276,6 +4290,29 @@ renderTrain=function(){
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open');});
 });
+
+// ── MUSCLE TAG MIGRATION ──
+(function applyMuscleTagMigration(){
+  if(localStorage.getItem('muscle_tag_migration_v2')==='done')return;
+  const prog=loadGymProg();
+  const corrections={
+    'Plate bench press':   ['Chest','Triceps'],
+    'Overhead Press':      ['Shoulders','Triceps'],
+    'Barbell Row':         ['Back','Biceps'],
+    'Seated row':          ['Back','Biceps'],
+    'Lat pulldown':        ['Back','Biceps'],
+    'Hip abductor IN':     ['Glutes'],
+    'Hip abductor OUT':    ['Glutes'],
+    'Seated leg curl':     ['Hamstrings'],
+    'Seated leg press':    ['Quads','Glutes'],
+    'Glute Hip Thrust':    ['Glutes','Hamstrings'],
+  };
+  Object.entries(corrections).forEach(([name,muscles])=>{
+    if(prog[name]){prog[name].muscles=muscles;}
+  });
+  saveGymProg(prog);
+  localStorage.setItem('muscle_tag_migration_v2','done');
+})();
 
 // ── INIT ──
 renderToday();

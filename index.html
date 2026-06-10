@@ -297,8 +297,8 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <p id="train-subhead">Log your workout</p>
   </div>
   <div class="train-tabs" id="train-tabs">
-    <button class="train-tab active" data-tab="gym" onclick="switchTrainTab('gym')">Gym</button>
-    <button class="train-tab" data-tab="run" onclick="switchTrainTab('run')">Run</button>
+    <button class="train-tab active" data-tab="run" onclick="switchTrainTab('run')">Run</button>
+    <button class="train-tab" data-tab="gym" onclick="switchTrainTab('gym')">Gym</button>
     <button class="train-tab" data-tab="volume" onclick="switchTrainTab('volume')">Volume</button>
     <button class="train-tab" data-tab="history" onclick="switchTrainTab('history')">History</button>
     <button class="train-tab" data-tab="prs" onclick="switchTrainTab('prs')">PRs</button>
@@ -1010,7 +1010,7 @@ function renderPlateCalc(weightKg){
 }
 
 // ── TRAIN ──
-let activeTrainTab='gym';
+let activeTrainTab='run';
 function switchTrainTab(tab){
   activeTrainTab=tab;
   document.querySelectorAll('.train-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));

@@ -988,33 +988,69 @@ function renderDayGoals(ds){
 }
 
 // ── REST TIMER ──
-const REST_CIRC=2*Math.PI*96; // circumference of r=96 ring ≈ 603.2
-let restInterval=null,restTotal=0,restRemaining=0;
-function startRestTimer(secs){
+const REST_CIRC=2*Math.PI*96;
+let restInterval=null,restTotal=0,restEndsAt=0,_restNotifTimeout=null;
+
+async function _requestNotifPermission(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default')await Notification.requestPermission();
+}
+function _scheduleRestNotif(secsFromNow){
+  if(_restNotifTimeout)clearTimeout(_restNotifTimeout);
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  _restNotifTimeout=setTimeout(()=>{
+    new Notification('Rest over — next set!',{body:'Time to go again 💪',icon:'/Weekly-tracker/icon-192.png',silent:false});
+  },secsFromNow*1000);
+}
+function _cancelRestNotif(){if(_restNotifTimeout){clearTimeout(_restNotifTimeout);_restNotifTimeout=null;}}
+
+async function startRestTimer(secs){
   restStop();
-  restTotal=secs;restRemaining=secs;
+  restTotal=secs;
+  restEndsAt=Date.now()+secs*1000;
   document.getElementById('rest-overlay').classList.add('active');
   updateRestDisplay();
   restInterval=setInterval(()=>{
-    restRemaining--;
-    if(restRemaining<=0){restStop();haptic('success');toastMsg('Rest done — next set!');return;}
+    const rem=Math.ceil((restEndsAt-Date.now())/1000);
+    if(rem<=0){restStop();haptic('success');toastMsg('Rest done — next set!');return;}
     updateRestDisplay();
-  },1000);
+  },500);
+  await _requestNotifPermission();
+  _scheduleRestNotif(secs);
 }
 function updateRestDisplay(){
-  const m=Math.floor(restRemaining/60),s=restRemaining%60;
+  const rem=Math.max(0,Math.ceil((restEndsAt-Date.now())/1000));
+  const m=Math.floor(rem/60),s=rem%60;
   document.getElementById('rest-ring-time').textContent=`${m}:${String(s).padStart(2,'0')}`;
-  const pct=restRemaining/restTotal;
+  const pct=rem/restTotal;
   const arc=document.getElementById('rest-ring-arc');
   arc.style.strokeDasharray=REST_CIRC.toFixed(1);
   arc.style.strokeDashoffset=((1-pct)*REST_CIRC).toFixed(1);
-  // green → amber (below 50%) → red (below 20%)
   arc.style.stroke=pct>0.5?'#10b981':pct>0.2?'#f97316':'#ef4444';
 }
-function restTimerAdd(s){restRemaining=Math.min(restRemaining+s,restTotal+s);updateRestDisplay();}
+function restTimerAdd(s){
+  if(!restEndsAt)return;
+  restEndsAt+=s*1000;
+  _cancelRestNotif();
+  _scheduleRestNotif(Math.ceil((restEndsAt-Date.now())/1000));
+  updateRestDisplay();
+}
 function restTimerSkip(){restStop();toastMsg('Rest skipped — go!');}
 function restTimerStop(){restStop();}
-function restStop(){clearInterval(restInterval);restInterval=null;document.getElementById('rest-overlay').classList.remove('active');}
+function restStop(){
+  clearInterval(restInterval);restInterval=null;
+  _cancelRestNotif();
+  restEndsAt=0;
+  document.getElementById('rest-overlay').classList.remove('active');
+}
+// Resync when app comes back into focus after being backgrounded
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&restEndsAt){
+    const rem=Math.ceil((restEndsAt-Date.now())/1000);
+    if(rem<=0){restStop();haptic('success');toastMsg('Rest done — next set!');}
+    else updateRestDisplay();
+  }
+});
 
 // ── PLATE CALCULATOR ──
 const PLATES=[25,20,15,10,5,2.5,1.25];

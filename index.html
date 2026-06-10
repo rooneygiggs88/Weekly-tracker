@@ -1285,9 +1285,11 @@ function renderRunSection(){
     const ds=dk(date);
     const isFuture=date>now;
     const isActive=ds===_runLogDate;
-    return`<button onclick="selectRunDay('${ds}')" ${isFuture?'disabled':''} style="flex:1;padding:8px 2px;border-radius:8px;border:2px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${isFuture?'var(--text3)':isActive?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:11px;font-weight:800;cursor:${isFuture?'default':'pointer'};opacity:${isFuture?0.3:1};transition:all 0.15s;">
+    const hasRun=runs.some(r=>r.date===ds);
+    return`<button onclick="selectRunDay('${ds}')" ${isFuture?'disabled':''} style="flex:1;padding:8px 2px;border-radius:8px;border:2px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${isFuture?'var(--text3)':isActive?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:11px;font-weight:800;cursor:${isFuture?'default':'pointer'};opacity:${isFuture?0.3:1};transition:all 0.15s;position:relative;">
       <div style="font-size:8px;font-weight:800;text-transform:uppercase;color:inherit;margin-bottom:2px;">${d}</div>
       <div style="font-size:13px;font-weight:800;">${date.getDate()}</div>
+      ${hasRun&&!isFuture?`<div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--green);"></div>`:''}
     </button>`;
   }).join('');
   const dayRuns=runs.filter(r=>r.date===_runLogDate);

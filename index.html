@@ -534,6 +534,30 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
+<div class="modal-overlay" id="run-edit-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Edit Run</h3>
+    <input type="hidden" id="run-edit-idx">
+    <label class="modal-label">Distance (km)</label>
+    <input class="modal-input" id="run-edit-km" type="number" inputmode="decimal" step="0.01" placeholder="e.g. 10.5">
+    <label class="modal-label">Time (hh:mm:ss or mm:ss)</label>
+    <input class="modal-input" id="run-edit-time" type="text" placeholder="e.g. 52:30">
+    <label class="modal-label">Effort</label>
+    <select class="modal-input" id="run-edit-effort">
+      <option value="">— select —</option>
+      <option>Recovery</option><option>Easy</option><option>Long Run</option><option>Tempo</option><option>Intervals</option><option>Race</option>
+    </select>
+    <label class="modal-label">Start time (optional)</label>
+    <input class="modal-input" id="run-edit-starttime" type="time">
+    <label class="modal-label">Note (optional)</label>
+    <input class="modal-input" id="run-edit-note" type="text" placeholder="Any notes">
+    <button class="btn-primary" onclick="saveRunEdit()" style="margin-bottom:10px;">Save</button>
+    <button class="btn-ghost" style="background:rgba(239,68,68,0.1);color:var(--red);border-color:rgba(239,68,68,0.3);margin-bottom:10px;" onclick="deleteRunEntry()">Delete run</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('run-edit-modal')">Cancel</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="gym-discard-modal">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -1806,9 +1830,11 @@ function renderTrendsRunAnalysis(){
   })();
 
   // 5. Run log
+  const sortedRuns=[...runs].sort((a,b)=>b.date.localeCompare(a.date));
   const runLog=`<div class="chart-card">
     <div class="chart-card-header"><span class="chart-card-title">Run Log</span><span class="chart-card-val">${runs.length} total</span></div>
-    ${[...runs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(r=>{
+    ${sortedRuns.slice(0,20).map(r=>{
+      const globalIdx=runs.indexOf(r);
       const d=new Date(r.date+'T12:00:00');
       const dl=d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
       const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):null;
@@ -1820,8 +1846,10 @@ function renderTrendsRunAnalysis(){
             ${r.time?`<span style="padding:2px 8px;border-radius:20px;background:rgba(99,102,241,0.12);color:var(--accent2);font-size:11px;font-weight:700;">${r.time}</span>`:''}
             ${pace?`<span style="padding:2px 8px;border-radius:20px;background:rgba(249,115,22,0.12);color:var(--orange);font-size:11px;font-weight:700;">${pace}/km</span>`:''}
             ${r.effort?`<span style="padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;">${r.effort}</span>`:''}
+            ${r.startTime?`<span style="padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text3);font-size:11px;font-weight:600;">🕐 ${r.startTime}</span>`:''}
           </div>
         </div>
+        <button onclick="openRunEdit(${globalIdx})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>
       </div>`;
     }).join('')}
   </div>`;
@@ -2965,6 +2993,48 @@ function renderReadinessCard(){
     </div>
     ${bodyHtml}
   </div>`;
+}
+
+// ── RUN EDIT ──
+function openRunEdit(idx){
+  const runs=loadRunData();
+  const r=runs[idx];
+  if(!r)return;
+  document.getElementById('run-edit-idx').value=idx;
+  document.getElementById('run-edit-km').value=r.km||'';
+  document.getElementById('run-edit-time').value=r.time||'';
+  document.getElementById('run-edit-effort').value=r.effort||'';
+  document.getElementById('run-edit-starttime').value=r.startTime||'';
+  document.getElementById('run-edit-note').value=r.note||'';
+  openModal('run-edit-modal');
+}
+function saveRunEdit(){
+  const idx=parseInt(document.getElementById('run-edit-idx').value);
+  const runs=loadRunData();
+  if(idx<0||idx>=runs.length)return;
+  const r=runs[idx];
+  r.km=parseFloat(document.getElementById('run-edit-km').value)||r.km||null;
+  r.time=document.getElementById('run-edit-time').value.trim()||r.time||null;
+  r.effort=document.getElementById('run-edit-effort').value||r.effort||null;
+  r.note=document.getElementById('run-edit-note').value.trim()||null;
+  const st=document.getElementById('run-edit-starttime').value.trim();
+  r.startTime=st||null;
+  if(st){const[h,m]=st.split(':').map(Number);const d=new Date(r.date);d.setHours(h,m,0,0);r.ts=d.getTime();}
+  else r.ts=null;
+  saveRunData(runs);
+  closeModal('run-edit-modal');
+  toastMsg('Run updated');haptic('success');
+  if(document.getElementById('page-trends').classList.contains('active'))renderTrends();
+}
+function deleteRunEntry(){
+  if(!confirm('Delete this run?'))return;
+  const idx=parseInt(document.getElementById('run-edit-idx').value);
+  const runs=loadRunData();
+  runs.splice(idx,1);
+  saveRunData(runs);
+  closeModal('run-edit-modal');
+  toastMsg('Run deleted');haptic('success');
+  if(document.getElementById('page-trends').classList.contains('active'))renderTrends();
 }
 
 // ── ACTIVITY LOAD ──

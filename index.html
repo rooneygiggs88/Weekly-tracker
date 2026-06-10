@@ -1741,13 +1741,13 @@ function renderTrendsRunAnalysis(){
       const p=paceVals[i];
       const cx=px(i),cy=py(p);
       const isBest=p===bestP,isLast=i===paceRuns.length-1;
-      const col=isBest?'#fbbf24':EFFORT_COL(r.effort);
+      const col=isBest?'#ffffff':EFFORT_COL(r.effort);
       const radius=isBest?6:isLast?5:4;
       svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius}" fill="${col}" stroke="var(--surface)" stroke-width="1.5" opacity="0.9"/>`;
       if(isBest||isLast){
         const anchor=i===0?'start':i===paceRuns.length-1?'end':'middle';
         const labelY=cy-(radius+5);
-        svg+=`<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="${isBest?'#fbbf24':'var(--text)'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(p)}</text>`;
+        svg+=`<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="${isBest?'#ffffff':'var(--text)'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(p)}</text>`;
       }
     });
     // X-axis: show date on month change
@@ -1772,8 +1772,9 @@ function renderTrendsRunAnalysis(){
         <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#34d399;"></div>Easy</div>
         <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#818cf8;"></div>Long</div>
         <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#fb923c;"></div>Tempo</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#f87171;"></div>Hard</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#fbbf24;"></div>Best</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#f87171;"></div>Intervals</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#fbbf24;"></div>Race</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#ffffff;"></div>Best</div>
       </div>
     </div>`;
   })();

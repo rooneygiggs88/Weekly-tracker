@@ -3886,10 +3886,25 @@ function getExRestSecs(name){
   if(!name)return 90;
   const prog=loadGymProg();
   if(prog[name]&&prog[name].restSeconds)return prog[name].restSeconds;
-  // defaults by likely type
   const nl=name.toLowerCase();
-  if(/squat|deadlift|press|row/.test(nl))return 180;
-  if(/curl|raise|extension|pushdown|fly/.test(nl))return 60;
+  // Heavy compounds lower body — 3 min
+  if(/squat|deadlift|leg press/.test(nl))return 180;
+  // Heavy pressing compounds — 3 min
+  if(/bench press|incline.*press|overhead press|ohp|military press/.test(nl))return 180;
+  // Free weight pulling — 2.5 min
+  if(/barbell row|bent.?over row|t-?bar row|dip/.test(nl))return 150;
+  // Cable pulling — 2 min
+  if(/seated row|cable row|lat pulldown|pull.?down|pull-?up|chin.?up/.test(nl))return 120;
+  // Hip thrust / glute bridge — 2 min
+  if(/hip thrust|glute bridge/.test(nl))return 120;
+  // Machine isolation legs — 90s
+  if(/leg curl|leg extension|hamstring curl/.test(nl))return 90;
+  // Small muscle isolation — 75s
+  if(/curl|pushdown|extension|tricep|bicep/.test(nl))return 75;
+  // Light isolation — 60s
+  if(/lateral raise|face pull|raise|fly|flye|abductor|adductor|calf|calves/.test(nl))return 60;
+  // Generic press/row catch-all — 150s
+  if(/press|row/.test(nl))return 150;
   return 90;
 }
 function saveExRestSecs(name,secs){
@@ -4398,6 +4413,26 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   });
   saveGymProg(prog);
   localStorage.setItem('muscle_tag_migration_v3','done');
+})();
+
+(function applyRestTimeMigration(){
+  if(localStorage.getItem('rest_time_migration_v1')==='done')return;
+  const defaults={
+    'Plate bench press':180,'Incline plate press':180,'Overhead Press':180,
+    'Barbell Row':150,'Dips':150,
+    'Seated row':120,'Lat pulldown':120,
+    'Glute Hip Thrust':120,
+    'Seated leg press':180,'Seated leg curl':90,
+    'Hip abductor IN':60,'Hip abductor OUT':60,
+    'Lateral Raise':60,'Face Pull':60,
+    'Bicep Curl':75,'Tricep Pushdown':75,
+  };
+  const prog=loadGymProg();
+  Object.entries(defaults).forEach(([name,secs])=>{
+    if(prog[name]&&!prog[name].restSeconds){prog[name].restSeconds=secs;}
+  });
+  saveGymProg(prog);
+  localStorage.setItem('rest_time_migration_v1','done');
 })();
 
 // ── INIT ──

@@ -3287,7 +3287,7 @@ function renderDayModalContent(ds){
   const dayScore=getDayScore(ds);
   const gym=loadGymData().filter(s=>s.date===ds);
   const runs=loadRunData().filter(r=>r.date===ds);
-  const goals=allGoals();
+  const goals=goalsActiveOn(ds).filter(g=>g.type==='daily'||g.inputStyle==='check');
   const scoreColor=dayScore>=80?'var(--green)':dayScore>=50?'var(--accent2)':'var(--text3)';
   let html=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
     <div>

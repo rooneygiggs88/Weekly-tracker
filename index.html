@@ -2687,7 +2687,7 @@ function saveName(){
 function exportData(){
   const data={state,gym:loadGymData(),run:loadRunData(),health:loadHealthData(),prog:loadGymProg(),vaping:loadVapingData(),morning:loadMorningData()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`tracker-backup-${dk(today())}.json`;a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`tracker-backup-${dk(today()).split('-').reverse().join('-')}.json`;a.click();
   toastMsg('Data exported');
 }
 function importData(evt){

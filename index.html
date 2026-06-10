@@ -2367,51 +2367,42 @@ function renderBodyCompCard(health){
   if(!latestW&&!latestBf){
     return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div></div>`;
   }
-  const entries=health.filter(e=>e.weight).slice(-30);
-  const n=entries.length;
-  const ws=entries.map(e=>e.weight);
-  const minW=Math.min(...ws),maxW=Math.max(...ws),rangeW=maxW-minW||1;
-  const bfMap={};withBf.forEach(e=>{bfMap[e.date]=e.bodyFat;});
-  const bfVals=entries.map(e=>bfMap[e.date]||null);
-  const bfAll=bfVals.filter(v=>v!=null);
-  const minBf=bfAll.length?Math.min(...bfAll):0,maxBf=bfAll.length?Math.max(...bfAll):1,rangeBf=maxBf-minBf||1;
-  function rollingAvg(arr,w=7){return arr.map((_,i)=>{const slice=arr.slice(Math.max(0,i-w+1),i+1).filter(v=>v!=null);return slice.length?slice.reduce((a,b)=>a+b,0)/slice.length:null;});}
-  const wAvg=rollingAvg(ws);const bfAvg=rollingAvg(bfVals);
-  const W=320,H=90,PL=36,PR=40,PT=6,PB=22;
+  // Scatter plot: weight (X) vs body fat % (Y), only entries with both values
+  const scatterPts=health.filter(e=>e.weight&&e.bodyFat!=null&&e.bodyFat>0).slice(-40);
+  const W=300,H=160,PL=30,PR=12,PT=10,PB=24;
   const chartW=W-PL-PR,chartH=H-PT-PB;
-  function toPts(vals,min,range){return vals.map((v,i)=>{if(v==null)return null;const x=PL+(i/(Math.max(n-1,1)))*chartW;const y=PT+((max-v)/(range||1))*chartH;return[x,y];});}
-  // Use padded range for weight axis
-  const wPad=(maxW-minW)*0.15||0.5;
-  const axMinW=minW-wPad,axMaxW=maxW+wPad,wRange=axMaxW-axMinW;
-  function toWPts(vals){return vals.map((v,i)=>{if(v==null)return null;return[PL+(i/(Math.max(n-1,1)))*chartW, PT+((axMaxW-v)/wRange)*chartH];});}
-  function toBfPts(vals){const bfPad=(maxBf-minBf)*0.15||0.5;const mn=minBf-bfPad,mx=maxBf+bfPad,rng=mx-mn||1;return vals.map((v,i)=>{if(v==null)return null;return[PL+(i/(Math.max(n-1,1)))*chartW, PT+((mx-v)/rng)*chartH];});}
-  function polyline(points,stroke,sw,dash){const segs=[];let seg=[];points.forEach(p=>{if(p)seg.push(p);else{if(seg.length>1)segs.push(seg);seg=[];}});if(seg.length>1)segs.push(seg);return segs.map(s=>`<polyline points="${s.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-dasharray="${dash}" opacity="0.9"/>`).join('');}
-  const wPts=toWPts(ws),wAvgPts=toWPts(wAvg);
-  const bfPts=toBfPts(bfVals),bfAvgPts=toBfPts(bfAvg);
-  const lastWPt=wPts.filter(Boolean).slice(-1)[0];
-  const lastBfPt=bfPts.filter(Boolean).slice(-1)[0];
-  const lx=PL+chartW+4;
-  // Y axis ticks for weight (left)
-  const wStep=wRange<=1?0.2:wRange<=3?0.5:1;
-  const firstTick=Math.ceil(axMinW/wStep)*wStep;
-  let yAxisSvg='';
-  yAxisSvg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+chartH}" stroke="var(--border)" stroke-width="1"/>`;
-  for(let t=firstTick;t<=axMaxW+0.01;t=Math.round((t+wStep)*100)/100){
-    const y=PT+((axMaxW-t)/wRange)*chartH;
-    if(y<PT-2||y>PT+chartH+2)continue;
-    yAxisSvg+=`<line x1="${PL-3}" y1="${y.toFixed(1)}" x2="${PL}" y2="${y.toFixed(1)}" stroke="var(--text3)" stroke-width="1"/>`;
-    yAxisSvg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+chartW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2,3" opacity="0.6"/>`;
-    yAxisSvg+=`<text x="${(PL-5).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${t.toFixed(1)}</text>`;
+  let chart='';
+  if(scatterPts.length>=2){
+    const sws=scatterPts.map(e=>e.weight),sbf=scatterPts.map(e=>e.bodyFat);
+    const minW=Math.min(...sws),maxW=Math.max(...sws);
+    const minBf=Math.min(...sbf),maxBf=Math.max(...sbf);
+    const wPad=(maxW-minW)*0.15||0.5,bfPad=(maxBf-minBf)*0.15||0.5;
+    const axMinW=minW-wPad,axMaxW=maxW+wPad,axMinBf=minBf-bfPad,axMaxBf=maxBf+bfPad;
+    const px=w=>PL+((w-axMinW)/(axMaxW-axMinW))*chartW;
+    const py=b=>PT+((axMaxBf-b)/(axMaxBf-axMinBf))*chartH;
+    const total=scatterPts.length;
+    // Gridlines
+    let grid='';
+    const wTick=((axMaxW-axMinW)/4);
+    for(let i=0;i<=4;i++){const x=PL+i*(chartW/4);grid+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${PT+chartH}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2,3"/>`;const val=axMinW+i*wTick;grid+=`<text x="${x.toFixed(1)}" y="${PT+chartH+14}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${val.toFixed(1)}</text>`;}
+    const bfTick=((axMaxBf-axMinBf)/3);
+    for(let i=0;i<=3;i++){const y=PT+i*(chartH/3);grid+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+chartW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2,3"/>`;const val=axMaxBf-i*bfTick;grid+=`<text x="${(PL-4).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${val.toFixed(1)}</text>`;}
+    // Axis labels
+    grid+=`<text x="${(PL+chartW/2).toFixed(1)}" y="${H}" text-anchor="middle" font-size="8" font-weight="700" fill="var(--text3)" font-family="-apple-system,sans-serif">kg</text>`;
+    grid+=`<text x="6" y="${(PT+chartH/2).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="700" fill="var(--text3)" font-family="-apple-system,sans-serif" transform="rotate(-90,6,${(PT+chartH/2).toFixed(1)})">bf%</text>`;
+    // Dots — faded oldest to bright newest, connected by thin path
+    const pathD=scatterPts.map((e,i)=>`${i===0?'M':'L'}${px(e.weight).toFixed(1)},${py(e.bodyFat).toFixed(1)}`).join(' ');
+    grid+=`<path d="${pathD}" fill="none" stroke="var(--accent2)" stroke-width="1" opacity="0.2"/>`;
+    const dots=scatterPts.map((e,i)=>{
+      const isLast=i===total-1;
+      const opacity=(0.25+(i/total)*0.75).toFixed(2);
+      const r=isLast?5:3;
+      const col=isLast?'#818cf8':'#6366f1';
+      const label=isLast?`<text x="${(px(e.weight)+7).toFixed(1)}" y="${(py(e.bodyFat)+4).toFixed(1)}" font-size="8" font-weight="800" fill="#818cf8" font-family="-apple-system,sans-serif">${e.weight}kg · ${e.bodyFat}%</text>`:'';
+      return`<circle cx="${px(e.weight).toFixed(1)}" cy="${py(e.bodyFat).toFixed(1)}" r="${r}" fill="${col}" opacity="${opacity}"/>${label}`;
+    }).join('');
+    chart=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;margin-top:12px;overflow:visible;">${grid}${dots}</svg>`;
   }
-  const axisLabels=[0,Math.floor(n/2),n-1].filter((v,i,a)=>a.indexOf(v)===i).map(i=>{const d=new Date(entries[i].date);const x=(PL+(i/(Math.max(n-1,1)))*chartW).toFixed(0);const anchor=i===0?'start':i===n-1?'end':'middle';return`<text x="${x}" y="${PT+chartH+14}" text-anchor="${anchor}" fill="var(--text3)" font-size="9" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;}).join('');
-  const chart=n>=2?`<svg class="svg-chart" viewBox="0 0 ${W} ${H+8}" style="height:120px;margin-top:12px;overflow:visible;">
-    ${yAxisSvg}
-    ${polyline(wPts,'#ef4444',1,'4 3')}${polyline(wAvgPts,'#ef4444',2.5,'')}
-    ${polyline(bfPts,'#60a5fa',1,'4 3')}${polyline(bfAvgPts,'#818cf8',2.5,'')}
-    ${lastWPt?`<circle cx="${lastWPt[0].toFixed(1)}" cy="${lastWPt[1].toFixed(1)}" r="3.5" fill="#ef4444"/><text x="${lx}" y="${(lastWPt[1]+4).toFixed(1)}" fill="#ef4444" font-size="9" font-weight="800" font-family="-apple-system,sans-serif">${latestW.weight}kg</text>`:''}
-    ${lastBfPt?`<circle cx="${lastBfPt[0].toFixed(1)}" cy="${lastBfPt[1].toFixed(1)}" r="3.5" fill="#60a5fa"/><text x="${lx}" y="${(lastBfPt[1]+4).toFixed(1)}" fill="#60a5fa" font-size="9" font-weight="800" font-family="-apple-system,sans-serif">${latestBf.bodyFat}%</text>`:''}
-    ${axisLabels}
-  </svg>`:'';
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);margin-bottom:12px;padding-bottom:12px;">
       <div>${latestW?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestW.weight}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div>${wDiff?`<div style="font-size:13px;font-weight:700;color:${parseFloat(wDiff)>0?'var(--red)':'var(--green)'};margin-top:2px;">${parseFloat(wDiff)>0?'+':''}${wDiff} kg</div>`:''}<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Weight</div>`:'<div style="font-size:13px;color:var(--text3);">No weight yet</div>'}</div>
@@ -2419,10 +2410,11 @@ function renderBodyCompCard(health){
         <button onclick="openHealthModal()" style="margin-top:6px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
       </div>
     </div>
-    <div style="display:flex;gap:14px;margin-bottom:4px;align-items:center;">
-      <div style="display:flex;align-items:center;gap:5px;"><svg width="20" height="8"><line x1="0" y1="4" x2="8" y2="4" stroke="#ef4444" stroke-width="1.5"/><line x1="10" y1="4" x2="20" y2="4" stroke="#ef4444" stroke-width="2.5"/></svg><span style="font-size:10px;font-weight:700;color:#ef4444;">Weight</span></div>
-      <div style="display:flex;align-items:center;gap:5px;"><svg width="20" height="8"><line x1="0" y1="4" x2="8" y2="4" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3 2"/><line x1="11" y1="4" x2="20" y2="4" stroke="#818cf8" stroke-width="2.5"/></svg><span style="font-size:10px;font-weight:700;color:#818cf8;">Body fat</span></div>
-      <span style="font-size:9px;color:var(--text3);margin-left:auto;">thick = 7d avg</span>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#6366f1;opacity:0.4;flex-shrink:0;"></div>
+      <span style="font-size:10px;color:var(--text3);font-weight:600;">Older</span>
+      <div style="width:8px;height:8px;border-radius:50%;background:#818cf8;flex-shrink:0;margin-left:6px;"></div>
+      <span style="font-size:10px;color:var(--text3);font-weight:600;">Most recent</span>
     </div>
     ${chart}
     ${health.length>1?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">${health.slice(-5).reverse().map(e=>`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.weight?e.weight+'kg':''}${e.bodyFat?` <span style="font-size:12px;color:#818cf8;font-weight:600;">· ${e.bodyFat}%</span>`:''}</span><span style="font-size:12px;color:var(--text3);">${new Date(e.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}${e.note?' · '+esc(e.note):''}</span></div>`).join('')}</div>`:''}

@@ -955,11 +955,11 @@ function renderDayGoals(ds){
     card.className='goal-card'+(done?' done':'');
     if(g.inputStyle==='check'){
       card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><div class="goal-card-meta">${done?'Completed':'Not done'}</div></div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
-      if(isToday)card.onclick=()=>toggleCheck(ds,g.id);
+      card.onclick=()=>toggleCheck(ds,g.id);
     }else{
       const val=getTextEntry(ds,g.id);
-      card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div>${isToday?`<input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()">`:val?`<div style="font-size:13px;color:var(--text2);margin-top:2px;">${esc(val)}</div>`:'<div class="goal-card-meta">No entry</div>'}</div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
-      if(isToday)card.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
+      card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()"></div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
+      card.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
     }
     stack.appendChild(card);
   });

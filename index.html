@@ -1805,46 +1805,81 @@ function renderPRs(){
   const el=document.getElementById('train-prs-content');
   const gym=loadGymData();
   if(!gym.length){el.innerHTML=`<div class="empty-state"><strong>No sessions yet</strong>Log your first gym session to start tracking PRs.</div>`;return;}
-  // Build PR map: exerciseName → {pb:{weight,reps,date}, e1rm:{weight,reps,e1rm,date}}
+
+  const now=today();
+  const cutRecent=addDays(now,-28);
+  const cutPrev=addDays(now,-56);
+
+  // Build PR map: exerciseName → {pb, e1rm, recent (best e1RM last 28d), prev (best e1RM 28-56d)}
   const prs={};
   gym.forEach(session=>{
+    const sd=new Date(session.date+'T12:00:00');
     (session.exercises||[]).forEach(ex=>{
       if(!ex.name)return;
       (ex.sets||[]).filter(s=>!s.warmup).forEach(s=>{
         const w=parseFloat(s.weight||0);const r=parseFloat(s.reps||0);
         if(!w)return;
-        if(!prs[ex.name])prs[ex.name]={pb:{weight:0,reps:0,date:''},e1rm:{weight:0,reps:0,e1rm:0,date:''}};
-        // PB = heaviest single set weight
-        if(w>prs[ex.name].pb.weight)prs[ex.name].pb={weight:w,reps:r,date:session.date};
-        // Est. 1RM via Epley
-        const est=r===1?w:w*(1+r/30);
-        if(est>prs[ex.name].e1rm.e1rm)prs[ex.name].e1rm={weight:w,reps:r,e1rm:Math.round(est*10)/10,date:session.date};
+        if(!prs[ex.name])prs[ex.name]={pb:{weight:0,reps:0,date:''},e1rm:{weight:0,reps:0,e1rm:0,date:''},recent:0,prev:0};
+        const p=prs[ex.name];
+        if(w>p.pb.weight)p.pb={weight:w,reps:r,date:session.date};
+        const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
+        if(est>p.e1rm.e1rm)p.e1rm={weight:w,reps:r,e1rm:est,date:session.date};
+        if(sd>=cutRecent&&est>p.recent)p.recent=est;
+        if(sd>=cutPrev&&sd<cutRecent&&est>p.prev)p.prev=est;
       });
     });
   });
-  const sorted=Object.entries(prs).sort((a,b)=>b[1].e1rm.e1rm-a[1].e1rm.e1rm);
-  if(!sorted.length){el.innerHTML=`<div class="empty-state"><strong>No PR data</strong>Log weights to track personal records.</div>`;return;}
-  el.innerHTML=`<div class="chart-card">
-    <div class="chart-card-header"><span class="chart-card-title">Personal Records</span></div>
-    ${sorted.map(([name,pr])=>`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        ${goalAvatarInline(name)}
-        <div style="flex:1;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div style="background:var(--surface2);border-radius:var(--radius-xs);padding:10px 12px;">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">PB (heaviest)</div>
-          <div style="font-size:20px;font-weight:800;line-height:1;">${pr.pb.weight}<span style="font-size:12px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;">× ${pr.pb.reps} reps · ${pr.pb.date}</div>
-        </div>
-        <div style="background:var(--surface2);border-radius:var(--radius-xs);padding:10px 12px;">
-          <div style="font-size:10px;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Est. 1RM</div>
-          <div style="font-size:20px;font-weight:800;color:var(--accent2);line-height:1;">${pr.e1rm.e1rm}<span style="font-size:12px;font-weight:600;margin-left:3px;">kg</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;">${pr.e1rm.weight}kg × ${pr.e1rm.reps} · ${pr.e1rm.date}</div>
-        </div>
-      </div>
-    </div>`).join('')}
-  </div>`;
+
+  if(!Object.keys(prs).length){el.innerHTML=`<div class="empty-state"><strong>No PR data</strong>Log weights to track personal records.</div>`;return;}
+
+  // Map muscles → Push/Pull/Legs/Core/Other
+  function muscleGroup(name){
+    const m=(getExerciseMuscles(name)||[]).map(x=>x.toLowerCase());
+    if(!m.length)return'Other';
+    if(m.some(x=>['chest','shoulders','triceps','front delt'].includes(x)))return'Push';
+    if(m.some(x=>['back','biceps','lats','rear delts','traps','rhomboids'].includes(x)))return'Pull';
+    if(m.some(x=>['quads','hamstrings','glutes','calves','hips','adductors'].includes(x)))return'Legs';
+    if(m.some(x=>['core','abs'].includes(x)))return'Core';
+    return'Other';
+  }
+
+  const groups={Push:[],Pull:[],Legs:[],Core:[],Other:[]};
+  Object.entries(prs).forEach(([name,pr])=>groups[muscleGroup(name)].push([name,pr]));
+  Object.values(groups).forEach(arr=>arr.sort((a,b)=>b[1].e1rm.e1rm-a[1].e1rm.e1rm));
+
+  function trendBadge(pr){
+    if(!pr.prev)return'';
+    const delta=Math.round((pr.recent-pr.prev)*10)/10;
+    if(delta>0.5)return`<span style="color:var(--green);font-size:11px;font-weight:800;">↑ +${delta}kg</span>`;
+    if(delta<-0.5)return`<span style="color:var(--red);font-size:11px;font-weight:800;">↓ ${delta}kg</span>`;
+    return`<span style="color:var(--text3);font-size:11px;font-weight:700;">→ plateau</span>`;
+  }
+
+  function fmtPRDate(ds){const d=new Date(ds+'T12:00:00');return`${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;}
+
+  function renderGroup(label,entries){
+    if(!entries.length)return'';
+    return`
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:16px 0 8px;">${label}</div>
+      <div class="chart-card" style="padding:0;margin-bottom:10px;">
+        ${entries.map(([name,pr],i)=>`
+          <div style="padding:12px 16px;${i<entries.length-1?'border-bottom:1px solid var(--border);':''}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <div style="font-size:14px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <span style="font-size:16px;font-weight:800;color:var(--accent2);">${pr.e1rm.e1rm}kg</span>
+                ${trendBadge(pr)}
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;">PB ${pr.pb.weight}kg × ${pr.pb.reps} · ${fmtPRDate(pr.pb.date)}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  const total=Object.keys(prs).length;
+  el.innerHTML=`
+    <div style="padding:4px 0 4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">${total} exercise${total!==1?'s':''} tracked</div>
+    ${['Push','Pull','Legs','Core','Other'].map(g=>renderGroup(g,groups[g])).join('')}`;
 }
 
 // ── TRENDS ──

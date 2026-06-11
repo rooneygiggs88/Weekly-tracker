@@ -1806,41 +1806,47 @@ function renderPRs(){
   const gym=loadGymData();
   if(!gym.length){el.innerHTML=`<div class="empty-state"><strong>No sessions yet</strong>Log your first gym session to start tracking PRs.</div>`;return;}
 
-  // Build PR map: exerciseName → {pb, e1rm, sessions:[{date,e1rm}] per session it appeared}
-  const prs={};
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtD(ds){const d=new Date(ds+'T12:00:00');return`${d.getDate()} ${MONTHS[d.getMonth()]}`;}
+
+  // Build per-exercise data: sessions in chronological order, all working sets
+  const exMap={};
   gym.forEach(session=>{
     (session.exercises||[]).forEach(ex=>{
       if(!ex.name)return;
-      let bestEst=0;
-      (ex.sets||[]).filter(s=>!s.warmup).forEach(s=>{
-        const w=parseFloat(s.weight||0);const r=parseFloat(s.reps||0);
-        if(!w)return;
-        if(!prs[ex.name])prs[ex.name]={pb:{weight:0,reps:0,date:''},e1rm:{weight:0,reps:0,e1rm:0,date:''},sessions:[]};
-        const p=prs[ex.name];
-        if(w>p.pb.weight)p.pb={weight:w,reps:r,date:session.date};
+      const workingSets=(ex.sets||[]).filter(s=>!s.warmup&&parseFloat(s.weight||0)>0);
+      if(!workingSets.length)return;
+      if(!exMap[ex.name])exMap[ex.name]={sessions:[]};
+      let bestE1rm=0,bestW=0,bestR=0;
+      workingSets.forEach(s=>{
+        const w=parseFloat(s.weight);const r=parseFloat(s.reps||0);
         const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
-        if(est>p.e1rm.e1rm)p.e1rm={weight:w,reps:r,e1rm:est,date:session.date};
-        if(est>bestEst)bestEst=est;
+        if(est>bestE1rm){bestE1rm=est;bestW=w;bestR=r;}
       });
-      if(bestEst>0&&prs[ex.name])prs[ex.name].sessions.push({date:session.date,e1rm:bestEst});
+      exMap[ex.name].sessions.push({date:session.date,weight:bestW,reps:bestR,e1rm:bestE1rm});
     });
   });
 
-  if(!Object.keys(prs).length){el.innerHTML=`<div class="empty-state"><strong>No PR data</strong>Log weights to track personal records.</div>`;return;}
+  if(!Object.keys(exMap).length){el.innerHTML=`<div class="empty-state"><strong>No PR data</strong>Log weights to track personal records.</div>`;return;}
 
-  // Trend: compare avg e1RM of last 3 sessions vs prior 3 sessions for this exercise
-  function trendBadge(pr){
-    const s=pr.sessions;
-    if(s.length<4)return'';
-    const recent=s.slice(-3).reduce((a,x)=>a+x.e1rm,0)/3;
-    const prev=s.slice(-6,-3).reduce((a,x)=>a+x.e1rm,0)/Math.min(3,s.slice(-6,-3).length);
-    const delta=Math.round((recent-prev)*10)/10;
-    if(delta>0.5)return`<span style="color:var(--green);font-size:11px;font-weight:800;">↑ +${delta}kg</span>`;
-    if(delta<-0.5)return`<span style="color:var(--red);font-size:11px;font-weight:800;">↓ ${delta}kg</span>`;
-    return`<span style="color:var(--text3);font-size:11px;font-weight:700;">→ plateau</span>`;
-  }
+  // Compute PB, e1RM PB, and trend for each exercise
+  Object.values(exMap).forEach(ex=>{
+    let pb={weight:0,reps:0,date:''},e1rmPB={weight:0,reps:0,e1rm:0,date:''};
+    ex.sessions.forEach(s=>{
+      if(s.weight>pb.weight)pb={weight:s.weight,reps:s.reps,date:s.date};
+      if(s.e1rm>e1rmPB.e1rm)e1rmPB={weight:s.weight,reps:s.reps,e1rm:s.e1rm,date:s.date};
+    });
+    ex.pb=pb;ex.e1rmPB=e1rmPB;
+    // Trend: avg e1rm last 3 sessions vs prior 3
+    const s=ex.sessions;
+    const r3=s.slice(-3);const p3=s.slice(-6,-3);
+    if(r3.length>=2&&p3.length>=1){
+      const ra=r3.reduce((a,x)=>a+x.e1rm,0)/r3.length;
+      const pa=p3.reduce((a,x)=>a+x.e1rm,0)/p3.length;
+      ex.trendDelta=Math.round((ra-pa)*10)/10;
+    }else{ex.trendDelta=null;}
+  });
 
-  // Map muscles → Push/Pull/Legs/Core/Other
   function muscleGroup(name){
     const m=(getExerciseMuscles(name)||[]).map(x=>x.toLowerCase());
     if(!m.length)return'Other';
@@ -1851,37 +1857,105 @@ function renderPRs(){
     return'Other';
   }
 
-  const groups={Push:[],Pull:[],Legs:[],Core:[],Other:[]};
-  Object.entries(prs).forEach(([name,pr])=>groups[muscleGroup(name)].push([name,pr]));
-  Object.values(groups).forEach(arr=>arr.sort((a,b)=>b[1].e1rm.e1rm-a[1].e1rm.e1rm));
+  // ── SECTION 1: Progressive Overload Tracker ──
+  // Only include exercises with 3+ sessions
+  const overloadEntries=Object.entries(exMap).filter(([,ex])=>ex.sessions.length>=3)
+    .sort((a,b)=>b[1].e1rmPB.e1rm-a[1].e1rmPB.e1rm);
 
-  function fmtPRDate(ds){const d=new Date(ds+'T12:00:00');return`${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;}
+  function overloadCard(name,ex){
+    const s=ex.sessions;
+    const last5=s.slice(-5);
+    const td=ex.trendDelta;
+    let statusColor,statusLabel,suggestionHtml='';
+    if(td===null){statusColor='var(--text3)';statusLabel='Building baseline';}
+    else if(td>1){statusColor='var(--green)';statusLabel='↑ Progressing';}
+    else if(td<-1){statusColor='var(--red)';statusLabel='↓ Regressing';}
+    else{statusColor='var(--orange)';statusLabel='→ Plateau';}
+
+    if(td!==null){
+      const lastS=s[s.length-1];
+      const suggestWeight=td>1
+        ? Math.ceil((lastS.weight*1.025)/2.5)*2.5
+        : td<-1
+          ? Math.floor((lastS.weight*0.95)/2.5)*2.5
+          : Math.ceil((lastS.weight*1.01)/2.5)*2.5;
+      const suggestBg=td>1?'rgba(76,175,80,0.08)':td<-1?'rgba(239,83,80,0.08)':'rgba(255,152,0,0.08)';
+      const suggestBorder=td>1?'var(--green)':td<-1?'var(--red)':'var(--orange)';
+      const suggestText=td>1
+        ?`<strong>Target ${suggestWeight}kg next session</strong> — keep the momentum going`
+        :td<-1
+          ?`<strong>Consider a deload week</strong>, then target ${suggestWeight}kg`
+          :`<strong>Try ${suggestWeight}kg</strong> to break through the plateau`;
+      suggestionHtml=`<div style="margin-top:10px;padding:8px 10px;border-left:3px solid ${suggestBorder};background:${suggestBg};border-radius:0 6px 6px 0;font-size:12px;color:var(--text1);">${suggestText}</div>`;
+    }
+
+    const sessionRows=last5.map((sess,i)=>{
+      const isLatest=i===last5.length-1;
+      const isPR=sess.e1rm>=ex.e1rmPB.e1rm;
+      return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i<last5.length-1?'border-bottom:1px solid var(--border);':''}">
+        <div style="font-size:11px;color:var(--text3);width:52px;flex-shrink:0;">${fmtD(sess.date)}</div>
+        <div style="flex:1;font-size:13px;font-weight:${isLatest?'700':'500'};color:${isLatest?'var(--text1)':'var(--text2)'};">${sess.weight}kg × ${sess.reps}</div>
+        <div style="font-size:12px;font-weight:700;color:${isPR?'var(--accent2)':'var(--text3)'};">${isPR?'<span style="background:var(--accent2);color:#fff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px;letter-spacing:0.05em;">PR</span>':sess.e1rm+'kg e1RM'}</div>
+      </div>`;
+    }).join('');
+
+    return`<div class="chart-card" style="margin-bottom:10px;padding:14px 16px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:14px;font-weight:800;color:var(--text1);">${esc(name)}</div>
+        <span style="font-size:11px;font-weight:800;color:${statusColor};white-space:nowrap;padding-left:8px;">${statusLabel}</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;">Last ${last5.length} sessions</div>
+      ${sessionRows}
+      ${suggestionHtml}
+    </div>`;
+  }
+
+  // ── SECTION 2: Personal Records ──
+  const groups={Push:[],Pull:[],Legs:[],Core:[],Other:[]};
+  Object.entries(exMap).forEach(([name,ex])=>groups[muscleGroup(name)].push([name,ex]));
+  Object.values(groups).forEach(arr=>arr.sort((a,b)=>b[1].pb.weight-a[1].pb.weight));
+
+  function trendArrow(td){
+    if(td===null)return'';
+    if(td>0.5)return`<span style="color:var(--green);font-size:13px;font-weight:800;margin-left:4px;">↑</span>`;
+    if(td<-0.5)return`<span style="color:var(--red);font-size:13px;font-weight:800;margin-left:4px;">↓</span>`;
+    return`<span style="color:var(--orange);font-size:13px;font-weight:800;margin-left:4px;">→</span>`;
+  }
 
   function renderGroup(label,entries){
     if(!entries.length)return'';
     return`
-      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:16px 0 8px;">${label}</div>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:14px 0 6px;">${label}</div>
       <div class="chart-card" style="padding:0;margin-bottom:10px;">
-        ${entries.map(([name,pr],i)=>`
+        ${entries.map(([name,ex],i)=>`
           <div style="padding:12px 16px;${i<entries.length-1?'border-bottom:1px solid var(--border);':''}">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-              <div style="font-size:14px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
-              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                <div style="text-align:right;">
-                  <div style="font-size:16px;font-weight:800;color:var(--accent2);line-height:1;">${pr.e1rm.e1rm}kg</div>
-                  <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">e1RM</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px;">e1RM ${ex.e1rmPB.e1rm}kg</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="display:flex;align-items:baseline;justify-content:flex-end;">
+                  <div style="font-size:22px;font-weight:800;color:var(--green);line-height:1;">${ex.pb.weight}kg</div>
+                  ${trendArrow(ex.trendDelta)}
                 </div>
-                ${trendBadge(pr)}
+                <div style="font-size:11px;color:var(--text3);margin-top:2px;">× ${ex.pb.reps} reps · ${fmtD(ex.pb.date)}</div>
               </div>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:3px;">PB ${pr.pb.weight}kg × ${pr.pb.reps} reps · ${fmtPRDate(pr.pb.date)}</div>
           </div>`).join('')}
       </div>`;
   }
 
-  const total=Object.keys(prs).length;
+  const total=Object.keys(exMap).length;
+  const overloadHtml=overloadEntries.length
+    ? `<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:4px 0 8px;">Progressive Overload</div>
+       ${overloadEntries.map(([n,ex])=>overloadCard(n,ex)).join('')}`
+    : `<div class="chart-card" style="margin-bottom:10px;text-align:center;color:var(--text3);font-size:13px;">Log 3+ sessions per exercise to see overload tracking</div>`;
+
   el.innerHTML=`
-    <div style="padding:4px 0 4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">${total} exercise${total!==1?'s':''} tracked</div>
+    <div style="padding:4px 0 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">${total} exercise${total!==1?'s':''} tracked</div>
+    ${overloadHtml}
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:14px 0 6px;border-top:1px solid var(--border);margin-top:4px;">Personal Records</div>
     ${['Push','Pull','Legs','Core','Other'].map(g=>renderGroup(g,groups[g])).join('')}`;
 }
 

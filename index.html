@@ -2157,8 +2157,11 @@ function renderTrendsRunAnalysis(){
     const recentPace=paceVals.slice(-3).reduce((a,b)=>a+b,0)/3;
     const earlyPace=paceVals.slice(0,3).reduce((a,b)=>a+b,0)/3;
     const improving=recentPace>=earlyPace;
+    const paceRegressing=!improving&&(recentPace-earlyPace)/earlyPace>0.1;
+    const paceCol=improving?'var(--green)':paceRegressing?'var(--red)':'var(--orange)';
+    const paceLabel=improving?'↑ Getting faster':paceRegressing?'↓ Significant regression':'↓ Pace slowing';
     return `<div class="chart-card">
-      <div class="chart-card-header"><span class="chart-card-title">Pace Progression</span><span class="chart-card-val" style="color:${improving?'var(--green)':'var(--orange)'};">${improving?'↑ Getting faster':'↓ Pace slowing'}</span></div>
+      <div class="chart-card-header"><span class="chart-card-title">Pace Progression</span><span class="chart-card-val" style="color:${paceCol};">${paceLabel}</span></div>
       <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
       <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#34d399;"></div>Easy</div>
@@ -2237,7 +2240,7 @@ function renderTrendsRunAnalysis(){
     const diff=latest.km-prev.km;
     const trend=diff>0?`↑ +${diff.toFixed(1)}km vs last`:diff<0?`↓ ${Math.abs(diff).toFixed(1)}km vs last`:'→ Same as last';
     return `<div class="chart-card">
-      <div class="chart-card-header"><span class="chart-card-title">Long Run Progression</span><span class="chart-card-val" style="color:${diff>=0?'var(--green)':'var(--text3)'};">${trend}</span></div>
+      <div class="chart-card-header"><span class="chart-card-title">Long Run Progression</span><span class="chart-card-val" style="color:${diff>0?'var(--green)':diff<-2?'var(--red)':diff<0?'var(--orange)':'var(--text3)'};">${trend}</span></div>
       <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;">
         ${bars}
       </svg>
@@ -2751,8 +2754,8 @@ function renderBodyCompCard(health){
         if(wD==='down'&&bD==='down'){weekLine=`This week you're down ${Math.abs(wW)}kg and ${Math.abs(bW)}% — strong week, keep rolling.`;weekCol='var(--green)';}
         else if(wD==='down'&&bD==='up'){weekLine=`This week you're down ${Math.abs(wW)}kg but fat crept up ${Math.abs(bW)}% — check the food.`;weekCol='var(--orange)';}
         else if(wD==='down'){weekLine=`This week you're down ${Math.abs(wW)}kg — solid progress.`;weekCol='var(--green)';}
-        else if(wD==='up'&&bD==='up'){weekLine=`This week you're up ${Math.abs(wW)}kg and ${Math.abs(bW)}% body fat — stay on plan.`;weekCol='var(--orange)';}
-        else if(wD==='up'){weekLine=`This week you're up ${Math.abs(wW)}kg — happens, keep logging.`;weekCol='var(--text2)';}
+        else if(wD==='up'&&bD==='up'){weekLine=`This week you're up ${Math.abs(wW)}kg and ${Math.abs(bW)}% body fat — rein it in.`;weekCol='var(--red)';}
+        else if(wD==='up'){weekLine=`This week you're up ${Math.abs(wW)}kg — keep an eye on it.`;weekCol='var(--orange)';}
         else if(wD==='flat'&&bD==='down'){weekLine=`This week: weight steady, fat down ${Math.abs(bW)}% — recomp working.`;weekCol='var(--green)';}
         else{weekLine="This week: holding steady — the week isn't over yet.";weekCol='var(--text3)';}
       } else {
@@ -2799,6 +2802,7 @@ function renderVapingSection(){
   let vapOverallLine='',vapOverallCol='var(--text2)';
   if(firstEntry&&latestEntry&&nicPerDay.length>=2){
     if(nicDeltaOverall<-0.5){vapOverallLine=`Down from ~${firstEntry.nic.toFixed(1)}mg to ~${latestEntry.nic.toFixed(1)}mg nicotine/day since you started — real reduction.`;vapOverallCol='var(--green)';}
+    else if(nicDeltaOverall>2){vapOverallLine=`Up from ~${firstEntry.nic.toFixed(1)}mg to ~${latestEntry.nic.toFixed(1)}mg nicotine/day since you started — ongoing regression, cut back.`;vapOverallCol='var(--red)';}
     else if(nicDeltaOverall>0.5){vapOverallLine=`Up from ~${firstEntry.nic.toFixed(1)}mg to ~${latestEntry.nic.toFixed(1)}mg nicotine/day — time to cut back.`;vapOverallCol='var(--orange)';}
     else{vapOverallLine=`Holding steady at ~${latestEntry.nic.toFixed(1)}mg nicotine/day (${latestEntry.puffs} puffs) since you started.`;}
   }
@@ -2816,7 +2820,8 @@ function renderVapingSection(){
       const lwAvgNic=lwVape.reduce((s,e)=>s+e.nic,0)/lwVape.length;
       const wDiff=+(twAvgNic-lwAvgNic).toFixed(1);
       if(wDiff<-0.5){vapWeekLine=`This week averaging ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs) — ${Math.abs(wDiff).toFixed(1)}mg less than last week, keep going.`;vapWeekCol='var(--green)';}
-      else if(wDiff>0.5){vapWeekLine=`This week averaging ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs) — ${wDiff.toFixed(1)}mg more than last week, rein it in.`;vapWeekCol='var(--orange)';}
+      else if(wDiff>2){vapWeekLine=`This week averaging ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs) — ${wDiff.toFixed(1)}mg more than last week, rein it in now.`;vapWeekCol='var(--red)';}
+      else if(wDiff>0.5){vapWeekLine=`This week averaging ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs) — ${wDiff.toFixed(1)}mg more than last week, watch it.`;vapWeekCol='var(--orange)';}
       else{vapWeekLine=`This week averaging ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs) — similar to last week.`;}
     } else {
       vapWeekLine=`This week so far: ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs avg) — keep logging.`;

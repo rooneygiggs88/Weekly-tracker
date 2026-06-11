@@ -1454,7 +1454,7 @@ function saveGymSession(){
 function renderRecentGymCard(){
   const {score,advice,col,hasMorning}=calcReadiness();
   const pct=score!=null?score:0;
-  const logBtn=`<button onclick="openModal('morning-modal')" style="padding:4px 10px;border-radius:12px;border:1px solid ${hasMorning?'var(--border)':'var(--accent)'};background:${hasMorning?'transparent':'rgba(99,102,241,0.1)'};color:${hasMorning?'var(--text3)':'var(--accent2)'};font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;">${hasMorning?'Edit':'Log morning'}</button>`;
+  const logBtn=`<button onclick="openMorningModal()" style="padding:4px 10px;border-radius:12px;border:1px solid ${hasMorning?'var(--border)':'var(--accent)'};background:${hasMorning?'transparent':'rgba(99,102,241,0.1)'};color:${hasMorning?'var(--text3)':'var(--accent2)'};font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;">${hasMorning?'Edit':'Log morning'}</button>`;
   const body=hasMorning
     ?`<div style="display:flex;align-items:center;gap:12px;">
         <div style="font-size:32px;font-weight:800;letter-spacing:-1px;color:${col};">${score}</div>
@@ -3290,6 +3290,13 @@ function renderTimeOfDay(){
 function loadMorningData(){try{return JSON.parse(localStorage.getItem('morning_data_v1')||'{}');}catch(e){return{};}}
 function saveMorningData(d){localStorage.setItem('morning_data_v1',JSON.stringify(d));}
 
+function openMorningModal(){
+  const saved=loadMorningData()[dk(today())]||{};
+  document.getElementById('morning-sleep').value=saved.sleep!=null?saved.sleep:'';
+  document.getElementById('morning-hrv').value=saved.hrv!=null?saved.hrv:'';
+  openMorningModal();
+}
+
 function saveMorningCheckin(){
   const sleep=parseInt(document.getElementById('morning-sleep').value)||null;
   const hrv=parseInt(document.getElementById('morning-hrv').value)||null;
@@ -3371,7 +3378,7 @@ function renderReadinessCard(){
   if(!el)return;
   const {score,factors,advice,col,hasMorning}=calcReadiness();
   const pct=score!=null?score:0;
-  const checkinBtn=`<button onclick="openModal('morning-modal')" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:14px;border:1px solid ${hasMorning?'var(--border)':'var(--accent)'};background:${hasMorning?'transparent':'rgba(99,102,241,0.1)'};color:${hasMorning?'var(--text3)':'var(--accent2)'};font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;">
+  const checkinBtn=`<button onclick="openMorningModal()" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:14px;border:1px solid ${hasMorning?'var(--border)':'var(--accent)'};background:${hasMorning?'transparent':'rgba(99,102,241,0.1)'};color:${hasMorning?'var(--text3)':'var(--accent2)'};font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     ${hasMorning?'Edit morning data':'Log morning data'}
   </button>`;

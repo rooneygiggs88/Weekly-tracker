@@ -3355,7 +3355,7 @@ function renderTimeOfDay(){
       <div style="font-size:14px;font-weight:800;min-width:38px;text-align:right;color:${s.count===best.count?s.color:'var(--text2)'};">${Math.round(s.count/total*100)}%</div>
     </div>`).join('')}
     <div style="font-size:13px;color:var(--text2);font-weight:600;padding-top:12px;line-height:1.5;">
-      You train most in the <strong>${best.label.toLowerCase()}</strong> — <strong>${best.count} session${best.count===1?'':'s'}</strong> logged${best.gym||best.run?` (${[best.gym?best.gym+' gym':'',best.run?best.run+' run':''].filter(Boolean).join(', ')})`:''}.
+      ${[best.gym?`<strong>${best.gym} gym session${best.gym===1?'':'s'}</strong>`:'',best.run?`<strong>${best.run} run${best.run===1?'':'s'}</strong>`:''].filter(Boolean).join(' and ')} logged in the <strong>${best.label.toLowerCase()}</strong>.
     </div>
   </div>`;
 }

@@ -568,6 +568,17 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
+<div class="modal-overlay" id="run-log-modal" onclick="if(event.target===this)closeModal('run-log-modal')">
+  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column;">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
+      <h3 style="margin:0;">All Runs</h3>
+      <button onclick="closeModal('run-log-modal')" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:0;">×</button>
+    </div>
+    <div id="run-log-modal-body" style="overflow-y:auto;flex:1;"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="run-edit-modal">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -2405,24 +2416,25 @@ function renderTrendsRunAnalysis(){
 
   // 5. Run log
   const sortedRuns=[...runs].sort((a,b)=>b.date.localeCompare(a.date));
+  const _runRowHtml=(r,globalIdx)=>{
+    const d=new Date(r.date+'T12:00:00');
+    const dl=d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):null;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+          ${r.effort?`<span style="padding:2px 8px;border-radius:20px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
+          <span style="font-size:11px;color:var(--text3);font-weight:600;">${dl}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
+      </div>
+      <button onclick="openRunEdit(${globalIdx})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>
+    </div>`;
+  };
   const runLog=`<div class="chart-card">
     <div class="chart-card-header"><span class="chart-card-title">Run Log</span><span class="chart-card-val">${runs.length} total</span></div>
-    ${sortedRuns.slice(0,20).map(r=>{
-      const globalIdx=runs.indexOf(r);
-      const d=new Date(r.date+'T12:00:00');
-      const dl=d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-      const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):null;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-            ${r.effort?`<span style="padding:2px 8px;border-radius:20px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
-            <span style="font-size:11px;color:var(--text3);font-weight:600;">${dl}</span>
-          </div>
-          <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
-        </div>
-        <button onclick="openRunEdit(${globalIdx})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>
-      </div>`;
-    }).join('')}
+    ${sortedRuns.slice(0,5).map(r=>_runRowHtml(r,runs.indexOf(r))).join('')}
+    ${runs.length>5?`<button onclick="openRunLogModal()" style="width:100%;margin-top:10px;padding:9px;background:none;border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">View all ${runs.length} runs</button>`:''}
   </div>`;
 
   // HR Trend — Easy + Long Run only
@@ -3632,6 +3644,29 @@ function renderReadinessCard(){
     </div>
     ${bodyHtml}
   </div>`;
+}
+
+// ── RUN LOG MODAL ──
+function openRunLogModal(){
+  const runs=loadRunData();
+  const sorted=[...runs].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('run-log-modal-body').innerHTML=sorted.map(r=>{
+    const idx=runs.indexOf(r);
+    const d=new Date(r.date+'T12:00:00');
+    const dl=d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):null;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+          ${r.effort?`<span style="padding:2px 8px;border-radius:20px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
+          <span style="font-size:11px;color:var(--text3);font-weight:600;">${dl}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
+      </div>
+      <button onclick="closeModal('run-log-modal');openRunEdit(${idx})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>
+    </div>`;
+  }).join('');
+  openModal('run-log-modal');
 }
 
 // ── RUN EDIT ──

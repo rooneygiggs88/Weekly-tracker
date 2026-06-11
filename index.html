@@ -1253,8 +1253,18 @@ function confirmGymSession(){
   renderGymLogger();
 }
 
-const COMPOUND_EX=new Set(['plate bench press','incline plate press','overhead press','dips','barbell row','lat pulldown','seated row','pull ups','chin ups','seated leg press','leg press','squat','deadlift','glute hip thrust','romanian deadlift']);
-function isCompound(name){return COMPOUND_EX.has(name.toLowerCase());}
+// Fixed canonical training order — compounds first, isolations after
+const EX_ORDER={
+  push:['plate bench press','incline plate press','overhead press','dips','lateral raises','tricep pushdowns'],
+  pull:['barbell row','lat pulldown','seated row','face pulls','ez bar curl','hammer curls','incline dumbbell curl'],
+  legs:['seated leg press','glute hip thrust','leg extension','seated leg curl','hip abductor in','hip abductor out','calf raises'],
+  custom:[],
+};
+function exOrderPriority(name,cat){
+  const list=EX_ORDER[cat]||[];
+  const idx=list.indexOf(name.toLowerCase());
+  return idx===-1?list.length:idx;
+}
 function getDefaultExercisesForType(type){
   const key=type.toLowerCase();
   const catMap={push:'push',pull:'pull',legs:'legs',core:'custom',custom:'custom'};
@@ -1265,19 +1275,10 @@ function getDefaultExercisesForType(type){
   gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)nameSet.add(e.name);}));
   const libEx=[...nameSet].filter(n=>getExCategory(n)===cat);
   if(libEx.length){
-    const freq={};libEx.forEach(n=>freq[n]=0);
-    gym.filter(s=>s.type&&s.type.toLowerCase()===key).forEach(s=>{
-      (s.exercises||[]).forEach(e=>{if(freq[e.name]!==undefined)freq[e.name]++;});
-    });
-    // Compounds first, then by frequency descending, then alphabetical
-    libEx.sort((a,b)=>{
-      const cDiff=(isCompound(b)?1:0)-(isCompound(a)?1:0);
-      if(cDiff!==0)return cDiff;
-      return freq[b]-freq[a]||a.localeCompare(b);
-    });
+    libEx.sort((a,b)=>exOrderPriority(a,cat)-exOrderPriority(b,cat));
     return libEx.map(name=>({name,sets:[{weight:'',reps:'',warmup:false}]}));
   }
-  // Fallback hardcoded defaults — compounds first within each category
+  // Fallback hardcoded defaults
   const DEFAULTS={
     push:['Plate bench press','Incline plate press','Overhead Press','Dips','Lateral Raises','Tricep Pushdowns'],
     pull:['Barbell Row','Lat pulldown','Seated row','Face Pulls','EZ Bar Curl','Hammer Curls'],

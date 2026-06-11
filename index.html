@@ -1253,6 +1253,8 @@ function confirmGymSession(){
   renderGymLogger();
 }
 
+const COMPOUND_EX=new Set(['plate bench press','incline plate press','overhead press','dips','barbell row','lat pulldown','seated row','pull ups','chin ups','seated leg press','leg press','squat','deadlift','glute hip thrust','romanian deadlift']);
+function isCompound(name){return COMPOUND_EX.has(name.toLowerCase());}
 function getDefaultExercisesForType(type){
   const key=type.toLowerCase();
   const catMap={push:'push',pull:'pull',legs:'legs',core:'custom',custom:'custom'};
@@ -1263,19 +1265,23 @@ function getDefaultExercisesForType(type){
   gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)nameSet.add(e.name);}));
   const libEx=[...nameSet].filter(n=>getExCategory(n)===cat);
   if(libEx.length){
-    // Sort by frequency in past sessions of this type, then alphabetically
     const freq={};libEx.forEach(n=>freq[n]=0);
     gym.filter(s=>s.type&&s.type.toLowerCase()===key).forEach(s=>{
       (s.exercises||[]).forEach(e=>{if(freq[e.name]!==undefined)freq[e.name]++;});
     });
-    libEx.sort((a,b)=>freq[b]-freq[a]||a.localeCompare(b));
+    // Compounds first, then by frequency descending, then alphabetical
+    libEx.sort((a,b)=>{
+      const cDiff=(isCompound(b)?1:0)-(isCompound(a)?1:0);
+      if(cDiff!==0)return cDiff;
+      return freq[b]-freq[a]||a.localeCompare(b);
+    });
     return libEx.map(name=>({name,sets:[{weight:'',reps:'',warmup:false}]}));
   }
-  // Fallback hardcoded defaults (first time, no library yet)
+  // Fallback hardcoded defaults — compounds first within each category
   const DEFAULTS={
-    push:['Overhead Press','Lateral Raises','Tricep Pushdowns','Plate bench press','Incline plate press','Dips'],
-    pull:['Barbell Row','Lat pulldown','Seated row','EZ Bar Curl','Hammer Curls','Face Pulls'],
-    legs:['Seated leg press','Leg extension','Seated leg curl','Calf Raises','Hip abductor IN','Hip abductor OUT','Glute Hip Thrust'],
+    push:['Plate bench press','Incline plate press','Overhead Press','Dips','Lateral Raises','Tricep Pushdowns'],
+    pull:['Barbell Row','Lat pulldown','Seated row','Face Pulls','EZ Bar Curl','Hammer Curls'],
+    legs:['Seated leg press','Glute Hip Thrust','Leg extension','Seated leg curl','Hip abductor IN','Hip abductor OUT','Calf Raises'],
     core:['Plank','Decline Sit Up With Plate','Hammer Ab Crunch Machine'],
     custom:[],
   };

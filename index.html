@@ -3294,7 +3294,7 @@ function openMorningModal(){
   const saved=loadMorningData()[dk(today())]||{};
   document.getElementById('morning-sleep').value=saved.sleep!=null?saved.sleep:'';
   document.getElementById('morning-hrv').value=saved.hrv!=null?saved.hrv:'';
-  openMorningModal();
+  openModal('morning-modal');
 }
 
 function saveMorningCheckin(){

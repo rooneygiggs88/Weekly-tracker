@@ -2470,6 +2470,17 @@ function renderTrendsGymAnalysis(){
       const pullSets=muscleEntries.filter(([m])=>['Back','Biceps'].includes(m)).reduce((a,[,v])=>a+v,0);
       const ratio=pullSets>0?(pushSets/pullSets).toFixed(1):'—';
       const balMsg=pullSets===0?{msg:'No pull data yet — add rows, pull-ups or lat pulldowns',col:'var(--text3)'}:parseFloat(ratio)>1.3?{msg:`Push:pull ${ratio}:1 — add more pulling work`,col:'var(--orange)'}:{msg:`Push:pull ${ratio}:1 — well balanced ✓`,col:'var(--green)'};
+      // Neglected muscle groups (bottom entries under 10%)
+      const neglected=muscleEntries.filter(([,v])=>v/totalMuscleSets<0.1);
+      const neglectedLine=neglected.length?`${neglected.map(([m])=>m).join(' & ')} ${neglected.length===1?'is':'are'} your least trained — consider adding more volume.`:null;
+      const neglectedCol=neglected.some(([,v])=>v/totalMuscleSets<0.06)?'var(--orange)':'var(--text3)';
+      // Not hit this week
+      const twMonStr=dk(getMonday(today()));
+      const twGymSessions=gym.filter(s=>s.date>=twMonStr);
+      const twMuscles=new Set();
+      twGymSessions.forEach(s=>(s.exercises||[]).forEach(e=>{const exL=e.name.toLowerCase();Object.entries(MUSCLE_MAP).forEach(([m,kws])=>{if(kws.some(k=>exL.includes(k)))twMuscles.add(m);});}));
+      const notHitThisWeek=muscleEntries.filter(([m])=>!twMuscles.has(m)).map(([m])=>m);
+      const notHitLine=twGymSessions.length>0&&notHitThisWeek.length?`Not hit this week: ${notHitThisWeek.join(', ')}.`:twGymSessions.length===0?'No gym sessions logged this week yet.':null;
       return `<div class="chart-card">
         <div class="chart-card-header"><span class="chart-card-title">Muscle Balance</span></div>
         <div style="display:flex;align-items:center;padding:8px 0;">
@@ -2481,8 +2492,16 @@ function renderTrendsGymAnalysis(){
           </svg>
           <div style="flex:1;padding-left:14px;">${legend}</div>
         </div>
-        <div style="padding:8px 10px;border-radius:8px;background:${balMsg.col}18;border:1px solid ${balMsg.col}44;margin-top:4px;">
-          <div style="font-size:11px;font-weight:700;color:${balMsg.col};">${balMsg.msg}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+          <div style="padding:8px 10px;border-radius:8px;background:${balMsg.col}18;border:1px solid ${balMsg.col}44;">
+            <div style="font-size:11px;font-weight:700;color:${balMsg.col};">${balMsg.msg}</div>
+          </div>
+          ${neglectedLine?`<div style="padding:8px 10px;border-radius:8px;background:${neglectedCol}18;border:1px solid ${neglectedCol}44;">
+            <div style="font-size:11px;font-weight:700;color:${neglectedCol};">${neglectedLine}</div>
+          </div>`:''}
+          ${notHitLine?`<div style="padding:8px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);">${notHitLine}</div>
+          </div>`:''}
         </div>
       </div>`;
     })();

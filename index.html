@@ -1190,6 +1190,8 @@ function renderGymSection(){
 
 // Step 1: pick the session type
 let _gymPickedType='Push';
+let _gymSupersetMode=false;
+function toggleSupersetMode(){_gymSupersetMode=!_gymSupersetMode;renderGymTypeSelector();}
 function renderGymTypeSelector(){
   const el=document.getElementById('gym-content');
   const sessions=loadGymData();
@@ -1204,11 +1206,13 @@ function renderGymTypeSelector(){
   el.innerHTML=`
     <div class="chart-card" style="margin-bottom:10px;">
       <div class="chart-card-header"><span class="chart-card-title">Select Session Type</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?'var(--accent)':'var(--border)'};background:${_gymPickedType===t?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${_gymPickedType===t?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
       </div>
+      <button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">⚡ Superset mode${_gymSupersetMode?' — ON':''}</button>
+      ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair · Push, Pull &amp; Legs only</div>`:''}
       ${hasPrev?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
-      <button class="btn-primary" style="width:100%;" onclick="confirmGymSession()">Start ${esc(_gymPickedType)} session →</button>
+      <button class="btn-primary" style="width:100%;" onclick="confirmGymSession()">${_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`⚡ Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>
     </div>
     ${renderRecentGymCard()}`;
 }
@@ -1216,8 +1220,36 @@ function gymPickType(t){
   _gymPickedType=t;
   renderGymTypeSelector();
 }
+const SUPERSET_PAIRS={
+  push:[['plate bench press','overhead press'],['lateral raises','tricep pushdowns'],['incline plate press','dips']],
+  pull:[['barbell row','ez bar curl'],['lat pulldown','hammer curls'],['seated row','face pulls']],
+  legs:[['leg extension','seated leg curl'],['hip abductor in','hip abductor out'],['seated leg press','glute hip thrust'],['calf raises',null]],
+};
+function _resolveExName(name){
+  if(!name)return null;
+  const prog=loadGymProg();const gym=loadGymData();
+  const nameSet=new Set(Object.keys(prog));
+  gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)nameSet.add(e.name);}));
+  const lower=name.toLowerCase();
+  return[...nameSet].find(n=>n.toLowerCase()===lower)||name;
+}
 function confirmGymSession(){
-  gymDraft={type:_gymPickedType,exercises:getDefaultExercisesForType(_gymPickedType),startedAt:Date.now()};
+  const type=_gymPickedType;
+  const useSuperset=_gymSupersetMode&&['Push','Pull','Legs'].includes(type);
+  if(useSuperset){
+    const pairDefs=SUPERSET_PAIRS[type.toLowerCase()]||[];
+    const exercises=[];const pairs=[];
+    pairDefs.forEach(([nameA,nameB])=>{
+      const iA=exercises.length;
+      exercises.push({name:_resolveExName(nameA)||nameA,sets:[{weight:'',reps:'',warmup:false}]});
+      const iB=nameB?exercises.length:null;
+      if(nameB)exercises.push({name:_resolveExName(nameB)||nameB,sets:[{weight:'',reps:'',warmup:false}]});
+      pairs.push([iA,iB]);
+    });
+    gymDraft={type,superset:true,pairs,exercises,startedAt:Date.now()};
+  } else {
+    gymDraft={type,exercises:getDefaultExercisesForType(type),startedAt:Date.now()};
+  }
   renderGymLogger();
 }
 
@@ -1278,7 +1310,7 @@ function renderGymLogger(){
   <div class="chart-card" style="margin-bottom:10px;background:linear-gradient(135deg,rgba(99,102,241,0.12) 0%,rgba(99,102,241,0.04) 100%);border-color:rgba(99,102,241,0.3);">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div>
-        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent2);margin-bottom:4px;">Session in progress</div>
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:${gymDraft.superset?'var(--amber)':'var(--accent2)'};margin-bottom:4px;">${gymDraft.superset?'⚡ Superset session':'Session in progress'}</div>
         <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">${esc(gymDraft.type)}</div>
       </div>
       <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
@@ -1298,7 +1330,7 @@ function renderGymLogger(){
     <div style="font-size:12px;color:var(--text3);font-weight:600;">Last ${esc(gymDraft.type)}: ${lastSame.date} · ${(lastSame.exercises||[]).length} ex</div>
     <button onclick="copyLastSameSession()" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(99,102,241,0.12);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Copy this</button>
   </div>`:''}
-  <div id="gym-exercises">${gymDraft.exercises.map((ex,i)=>renderExBlock(ex,i,lastSame,prog,sessions)).join('')}</div>
+  ${gymDraft.superset?renderSupersetExercisesHtml(lastSame,prog,sessions):`<div id="gym-exercises">${gymDraft.exercises.map((ex,i)=>renderExBlock(ex,i,lastSame,prog,sessions)).join('')}</div>`}
   <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
   <label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label>
   <textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;margin-bottom:10px;" oninput="gymDraft.notes=this.value;">${esc(gymDraft.notes||'')}</textarea>
@@ -1415,7 +1447,30 @@ function gymSetExName(i,v){if(gymDraft.exercises[i])gymDraft.exercises[i].name=v
 function gymSetWeight(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si])gymDraft.exercises[i].sets[si].weight=v;}
 function gymSetReps(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si])gymDraft.exercises[i].sets[si].reps=v;}
 
-function renderExBlock(ex,i,lastSame,prog,sessions){
+function renderSupersetExercisesHtml(lastSame,prog,sessions){
+  const pairs=gymDraft.pairs||[];
+  const pairedIdx=new Set(pairs.flatMap(p=>p.filter(x=>x!==null)));
+  const soloIdx=gymDraft.exercises.map((_,i)=>i).filter(i=>!pairedIdx.has(i));
+  const pairBlocks=pairs.map(([iA,iB],pi)=>{
+    const exA=gymDraft.exercises[iA];
+    const exB=iB!==null?gymDraft.exercises[iB]:null;
+    return`<div style="border:1px solid rgba(210,153,34,0.3);border-radius:12px;padding:14px;margin-bottom:12px;background:rgba(210,153,34,0.04);">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--amber);margin-bottom:10px;">⚡ Superset ${pi+1}</div>
+      <div style="border-left:3px solid var(--accent);padding-left:12px;margin-bottom:8px;position:relative;">
+        <div style="position:absolute;left:-11px;top:12px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:white;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">A</div>
+        ${renderExBlock(exA,iA,lastSame,prog,sessions,true)}
+      </div>
+      ${exB?`<div style="border-left:3px solid var(--green);padding-left:12px;margin-bottom:10px;position:relative;">
+        <div style="position:absolute;left:-11px;top:12px;width:18px;height:18px;border-radius:50%;background:var(--green);color:white;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">B</div>
+        ${renderExBlock(exB,iB,lastSame,prog,sessions,true)}
+      </div>`:''}
+      <button onclick="startRestTimer(90)" style="width:100%;padding:10px;background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.3);border-radius:var(--radius-xs);color:var(--amber);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;">⏱ Rest 90s — after completing both</button>
+    </div>`;
+  }).join('');
+  const soloBlocks=soloIdx.map(i=>renderExBlock(gymDraft.exercises[i],i,lastSame,prog,sessions,false)).join('');
+  return`<div id="gym-exercises">${pairBlocks}${soloBlocks}</div>`;
+}
+function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
   const _restSecs=getExRestSecs(ex.name||'');
   const lastEx=lastSame&&lastSame.exercises?lastSame.exercises.find(e=>e.name.toLowerCase()===ex.name.toLowerCase()):null;
   const lastSets=lastEx?(lastEx.sets||[]).filter(s=>!s.warmup):[];
@@ -1456,7 +1511,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions){
     </div>`).join('')}
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="gymAddSet(${i})" style="flex:1;padding:8px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
-      <button onclick="startRestTimer(${_restSecs})" style="padding:8px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${_restSecs>=60?Math.floor(_restSecs/60)+'m'+(_restSecs%60?_restSecs%60+'s':''):_restSecs+'s'} rest</button>
+      ${hideRest?'':`<button onclick="startRestTimer(${_restSecs})" style="padding:8px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${_restSecs>=60?Math.floor(_restSecs/60)+'m'+(_restSecs%60?_restSecs%60+'s':''):_restSecs+'s'} rest</button>`}
     </div>
     ${renderPlateCalc((ex.sets||[]).filter(s=>!s.warmup).reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b||0)?parseFloat(s.weight):b,0))}
   </div>`;
@@ -1485,7 +1540,7 @@ function saveGymSession(){
   const exercises=(gymDraft.exercises||[]).filter(e=>(e.name||'').trim()&&(e.sets||[]).length);
   if(!exercises.length){toastMsg('Add at least one exercise');return;}
   const sessions=loadGymData();
-  sessions.push({date:dk(today()),type:gymDraft.type,exercises,notes:gymDraft.notes||'',ts:Date.now()});
+  sessions.push({date:dk(today()),type:gymDraft.type,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:Date.now()});
   saveGymData(sessions);
   const prog=loadGymProg();
   exercises.forEach(e=>{if(!prog[e.name])prog[e.name]={history:[]};prog[e.name].history.push({date:dk(today()),sets:e.sets});});

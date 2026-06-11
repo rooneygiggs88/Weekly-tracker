@@ -1858,9 +1858,12 @@ function renderPRs(){
   }
 
   // ── SECTION 1: Progressive Overload Tracker ──
-  // Only include exercises with 3+ sessions
-  const overloadEntries=Object.entries(exMap).filter(([,ex])=>ex.sessions.length>=3)
-    .sort((a,b)=>b[1].e1rmPB.e1rm-a[1].e1rmPB.e1rm);
+  // Only include exercises with 3+ sessions, grouped by muscle
+  const overloadGroups={Push:[],Pull:[],Legs:[],Core:[],Other:[]};
+  Object.entries(exMap).filter(([,ex])=>ex.sessions.length>=3)
+    .forEach(([name,ex])=>overloadGroups[muscleGroup(name)].push([name,ex]));
+  Object.values(overloadGroups).forEach(arr=>arr.sort((a,b)=>b[1].e1rmPB.e1rm-a[1].e1rmPB.e1rm));
+  const overloadEntries=Object.values(overloadGroups).flat();
 
   function overloadCard(name,ex){
     const s=ex.sessions;
@@ -1947,9 +1950,14 @@ function renderPRs(){
   }
 
   const total=Object.keys(exMap).length;
-  const overloadHtml=overloadEntries.length
-    ? `<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:4px 0 8px;">Progressive Overload</div>
-       ${overloadEntries.map(([n,ex])=>overloadCard(n,ex)).join('')}`
+  const hasOverload=overloadEntries.length>0;
+  const overloadHtml=hasOverload
+    ? ['Push','Pull','Legs','Core','Other'].map(g=>{
+        const entries=overloadGroups[g];
+        if(!entries.length)return'';
+        return`<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:14px 0 6px;">${g}</div>
+               ${entries.map(([n,ex])=>overloadCard(n,ex)).join('')}`;
+      }).join('')
     : `<div class="chart-card" style="margin-bottom:10px;text-align:center;color:var(--text3);font-size:13px;">Log 3+ sessions per exercise to see overload tracking</div>`;
 
   el.innerHTML=`

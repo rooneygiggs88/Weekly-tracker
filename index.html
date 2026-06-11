@@ -2788,10 +2788,43 @@ function renderVapingSection(){
   const totalPuffs7=today7.reduce((s,e)=>s+(e.puffs||0),0);
   const totalPuffs7prev=prev7.reduce((s,e)=>s+(e.puffs||0),0);
   const totalNic7=today7.reduce((s,e)=>s+(estimateNicotineMg(e.puffs,e.mg)||0),0);
-  const wowPct=totalPuffs7prev>0?Math.round((totalPuffs7-totalPuffs7prev)/totalPuffs7prev*100):null;
-  const wowStr=wowPct!=null?`<span style="font-size:11px;font-weight:700;color:${wowPct<=0?'var(--green)':'var(--red)'};">${wowPct>0?'+':''}${wowPct}% vs prev week</span>`:'';
   const last=data.length?data.slice().sort((a,b)=>b.date.localeCompare(a.date))[0]:null;
   const lastLabel=last?vapingEntryDateLabel(last.date):'';
+  // Summary calculations
+  const vapSorted=[...data].sort((a,b)=>a.date.localeCompare(b.date));
+  const nicPerDay=vapSorted.map(e=>({date:e.date,nic:estimateNicotineMg(e.puffs,e.mg)||0,puffs:e.puffs||0}));
+  const firstSlice=nicPerDay.slice(0,Math.min(7,nicPerDay.length));
+  const recentSlice=nicPerDay.slice(-Math.min(7,nicPerDay.length));
+  const firstAvgNic=firstSlice.length?firstSlice.reduce((s,e)=>s+e.nic,0)/firstSlice.length:0;
+  const recentAvgNic=recentSlice.length?recentSlice.reduce((s,e)=>s+e.nic,0)/recentSlice.length:0;
+  const recentAvgPuffs=recentSlice.length?Math.round(recentSlice.reduce((s,e)=>s+e.puffs,0)/recentSlice.length):0;
+  const nicDeltaOverall=+(recentAvgNic-firstAvgNic).toFixed(1);
+  let vapOverallLine='',vapOverallCol='var(--text2)';
+  if(vapSorted.length>=2){
+    if(nicDeltaOverall<-0.5){vapOverallLine=`Down from ~${firstAvgNic.toFixed(1)}mg to ~${recentAvgNic.toFixed(1)}mg nicotine/day since you started — real reduction.`;vapOverallCol='var(--green)';}
+    else if(nicDeltaOverall>0.5){vapOverallLine=`Up from ~${firstAvgNic.toFixed(1)}mg to ~${recentAvgNic.toFixed(1)}mg nicotine/day — time to cut back.`;vapOverallCol='var(--orange)';}
+    else{vapOverallLine=`Averaging ~${recentAvgNic.toFixed(1)}mg nicotine/day (${recentAvgPuffs} puffs) — holding steady since you started.`;}
+  }
+  const vapMon=new Date();vapMon.setHours(0,0,0,0);vapMon.setDate(vapMon.getDate()-((vapMon.getDay()+6)%7));
+  const vapMonStr=`${vapMon.getFullYear()}-${String(vapMon.getMonth()+1).padStart(2,'0')}-${String(vapMon.getDate()).padStart(2,'0')}`;
+  const vapLastMon=new Date(vapMon);vapLastMon.setDate(vapLastMon.getDate()-7);
+  const vapLastMonStr=`${vapLastMon.getFullYear()}-${String(vapLastMon.getMonth()+1).padStart(2,'0')}-${String(vapLastMon.getDate()).padStart(2,'0')}`;
+  const twVape=nicPerDay.filter(e=>e.date>=vapMonStr);
+  const lwVape=nicPerDay.filter(e=>e.date>=vapLastMonStr&&e.date<vapMonStr);
+  let vapWeekLine='',vapWeekCol='var(--text3)';
+  if(twVape.length>=1){
+    const twAvgNic=twVape.reduce((s,e)=>s+e.nic,0)/twVape.length;
+    const twAvgPuffs=Math.round(twVape.reduce((s,e)=>s+e.puffs,0)/twVape.length);
+    if(lwVape.length>=1){
+      const lwAvgNic=lwVape.reduce((s,e)=>s+e.nic,0)/lwVape.length;
+      const wDiff=+(twAvgNic-lwAvgNic).toFixed(1);
+      if(wDiff<-0.5){vapWeekLine=`This week averaging ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs) — ${Math.abs(wDiff).toFixed(1)}mg less than last week, keep going.`;vapWeekCol='var(--green)';}
+      else if(wDiff>0.5){vapWeekLine=`This week averaging ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs) — ${wDiff.toFixed(1)}mg more than last week, rein it in.`;vapWeekCol='var(--orange)';}
+      else{vapWeekLine=`This week averaging ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs) — similar to last week.`;}
+    } else {
+      vapWeekLine=`This week so far: ~${twAvgNic.toFixed(1)}mg/day (${twAvgPuffs} puffs avg) — keep logging.`;
+    }
+  }
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header">
       <span class="chart-card-title">Nicotine</span>
@@ -2803,7 +2836,10 @@ function renderVapingSection(){
         ${totalNic7>0?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">~${totalNic7.toFixed(1)}<span style="font-size:14px;font-weight:700;">mg</span></div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">nicotine / 7d</div></div>`:''}
         ${last?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${last.puffs||0}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">${lastLabel}</div></div>`:''}
       </div>
-      ${wowStr?`<div style="margin-bottom:10px;">${wowStr}</div>`:''}
+      ${(vapOverallLine||vapWeekLine)?`<div style="margin:8px 0 10px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);">
+        ${vapOverallLine?`<div style="font-size:13px;font-weight:700;color:${vapOverallCol};line-height:1.5;${vapWeekLine?'margin-bottom:8px;':''}">${vapOverallLine}</div>`:''}
+        ${vapWeekLine?`<div style="font-size:12px;font-weight:600;color:${vapWeekCol};line-height:1.5;">${vapWeekLine}</div>`:''}
+      </div>`:''}
       ${renderVapingChart(data)}
       <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px;">
         ${data.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5).map(e=>{

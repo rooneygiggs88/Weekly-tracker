@@ -1443,8 +1443,21 @@ function gymAddSet(i){gymDraft.exercises[i].sets.push({weight:'',reps:'',warmup:
 function gymRemoveSet(i,si){gymDraft.exercises[i].sets.splice(si,1);renderGymLogger();}
 function gymToggleWarmup(i,si){gymDraft.exercises[i].sets[si].warmup=!gymDraft.exercises[i].sets[si].warmup;renderGymLogger();}
 function gymSetExName(i,v){if(gymDraft.exercises[i])gymDraft.exercises[i].name=v;updateProgressHint(i);}
-function gymSetWeight(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si])gymDraft.exercises[i].sets[si].weight=v;}
-function gymSetReps(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si])gymDraft.exercises[i].sets[si].reps=v;}
+function gymSetWeight(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si]){gymDraft.exercises[i].sets[si].weight=v;gymCheckSetDone(i,si);}}
+function gymSetReps(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si]){gymDraft.exercises[i].sets[si].reps=v;gymCheckSetDone(i,si);}}
+function gymCheckSetDone(i,si){
+  const s=gymDraft&&gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];
+  if(!s||s.warmup)return;
+  const done=!!(s.weight&&s.reps);
+  const btn=document.getElementById(`set-num-${i}-${si}`);
+  const row=document.getElementById(`set-row-${i}-${si}`);
+  if(btn){
+    btn.style.color=done?'var(--green)':'var(--text3)';
+    btn.style.borderColor=done?'rgba(16,185,129,0.4)':'var(--border)';
+    btn.style.background=done?'rgba(16,185,129,0.12)':'transparent';
+  }
+  if(row)row.style.background=done?'rgba(16,185,129,0.05)':'';
+}
 
 function renderSupersetExercisesHtml(lastSame,prog,sessions){
   const pairs=gymDraft.pairs||[];
@@ -1501,14 +1514,14 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
       <div style="font-size:10px;font-weight:700;color:var(--text3);">reps</div>
       <div></div>
     </div>
-    ${(ex.sets||[]).map((s,si)=>`<div style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:6px;align-items:center;">
-      <button onclick="gymToggleWarmup(${i},${si})" style="width:28px;height:28px;border-radius:8px;border:1px solid ${s.warmup?'var(--orange)':'var(--border)'};background:${s.warmup?'rgba(249,115,22,0.15)':'transparent'};color:${s.warmup?'var(--orange)':'var(--text3)'};font-size:10px;font-weight:800;cursor:pointer;" title="Warmup">W</button>
+    ${(ex.sets||[]).map((s,si)=>{const done=!s.warmup&&!!(s.weight&&s.reps);const btnCol=s.warmup?'var(--orange)':done?'var(--green)':'var(--text3)';const btnBdr=s.warmup?'var(--orange)':done?'rgba(16,185,129,0.4)':'var(--border)';const btnBg=s.warmup?'rgba(249,115,22,0.15)':done?'rgba(16,185,129,0.12)':'transparent';return`<div id="set-row-${i}-${si}" style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:6px;align-items:center;border-radius:8px;${done?'background:rgba(16,185,129,0.05);':''}" >
+      <button id="set-num-${i}-${si}" onclick="gymToggleWarmup(${i},${si})" style="width:28px;height:28px;border-radius:8px;border:1px solid ${btnBdr};background:${btnBg};color:${btnCol};font-size:10px;font-weight:800;cursor:pointer;" title="${s.warmup?'Warmup':'Tap to mark warmup'}">${s.warmup?'W':si+1}</button>
       <input class="run-field" type="number" inputmode="decimal" placeholder="kg" value="${esc(String(s.weight||''))}"
         style="padding:10px 12px;${s.warmup?'opacity:0.6;':''}" oninput="gymSetWeight(${i},${si},this.value)">
       <input class="run-field" type="number" inputmode="numeric" placeholder="reps" value="${esc(String(s.reps||''))}"
         style="padding:10px 12px;${s.warmup?'opacity:0.6;':''}" oninput="gymSetReps(${i},${si},this.value)">
       <button onclick="gymRemoveSet(${i},${si})" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;">×</button>
-    </div>`).join('')}
+    </div>`;}).join('')}
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="gymAddSet(${i})" style="flex:1;padding:8px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
       ${hideRest?'':`<button onclick="startRestTimer(${_restSecs})" style="padding:8px 14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${_restSecs>=60?Math.floor(_restSecs/60)+'m'+(_restSecs%60?_restSecs%60+'s':''):_restSecs+'s'} rest</button>`}

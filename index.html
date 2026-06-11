@@ -2672,10 +2672,6 @@ function renderBodyCompCard(health){
   const withBf=health.filter(e=>e.bodyFat!=null&&e.bodyFat>0);
   const latestW=withW.length?withW[withW.length-1]:null;
   const latestBf=withBf.length?withBf[withBf.length-1]:null;
-  const prevW=withW.length>1?withW[withW.length-2]:null;
-  const prevBf=withBf.length>1?withBf[withBf.length-2]:null;
-  const wDiff=latestW&&prevW?(latestW.weight-prevW.weight).toFixed(1):null;
-  const bDiff=latestBf&&prevBf?(latestBf.bodyFat-prevBf.bodyFat).toFixed(1):null;
   if(!latestW&&!latestBf){
     return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div></div>`;
   }
@@ -2713,44 +2709,59 @@ function renderBodyCompCard(health){
   </div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);margin-bottom:12px;padding-bottom:12px;">
-      <div>${latestW?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestW.weight}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div>${wDiff?`<div style="font-size:13px;font-weight:700;color:${parseFloat(wDiff)>0?'var(--red)':'var(--green)'};margin-top:2px;">${parseFloat(wDiff)>0?'+':''}${wDiff} kg</div>`:''}<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Weight</div>`:'<div style="font-size:13px;color:var(--text3);">No weight yet</div>'}</div>
-      <div style="text-align:right;">${latestBf?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestBf.bodyFat}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:2px;">%</span></div>${bDiff?`<div style="font-size:13px;font-weight:700;color:${parseFloat(bDiff)>0?'var(--red)':'var(--green)'};margin-top:2px;text-align:right;">${parseFloat(bDiff)>0?'+':''}${bDiff}%</div>`:''}<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Body Fat</div>`:'<div style="font-size:13px;color:var(--text3);">No body fat yet</div>'}
+      <div>${latestW?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestW.weight}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Weight</div>`:'<div style="font-size:13px;color:var(--text3);">No weight yet</div>'}</div>
+      <div style="text-align:right;">${latestBf?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestBf.bodyFat}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:2px;">%</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Body Fat</div>`:'<div style="font-size:13px;color:var(--text3);">No body fat yet</div>'}
         <button onclick="openHealthModal()" style="margin-top:6px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
       </div>
     </div>
     ${chart}
     ${(()=>{
-      // Linear regression helper
-      function linReg(pts){const n=pts.length;if(n<2)return null;const mx=pts.reduce((s,p)=>s+p[0],0)/n,my=pts.reduce((s,p)=>s+p[1],0)/n;const num=pts.reduce((s,p)=>s+(p[0]-mx)*(p[1]-my),0);const den=pts.reduce((s,p)=>s+(p[0]-mx)**2,0);return den===0?null:{slope:num/den,intercept:my-mx*(num/den)};}
-      const withBoth=health.filter(e=>e.weight&&e.bodyFat>0);
-      if(withBoth.length<3)return'';
-      const first=new Date(withBoth[0].date).getTime(),last2=new Date(withBoth[withBoth.length-1].date).getTime();
-      const days=(last2-first)/(86400000)||1;
-      const wPts=withBoth.map(e=>[(new Date(e.date).getTime()-first)/86400000,e.weight]);
-      const bPts=withBoth.map(e=>[(new Date(e.date).getTime()-first)/86400000,e.bodyFat]);
-      const wReg=linReg(wPts),bReg=linReg(bPts);
-      if(!wReg||!bReg)return'';
-      const wChange=(wReg.slope*days).toFixed(1);
-      const bChange=(bReg.slope*days).toFixed(1);
-      const wDir=wReg.slope<-0.005?'down':wReg.slope>0.005?'up':'stable';
-      const bDir=bReg.slope<-0.005?'down':bReg.slope>0.005?'up':'stable';
-      // Interpret direction combination
-      let signal,signalCol;
-      if(wDir==='down'&&bDir==='down'){signal='Losing weight and fat — good recomp ↙';signalCol='var(--green)';}
-      else if(wDir==='down'&&bDir==='up'){signal='Weight dropping but fat rising — may be losing muscle';signalCol='var(--orange)';}
-      else if(wDir==='up'&&bDir==='down'){signal='Weight up, fat down — gaining muscle ↗';signalCol='var(--green)';}
-      else if(wDir==='up'&&bDir==='up'){signal='Both trending up — review diet';signalCol='var(--red)';}
-      else if(wDir==='stable'&&bDir==='down'){signal='Weight stable, fat falling — solid recomp';signalCol='var(--green)';}
-      else if(wDir==='stable'&&bDir==='up'){signal='Weight stable but fat creeping up';signalCol='var(--orange)';}
-      else{signal='Holding steady';signalCol='var(--text2)';}
-      const wLabel=parseFloat(wChange)>0?`+${wChange}`:wChange;
-      const bLabel=parseFloat(bChange)>0?`+${bChange}`:bChange;
-      return`<div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);border-left:3px solid ${signalCol};">
-        <div style="font-size:12px;font-weight:800;color:${signalCol};margin-bottom:6px;">${signal}</div>
-        <div style="display:flex;gap:16px;">
-          <div><span style="font-size:11px;color:var(--text3);font-weight:700;">WEIGHT</span><div style="font-size:13px;font-weight:700;color:${wDir==='down'?'var(--green)':wDir==='up'?'var(--red)':'var(--text2)'};">${wLabel} kg over ${Math.round(days)} days</div></div>
-          <div><span style="font-size:11px;color:var(--text3);font-weight:700;">BODY FAT</span><div style="font-size:13px;font-weight:700;color:${bDir==='down'?'var(--green)':bDir==='up'?'var(--red)':'var(--text2)'};">${bLabel}% over ${Math.round(days)} days</div></div>
-        </div>
+      if(!withW.length&&!withBf.length)return'';
+      // Since started
+      const wFirst=withW.length?withW[0]:null;
+      const bFirst=withBf.length?withBf[0]:null;
+      const wTotal=wFirst&&latestW?+(latestW.weight-wFirst.weight).toFixed(1):null;
+      const bTotal=bFirst&&latestBf?+(latestBf.bodyFat-bFirst.bodyFat).toFixed(1):null;
+      let overallLine='',overallCol='var(--text2)';
+      if(wTotal!==null&&bTotal!==null){
+        const wD=wTotal<-0.1?'down':wTotal>0.1?'up':'flat';
+        const bD=bTotal<-0.1?'down':bTotal>0.1?'up':'flat';
+        if(wD==='down'&&bD==='down'){overallLine=`Down ${Math.abs(wTotal)}kg and ${Math.abs(bTotal)}% body fat since you started — the compound effect is real.`;overallCol='var(--green)';}
+        else if(wD==='down'&&bD==='up'){overallLine=`Down ${Math.abs(wTotal)}kg overall but fat up ${Math.abs(bTotal)}% — lean into protein and training.`;overallCol='var(--orange)';}
+        else if(wD==='up'&&bD==='down'){overallLine=`Up ${Math.abs(wTotal)}kg but cut ${Math.abs(bTotal)}% body fat — muscle building is working.`;overallCol='var(--green)';}
+        else if(wD==='up'&&bD==='up'){overallLine=`Up ${Math.abs(wTotal)}kg and ${Math.abs(bTotal)}% body fat — time to tighten it up.`;overallCol='var(--red)';}
+        else if(wD==='flat'&&bD==='down'){overallLine=`Weight held, cut ${Math.abs(bTotal)}% body fat — textbook recomp.`;overallCol='var(--green)';}
+        else{overallLine='Holding steady — every logged day builds the picture.';}
+      } else if(wTotal!==null){
+        if(wTotal<-0.1){overallLine=`Down ${Math.abs(wTotal)}kg since you started — consistency pays.`;overallCol='var(--green)';}
+        else if(wTotal>0.1){overallLine=`Up ${Math.abs(wTotal)}kg since you started.`;overallCol='var(--orange)';}
+        else{overallLine='Holding steady — every logged day builds the picture.';}
+      }
+      // This week
+      const mon=new Date();mon.setHours(0,0,0,0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+      const monStr=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+      const twW=withW.filter(e=>e.date>=monStr);
+      const twBf=withBf.filter(e=>e.date>=monStr);
+      const wW=twW.length>=2?+(twW[twW.length-1].weight-twW[0].weight).toFixed(1):null;
+      const bW=twBf.length>=2?+(twBf[twBf.length-1].bodyFat-twBf[0].bodyFat).toFixed(1):null;
+      let weekLine='',weekCol='var(--text3)';
+      if(wW!==null||bW!==null){
+        const wD=wW!==null?(wW<-0.1?'down':wW>0.1?'up':'flat'):'n/a';
+        const bD=bW!==null?(bW<-0.1?'down':bW>0.1?'up':'flat'):'n/a';
+        if(wD==='down'&&bD==='down'){weekLine=`This week you're down ${Math.abs(wW)}kg and ${Math.abs(bW)}% — strong week, keep rolling.`;weekCol='var(--green)';}
+        else if(wD==='down'&&bD==='up'){weekLine=`This week you're down ${Math.abs(wW)}kg but fat crept up ${Math.abs(bW)}% — check the food.`;weekCol='var(--orange)';}
+        else if(wD==='down'){weekLine=`This week you're down ${Math.abs(wW)}kg — solid progress.`;weekCol='var(--green)';}
+        else if(wD==='up'&&bD==='up'){weekLine=`This week you're up ${Math.abs(wW)}kg and ${Math.abs(bW)}% body fat — stay on plan.`;weekCol='var(--orange)';}
+        else if(wD==='up'){weekLine=`This week you're up ${Math.abs(wW)}kg — happens, keep logging.`;weekCol='var(--text2)';}
+        else if(wD==='flat'&&bD==='down'){weekLine=`This week: weight steady, fat down ${Math.abs(bW)}% — recomp working.`;weekCol='var(--green)';}
+        else{weekLine="This week: holding steady — the week isn't over yet.";weekCol='var(--text3)';}
+      } else {
+        weekLine=twW.length===1?`This week: only one entry so far — keep logging daily.`:`This week: no entries yet — start logging for the full picture.`;
+      }
+      if(!overallLine)return'';
+      return`<div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);">
+        <div style="font-size:13px;font-weight:700;color:${overallCol};line-height:1.5;${weekLine?'margin-bottom:8px;':''}">${overallLine}</div>
+        ${weekLine?`<div style="font-size:12px;font-weight:600;color:${weekCol};line-height:1.5;">${weekLine}</div>`:''}
       </div>`;
     })()}
     ${health.length>1?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">${health.slice(-5).reverse().map(e=>`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.weight?e.weight+'kg':''}${e.bodyFat?` <span style="font-size:12px;color:#818cf8;font-weight:600;">· ${e.bodyFat}%</span>`:''}</span><span style="font-size:12px;color:var(--text3);">${new Date(e.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}${e.note?' · '+esc(e.note):''}</span></div>`).join('')}</div>`:''}

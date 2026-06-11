@@ -2539,28 +2539,26 @@ function renderDayOfWeekHeatmap(){
   const worst=allRates.reduce((wi,r,i)=>r<allRates[wi]?i:wi,0);
   const insight=`<div style="font-size:12px;color:var(--text2);margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">Strongest: <strong style="color:var(--text);">${DAYS[best]}</strong> (${Math.round(allRates[best]*100)}%) · Weakest: <strong style="color:var(--text);">${DAYS[worst]}</strong> (${Math.round(allRates[worst]*100)}%)</div>`;
 
-  const BAR_H=40; // px height of bar area
-  const BAR_W=16; // px width of each bar
-  const GAP=5;
+  const CELL=26;
+  const CGAP=5;
 
-  const rowsHtml=rows.map(row=>{
-    const max=Math.max(...row.rates,0.01);
-    const bars=row.rates.map((r,i)=>{
-      const h=Math.max(2,Math.round((r/max)*BAR_H));
+  const headerRow=`<div style="display:flex;align-items:center;padding-bottom:6px;">
+    <div style="min-width:80px;flex-shrink:0;"></div>
+    <div style="display:flex;gap:${CGAP}px;">${DAYS_SHORT.map(d=>`<div style="width:${CELL}px;text-align:center;font-size:10px;font-weight:700;color:var(--text3);">${d}</div>`).join('')}</div>
+  </div>`;
+
+  const rowsHtml=headerRow+rows.map(row=>{
+    const cells=row.rates.map((r,i)=>{
       const pct=Math.round(r*100);
-      const isBest=r===max;
-      const color=row.isAll?(isBest?'var(--accent2)':'rgba(99,102,241,0.45)'):(isBest?'var(--green)':'rgba(16,185,129,0.4)');
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:${BAR_W}px;">
-        <div style="width:${BAR_W}px;height:${BAR_H}px;display:flex;align-items:flex-end;">
-          <div style="width:100%;height:${h}px;background:${color};border-radius:3px 3px 2px 2px;transition:height 0.3s;"></div>
-        </div>
-        <div style="font-size:9px;font-weight:800;color:${i===best&&row.isAll?'var(--accent2)':'var(--text3)'};">${DAYS_SHORT[i]}</div>
-        <div style="font-size:9px;font-weight:700;color:${isBest?'var(--text)':'var(--text3)'};">${pct>0?pct+'%':'-'}</div>
-      </div>`;
+      const alpha=pct===0?0:r<=0.25?0.18:r<=0.5?0.38:r<=0.75?0.62:1;
+      const rgb=row.isAll?'99,102,241':'16,185,129';
+      const bg=pct===0?'var(--surface2)':`rgba(${rgb},${alpha})`;
+      const border=pct===0?`1px solid var(--border)`:`1px solid rgba(${rgb},${Math.min(alpha+0.15,1)})`;
+      return `<div style="width:${CELL}px;height:${CELL}px;border-radius:5px;background:${bg};border:${border};flex-shrink:0;" title="${DAYS[i]}: ${pct}%"></div>`;
     }).join('');
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
-      <div style="min-width:72px;max-width:80px;flex-shrink:0;font-size:${row.isAll?'11px':'11px'};font-weight:${row.isAll?'800':'600'};color:${row.isAll?'var(--text)':'var(--text2)'};">${esc(row.name)}</div>
-      <div style="display:flex;gap:${GAP}px;align-items:flex-end;flex:1;justify-content:space-between;">${bars}</div>
+    return `<div style="display:flex;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div style="min-width:80px;flex-shrink:0;font-size:11px;font-weight:${row.isAll?'800':'600'};color:${row.isAll?'var(--text)':'var(--text2)'};">${esc(row.name)}</div>
+      <div style="display:flex;gap:${CGAP}px;">${cells}</div>
     </div>`;
   }).join('');
 

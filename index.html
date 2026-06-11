@@ -2793,17 +2793,14 @@ function renderVapingSection(){
   // Summary calculations
   const vapSorted=[...data].sort((a,b)=>a.date.localeCompare(b.date));
   const nicPerDay=vapSorted.map(e=>({date:e.date,nic:estimateNicotineMg(e.puffs,e.mg)||0,puffs:e.puffs||0}));
-  const firstSlice=nicPerDay.slice(0,Math.min(7,nicPerDay.length));
-  const recentSlice=nicPerDay.slice(-Math.min(7,nicPerDay.length));
-  const firstAvgNic=firstSlice.length?firstSlice.reduce((s,e)=>s+e.nic,0)/firstSlice.length:0;
-  const recentAvgNic=recentSlice.length?recentSlice.reduce((s,e)=>s+e.nic,0)/recentSlice.length:0;
-  const recentAvgPuffs=recentSlice.length?Math.round(recentSlice.reduce((s,e)=>s+e.puffs,0)/recentSlice.length):0;
-  const nicDeltaOverall=+(recentAvgNic-firstAvgNic).toFixed(1);
+  const firstEntry=nicPerDay.length?nicPerDay[0]:null;
+  const latestEntry=nicPerDay.length?nicPerDay[nicPerDay.length-1]:null;
+  const nicDeltaOverall=firstEntry&&latestEntry?+(latestEntry.nic-firstEntry.nic).toFixed(1):null;
   let vapOverallLine='',vapOverallCol='var(--text2)';
-  if(vapSorted.length>=2){
-    if(nicDeltaOverall<-0.5){vapOverallLine=`Down from ~${firstAvgNic.toFixed(1)}mg to ~${recentAvgNic.toFixed(1)}mg nicotine/day since you started — real reduction.`;vapOverallCol='var(--green)';}
-    else if(nicDeltaOverall>0.5){vapOverallLine=`Up from ~${firstAvgNic.toFixed(1)}mg to ~${recentAvgNic.toFixed(1)}mg nicotine/day — time to cut back.`;vapOverallCol='var(--orange)';}
-    else{vapOverallLine=`Averaging ~${recentAvgNic.toFixed(1)}mg nicotine/day (${recentAvgPuffs} puffs) — holding steady since you started.`;}
+  if(firstEntry&&latestEntry&&nicPerDay.length>=2){
+    if(nicDeltaOverall<-0.5){vapOverallLine=`Down from ~${firstEntry.nic.toFixed(1)}mg to ~${latestEntry.nic.toFixed(1)}mg nicotine/day since you started — real reduction.`;vapOverallCol='var(--green)';}
+    else if(nicDeltaOverall>0.5){vapOverallLine=`Up from ~${firstEntry.nic.toFixed(1)}mg to ~${latestEntry.nic.toFixed(1)}mg nicotine/day — time to cut back.`;vapOverallCol='var(--orange)';}
+    else{vapOverallLine=`Holding steady at ~${latestEntry.nic.toFixed(1)}mg nicotine/day (${latestEntry.puffs} puffs) since you started.`;}
   }
   const vapMon=new Date();vapMon.setHours(0,0,0,0);vapMon.setDate(vapMon.getDate()-((vapMon.getDay()+6)%7));
   const vapMonStr=`${vapMon.getFullYear()}-${String(vapMon.getMonth()+1).padStart(2,'0')}-${String(vapMon.getDate()).padStart(2,'0')}`;

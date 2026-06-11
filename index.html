@@ -1222,6 +1222,24 @@ function confirmGymSession(){
 }
 
 function getDefaultExercisesForType(type){
+  const key=type.toLowerCase();
+  const catMap={push:'push',pull:'pull',legs:'legs',core:'custom',custom:'custom'};
+  const cat=catMap[key]||'custom';
+  const prog=loadGymProg();
+  const gym=loadGymData();
+  const nameSet=new Set(Object.keys(prog));
+  gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)nameSet.add(e.name);}));
+  const libEx=[...nameSet].filter(n=>getExCategory(n)===cat);
+  if(libEx.length){
+    // Sort by frequency in past sessions of this type, then alphabetically
+    const freq={};libEx.forEach(n=>freq[n]=0);
+    gym.filter(s=>s.type&&s.type.toLowerCase()===key).forEach(s=>{
+      (s.exercises||[]).forEach(e=>{if(freq[e.name]!==undefined)freq[e.name]++;});
+    });
+    libEx.sort((a,b)=>freq[b]-freq[a]||a.localeCompare(b));
+    return libEx.map(name=>({name,sets:[{weight:'',reps:'',warmup:false}]}));
+  }
+  // Fallback hardcoded defaults (first time, no library yet)
   const DEFAULTS={
     push:['Overhead Press','Lateral Raises','Tricep Pushdowns','Plate bench press','Incline plate press','Dips'],
     pull:['Barbell Row','Lat pulldown','Seated row','EZ Bar Curl','Hammer Curls','Face Pulls'],
@@ -1229,14 +1247,9 @@ function getDefaultExercisesForType(type){
     core:['Plank','Decline Sit Up With Plate','Hammer Ab Crunch Machine'],
     custom:[],
   };
-  const key=type.toLowerCase();
   const list=DEFAULTS[key]||[];
   if(!list.length)return[{name:'',sets:[{weight:'',reps:'',warmup:false}]}];
-  const progNames=Object.keys(loadGymProg());
-  return list.map(name=>{
-    const match=progNames.find(n=>n.toLowerCase()===name.toLowerCase())||name;
-    return{name:match,sets:[{weight:'',reps:'',warmup:false}]};
-  });
+  return list.map(name=>({name,sets:[{weight:'',reps:'',warmup:false}]}));
 }
 function startGymSession(){confirmGymSession();}
 
@@ -4056,8 +4069,8 @@ function getExCategory(name){
   const PULL_M=['Back','Biceps'];
   const LEGS_M=['Quads','Hamstrings','Glutes','Calves','Legs / Quads'];
   if(muscles.some(m=>LEGS_M.includes(m)))return'legs';
-  if(muscles.some(m=>PUSH_M.includes(m))&&!muscles.some(m=>PULL_M.includes(m)))return'push';
-  if(muscles.some(m=>PULL_M.includes(m))&&!muscles.some(m=>PUSH_M.includes(m)))return'pull';
+  if(muscles.some(m=>PULL_M.includes(m)))return'pull'; // Back present = pull (covers face pulls etc)
+  if(muscles.some(m=>PUSH_M.includes(m)))return'push';
   return'custom';
 }
 function getExerciseMuscles(name){

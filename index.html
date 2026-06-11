@@ -519,9 +519,12 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div class="muscle-check-grid" id="new-ex-muscles" style="margin-bottom:16px;"></div>
 
     <label class="modal-label">Rest timer</label>
-    <div id="new-ex-rest" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;"></div>
+    <div id="new-ex-rest" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
 
-    <button class="btn-primary" onclick="confirmNewEx()" style="margin-bottom:8px;">Add to Session</button>
+    <label class="modal-label">Category</label>
+    <div id="new-ex-category" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;"></div>
+
+    <button class="btn-primary" id="new-ex-confirm-btn" onclick="confirmNewEx()" style="margin-bottom:8px;">Add to Session</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('new-ex-modal')">Cancel</button>
   </div>
 </div>
@@ -1299,9 +1302,9 @@ function gymConfirmTypeChange(t){
   gymDraft.type=t;_gymPickedType=t;renderGymLogger();
 }
 let _newExRestSecs=90;
-function gymAddEx(){
-  _newExRestSecs=90;
-  // Populate suggestions
+let _newExCategory='custom';
+let _libAddMode=false;
+function _newExPopulate(){
   const seen=new Set();
   loadGymData().forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)seen.add(e.name);}));
   const prog=loadGymProg();Object.keys(prog).forEach(n=>seen.add(n));
@@ -1310,6 +1313,19 @@ function gymAddEx(){
   _newExMusclesSelected=[];
   _renderNewExMuscles([]);
   _renderNewExRest(90);
+  _renderNewExCategory('custom');
+}
+function gymAddEx(){
+  _libAddMode=false;_newExRestSecs=90;_newExCategory='custom';
+  _newExPopulate();
+  document.getElementById('new-ex-confirm-btn').textContent='Add to Session';
+  openModal('new-ex-modal');
+  setTimeout(()=>document.getElementById('new-ex-name').focus(),300);
+}
+function openLibraryAddEx(){
+  _libAddMode=true;_newExRestSecs=90;_newExCategory='custom';
+  _newExPopulate();
+  document.getElementById('new-ex-confirm-btn').textContent='Save to Library';
   openModal('new-ex-modal');
   setTimeout(()=>document.getElementById('new-ex-name').focus(),300);
 }
@@ -1321,6 +1337,9 @@ function newExNameChange(val){
   const secs=getExRestSecs(val);
   _newExRestSecs=secs;
   _renderNewExRest(secs);
+  const prog=loadGymProg();
+  const cat=prog[val]&&prog[val].category?prog[val].category:getExCategory(val);
+  _newExCategory=cat;_renderNewExCategory(cat);
 }
 function _renderNewExMuscles(selected){
   document.getElementById('new-ex-muscles').innerHTML=ALL_MUSCLE_GROUPS.map(m=>{
@@ -1347,19 +1366,32 @@ function _renderNewExRest(active){
   }).join('');
 }
 function _setNewExRest(s){_newExRestSecs=s;_renderNewExRest(s);}
+function _renderNewExCategory(active){
+  const cats=[{v:'push',l:'Push'},{v:'pull',l:'Pull'},{v:'legs',l:'Legs'},{v:'custom',l:'Custom'}];
+  document.getElementById('new-ex-category').innerHTML=cats.map(c=>{
+    const sel=active===c.v;
+    return`<button onclick="_setNewExCategory('${c.v}')" style="padding:8px 16px;border-radius:12px;border:2px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${sel?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${c.l}</button>`;
+  }).join('');
+}
+function _setNewExCategory(v){_newExCategory=v;_renderNewExCategory(v);}
 function confirmNewEx(){
   const name=document.getElementById('new-ex-name').value.trim();
   if(!name){toastMsg('Enter an exercise name');return;}
-  // Save tags + rest to prog
   const prog=loadGymProg();
   if(!prog[name])prog[name]={history:[]};
   if(_newExMusclesSelected.length)prog[name].muscles=[..._newExMusclesSelected];
   prog[name].restSeconds=_newExRestSecs;
+  prog[name].category=_newExCategory;
   saveGymProg(prog);
-  // Add to session
-  gymDraft.exercises.push({name,sets:[{weight:'',reps:'',warmup:false}]});
-  closeModal('new-ex-modal');
-  renderGymLogger();
+  if(_libAddMode){
+    closeModal('new-ex-modal');
+    renderExerciseLibrary();
+    toastMsg(`${name} saved to library`);
+  } else {
+    gymDraft.exercises.push({name,sets:[{weight:'',reps:'',warmup:false}]});
+    closeModal('new-ex-modal');
+    renderGymLogger();
+  }
   haptic('success');
 }
 function gymRemoveEx(i){gymDraft.exercises.splice(i,1);renderGymLogger();}
@@ -4016,6 +4048,18 @@ function normaliseMuscles(arr){
   });
   return out.length?out:arr;
 }
+function getExCategory(name){
+  const prog=loadGymProg();
+  if(prog[name]&&prog[name].category)return prog[name].category;
+  const muscles=getExerciseMuscles(name);
+  const PUSH_M=['Chest','Shoulders','Triceps'];
+  const PULL_M=['Back','Biceps'];
+  const LEGS_M=['Quads','Hamstrings','Glutes','Calves','Legs / Quads'];
+  if(muscles.some(m=>LEGS_M.includes(m)))return'legs';
+  if(muscles.some(m=>PUSH_M.includes(m))&&!muscles.some(m=>PULL_M.includes(m)))return'push';
+  if(muscles.some(m=>PULL_M.includes(m))&&!muscles.some(m=>PUSH_M.includes(m)))return'pull';
+  return'custom';
+}
 function getExerciseMuscles(name){
   if(!name)return[];
   const prog=loadGymProg();
@@ -4204,7 +4248,6 @@ function renderExerciseLibrary(){
   const el=document.getElementById('train-library-content');
   if(!el)return;
   const prog=loadGymProg();
-  // Gather all exercise names: from prog + from all session history
   const gym=loadGymData();
   const nameSet=new Set(Object.keys(prog));
   gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)nameSet.add(e.name);}));
@@ -4212,26 +4255,43 @@ function renderExerciseLibrary(){
   const searchVal=(document.getElementById('lib-search')||{}).value||'';
   const filtered=names.filter(n=>n.toLowerCase().includes(searchVal.toLowerCase()));
 
-  const rows=filtered.map(name=>{
+  const CATS=[
+    {key:'push',label:'Push',col:'#6366f1'},
+    {key:'pull',label:'Pull',col:'#10b981'},
+    {key:'legs',label:'Legs',col:'#f97316'},
+    {key:'custom',label:'Custom',col:'#64748b'},
+  ];
+  function makeRow(name){
     const muscles=getExerciseMuscles(name);
     const restSecs=getExRestSecs(name);
     const restLabel=restSecs>=60?Math.floor(restSecs/60)+'m'+(restSecs%60?restSecs%60+'s':''):restSecs+'s';
     const musclePills=muscles.length?muscles.map(m=>{const c=MUSCLE_COLS[m]||'var(--accent2)';return`<span style="display:inline-block;padding:2px 7px;border-radius:10px;background:${c}22;color:${c};font-size:10px;font-weight:700;margin-right:4px;margin-bottom:2px;">${m}</span>`;}).join(''):`<span style="font-size:11px;color:var(--text3);">No muscles tagged</span>`;
-    return`<div style="padding:14px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <div style="font-size:14px;font-weight:700;">${esc(name)}</div>
+    return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+        <div style="font-size:13px;font-weight:700;">${esc(name)}</div>
         <button onclick='openExerciseEdit(${JSON.stringify(name)})' style="padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
       </div>
-      <div style="margin-bottom:4px;">${musclePills}</div>
+      <div style="margin-bottom:3px;">${musclePills}</div>
       <div style="font-size:11px;color:var(--text3);font-weight:600;">Rest: ${restLabel}</div>
+    </div>`;
+  }
+  const sections=CATS.map(cat=>{
+    const catNames=filtered.filter(n=>getExCategory(n)===cat.key);
+    if(!catNames.length)return'';
+    return`<div style="margin-bottom:4px;">
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:${cat.col};padding:10px 0 6px;border-bottom:2px solid ${cat.col}44;margin-bottom:2px;">${cat.label} <span style="color:var(--text3);font-weight:600;">${catNames.length}</span></div>
+      ${catNames.map(makeRow).join('')}
     </div>`;
   }).join('');
 
   el.innerHTML=`
     <div class="chart-card" style="margin-bottom:10px;">
-      <div class="chart-card-header"><span class="chart-card-title">Exercise Library</span><span class="chart-card-val">${names.length} exercises</span></div>
+      <div class="chart-card-header">
+        <span class="chart-card-title">Exercise Library</span>
+        <button onclick="openLibraryAddEx()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button>
+      </div>
       <input id="lib-search" class="modal-input" placeholder="Search exercises…" style="margin-bottom:12px;" oninput="renderExerciseLibrary()" value="${esc(searchVal)}">
-      ${filtered.length?rows:`<div style="font-size:13px;color:var(--text3);padding:12px 0;">No exercises found.</div>`}
+      ${sections||`<div style="font-size:13px;color:var(--text3);padding:12px 0;">No exercises found.</div>`}
     </div>`;
 }
 

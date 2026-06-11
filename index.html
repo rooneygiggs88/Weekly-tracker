@@ -1806,31 +1806,39 @@ function renderPRs(){
   const gym=loadGymData();
   if(!gym.length){el.innerHTML=`<div class="empty-state"><strong>No sessions yet</strong>Log your first gym session to start tracking PRs.</div>`;return;}
 
-  const now=today();
-  const cutRecent=addDays(now,-28);
-  const cutPrev=addDays(now,-56);
-
-  // Build PR map: exerciseName → {pb, e1rm, recent (best e1RM last 28d), prev (best e1RM 28-56d)}
+  // Build PR map: exerciseName → {pb, e1rm, sessions:[{date,e1rm}] per session it appeared}
   const prs={};
   gym.forEach(session=>{
-    const sd=new Date(session.date+'T12:00:00');
     (session.exercises||[]).forEach(ex=>{
       if(!ex.name)return;
+      let bestEst=0;
       (ex.sets||[]).filter(s=>!s.warmup).forEach(s=>{
         const w=parseFloat(s.weight||0);const r=parseFloat(s.reps||0);
         if(!w)return;
-        if(!prs[ex.name])prs[ex.name]={pb:{weight:0,reps:0,date:''},e1rm:{weight:0,reps:0,e1rm:0,date:''},recent:0,prev:0};
+        if(!prs[ex.name])prs[ex.name]={pb:{weight:0,reps:0,date:''},e1rm:{weight:0,reps:0,e1rm:0,date:''},sessions:[]};
         const p=prs[ex.name];
         if(w>p.pb.weight)p.pb={weight:w,reps:r,date:session.date};
         const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
         if(est>p.e1rm.e1rm)p.e1rm={weight:w,reps:r,e1rm:est,date:session.date};
-        if(sd>=cutRecent&&est>p.recent)p.recent=est;
-        if(sd>=cutPrev&&sd<cutRecent&&est>p.prev)p.prev=est;
+        if(est>bestEst)bestEst=est;
       });
+      if(bestEst>0&&prs[ex.name])prs[ex.name].sessions.push({date:session.date,e1rm:bestEst});
     });
   });
 
   if(!Object.keys(prs).length){el.innerHTML=`<div class="empty-state"><strong>No PR data</strong>Log weights to track personal records.</div>`;return;}
+
+  // Trend: compare avg e1RM of last 3 sessions vs prior 3 sessions for this exercise
+  function trendBadge(pr){
+    const s=pr.sessions;
+    if(s.length<4)return'';
+    const recent=s.slice(-3).reduce((a,x)=>a+x.e1rm,0)/3;
+    const prev=s.slice(-6,-3).reduce((a,x)=>a+x.e1rm,0)/Math.min(3,s.slice(-6,-3).length);
+    const delta=Math.round((recent-prev)*10)/10;
+    if(delta>0.5)return`<span style="color:var(--green);font-size:11px;font-weight:800;">↑ +${delta}kg</span>`;
+    if(delta<-0.5)return`<span style="color:var(--red);font-size:11px;font-weight:800;">↓ ${delta}kg</span>`;
+    return`<span style="color:var(--text3);font-size:11px;font-weight:700;">→ plateau</span>`;
+  }
 
   // Map muscles → Push/Pull/Legs/Core/Other
   function muscleGroup(name){
@@ -1847,14 +1855,6 @@ function renderPRs(){
   Object.entries(prs).forEach(([name,pr])=>groups[muscleGroup(name)].push([name,pr]));
   Object.values(groups).forEach(arr=>arr.sort((a,b)=>b[1].e1rm.e1rm-a[1].e1rm.e1rm));
 
-  function trendBadge(pr){
-    if(!pr.prev)return'';
-    const delta=Math.round((pr.recent-pr.prev)*10)/10;
-    if(delta>0.5)return`<span style="color:var(--green);font-size:11px;font-weight:800;">↑ +${delta}kg</span>`;
-    if(delta<-0.5)return`<span style="color:var(--red);font-size:11px;font-weight:800;">↓ ${delta}kg</span>`;
-    return`<span style="color:var(--text3);font-size:11px;font-weight:700;">→ plateau</span>`;
-  }
-
   function fmtPRDate(ds){const d=new Date(ds+'T12:00:00');return`${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;}
 
   function renderGroup(label,entries){
@@ -1867,11 +1867,14 @@ function renderPRs(){
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
               <div style="font-size:14px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
               <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                <span style="font-size:16px;font-weight:800;color:var(--accent2);">${pr.e1rm.e1rm}kg</span>
+                <div style="text-align:right;">
+                  <div style="font-size:16px;font-weight:800;color:var(--accent2);line-height:1;">${pr.e1rm.e1rm}kg</div>
+                  <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">e1RM</div>
+                </div>
                 ${trendBadge(pr)}
               </div>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:3px;">PB ${pr.pb.weight}kg × ${pr.pb.reps} · ${fmtPRDate(pr.pb.date)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;">PB ${pr.pb.weight}kg × ${pr.pb.reps} reps · ${fmtPRDate(pr.pb.date)}</div>
           </div>`).join('')}
       </div>`;
   }

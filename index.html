@@ -1484,7 +1484,12 @@ function renderSupersetExercisesHtml(lastSame,prog,sessions){
 }
 function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
   const _restSecs=getExRestSecs(ex.name||'');
-  const lastEx=lastSame&&lastSame.exercises?lastSame.exercises.find(e=>e.name.toLowerCase()===ex.name.toLowerCase()):null;
+  const nameLower=(ex.name||'').toLowerCase();
+  // Find most recent occurrence of this exercise across ALL session types
+  const lastEx=nameLower?(sessions||[]).slice().reverse().reduce((found,s)=>{
+    if(found)return found;
+    return(s.exercises||[]).find(e=>e.name&&e.name.toLowerCase()===nameLower)||null;
+  },null):null;
   const lastSets=lastEx?(lastEx.sets||[]).filter(s=>!s.warmup):[];
   const topLast=lastSets.length?lastSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,lastSets[0]):null;
   // PB: highest weight across all history for this exercise
@@ -1537,8 +1542,12 @@ function getExerciseSuggestions(cur,sessions){
 }
 function updateProgressHint(i){
   const ex=gymDraft&&gymDraft.exercises[i];if(!ex||!ex.name)return;
-  const lastSame=loadGymData().filter(s=>s.type===gymDraft.type).slice(-1)[0];
-  const lastEx=lastSame&&lastSame.exercises?lastSame.exercises.find(e=>e.name.toLowerCase()===ex.name.toLowerCase()):null;
+  const sessions=loadGymData();
+  const nameLower=ex.name.toLowerCase();
+  const lastEx=sessions.slice().reverse().reduce((found,s)=>{
+    if(found)return found;
+    return(s.exercises||[]).find(e=>e.name&&e.name.toLowerCase()===nameLower)||null;
+  },null);
   const hintEl=document.getElementById(`ex-hint-${i}`);if(!hintEl)return;
   if(lastEx){
     const ls=(lastEx.sets||[]).filter(s=>!s.warmup);

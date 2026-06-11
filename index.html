@@ -581,6 +581,8 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     </select>
     <label class="modal-label">Start time (optional)</label>
     <input class="modal-input" id="run-edit-starttime" type="time">
+    <label class="modal-label">Avg Heart Rate (optional)</label>
+    <input class="modal-input" id="run-edit-hr" type="number" inputmode="numeric" placeholder="e.g. 145" min="60" max="220">
     <label class="modal-label">Note (optional)</label>
     <input class="modal-input" id="run-edit-note" type="text" placeholder="Any notes">
     <button class="btn-primary" onclick="saveRunEdit()" style="margin-bottom:10px;">Save</button>
@@ -1503,6 +1505,7 @@ function renderRunSection(){
           ${r.time?`<span style="font-size:12px;color:var(--text2);font-weight:600;">${r.time}</span>`:''}
           ${pace?`<span style="font-size:12px;color:var(--orange);font-weight:600;">${pace}</span>`:''}
           ${r.effort?`<span style="padding:2px 7px;border-radius:8px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
+          ${r.hr?`<span style="padding:2px 7px;border-radius:8px;background:rgba(239,68,68,0.1);color:var(--red);font-size:11px;font-weight:700;">♥ ${r.hr}</span>`:''}
         </div>
         <button onclick="openRunEdit(${globalIdx})" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(16,185,129,0.3);background:transparent;color:var(--green);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
       </div>`;
@@ -1526,6 +1529,9 @@ function renderRunSection(){
     <div style="height:12px;"></div>
     <label>Start time (optional)</label>
     <input class="run-field" type="time" id="run-starttime" value="${new Date().toTimeString().slice(0,5)}">
+    <div style="height:12px;"></div>
+    <label>Avg Heart Rate (optional)</label>
+    <input class="run-field" type="number" id="run-hr" inputmode="numeric" placeholder="e.g. 145" min="60" max="220">
     <div style="height:12px;"></div>
     <label>Notes (optional)</label>
     <input class="run-field" type="text" id="run-note" placeholder="How did it feel?">
@@ -1571,7 +1577,8 @@ function saveRun(){
   }
   const runs=loadRunData();
   const logDate=_runLogDate||dk(today());
-  runs.push({date:logDate,km,time,note,effort:selectedEffort,startTime:startTimeVal||null,ts});
+  const hr=parseInt(document.getElementById('run-hr').value)||null;
+  runs.push({date:logDate,km,time,note,effort:selectedEffort,startTime:startTimeVal||null,ts,hr});
   saveRunData(runs);
   if(!state.data[`${logDate}:session:run`])state.data[`${logDate}:session:run`]=[];
   state.data[`${logDate}:session:run`].push(`${km}km`);
@@ -2259,7 +2266,68 @@ function renderTrendsRunAnalysis(){
     }).join('')}
   </div>`;
 
-  return summary+loadChart+paceChart+effortChart+longRunChart+runLog;
+  // HR Trend — Easy + Long Run only
+  const hrChart=(()=>{
+    const hrRuns=runs.filter(r=>r.hr&&(r.effort==='Easy'||r.effort==='Long Run')).sort((a,b)=>a.date.localeCompare(b.date));
+    if(hrRuns.length<3)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Aerobic HR Trend</span></div><div class="empty-state" style="padding:16px 0 8px;">Log heart rate on 3+ Easy or Long runs to see your aerobic fitness trend.</div></div>`;
+    const W=320,H=160,PL=36,PR=10,PT=14,PB=24;
+    const chartW=W-PL-PR,chartH=H-PT-PB;
+    const hrVals=hrRuns.map(r=>r.hr);
+    const minHR=Math.min(...hrVals)-5,maxHR=Math.max(...hrVals)+5;
+    const rangeHR=Math.max(maxHR-minHR,1);
+    const px=i=>PL+(i/Math.max(hrRuns.length-1,1))*chartW;
+    const py=h=>PT+((maxHR-h)/rangeHR)*chartH;
+    let svg='';
+    // Gridlines
+    const step=Math.ceil(rangeHR/4/5)*5;
+    for(let h=Math.floor(minHR/step)*step;h<=maxHR+step;h+=step){
+      const y=py(h);if(y<PT-4||y>PT+chartH+4)continue;
+      svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
+      svg+=`<text x="${(PL-5).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${h}</text>`;
+    }
+    svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
+    svg+=`<line x1="${PL}" y1="${(PT+chartH).toFixed(1)}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
+    // Connecting line
+    const lineD='M'+hrRuns.map((_,i)=>`${px(i).toFixed(1)},${py(hrVals[i]).toFixed(1)}`).join('L');
+    svg+=`<path d="${lineD}" fill="none" stroke="var(--red)" stroke-width="1.5" opacity="0.3" stroke-linejoin="round"/>`;
+    // Dots
+    hrRuns.forEach((r,i)=>{
+      const isLong=r.effort==='Long Run';
+      const x=px(i),y=py(hrVals[i]);
+      svg+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${isLong?'#818cf8':'#f87171'}" opacity="0.9"/>`;
+      // X-axis date label every few points
+      if(i===0||i===hrRuns.length-1||(hrRuns.length>6&&i%Math.ceil(hrRuns.length/5)===0)){
+        const d=new Date(r.date+'T12:00:00');
+        svg+=`<text x="${x.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
+      }
+    });
+    // Summary text
+    const recentHR=hrVals.slice(-3).reduce((a,b)=>a+b,0)/Math.min(3,hrVals.length);
+    const earlyHR=hrVals.slice(0,3).reduce((a,b)=>a+b,0)/Math.min(3,hrVals.length);
+    const delta=Math.round(recentHR-earlyHR);
+    const improving=delta<-1;const worsening=delta>1;
+    const trendLabel=improving?`↓ ${Math.abs(delta)}bpm — aerobic base building`:worsening?`↑ ${delta}bpm — monitor closely`:'→ Holding steady';
+    const trendColor=improving?'var(--green)':worsening?'var(--red)':'var(--text3)';
+    const thisMonthRuns=hrRuns.filter(r=>{const d=new Date(r.date+'T12:00:00');return d.getMonth()===new Date().getMonth()&&d.getFullYear()===new Date().getFullYear();});
+    const lastMonthRuns=hrRuns.filter(r=>{const d=new Date(r.date+'T12:00:00');const lm=new Date();lm.setMonth(lm.getMonth()-1);return d.getMonth()===lm.getMonth()&&d.getFullYear()===lm.getFullYear();});
+    const thisAvg=thisMonthRuns.length?Math.round(thisMonthRuns.reduce((a,r)=>a+r.hr,0)/thisMonthRuns.length):null;
+    const lastAvg=lastMonthRuns.length?Math.round(lastMonthRuns.reduce((a,r)=>a+r.hr,0)/lastMonthRuns.length):null;
+    const monthComparison=thisAvg&&lastAvg?`<div style="font-size:12px;color:var(--text2);margin-top:6px;">This month <strong>${thisAvg}bpm</strong> vs last month <strong>${lastAvg}bpm</strong> — ${thisAvg<lastAvg?`♥ ${lastAvg-thisAvg}bpm lower, aerobic efficiency improving`:thisAvg>lastAvg?`♥ ${thisAvg-lastAvg}bpm higher, may need more easy running`:'no change'}</div>`:'';
+    return`<div class="chart-card">
+      <div class="chart-card-header"><span class="chart-card-title">Aerobic HR Trend</span><span class="chart-card-val" style="color:${trendColor};">${trendLabel}</span></div>
+      <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#f87171;"></div>Easy</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#818cf8;"></div>Long Run</div>
+      </div>
+      <div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.5;">
+        <strong>What this shows:</strong> Your heart rate on Easy and Long runs at a steady effort. As your aerobic fitness improves, your heart works less hard to cover the same distance — so a falling HR trend over weeks and months means you're getting fitter, even if your pace stays the same.
+        ${monthComparison}
+      </div>
+    </div>`;
+  })();
+
+  return summary+loadChart+paceChart+effortChart+longRunChart+hrChart+runLog;
 }
 
 // ── TRENDS: GYM ANALYSIS ──
@@ -3338,6 +3406,7 @@ function openRunEdit(idx){
   document.getElementById('run-edit-time').value=r.time||'';
   document.getElementById('run-edit-effort').value=r.effort||'';
   document.getElementById('run-edit-starttime').value=r.startTime||'';
+  document.getElementById('run-edit-hr').value=r.hr||'';
   document.getElementById('run-edit-note').value=r.note||'';
   openModal('run-edit-modal');
 }
@@ -3349,6 +3418,7 @@ function saveRunEdit(){
   r.km=parseFloat(document.getElementById('run-edit-km').value)||r.km||null;
   r.time=document.getElementById('run-edit-time').value.trim()||r.time||null;
   r.effort=document.getElementById('run-edit-effort').value||r.effort||null;
+  r.hr=parseInt(document.getElementById('run-edit-hr').value)||null;
   r.note=document.getElementById('run-edit-note').value.trim()||null;
   const st=document.getElementById('run-edit-starttime').value.trim();
   r.startTime=st||null;

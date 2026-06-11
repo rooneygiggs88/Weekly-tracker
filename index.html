@@ -3067,7 +3067,7 @@ function importData(evt){
         if(Array.isArray(d.health))localStorage.setItem('health_data_v1',JSON.stringify(d.health));
         if(d.prog&&typeof d.prog==='object'&&!Array.isArray(d.prog))localStorage.setItem('gym_prog_v1',JSON.stringify(d.prog));
         if(Array.isArray(d.vaping))localStorage.setItem('vaping_data_v1',JSON.stringify(d.vaping));
-        if(Array.isArray(d.morning))localStorage.setItem('morning_data_v1',JSON.stringify(d.morning));
+        if(d.morning&&typeof d.morning==='object'&&!Array.isArray(d.morning))localStorage.setItem('morning_data_v1',JSON.stringify(d.morning));
       }
       toastMsg('Data imported — reloading…');
       setTimeout(()=>location.reload(),1200);

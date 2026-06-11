@@ -919,8 +919,8 @@ function renderToday(){
     if(isFuture)el.style.opacity='0.3';
     el.dataset.ds=dds;
     el.innerHTML=`<div class="week-day-label">${lbl}</div><div class="week-day-dot"></div><div class="week-day-num">${d.getDate()}</div>${planShort?`<div class="week-day-plan" style="color:${planColor};">${planShort}</div>`:'<div class="week-day-plan"></div>'}`;
-    // tap a day to view it
-    if(!isFuture){el.onclick=()=>{const clickDs=dds;renderDayGoals(clickDs);};}
+    // tap a day to view it and open day modal
+    if(!isFuture){el.onclick=()=>{renderDayGoals(dds);openDayModal(dds);};}
     stripEl.appendChild(el);
   });
 
@@ -996,6 +996,18 @@ function renderToday(){
     }
     stack.appendChild(card);
   });
+
+  // Render readiness card
+  renderReadinessCard();
+  // Inject anomaly alerts below date label, above score
+  const alertHtml=renderAnomalyAlerts();
+  if(alertHtml){
+    const scoreWrap=document.querySelector('.today-score-wrap');
+    if(scoreWrap&&!document.querySelector('.anomaly-alerts')){
+      const div=document.createElement('div');div.innerHTML=alertHtml;
+      scoreWrap.parentNode.insertBefore(div.firstChild,scoreWrap);
+    }
+  }
 }
 
 function renderDayGoals(ds){
@@ -1211,7 +1223,6 @@ function getDefaultExercisesForType(type){
     legs:['Seated leg press','Leg extension','Seated leg curl','Calf Raises','Hip abductor IN','Hip abductor OUT','Glute Hip Thrust'],
     core:['Plank','Decline Sit Up With Plate','Hammer Ab Crunch Machine'],
     custom:[],
-    custom:[],
   };
   const key=type.toLowerCase();
   const list=DEFAULTS[key]||[];
@@ -1269,7 +1280,7 @@ function renderGymLogger(){
     <div style="font-size:12px;color:var(--text3);font-weight:600;">Last ${esc(gymDraft.type)}: ${lastSame.date} · ${(lastSame.exercises||[]).length} ex</div>
     <button onclick="copyLastSameSession()" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(99,102,241,0.12);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Copy this</button>
   </div>`:''}
-  <div id="gym-exercises">${gymDraft.exercises.map((ex,i)=>renderExBlock(ex,i,lastSame,prog)).join('')}</div>
+  <div id="gym-exercises">${gymDraft.exercises.map((ex,i)=>renderExBlock(ex,i,lastSame,prog,sessions)).join('')}</div>
   <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
   <label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label>
   <textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;margin-bottom:10px;" oninput="gymDraft.notes=this.value;">${esc(gymDraft.notes||'')}</textarea>
@@ -1357,7 +1368,7 @@ function gymSetExName(i,v){if(gymDraft.exercises[i])gymDraft.exercises[i].name=v
 function gymSetWeight(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si])gymDraft.exercises[i].sets[si].weight=v;}
 function gymSetReps(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si])gymDraft.exercises[i].sets[si].reps=v;}
 
-function renderExBlock(ex,i,lastSame,prog){
+function renderExBlock(ex,i,lastSame,prog,sessions){
   const _restSecs=getExRestSecs(ex.name||'');
   const lastEx=lastSame&&lastSame.exercises?lastSame.exercises.find(e=>e.name.toLowerCase()===ex.name.toLowerCase()):null;
   const lastSets=lastEx?(lastEx.sets||[]).filter(s=>!s.warmup):[];
@@ -1365,12 +1376,13 @@ function renderExBlock(ex,i,lastSame,prog){
   // PB: highest weight across all history for this exercise
   const exProg=ex.name&&prog[ex.name];
   const allHistorySets=(exProg&&exProg.history||[]).flatMap(h=>h.sets||[]).filter(s=>!s.warmup&&parseFloat(s.weight||0)>0);
-  // Also check all gym sessions
-  const allSessionSets=loadGymData().flatMap(s=>(s.exercises||[]).filter(e=>e.name&&e.name.toLowerCase()===ex.name.toLowerCase()).flatMap(e=>(e.sets||[]).filter(ss=>!ss.warmup)));
+  // Also check all gym sessions (use pre-loaded sessions if available)
+  const gymSessions=sessions||loadGymData();
+  const allSessionSets=gymSessions.flatMap(s=>(s.exercises||[]).filter(e=>e.name&&e.name.toLowerCase()===ex.name.toLowerCase()).flatMap(e=>(e.sets||[]).filter(ss=>!ss.warmup)));
   const pbSet=[...allHistorySets,...allSessionSets].reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,{weight:0,reps:0});
   const pb=parseFloat(pbSet.weight||0);
   const targetWeight=topLast&&topLast.weight?Math.round((parseFloat(topLast.weight)+2.5)*2)/2:null;
-  const sugg=getExerciseSuggestions(ex.name);
+  const sugg=getExerciseSuggestions(ex.name,gymSessions);
   return`<div class="chart-card" style="margin-bottom:10px;" id="ex-block-${i}">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
       <input class="modal-input" style="flex:1;margin-bottom:0;" value="${esc(ex.name||'')}" placeholder="Exercise name"
@@ -1403,9 +1415,9 @@ function renderExBlock(ex,i,lastSame,prog){
   </div>`;
 }
 
-function getExerciseSuggestions(cur){
+function getExerciseSuggestions(cur,sessions){
   const seen=new Set();
-  loadGymData().forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)seen.add(e.name);}));
+  (sessions||loadGymData()).forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)seen.add(e.name);}));
   return[...seen].filter(n=>!cur||n.toLowerCase().includes((cur||'').toLowerCase())).slice(0,8);
 }
 function updateProgressHint(i){
@@ -1421,10 +1433,12 @@ function updateProgressHint(i){
   }else hintEl.innerHTML='';
 }
 function saveGymSession(){
+  const notesEl=document.getElementById('gym-notes-field');
+  if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
   const exercises=(gymDraft.exercises||[]).filter(e=>(e.name||'').trim()&&(e.sets||[]).length);
   if(!exercises.length){toastMsg('Add at least one exercise');return;}
   const sessions=loadGymData();
-  sessions.push({date:dk(today()),type:gymDraft.type,exercises,ts:Date.now()});
+  sessions.push({date:dk(today()),type:gymDraft.type,exercises,notes:gymDraft.notes||'',ts:Date.now()});
   saveGymData(sessions);
   const prog=loadGymProg();
   exercises.forEach(e=>{if(!prog[e.name])prog[e.name]={history:[]};prog[e.name].history.push({date:dk(today()),sets:e.sets});});
@@ -1494,7 +1508,7 @@ function renderRunSection(){
       </div>`;
     }).join('')}
   </div>`:'';
-  el.innerHTML=`
+  el.innerHTML=renderRunTarget()+`
   <div class="run-input-card">
     <div style="display:flex;gap:4px;margin-bottom:16px;">${dayBtns}</div>
     ${dayRunsHtml}
@@ -1580,25 +1594,80 @@ function renderRunHistory(runs){
   return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Run History</span></div>${rows}${toggle}</div>`;
 }
 let _trainHistoryExpanded=false;
+let _expandedHistoryId=null;
+function toggleHistoryRow(id){_expandedHistoryId=_expandedHistoryId===id?null:id;renderTrainHistory();}
 function renderTrainHistory(){
   const el=document.getElementById('train-history-content');
   const gymData=loadGymData();const runData=loadRunData();
   const gymCount=gymData.length;
-  const allSessions=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...runData.map(r=>({...r,_t:'run'}))]
+  const all=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...runData.map((r,i)=>({...r,_t:'run',_idx:i}))]
     .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  if(!allSessions.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
-  const limit=_trainHistoryExpanded?allSessions.length:5;
-  const all=allSessions.slice(0,limit);
-  const toggle=allSessions.length>5?`<div onclick="_trainHistoryExpanded=!_trainHistoryExpanded;renderTrainHistory();" style="text-align:center;padding:10px 0;font-size:12px;font-weight:700;color:var(--accent2);cursor:pointer;">${_trainHistoryExpanded?'Show less ↑':`Show all ${allSessions.length} sessions ↓`}</div>`:'';
+  if(!all.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
   const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare Sessions</button>`:'';
-  el.innerHTML=compareBtn+
-    renderGymAnalysis(gymData)+
-    renderRunAnalysis(runData)+
-    `<div class="chart-card-header" style="padding:16px 0 8px;"><span class="chart-card-title">Recent Sessions</span></div>`+
-    `<div class="chart-card">${all.map(e=>e._t==='gym'
-      ?`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openSessionDetail(${e._idx})">${goalAvatarInline('Gym')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(e.type||'Workout')}</div><div style="font-size:12px;color:var(--text3);">${e.date}</div></div><div style="font-size:13px;color:var(--text2);font-weight:600;">${(e.exercises||[]).length} ex</div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>`
-      :`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">${goalAvatarInline('Running')}<div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.km?e.km+'km':e.time||'Run'}</div><div style="font-size:12px;color:var(--text3);">${e.date}${e.effort?' · '+e.effort:''}</div></div><div style="font-size:13px;color:var(--accent2);font-weight:700;">${e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):''}</div></div>`
-    ).join('')}${toggle}</div>`;
+  const rows=all.map((e,ri)=>{
+    const id=`${e._t}-${e._idx}-${e.date}`;
+    const expanded=_expandedHistoryId===id;
+    const d=new Date(e.date+'T12:00:00');
+    const dateLabel=d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    if(e._t==='gym'){
+      const sets=(e.exercises||[]).reduce((t,ex)=>t+(ex.sets||[]).filter(s=>!s.warmup).length,0);
+      const vol=(e.exercises||[]).reduce((t,ex)=>(ex.sets||[]).filter(s=>!s.warmup).reduce((tt,s)=>tt+(parseFloat(s.weight||0)*parseFloat(s.reps||0)),t),0);
+      const detail=expanded?`<div style="padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px;">
+        ${(e.exercises||[]).map(ex=>{
+          const ws=(ex.sets||[]).filter(s=>!s.warmup);
+          const top=ws.length?ws.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,ws[0]):null;
+          return`<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:13px;font-weight:700;">${esc(ex.name||'Exercise')}</span>
+              ${top&&top.weight?`<span style="font-size:12px;color:var(--accent2);font-weight:700;">${top.weight}kg × ${top.reps}</span>`:''}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">${(ex.sets||[]).filter(s=>!s.warmup).map(s=>`<span style="padding:3px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);">${s.weight}kg×${s.reps}</span>`).join('')}</div>
+          </div>`;
+        }).join('')}
+        ${e.notes?`<div style="font-size:12px;color:var(--text3);margin-top:8px;font-style:italic;">"${esc(e.notes)}"</div>`:''}
+        ${vol>0?`<div style="font-size:11px;color:var(--text3);margin-top:8px;">Total volume: ${Math.round(vol).toLocaleString()}kg</div>`:''}
+      </div>`:'';
+      return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleHistoryRow('${id}')">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              ${sessionTypeTag(e.type||'Workout')}
+              <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text2);">${(e.exercises||[]).length} exercises · ${sets} sets</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="transform:rotate(${expanded?90:0}deg);transition:transform 0.2s;flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        ${detail}
+      </div>`;
+    } else {
+      const pace=e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):'';
+      const effortTag=e.effort?sessionTypeTag('Run'):'';
+      const detail=expanded?`<div style="padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+          ${e.km?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.km}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">km</div></div>`:''}
+          ${e.time?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.time}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">time</div></div>`:''}
+          ${pace?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${pace}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">pace</div></div>`:''}
+        </div>
+        ${e.note?`<div style="font-size:12px;color:var(--text3);font-style:italic;">"${esc(e.note)}"</div>`:''}
+      </div>`:'';
+      return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleHistoryRow('${id}')">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              ${sessionTypeTag('Run')}
+              ${e.effort?`<span style="padding:3px 9px;border-radius:20px;background:${effortStyle(e.effort).bg};font-size:11px;font-weight:700;color:${effortStyle(e.effort).text};">${esc(e.effort)}</span>`:''}
+              <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text2);">${e.km?e.km+'km':''}${e.km&&e.time?' · ':''}${e.time||''}${pace?' · '+pace:''}</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="transform:rotate(${expanded?90:0}deg);transition:transform 0.2s;flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        ${detail}
+      </div>`;
+    }
+  }).join('');
+  el.innerHTML=compareBtn+`<div class="chart-card">${rows}</div>`;
 }
 
 // ── GYM ANALYSIS ──
@@ -2232,80 +2301,6 @@ function renderTrendsGymAnalysis(){
   return summary+freqChart+volChart+muscleChart+sessionLog;
 }
 
-function renderConsistencyScore(){
-  // Look at last 28 days, compute avg completion and variance
-  const now=today();const scores=[];
-  for(let i=27;i>=0;i--){const d=addDays(now,-i);scores.push(getDayScore(dk(d)));}
-  const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
-  const variance=scores.reduce((a,b)=>a+Math.pow(b-avg,2),0)/scores.length;
-  const stdDev=Math.sqrt(variance);
-  // Grade: penalise high variance, reward high avg
-  const raw=avg-(stdDev*0.5);
-  const grade=raw>=85?'S':raw>=70?'A':raw>=50?'B':raw>=30?'C':'D';
-  const gradeColor=grade==='S'?'var(--accent2)':grade==='A'?'var(--green)':grade==='B'?'var(--orange)':'var(--text3)';
-  const R=44,C=54,stroke=8;
-  const circ=2*Math.PI*R;
-  const filled=circ*(avg/100);
-  return`<div class="metric-row">
-    <div class="metric-card" style="grid-column:span 1;">
-      <div class="m-label">Consistency</div>
-      <div style="font-size:48px;font-weight:800;color:${gradeColor};letter-spacing:-2px;line-height:1;">${grade}</div>
-      <div class="m-unit">last 28 days</div>
-    </div>
-    <div class="metric-card accent">
-      <div class="m-label">Avg Daily</div>
-      <div class="m-val">${Math.round(avg)}</div>
-      <div class="m-unit">% · σ ${Math.round(stdDev)}pts</div>
-    </div>
-  </div>`;
-}
-
-function renderHeatmap(){
-  const now=today();
-  // 16 weeks × 7 days = 112 days back
-  const weeks=16;const cells=[];
-  const startMonday=addDays(getMonday(now),-(weeks-1)*7);
-  for(let w=0;w<weeks;w++){
-    const row=[];
-    for(let d=0;d<7;d++){
-      const date=addDays(startMonday,w*7+d);
-      const isFuture=date>now;
-      const score=isFuture?-1:getDayScore(dk(date));
-      row.push({date:dk(date),score,isFuture});
-    }
-    cells.push(row);
-  }
-  const cellSize=16,gap=3;
-  const W=(cellSize+gap)*weeks-gap;const H=(cellSize+gap)*7-gap;
-  const rects=cells.map((row,wi)=>row.map((cell,di)=>{
-    const x=wi*(cellSize+gap);const y=di*(cellSize+gap);
-    if(cell.isFuture)return`<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="3" fill="var(--surface2)" opacity="0.3"/>`;
-    const s=cell.score;
-    const fill=s===0?'var(--surface2)':s<50?'rgba(99,102,241,0.25)':s<80?'rgba(99,102,241,0.55)':'var(--accent)';
-    return`<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="3" fill="${fill}"><title>${cell.date}: ${s}%</title></rect>`;
-  }).join('')).join('');
-  const dayLabels=['M','','W','','F','','S'].map((l,i)=>l?`<text x="-4" y="${i*(cellSize+gap)+cellSize*0.75}" text-anchor="end" fill="var(--text3)" font-size="9" font-weight="700">${l}</text>`:'').join('');
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Activity Heatmap</span><span class="chart-card-val">16 weeks</span></div><div style="overflow-x:auto;padding:4px 0;"><svg viewBox="-16 0 ${W+20} ${H}" style="height:${H}px;min-width:${W+16}px;">${dayLabels}${rects}</svg></div></div>`;
-}
-
-function renderWeekChart(){
-  const now=today();const mon=getMonday(now);
-  const data=[];
-  for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(d.getDate()+i);data.push(d>now?null:getDayScore(dk(d)));}
-  const bw=32,gap=10,H=80;
-  const bars=data.map((v,i)=>{
-    const x=i*(bw+gap);
-    if(v===null)return`<rect x="${x}" y="0" width="${bw}" height="${H}" fill="var(--surface2)" rx="6" opacity="0.4"/>`;
-    const h=Math.max(4,v/100*H);const y=H-h;
-    const fill=v>=80?'var(--green)':v>=50?'var(--accent)':'var(--text3)';
-    return`<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${fill}" rx="6" opacity="0.9"/>
-      <text x="${x+bw/2}" y="${H+16}" text-anchor="middle" fill="var(--text3)" font-size="10" font-weight="700">${['M','T','W','T','F','S','S'][i]}</text>
-      ${v>0?`<text x="${x+bw/2}" y="${y-6}" text-anchor="middle" fill="${fill}" font-size="9" font-weight="800">${v}</text>`:''}`;
-  }).join('');
-  const W=(bw+gap)*7-gap;
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Daily Completion</span></div><svg class="svg-chart" viewBox="0 0 ${W} ${H+24}" style="height:120px;">${bars}</svg></div>`;
-}
-
 // ── DAY-OF-WEEK PATTERN HEATMAP ──
 function renderDayOfWeekHeatmap(){
   const now=today();
@@ -2453,58 +2448,6 @@ function renderWeeklyTrendChart(){
 }
 function setWeekTrendFilter(id){_weekTrendFilter=id;renderTrends();}
 
-function renderWeekBars(){
-  const now=today();const mon=getMonday(now);const goals=allGoals();if(!goals.length)return'';
-  const daysPast=Math.min(7,Math.ceil((now-mon)/86400000)+1);
-  const bars=goals.map(g=>{
-    let done=0;for(let i=0;i<daysPast;i++){const d=new Date(mon);d.setDate(d.getDate()+i);if(goalDone(dk(d),g))done++;}
-    const pct=Math.round(done/daysPast*100);const[fg]=goalColorPair(g.name);
-    return`<div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:14px;font-weight:700;">${esc(g.name)}</span><span style="font-size:13px;font-weight:700;color:${pct>=80?'var(--green)':pct>=50?fg:'var(--text3)'};">${pct}%</span></div><div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${pct>=80?'var(--green)':fg};border-radius:3px;transition:width 0.6s;"></div></div></div>`;
-  }).join('');
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Goal Progress</span></div>${bars}</div>`;
-}
-
-
-function renderRunStatsCard(runs){
-  if(!runs.length)return'';
-  const wk=runs.filter(r=>r.km>0);const wp=runs.filter(r=>r.km>0&&r.time&&parseTimeToSecs(r.time)>0);
-  const totalKm=wk.reduce((s,r)=>s+r.km,0);
-  const best=wp.length?wp.reduce((b,r)=>r.km/parseTimeToSecs(r.time)>b.km/parseTimeToSecs(b.time)?r:b,wp[0]):null;
-  const longest=wk.length?wk.reduce((b,r)=>r.km>b.km?r:b,wk[0]):null;
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Running</span></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:4px 0;"><div style="text-align:center;"><div style="font-size:24px;font-weight:800;letter-spacing:-1px;">${totalKm.toFixed(0)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Total km</div></div><div style="text-align:center;"><div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">${best?fmtPace(best.km/parseTimeToSecs(best.time)):'—'}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Best pace</div></div><div style="text-align:center;"><div style="font-size:24px;font-weight:800;letter-spacing:-1px;">${longest?longest.km+'km':'—'}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Longest</div></div></div></div>`;
-}
-
-function renderPaceChart(runs){
-  const wp=runs.filter(r=>r.km>0&&r.time&&parseTimeToSecs(r.time)>0).slice(-16);
-  if(wp.length<2)return'';
-  const paces=wp.map(r=>parseTimeToSecs(r.time)/r.km);
-  const minP=Math.min(...paces),maxP=Math.max(...paces);
-  const range=maxP-minP||60;
-  const W=280,H=70,n=paces.length;
-  const pts=paces.map((p,i)=>{const x=(i/(n-1))*W;const y=H-((p-minP)/range)*(H-4);return`${x.toFixed(1)},${y.toFixed(1)}`;}).join(' ');
-  const dots=paces.map((p,i)=>{const x=(i/(n-1))*W;const y=H-((p-minP)/range)*(H-4);return`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--accent)" opacity="0.9"/>`;}).join('');
-  const latest=fmtPace(1/paces[n-1]);
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Pace Trend</span><span class="chart-card-val">${latest} latest</span></div><svg class="svg-chart" viewBox="-4 -4 ${W+8} ${H+8}" style="height:90px;"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.5"/>${dots}</svg></div>`;
-}
-
-function renderGymStatsCard(gym){
-  if(!gym.length)return'';
-  const freq={};gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)freq[e.name]=(freq[e.name]||0)+1;}));
-  const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const totalSets=gym.reduce((t,s)=>(s.exercises||[]).reduce((tt,e)=>tt+(e.sets||[]).filter(ss=>!ss.warmup).length,t),0);
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Gym</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0 12px;"><div style="text-align:center;"><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${gym.length}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Sessions</div></div><div style="text-align:center;"><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${totalSets}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:2px;">Total sets</div></div></div>${top.length?`<div style="border-top:1px solid var(--border);padding-top:10px;"><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Most logged</div>${top.map(([n,c])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-size:13px;font-weight:700;">${esc(n)}</span><span style="font-size:13px;color:var(--text2);">${c}×</span></div>`).join('')}</div>`:''}</div>`;
-}
-
-function renderVolumeChart(gym){
-  const recent=gym.slice(-10);if(recent.length<2)return'';
-  const vols=recent.map(s=>(s.exercises||[]).reduce((t,e)=>(e.sets||[]).filter(ss=>!ss.warmup).reduce((tt,ss)=>tt+(parseFloat(ss.weight||0)*parseFloat(ss.reps||0)),t),0));
-  const maxV=Math.max(...vols)||1;
-  const bw=22,gap=6,H=60;
-  const bars=vols.map((v,i)=>{const h=Math.max(3,v/maxV*H);return`<rect x="${i*(bw+gap)}" y="${H-h}" width="${bw}" height="${h}" fill="var(--green)" rx="4" opacity="0.8"/><text x="${i*(bw+gap)+bw/2}" y="${H+14}" text-anchor="middle" fill="var(--text3)" font-size="9">${recent[i].type?recent[i].type[0]:''}</text>`;}).join('');
-  const W=(bw+gap)*10-gap;
-  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Training Volume</span><span class="chart-card-val">last ${recent.length} sessions</span></div><svg class="svg-chart" viewBox="0 0 ${W} ${H+18}" style="height:90px;">${bars}</svg></div>`;
-}
-
 // ── ME PAGE ──
 function renderMe(){
   const el=document.getElementById('me-content');
@@ -2624,8 +2567,6 @@ function renderBodyCompCard(health){
     ${health.length>1?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">${health.slice(-5).reverse().map(e=>`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.weight?e.weight+'kg':''}${e.bodyFat?` <span style="font-size:12px;color:#818cf8;font-weight:600;">· ${e.bodyFat}%</span>`:''}</span><span style="font-size:12px;color:var(--text3);">${new Date(e.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}${e.note?' · '+esc(e.note):''}</span></div>`).join('')}</div>`:''}
   </div>`;
 }
-
-function renderWeightChart(entries){return'';}
 
 function renderVapingSection(){
   const data=loadVapingData();
@@ -3349,122 +3290,6 @@ function renderActivityLoad(){
   </div>`;
 }
 
-// ── PROGRESSIVE OVERLOAD ──
-function renderProgressiveOverload(){
-  const gym=loadGymData();if(!gym.length)return'';
-  const now=today();const weekAgo=dk(addDays(now,-7));
-  // For each exercise, get current best and previous best (before this week)
-  const exMap={};
-  gym.forEach(session=>{
-    (session.exercises||[]).forEach(ex=>{
-      if(!ex.name)return;
-      const sets=(ex.sets||[]).filter(s=>!s.warmup);
-      const best=sets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,sets[0]||null);
-      if(!best||!best.weight)return;
-      const w=parseFloat(best.weight);
-      if(!exMap[ex.name])exMap[ex.name]={thisWeek:null,prevBest:null,history:[]};
-      exMap[ex.name].history.push({date:session.date,weight:w,reps:best.reps});
-      if(session.date>=weekAgo){
-        if(!exMap[ex.name].thisWeek||w>exMap[ex.name].thisWeek.weight)
-          exMap[ex.name].thisWeek={weight:w,reps:best.reps,date:session.date};
-      } else {
-        if(!exMap[ex.name].prevBest||w>exMap[ex.name].prevBest)
-          exMap[ex.name].prevBest=w;
-      }
-    });
-  });
-  const exercises=Object.entries(exMap)
-    .filter(([,v])=>v.thisWeek)
-    .map(([name,v])=>{
-      const delta=v.prevBest!=null?v.thisWeek.weight-v.prevBest:null;
-      return{name,current:v.thisWeek.weight,reps:v.thisWeek.reps,delta,history:v.history.slice(-5)};
-    })
-    .sort((a,b)=>{
-      // progressing first, then maintained, then regressed
-      if(a.delta>0&&b.delta<=0)return-1;if(b.delta>0&&a.delta<=0)return 1;
-      return(b.delta||0)-(a.delta||0);
-    });
-  if(!exercises.length)return'';
-  const progressing=exercises.filter(e=>e.delta!=null&&e.delta>0).length;
-  return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header">
-      <span class="chart-card-title">Progressive Overload</span>
-      <span class="chart-card-val">${exercises.length} exercises</span>
-    </div>
-    ${progressing>0?`<div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px;">✓ ${progressing} exercise${progressing===1?'':'s'} progressing this week.</div>`:''}
-    ${exercises.map(e=>{
-      const deltaColor=e.delta==null?'var(--text3)':e.delta>0?'var(--green)':e.delta<0?'var(--red)':'var(--orange)';
-      const deltaText=e.delta==null?'—':e.delta>0?`+${e.delta.toFixed(e.delta%1?2:0)}kg ↑`:e.delta<0?`${e.delta.toFixed(e.delta%1?2:0)}kg ↓`:`=${e.current}kg`;
-      // Mini bar chart from last 5 sessions
-      const hw=e.history.map(h=>h.weight);
-      const maxH=Math.max(...hw)||1;
-      const bars=hw.map((w,i)=>{const h=Math.round(w/maxH*20);const isLast=i===hw.length-1;return`<rect x="${i*7}" y="${20-h}" width="5" height="${h}" fill="${isLast?(e.delta>0?'var(--green)':e.delta<0?'var(--red)':'var(--orange)'):'var(--surface2)'}" rx="1.5"/>`;}).join('');
-      const bw=hw.length*7;
-      return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-        <svg viewBox="0 0 ${bw||7} 20" style="width:${Math.max(bw,7)}px;height:20px;flex-shrink:0;">${bars}</svg>
-        <div style="flex:1;font-size:14px;font-weight:700;">${esc(e.name)}</div>
-        <div style="font-size:14px;font-weight:800;">${e.current}kg</div>
-        <div style="font-size:12px;font-weight:700;color:${deltaColor};min-width:60px;text-align:right;">${deltaText}</div>
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
-// ── BEST / WORST WEEKS ──
-function renderBestWorstWeeks(){
-  const now=today();const weeks=[];
-  // go back 12 weeks
-  for(let w=1;w<=12;w++){
-    const mon=addDays(getMonday(now),-w*7);
-    const sun=addDays(mon,6);
-    let total=0,done=0;
-    for(let i=0;i<7;i++){
-      const d=addDays(mon,i);if(d>now)break;
-      allGoals().forEach(g=>{total++;if(goalDone(dk(d),g))done++;});
-    }
-    if(total>0)weeks.push({mon,sun,pct:Math.round(done/total*100),label:`${mon.getDate()}/${mon.getMonth()+1}`});
-  }
-  if(!weeks.length)return'';
-  const sorted=[...weeks].sort((a,b)=>b.pct-a.pct);
-  const best=sorted[0],worst=sorted[sorted.length-1];
-  return`<div class="metric-row">
-    <div class="metric-card green">
-      <div class="m-label">Best Week</div>
-      <div class="m-val">${best.pct}</div>
-      <div class="m-unit">% · w/c ${best.label}</div>
-    </div>
-    <div class="metric-card">
-      <div class="m-label">Worst Week</div>
-      <div class="m-val" style="color:var(--text3);">${worst.pct}</div>
-      <div class="m-unit">% · w/c ${worst.label}</div>
-    </div>
-  </div>`;
-}
-
-// ── PREDICTED COMPLETION ──
-function renderPredictedCompletion(){
-  const now=today();const mon=getMonday(now);
-  const dayOfWeek=(now.getDay()+6)%7; // 0=Mon
-  if(dayOfWeek===0)return''; // too early on Monday
-  let done=0,total=0;
-  for(let i=0;i<=dayOfWeek;i++){
-    const d=addDays(mon,i);if(d>now)break;
-    allGoals().forEach(g=>{total++;if(goalDone(dk(d),g))done++;});
-  }
-  if(!total)return'';
-  const currentRate=done/total;
-  const remainingDays=6-dayOfWeek;
-  const projDone=done+(currentRate*allGoals().length*remainingDays);
-  const projTotal=(dayOfWeek+1+remainingDays)*allGoals().length;
-  const predicted=Math.round(projDone/projTotal*100);
-  const current=Math.round(done/total*100);
-  return`<div class="metric-card" style="margin-bottom:10px;">
-    <div class="m-label">Predicted Week</div>
-    <div class="m-val" style="color:${predicted>=80?'var(--green)':predicted>=50?'var(--accent2)':'var(--text3)'};">${predicted}</div>
-    <div class="m-unit">% · at current pace (${current}%/day)</div>
-  </div>`;
-}
-
 // ── SESSION COMPARE ──
 function openCompareModal(){
   const gym=loadGymData();
@@ -3800,21 +3625,6 @@ function clearWeekPlan(){
   state.weekPlan=null;_weekPlanDraft=null;saveState();toastMsg('Plan removed');
   if(document.getElementById('page-me').classList.contains('active'))renderMe();
 }
-function renderTodayPlanCard(){
-  const t=getTodayPlanType();if(!t||t==='Rest'||t==='Off')return'';
-  const isGym=['Push','Pull','Legs','Core','Custom'].includes(t);
-  const isRun=t==='Run';
-  const tab=isRun?'run':'gym';
-  return`<div class="session-card" style="--accent:${isRun?'#06b6d4':'var(--green)'};" onclick="showPage('train');switchTrainTab('${tab}')${isGym?`;setTimeout(()=>{_gymPickedType='${t}';renderGymTypeSelector();},50)`:''}>
-    <div class="session-card-body">
-      <div class="session-card-label">Today's Plan</div>
-      <div class="session-card-title">${esc(t)}</div>
-      <div class="session-card-meta">Tap to start</div>
-    </div>
-    <div class="session-card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
-  </div>`;
-}
-
 // ── EXERCISE LIBRARY & MUSCLE TRACKING ──
 const DEFAULT_MUSCLE_MAP={
   // Chest
@@ -4211,56 +4021,11 @@ function renderMuscleVolume(){
   </div>`;
 }
 
-// ── PATCH renderToday to inject alerts + today's plan ──
-const _origRenderToday=renderToday;
-renderToday=function(){
-  _origRenderToday();
-  renderReadinessCard();
-  // Inject anomaly alerts below date label, above score
-  const alertHtml=renderAnomalyAlerts();
-  if(alertHtml){
-    const scoreWrap=document.querySelector('.today-score-wrap');
-    if(scoreWrap&&!document.querySelector('.anomaly-alerts')){
-      const div=document.createElement('div');div.innerHTML=alertHtml;
-      scoreWrap.parentNode.insertBefore(div.firstChild,scoreWrap);
-    }
-  }
-};
-
-// ── PATCH renderRunSection to inject run target ──
-const _origRenderRunSection=renderRunSection;
-renderRunSection=function(){
-  _origRenderRunSection();
-  const el=document.getElementById('run-content');
-  if(el){
-    const targetHtml=renderRunTarget();
-    el.insertAdjacentHTML('afterbegin',targetHtml);
-  }
-};
 
 
 
 
-// ── PATCH saveGymSession to preserve notes ──
-const _origSaveGymSession=saveGymSession;
-saveGymSession=function(){
-  const notesEl=document.getElementById('gym-notes-field');
-  if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
-  // Save notes on the pushed session
-  const exercises=(gymDraft.exercises||[]).filter(e=>(e.name||'').trim()&&(e.sets||[]).length);
-  if(!exercises.length){toastMsg('Add at least one exercise');return;}
-  const sessions=loadGymData();
-  sessions.push({date:dk(today()),type:gymDraft.type,exercises,notes:gymDraft.notes||'',ts:Date.now()});
-  saveGymData(sessions);
-  const prog=loadGymProg();
-  exercises.forEach(e=>{if(!prog[e.name])prog[e.name]={history:[]};prog[e.name].history.push({date:dk(today()),sets:e.sets});});
-  saveGymProg(prog);
-  const d=dk(today());
-  if(!state.data[`${d}:session:gym`])state.data[`${d}:session:gym`]=[];
-  state.data[`${d}:session:gym`].push(gymDraft.type);
-  saveState();gymDraft=null;
-  toastMsg('Session saved');haptic('success');renderGymSection();
-};
+
 
 // ── Session type colour map ──
 const SESSION_TYPE_COL={
@@ -4275,107 +4040,6 @@ function sessionTypeTag(type){
   const c=SESSION_TYPE_COL[type]||{bg:'rgba(128,128,168,0.12)',border:'rgba(128,128,168,0.3)',text:'var(--text2)'};
   return`<span style="display:inline-block;padding:3px 9px;border-radius:20px;background:${c.bg};border:1px solid ${c.border};color:${c.text};font-size:11px;font-weight:800;">${esc(type)}</span>`;
 }
-let _expandedHistoryId=null;
-function toggleHistoryRow(id){_expandedHistoryId=_expandedHistoryId===id?null:id;renderTrainHistory();}
-
-renderTrainHistory=function(){
-  const el=document.getElementById('train-history-content');
-  const gymData=loadGymData();const runData=loadRunData();
-  const gymCount=gymData.length;
-  const all=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...runData.map((r,i)=>({...r,_t:'run',_idx:i}))]
-    .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  if(!all.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
-  const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare Sessions</button>`:'';
-  const rows=all.map((e,ri)=>{
-    const id=`${e._t}-${e._idx}-${e.date}`;
-    const expanded=_expandedHistoryId===id;
-    const d=new Date(e.date+'T12:00:00');
-    const dateLabel=d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-    if(e._t==='gym'){
-      const sets=(e.exercises||[]).reduce((t,ex)=>t+(ex.sets||[]).filter(s=>!s.warmup).length,0);
-      const vol=(e.exercises||[]).reduce((t,ex)=>(ex.sets||[]).filter(s=>!s.warmup).reduce((tt,s)=>tt+(parseFloat(s.weight||0)*parseFloat(s.reps||0)),t),0);
-      const detail=expanded?`<div style="padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px;">
-        ${(e.exercises||[]).map(ex=>{
-          const ws=(ex.sets||[]).filter(s=>!s.warmup);
-          const top=ws.length?ws.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,ws[0]):null;
-          return`<div style="padding:8px 0;border-bottom:1px solid var(--border);">
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-              <span style="font-size:13px;font-weight:700;">${esc(ex.name||'Exercise')}</span>
-              ${top&&top.weight?`<span style="font-size:12px;color:var(--accent2);font-weight:700;">${top.weight}kg × ${top.reps}</span>`:''}
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;">${(ex.sets||[]).filter(s=>!s.warmup).map(s=>`<span style="padding:3px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text2);">${s.weight}kg×${s.reps}</span>`).join('')}</div>
-          </div>`;
-        }).join('')}
-        ${e.notes?`<div style="font-size:12px;color:var(--text3);margin-top:8px;font-style:italic;">"${esc(e.notes)}"</div>`:''}
-        ${vol>0?`<div style="font-size:11px;color:var(--text3);margin-top:8px;">Total volume: ${Math.round(vol).toLocaleString()}kg</div>`:''}
-      </div>`:'';
-      return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleHistoryRow('${id}')">
-          <div style="flex:1;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              ${sessionTypeTag(e.type||'Workout')}
-              <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
-            </div>
-            <div style="font-size:12px;color:var(--text2);">${(e.exercises||[]).length} exercises · ${sets} sets</div>
-          </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="transform:rotate(${expanded?90:0}deg);transition:transform 0.2s;flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        ${detail}
-      </div>`;
-    } else {
-      const pace=e.km&&e.time?fmtPace(e.km/parseTimeToSecs(e.time)):'';
-      const effortTag=e.effort?sessionTypeTag('Run'):'';
-      const detail=expanded?`<div style="padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
-          ${e.km?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.km}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">km</div></div>`:''}
-          ${e.time?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.time}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">time</div></div>`:''}
-          ${pace?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${pace}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">pace</div></div>`:''}
-        </div>
-        ${e.note?`<div style="font-size:12px;color:var(--text3);font-style:italic;">"${esc(e.note)}"</div>`:''}
-      </div>`:'';
-      return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleHistoryRow('${id}')">
-          <div style="flex:1;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              ${sessionTypeTag('Run')}
-              ${e.effort?`<span style="padding:3px 9px;border-radius:20px;background:${effortStyle(e.effort).bg};font-size:11px;font-weight:700;color:${effortStyle(e.effort).text};">${esc(e.effort)}</span>`:''}
-              <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
-            </div>
-            <div style="font-size:12px;color:var(--text2);">${e.km?e.km+'km':''}${e.km&&e.time?' · ':''}${e.time||''}${pace?' · '+pace:''}</div>
-          </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="transform:rotate(${expanded?90:0}deg);transition:transform 0.2s;flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        ${detail}
-      </div>`;
-    }
-  }).join('');
-  el.innerHTML=compareBtn+`<div class="chart-card">${rows}</div>`;
-};
-
-
-// ── PATCH week strip day tap to open day modal ──
-// Override the onclick handlers in renderToday
-const _origRenderToday2=renderToday;
-renderToday=function(){
-  _origRenderToday2();
-  // Override strip onclick to open day modal
-  document.querySelectorAll('.week-day').forEach(el=>{
-    if(el.onclick){
-      const origClick=el.onclick;
-      el.onclick=function(){
-        // Extract ds from original onclick by running it then opening modal
-        origClick.call(this);
-        // find ds from data or re-derive
-        const num=el.querySelector('.week-day-num');if(!num)return;
-        const dayNum=parseInt(num.textContent);
-        const now=today();
-        const baseMonday=addDays(getMonday(now),weekOffset*7);
-        for(let i=0;i<7;i++){const d=addDays(baseMonday,i);if(d.getDate()===dayNum&&d<=now){openDayModal(dk(d));break;}}
-      };
-    }
-  });
-};
-
 // ── PATCH train subhead to show today's plan ──
 function updateTrainSubhead(){
   const planType=getTodayPlanType();

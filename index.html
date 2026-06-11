@@ -1149,7 +1149,7 @@ function switchTrainTab(tab){
   document.querySelectorAll('.train-section').forEach(s=>s.classList.toggle('active',s.id===`train-${tab}`));
   renderTrainSection(tab);
 }
-function renderTrain(){switchTrainTab(activeTrainTab);}
+function renderTrain(){switchTrainTab(activeTrainTab);updateTrainSubhead();}
 function renderTrainSection(tab){
   if(tab==='gym')renderGymSection();
   if(tab==='run')renderRunSection();
@@ -4073,11 +4073,6 @@ function updateTrainSubhead(){
     else subhead.textContent='Log your workout';
   }
 }
-const _origRenderTrain=renderTrain;
-renderTrain=function(){
-  _origRenderTrain();
-  updateTrainSubhead();
-};
 
 // close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{

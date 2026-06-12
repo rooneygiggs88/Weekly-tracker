@@ -2315,23 +2315,45 @@ function renderTrendsRunAnalysis(){
         svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+16).toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;
       }
     });
-    const recentPace=paceVals.slice(-3).reduce((a,b)=>a+b,0)/3;
-    const earlyPace=paceVals.slice(0,3).reduce((a,b)=>a+b,0)/3;
+    // Format a seconds delta as "1m 19s/km" rather than "79s/km"
+    const fmtDelta=s=>{const m=Math.floor(s/60),sec=s%60;return m>0?(sec>0?`${m}m ${sec}s/km`:`${m}m/km`):`${s}s/km`;};
+    // Effort-aware trend: quality runs (Tempo/Intervals/Race) drive the badge
+    const QUALITY_EFF=new Set(['Tempo','Fartlek','Intervals','Hard','Race']);
+    const EASY_EFF=new Set(['Easy','Recovery','Long Run','Long run','Long']);
+    const qualityR=paceRuns.filter(r=>QUALITY_EFF.has(r.effort));
+    const qualityV=qualityR.map(r=>r.km/parseTimeToSecs(r.time));
+    const useQuality=qualityV.length>=3;
+    const trendV=useQuality?qualityV:paceVals;
+    const recentPace=trendV.slice(-3).reduce((a,b)=>a+b,0)/3;
+    const earlyPace=trendV.slice(0,3).reduce((a,b)=>a+b,0)/3;
     const improving=recentPace>=earlyPace;
     const paceRegressing=!improving&&(earlyPace-recentPace)/earlyPace>0.1;
-    const paceCol=improving?'var(--green)':paceRegressing?'var(--red)':'var(--orange)';
-    const paceLabel=improving?'↑ Getting faster':paceRegressing?'↓ Significant regression':'↓ Pace slowing';
+    const recentEasyCount=paceRuns.slice(-3).filter(r=>EASY_EFF.has(r.effort)).length;
+    const easyDominated=!useQuality&&recentEasyCount>=2;
+    const paceCol=improving?'var(--green)':paceRegressing?'var(--red)':easyDominated?'var(--text3)':'var(--orange)';
+    const paceLabel=improving?'↑ Getting faster':paceRegressing?'↓ Quality pace dropping':easyDominated?'→ Easy/base work phase':'↓ Pace slowing';
     // Text analysis
     const bestIdx=paceVals.indexOf(bestP);
     const bestRun=paceRuns[bestIdx];
     const bestDate=new Date(bestRun.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
     const deltaSec=Math.abs(Math.round(1/recentPace)-Math.round(1/earlyPace));
-    const trendLine=`Pace ${improving?'improved':'slowed'} by <strong>${deltaSec}s/km</strong> — recent average <strong>${fmtPace(recentPace)}</strong> vs <strong>${fmtPace(earlyPace)}</strong> early on.`;
+    let trendLine;
+    if(useQuality){
+      trendLine=`Quality run pace ${improving?'improved':'slowed'} by <strong>${fmtDelta(deltaSec)}</strong> — recent avg <strong>${fmtPace(recentPace)}</strong> vs <strong>${fmtPace(earlyPace)}</strong> early on.`;
+    } else if(easyDominated){
+      trendLine=`Recent sessions are mainly easy/long runs — slower pace is intentional base work, not a fitness drop.`;
+    } else {
+      trendLine=`Pace ${improving?'improved':'slowed'} by <strong>${fmtDelta(deltaSec)}</strong> — recent average <strong>${fmtPace(recentPace)}</strong> vs <strong>${fmtPace(earlyPace)}</strong> early on.`;
+    }
+    // Distance context — longer recent runs explain slower pace
+    const recentAvgKm=paceRuns.slice(-3).reduce((s,r)=>s+(r.km||0),0)/3;
+    const earlyAvgKm=paceRuns.slice(0,3).reduce((s,r)=>s+(r.km||0),0)/3;
+    const distLine=(recentAvgKm>earlyAvgKm*1.2&&!improving&&recentAvgKm>0&&earlyAvgKm>0)?`Recent runs avg <strong>${recentAvgKm.toFixed(1)}km</strong> vs <strong>${earlyAvgKm.toFixed(1)}km</strong> early on — longer distance naturally brings pace down.`:'';
     const bestLine=`Best run <strong>${fmtPace(bestP)}</strong> on ${bestDate}${bestRun.effort?` · ${bestRun.effort}`:''}`;
     const effortBuckets={};
     paceRuns.forEach((r,i)=>{if(r.effort){if(!effortBuckets[r.effort])effortBuckets[r.effort]=[];effortBuckets[r.effort].push(paceVals[i]);}});
     const effortAvgs=Object.entries(effortBuckets).filter(([,v])=>v.length>=2).map(([e,v])=>({e,avg:v.reduce((a,b)=>a+b,0)/v.length})).sort((a,b)=>b.avg-a.avg);
-    const effortLine=effortAvgs.length>=2?(()=>{const f=effortAvgs[0],s=effortAvgs[effortAvgs.length-1],gap=Math.round(1/s.avg)-Math.round(1/f.avg);return`${f.e} avg <strong>${fmtPace(f.avg)}</strong>, ${gap}s/km faster than ${s.e.toLowerCase()}.`;})():'';
+    const effortLine=effortAvgs.length>=2?(()=>{const f=effortAvgs[0],s=effortAvgs[effortAvgs.length-1],gap=Math.round(1/s.avg)-Math.round(1/f.avg);return`${f.e} avg <strong>${fmtPace(f.avg)}</strong>, ${fmtDelta(gap)} faster than ${s.e.toLowerCase()}.`;})():'';
     return `<div class="chart-card">
       <div class="chart-card-header"><span class="chart-card-title">Pace Progression</span><span class="chart-card-val" style="color:${paceCol};">${paceLabel}</span></div>
       <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
@@ -2345,6 +2367,7 @@ function renderTrendsRunAnalysis(){
       </div>
       <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid ${paceCol};">
         <div style="font-size:12px;color:var(--text2);line-height:1.6;">${trendLine}</div>
+        ${distLine?`<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;">${distLine}</div>`:''}
         <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;">${bestLine}</div>
         ${effortLine?`<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;">${effortLine}</div>`:''}
       </div>

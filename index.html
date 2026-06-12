@@ -2146,11 +2146,10 @@ function renderTrends(){
       <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekGym.length}</div><div class="m-unit">sessions this week</div></div>
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week</div></div>
     </div>
+    ${renderActivityLoad()}
     ${renderWeeklyTrendChart()}
     ${renderDayOfWeekHeatmap()}
-
     ${renderTimeOfDay()}
-    ${renderActivityLoad()}
   `;
 }
 

@@ -1660,22 +1660,24 @@ function renderRunSection(){
     <div style="display:flex;gap:4px;margin-bottom:16px;">${dayBtns}</div>
     ${dayRunsHtml}
     <label>Distance (km)</label>
-    <input class="run-field" type="number" id="run-km" inputmode="decimal" placeholder="0.0" step="0.1" oninput="updatePacePreview()">
+    <input class="run-field" type="number" id="run-km" inputmode="decimal" placeholder="0.0" step="0.1" oninput="updatePacePreview();this.style.borderColor=''">
     <div style="height:12px;"></div>
     <label>Time</label>
-    <input class="run-field" type="text" id="run-time" placeholder="mm:ss or h:mm:ss" oninput="updatePacePreview()">
+    <input class="run-field" type="text" id="run-time" placeholder="mm:ss or h:mm:ss" oninput="updatePacePreview();this.style.borderColor=''">
     <div id="pace-preview" style="font-size:13px;color:var(--accent2);font-weight:700;min-height:20px;margin-top:6px;"></div>
     <div style="height:12px;"></div>
     <label>Effort</label>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
-      ${['Easy','Tempo','Intervals','Race','Long Run','Recovery'].map(e=>`<button onclick="selectEffort('${e}')" id="eff-${e.replace(' ','-')}" style="padding:8px 6px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
+    <div id="effort-container" style="border-radius:10px;border:1px solid transparent;padding:3px;margin:-3px;transition:border-color 0.2s;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
+        ${['Easy','Tempo','Intervals','Race','Long Run','Recovery'].map(e=>`<button onclick="selectEffort('${e}')" id="eff-${e.replace(' ','-')}" style="padding:8px 6px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
+      </div>
     </div>
     <div style="height:12px;"></div>
-    <label>Start time (optional)</label>
-    <input class="run-field" type="time" id="run-starttime" value="${new Date().toTimeString().slice(0,5)}">
+    <label>Start time</label>
+    <input class="run-field" type="time" id="run-starttime" value="${new Date().toTimeString().slice(0,5)}" oninput="this.style.borderColor=''">
     <div style="height:12px;"></div>
-    <label>Avg Heart Rate (optional)</label>
-    <input class="run-field" type="number" id="run-hr" inputmode="numeric" placeholder="e.g. 145" min="60" max="220">
+    <label>Avg Heart Rate</label>
+    <input class="run-field" type="number" id="run-hr" inputmode="numeric" placeholder="e.g. 145" min="60" max="220" oninput="this.style.borderColor=''">
     <div style="height:12px;"></div>
     <label>Notes (optional)</label>
     <input class="run-field" type="text" id="run-note" placeholder="How did it feel?">
@@ -1702,6 +1704,7 @@ function selectEffort(e){
     b.style.color=a?'white':'var(--text2)';
     b.style.borderColor=a?'var(--accent)':'var(--border)';
   });
+  if(selectedEffort){const c=document.getElementById('effort-container');if(c)c.style.borderColor='transparent';}
 }
 function updatePacePreview(){
   const km=parseFloat(document.getElementById('run-km').value)||0;
@@ -1709,20 +1712,30 @@ function updatePacePreview(){
   document.getElementById('pace-preview').textContent=km>0&&secs>0?fmtPace(km/secs):'';
 }
 function saveRun(){
-  const km=parseFloat(document.getElementById('run-km').value)||0;
-  const time=(document.getElementById('run-time').value||'').trim();
+  const kmEl=document.getElementById('run-km');
+  const timeEl=document.getElementById('run-time');
+  const startEl=document.getElementById('run-starttime');
+  const hrEl=document.getElementById('run-hr');
+  const effortCont=document.getElementById('effort-container');
+  const km=parseFloat(kmEl.value)||0;
+  const time=(timeEl.value||'').trim();
+  const startTimeVal=(startEl.value||'').trim();
+  const hr=parseInt(hrEl.value)||0;
+  const ERR='var(--red)';
+  let valid=true;
+  if(!km){kmEl.style.borderColor=ERR;valid=false;}
+  if(!time){timeEl.style.borderColor=ERR;valid=false;}
+  if(!selectedEffort){if(effortCont)effortCont.style.borderColor=ERR;valid=false;}
+  if(!startTimeVal){startEl.style.borderColor=ERR;valid=false;}
+  if(!hr){hrEl.style.borderColor=ERR;valid=false;}
+  if(!valid){toastMsg('Fill in all fields');haptic('error');return;}
   const note=(document.getElementById('run-note').value||'').trim();
-  const startTimeVal=(document.getElementById('run-starttime').value||'').trim();
-  if(!km&&!time){toastMsg('Add a distance or time');return;}
   let ts=null;
-  if(startTimeVal){
-    const [h,m]=startTimeVal.split(':').map(Number);
-    const d=new Date(_runLogDate||dk(today()));d.setHours(h,m,0,0);ts=d.getTime();
-  }
+  const [h,m]=startTimeVal.split(':').map(Number);
+  const d=new Date(_runLogDate||dk(today()));d.setHours(h,m,0,0);ts=d.getTime();
   const runs=loadRunData();
   const logDate=_runLogDate||dk(today());
-  const hr=parseInt(document.getElementById('run-hr').value)||null;
-  runs.push({date:logDate,km,time,note,effort:selectedEffort,startTime:startTimeVal||null,ts,hr});
+  runs.push({date:logDate,km,time,note,effort:selectedEffort,startTime:startTimeVal,ts,hr});
   saveRunData(runs);
   if(!state.data[`${logDate}:session:run`])state.data[`${logDate}:session:run`]=[];
   state.data[`${logDate}:session:run`].push(`${km}km`);

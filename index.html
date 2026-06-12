@@ -4054,7 +4054,7 @@ function copyLastSameSession(){
     },null);
     if(lastEx&&(lastEx.sets||[]).length){
       anyFilled=true;
-      return{name:ex.name,sets:(lastEx.sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:s.warmup||false}))};
+      return{name:ex.name,sets:(lastEx.sets||[]).map(s=>({weight:s.weight,reps:'',warmup:s.warmup||false}))};
     }
     return{name:ex.name,sets:[{weight:'',reps:'',warmup:false}]};
   });

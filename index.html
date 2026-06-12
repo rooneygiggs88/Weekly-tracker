@@ -4043,13 +4043,25 @@ function copyLastSession(){
 }
 function copyLastSameSession(){
   if(!gymDraft)return;
-  const last=loadGymData().filter(s=>s.type===gymDraft.type).slice(-1)[0];
-  if(!last){toastMsg('No previous '+gymDraft.type+' session');return;}
-  gymDraft.exercises=(last.exercises||[]).map(e=>({
-    name:e.name,
-    sets:(e.sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:s.warmup||false}))
-  }));
-  renderGymLogger();toastMsg(gymDraft.type+' session copied');haptic('light');
+  const sessions=loadGymData();
+  const canonical=getDefaultExercisesForType(gymDraft.type);
+  let anyFilled=false;
+  const exercises=canonical.map(ex=>{
+    const nameLower=ex.name.toLowerCase();
+    const lastEx=sessions.slice().reverse().reduce((found,s)=>{
+      if(found)return found;
+      return(s.exercises||[]).find(e=>e.name&&e.name.toLowerCase()===nameLower)||null;
+    },null);
+    if(lastEx&&(lastEx.sets||[]).length){
+      anyFilled=true;
+      return{name:ex.name,sets:(lastEx.sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:s.warmup||false}))};
+    }
+    return{name:ex.name,sets:[{weight:'',reps:'',warmup:false}]};
+  });
+  gymDraft.exercises=exercises;
+  renderGymLogger();
+  toastMsg(anyFilled?gymDraft.type+' weights pre-filled from history':'No history found');
+  haptic('light');
 }
 
 // ── DAY POPUP MODAL ──

@@ -3035,18 +3035,23 @@ function renderVapingSection(){
       <button onclick="openVapingModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(99,102,241,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
     </div>
     ${data.length?`
-      <div style="display:flex;gap:16px;margin-bottom:6px;flex-wrap:wrap;">
-        <div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${totalPuffs7}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs / 7d</div></div>
-        ${totalNic7>0?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">~${totalNic7.toFixed(1)}<span style="font-size:14px;font-weight:700;">mg</span></div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">nicotine / 7d</div></div>`:''}
-        ${last?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">${last.puffs||0}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">${lastLabel}</div></div>`:''}
-        ${latestCigEquiv!==null?`<div><div style="font-size:28px;font-weight:800;letter-spacing:-1px;">~${latestCigEquiv.toFixed(1)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">cigs/day equiv</div></div>`:''}
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">This Week</div>
+        <div style="display:flex;gap:28px;flex-wrap:wrap;">
+          <div><div style="font-size:26px;font-weight:800;letter-spacing:-1px;">${totalPuffs7}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs / 7d</div></div>
+          ${totalNic7>0?`<div><div style="font-size:26px;font-weight:800;letter-spacing:-1px;">~${(totalNic7/CIG_PER_MG).toFixed(1)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">cig equiv / 7d</div></div>`:''}
+        </div>
       </div>
-      ${latestCigEquiv!==null?`<div style="margin:8px 0 10px;">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"><span>0 mg/day</span><span>cigarette equivalent</span><span>40 mg/day</span></div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;height:7px;overflow:hidden;"><div style="height:100%;width:${cigBarPct.toFixed(1)}%;border-radius:4px;background:linear-gradient(90deg,var(--green) 0%,var(--orange) 50%,var(--red) 100%);background-size:300% 100%;background-position:${cigBarPct.toFixed(1)}% 0%;transition:width 0.4s;"></div></div>
-        <div style="font-size:11px;color:var(--text2);margin-top:5px;text-align:center;font-weight:600;">≈ ${latestCigEquiv.toFixed(1)} cigarette equivalents per day (latest entry)</div>
-      </div>`:``}
-      ${(vapOverallLine||vapWeekLine)?`<div style="margin:8px 0 10px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);">
+      ${last?`<div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">${lastLabel}</div>
+        <div style="display:flex;gap:28px;flex-wrap:wrap;margin-bottom:${latestCigEquiv!==null?'10px':'0'};">
+          <div><div style="font-size:26px;font-weight:800;letter-spacing:-1px;">${last.puffs||0}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs</div></div>
+          ${latestCigEquiv!==null?`<div><div style="font-size:26px;font-weight:800;letter-spacing:-1px;">~${latestCigEquiv.toFixed(1)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">cig equiv</div></div>`:''}
+        </div>
+        ${latestCigEquiv!==null?`<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;"><span>0</span><span>← nicotine / day →</span><span>40 mg</span></div>
+        <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;"><div style="height:100%;width:${cigBarPct.toFixed(1)}%;border-radius:4px;background:linear-gradient(90deg,var(--green) 0%,var(--orange) 50%,var(--red) 100%);background-size:300% 100%;background-position:${cigBarPct.toFixed(1)}% 0%;transition:width 0.4s;"></div></div>`:``}
+      </div>`:''}
+      ${(vapOverallLine||vapWeekLine)?`<div style="margin:0 0 10px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);">
         ${vapOverallLine?`<div style="font-size:13px;font-weight:700;color:${vapOverallCol};line-height:1.5;${vapWeekLine?'margin-bottom:8px;':''}">${vapOverallLine}</div>`:''}
         ${vapWeekLine?`<div style="font-size:12px;font-weight:600;color:${vapWeekCol};line-height:1.5;">${vapWeekLine}</div>`:''}
       </div>`:''}
@@ -3061,65 +3066,78 @@ function renderVapingSection(){
 }
 
 function renderVapingChart(data){
+  const CIG_PER_MG=1.2;
   const sorted=[...data].sort((a,b)=>a.date.localeCompare(b.date));
   if(sorted.length<2)return'';
-  const W=300,H=120,PL=38,PR=10,PT=12,PB=22;
+  const W=300,H=130,PL=38,PR=30,PT=12,PB=22;
   const chartW=W-PL-PR,chartH=H-PT-PB;
+  // Puffs
   const vals=sorted.map(e=>e.puffs||0);
   const maxV=Math.max(...vals,1);
-  const pad=maxV*0.1;
-  const hi=maxV+pad;
+  const hi=maxV*1.1;
   const py=v=>PT+((hi-v)/hi)*chartH;
+  // Cig equiv
+  const cigVals=sorted.map(e=>+(estimateNicotineMg(e.puffs,e.mg)||0)/CIG_PER_MG);
+  const maxCig=Math.max(...cigVals,1);
+  const hiCig=maxCig*1.15;
+  const pyCig=v=>PT+((hiCig-v)/hiCig)*chartH;
   const px=i=>PL+(i/Math.max(sorted.length-1,1))*chartW;
-  // 7-day rolling avg
-  const rolling=sorted.map((_,i)=>{
-    const slice=vals.slice(Math.max(0,i-6),i+1);
-    return slice.reduce((a,b)=>a+b,0)/slice.length;
-  });
+  // 7-day rolling avgs
+  const rolling=sorted.map((_,i)=>{const sl=vals.slice(Math.max(0,i-6),i+1);return sl.reduce((a,b)=>a+b,0)/sl.length;});
+  const rollingCig=sorted.map((_,i)=>{const sl=cigVals.slice(Math.max(0,i-6),i+1);return sl.reduce((a,b)=>a+b,0)/sl.length;});
   let svg='';
-  // Y gridlines
+  // Left Y gridlines (puffs)
   const step=maxV<=200?50:maxV<=500?100:200;
   for(let t=0;t<=hi;t+=step){
     const y=py(t);if(y<PT-2||y>PT+chartH+2)continue;
     svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
     svg+=`<text x="${(PL-4).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="600">${t}</text>`;
   }
+  // Right Y labels (cig equiv)
+  const cigStep=maxCig<=5?1:maxCig<=15?5:10;
+  for(let c=0;c<=hiCig;c+=cigStep){
+    const y=pyCig(c);if(y<PT-2||y>PT+chartH+2)continue;
+    svg+=`<text x="${(W-PR+4).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="start" font-size="8" fill="#fb923c" font-family="-apple-system,sans-serif" font-weight="700">${c}</text>`;
+  }
+  // Axes
   svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
   svg+=`<line x1="${PL}" y1="${(PT+chartH).toFixed(1)}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
-  // Bar for each entry
+  svg+=`<line x1="${W-PR}" y1="${PT}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="#fb923c" stroke-width="1" opacity="0.35"/>`;
+  // Puffs bars
   const bw=Math.max(3,Math.floor(chartW/sorted.length*0.6));
   sorted.forEach((e,i)=>{
     const x=px(i)-bw/2,bh=Math.max(2,(e.puffs||0)/hi*chartH),by=PT+chartH-bh;
     svg+=`<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh}" rx="2" fill="var(--accent)" opacity="0.5"/>`;
   });
-  // Rolling avg line
+  // Puffs rolling avg line
   const avgLine=rolling.map((v,i)=>`${i===0?'M':'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
   svg+=`<path d="${avgLine}" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // Cig equiv rolling avg line (dashed orange, right axis)
+  const cigLine=rollingCig.map((v,i)=>`${i===0?'M':'L'}${px(i).toFixed(1)},${pyCig(v).toFixed(1)}`).join(' ');
+  svg+=`<path d="${cigLine}" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4,3"/>`;
   // X labels on month change
   let lastMonth=null;
   sorted.forEach((e,i)=>{
     const d=new Date(e.date+'T12:00:00');
     const month=d.toLocaleDateString('en-GB',{month:'short'});
-    if(month!==lastMonth){
-      lastMonth=month;
-      const cx=px(i);
-      const anchor=i===0?'start':i===sorted.length-1?'end':'middle';
-      svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${anchor}" font-size="8" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;
-    }
+    if(month!==lastMonth){lastMonth=month;const cx=px(i);const anchor=i===0?'start':i===sorted.length-1?'end':'middle';svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${anchor}" font-size="8" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;}
   });
-  // Trend indicator
   const recentAvg=rolling[rolling.length-1];
   const earlyAvg=rolling[0];
   const improving=recentAvg<earlyAvg;
   const trendCol=improving?'var(--green)':'var(--orange)';
-  const trendLbl=improving?`↓ Trending down`:`↑ Trending up`;
+  const trendLbl=improving?'↓ Trending down':'↑ Trending up';
   return`<div style="margin-bottom:8px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <span style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">Puffs per day</span>
+      <span style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;">Daily trend</span>
       <span style="font-size:11px;font-weight:700;color:${trendCol};">${trendLbl}</span>
     </div>
     <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
-    <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);margin-top:6px;"><div style="width:16px;height:2px;background:var(--accent2);border-radius:1px;"></div>7-day avg</div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:10px;font-weight:700;color:var(--text3);margin-top:6px;">
+      <div style="display:flex;align-items:center;gap:4px;"><div style="width:10px;height:8px;border-radius:2px;background:var(--accent);opacity:0.5;"></div>Puffs</div>
+      <div style="display:flex;align-items:center;gap:4px;"><div style="width:16px;height:2px;background:var(--accent2);border-radius:1px;"></div>7d avg</div>
+      <div style="display:flex;align-items:center;gap:4px;"><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="4,3"/></svg><span style="color:#fb923c;">Cig equiv</span></div>
+    </div>
   </div>`;
 }
 

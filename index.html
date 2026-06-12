@@ -1473,12 +1473,19 @@ function gymCheckSetDone(i,si){
   const done=!!(s.weight&&s.reps);
   const btn=document.getElementById(`set-num-${i}-${si}`);
   const row=document.getElementById(`set-row-${i}-${si}`);
+  const kgEl=document.getElementById(`set-kg-${i}-${si}`);
+  const repsEl=document.getElementById(`set-reps-${i}-${si}`);
   if(btn){
     btn.style.color=done?'var(--green)':'var(--text3)';
     btn.style.borderColor=done?'rgba(16,185,129,0.4)':'var(--border)';
     btn.style.background=done?'rgba(16,185,129,0.12)':'transparent';
   }
   if(row)row.style.background=done?'rgba(16,185,129,0.05)':'';
+  [kgEl,repsEl].forEach(el=>{
+    if(!el)return;
+    el.style.background=done?'rgba(16,185,129,0.08)':'';
+    el.style.borderColor=done?'rgba(16,185,129,0.4)':'';
+  });
 }
 
 function renderSupersetExercisesHtml(lastSame,prog,sessions){
@@ -1541,12 +1548,21 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
       <div style="font-size:10px;font-weight:700;color:var(--text3);">reps</div>
       <div></div>
     </div>
-    ${(ex.sets||[]).map((s,si)=>{const done=!s.warmup&&!!(s.weight&&s.reps);const btnCol=s.warmup?'var(--orange)':done?'var(--green)':'var(--text3)';const btnBdr=s.warmup?'var(--orange)':done?'rgba(16,185,129,0.4)':'var(--border)';const btnBg=s.warmup?'rgba(249,115,22,0.15)':done?'rgba(16,185,129,0.12)':'transparent';return`<div id="set-row-${i}-${si}" style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:6px;align-items:center;border-radius:8px;${done?'background:rgba(16,185,129,0.05);':''}" >
+    ${(ex.sets||[]).map((s,si)=>{
+      const done=!s.warmup&&!!(s.weight&&s.reps);
+      const btnCol=s.warmup?'var(--orange)':done?'var(--green)':'var(--text3)';
+      const btnBdr=s.warmup?'rgba(249,115,22,0.5)':done?'rgba(16,185,129,0.4)':'var(--border)';
+      const btnBg=s.warmup?'rgba(249,115,22,0.15)':done?'rgba(16,185,129,0.12)':'transparent';
+      const rowBg=s.warmup?'rgba(249,115,22,0.04)':done?'rgba(16,185,129,0.05)':'';
+      const inputBg=s.warmup?'rgba(249,115,22,0.08)':done?'rgba(16,185,129,0.08)':'';
+      const inputBdr=s.warmup?'rgba(249,115,22,0.35)':done?'rgba(16,185,129,0.4)':'';
+      const inputStyle=`padding:10px 12px;${inputBg?'background:'+inputBg+';':''}${inputBdr?'border-color:'+inputBdr+';':''}`;
+      return`<div id="set-row-${i}-${si}" style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:6px;align-items:center;border-radius:8px;${rowBg?'background:'+rowBg+';':''}">
       <button id="set-num-${i}-${si}" onclick="gymToggleWarmup(${i},${si})" style="width:28px;height:28px;border-radius:8px;border:1px solid ${btnBdr};background:${btnBg};color:${btnCol};font-size:10px;font-weight:800;cursor:pointer;" title="${s.warmup?'Warmup':'Tap to mark warmup'}">${s.warmup?'W':si+1}</button>
-      <input class="run-field" type="number" inputmode="decimal" placeholder="kg" value="${esc(String(s.weight||''))}"
-        style="padding:10px 12px;${s.warmup?'opacity:0.6;':''}" oninput="gymSetWeight(${i},${si},this.value)">
-      <input class="run-field" type="number" inputmode="numeric" placeholder="reps" value="${esc(String(s.reps||''))}"
-        style="padding:10px 12px;${s.warmup?'opacity:0.6;':''}" oninput="gymSetReps(${i},${si},this.value)">
+      <input id="set-kg-${i}-${si}" class="run-field" type="number" inputmode="decimal" placeholder="kg" value="${esc(String(s.weight||''))}"
+        style="${inputStyle}" oninput="gymSetWeight(${i},${si},this.value)">
+      <input id="set-reps-${i}-${si}" class="run-field" type="number" inputmode="numeric" placeholder="reps" value="${esc(String(s.reps||''))}"
+        style="${inputStyle}" oninput="gymSetReps(${i},${si},this.value)">
       <button onclick="gymRemoveSet(${i},${si})" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;">×</button>
     </div>`;}).join('')}
     <div style="display:flex;gap:8px;margin-top:6px;">

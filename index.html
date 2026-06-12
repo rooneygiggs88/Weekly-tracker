@@ -1217,7 +1217,7 @@ function toggleSupersetMode(){_gymSupersetMode=!_gymSupersetMode;renderGymTypeSe
 function renderGymTypeSelector(){
   const el=document.getElementById('gym-content');
   const sessions=loadGymData();
-  const types=['Push','Pull','Legs','Core','Custom'];
+  const types=['Push','Pull','Legs','Core','Custom','Makeup'];
   // Suggest next in PPL rotation
   if(!_gymPickedType){
     const ppl=['Push','Pull','Legs'];
@@ -1225,16 +1225,17 @@ function renderGymTypeSelector(){
     else _gymPickedType='Push';
   }
   const hasPrev=sessions.length>0;
+  const isMakeup=_gymPickedType==='Makeup';
   el.innerHTML=`
     <div class="chart-card" style="margin-bottom:10px;">
       <div class="chart-card-header"><span class="chart-card-title">Select Session Type</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-        ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?'var(--accent)':'var(--border)'};background:${_gymPickedType===t?'rgba(99,102,241,0.15)':'var(--surface2)'};color:${_gymPickedType===t?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
+        ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent)'):'var(--border)'};background:${_gymPickedType===t?(t==='Makeup'?'rgba(210,153,34,0.15)':'rgba(99,102,241,0.15)'):'var(--surface2)'};color:${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent2)'):'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
       </div>
-      <button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">⚡ Superset mode${_gymSupersetMode?' — ON':''}</button>
-      ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair · Push, Pull &amp; Legs only</div>`:''}
-      ${hasPrev?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
-      <button class="btn-primary" style="width:100%;" onclick="confirmGymSession()">${_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`⚡ Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>
+      ${isMakeup?`<div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;padding:8px 12px;background:rgba(210,153,34,0.08);border-radius:var(--radius-xs);border:1px solid rgba(210,153,34,0.2);">Loads Push, Pull &amp; Legs exercises not yet done this week</div>`:`<button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">⚡ Superset mode${_gymSupersetMode?' — ON':''}</button>
+      ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair · Push, Pull &amp; Legs only</div>`:''}`}
+      ${hasPrev&&!isMakeup?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
+      <button class="btn-primary" style="width:100%;${isMakeup?'background:var(--amber);border-color:var(--amber);':''}" onclick="confirmGymSession()">${isMakeup?'Build Makeup session →':_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`⚡ Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>
     </div>
     ${renderRecentGymCard()}`;
 }
@@ -1257,6 +1258,14 @@ function _resolveExName(name){
 }
 function confirmGymSession(){
   const type=_gymPickedType;
+  if(type==='Makeup'){
+    const exercises=getExercisesForMakeup();
+    if(!exercises.length){toastMsg('All exercises done this week — great work!');haptic('light');return;}
+    gymDraft={type:'Makeup',exercises,startedAt:Date.now()};
+    renderGymLogger();
+    toastMsg(`${exercises.length} missed exercise${exercises.length!==1?'s':''} loaded`);haptic('light');
+    return;
+  }
   const useSuperset=_gymSupersetMode&&['Push','Pull','Legs'].includes(type);
   if(useSuperset){
     const pairDefs=SUPERSET_PAIRS[type.toLowerCase()]||[];
@@ -4041,8 +4050,46 @@ function copyLastSession(){
   };
   renderGymLogger();toastMsg('Last session copied — edit before saving');haptic('light');
 }
+function getExercisesForMakeup(){
+  const now=today();
+  const daysFromMon=(now.getDay()+6)%7;
+  const monday=new Date(now);monday.setDate(now.getDate()-daysFromMon);
+  const weekStart=dk(monday);
+  const sessions=loadGymData();
+  const thisWeek=sessions.filter(s=>s.date>=weekStart);
+  const doneThisWeek=new Set();
+  thisWeek.forEach(s=>(s.exercises||[]).forEach(e=>{
+    if(!e.name)return;
+    if((e.sets||[]).some(set=>!set.warmup&&set.weight&&set.reps))doneThisWeek.add(e.name.toLowerCase());
+  }));
+  const missed=[];
+  ['Push','Pull','Legs'].forEach(type=>{
+    getDefaultExercisesForType(type).forEach(ex=>{
+      if(!doneThisWeek.has(ex.name.toLowerCase()))missed.push(ex);
+    });
+  });
+  return missed.map(ex=>{
+    const nameLower=ex.name.toLowerCase();
+    const lastEx=sessions.slice().reverse().reduce((found,s)=>{
+      if(found)return found;
+      return(s.exercises||[]).find(e=>e.name&&e.name.toLowerCase()===nameLower)||null;
+    },null);
+    if(lastEx&&(lastEx.sets||[]).length){
+      return{name:ex.name,sets:(lastEx.sets||[]).map(s=>({weight:s.weight,reps:'',warmup:s.warmup||false}))};
+    }
+    return{name:ex.name,sets:[{weight:'',reps:'',warmup:false}]};
+  });
+}
 function copyLastSameSession(){
   if(!gymDraft)return;
+  if(gymDraft.type==='Makeup'){
+    const exercises=getExercisesForMakeup();
+    if(!exercises.length){toastMsg('All exercises done this week!');haptic('light');return;}
+    gymDraft.exercises=exercises;
+    renderGymLogger();
+    toastMsg(`${exercises.length} missed exercise${exercises.length!==1?'s':''} reloaded`);haptic('light');
+    return;
+  }
   const sessions=loadGymData();
   const canonical=getDefaultExercisesForType(gymDraft.type);
   let anyFilled=false;

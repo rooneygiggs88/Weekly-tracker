@@ -1,4 +1,4 @@
-const CACHE = 'tracker-v27';
+const CACHE = 'tracker-v28';
 const ASSETS = [
   '/Weekly-tracker/',
   '/Weekly-tracker/index.html',

@@ -2688,21 +2688,66 @@ function renderTrendsGymAnalysis(){
       let offset=-0.25*circ;
       const arcs=muscleEntries.map(([m,v])=>{const col=MCOLS[m]||'var(--text3)';const dash=(v/totalMuscleSets)*circ;const arc=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-dasharray="${(dash-1.5).toFixed(1)} ${(circ-dash+1.5).toFixed(1)}" stroke-dashoffset="${(-offset).toFixed(1)}" opacity="0.85"/>`;offset+=dash;return arc;}).join('');
       const legend=muscleEntries.map(([m,v])=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><div style="width:10px;height:10px;border-radius:2px;background:${MCOLS[m]||'var(--text3)'};flex-shrink:0;"></div><div style="font-size:11px;font-weight:700;flex:1;">${m}</div><div style="font-size:11px;color:var(--text3);">${v} (${Math.round(v/totalMuscleSets*100)}%)</div></div>`).join('');
-      const pushSets=muscleEntries.filter(([m])=>['Chest','Shoulders','Triceps'].includes(m)).reduce((a,[,v])=>a+v,0);
-      const pullSets=muscleEntries.filter(([m])=>['Back','Biceps'].includes(m)).reduce((a,[,v])=>a+v,0);
-      const ratio=pullSets>0?(pushSets/pullSets).toFixed(1):'—';
-      const balMsg=pullSets===0?{msg:'No pull data yet — add rows, pull-ups or lat pulldowns',col:'var(--text3)'}:parseFloat(ratio)>1.3?{msg:`Push:pull ${ratio}:1 — add more pulling work`,col:'var(--orange)'}:{msg:`Push:pull ${ratio}:1 — well balanced ✓`,col:'var(--green)'};
-      // Neglected muscle groups (bottom entries under 10%)
-      const neglected=muscleEntries.filter(([,v])=>v/totalMuscleSets<0.1);
-      const neglectedLine=neglected.length?`${neglected.map(([m])=>m).join(' & ')} ${neglected.length===1?'is':'are'} your least trained — consider adding more volume.`:null;
-      const neglectedCol=neglected.some(([,v])=>v/totalMuscleSets<0.06)?'var(--orange)':'var(--text3)';
+      const pushSets=(muscleTotals.Chest||0)+(muscleTotals.Shoulders||0)+(muscleTotals.Triceps||0);
+      const pullSets=(muscleTotals.Back||0)+(muscleTotals.Biceps||0);
+      const ppRatio=pullSets>0?(pushSets/pullSets):null;
+      const ppStr=ppRatio!==null?ppRatio.toFixed(1):'—';
+      const ppMsg=ppRatio===null
+        ?{msg:'No pull data yet — add rows, pulldowns or curls',col:'var(--text3)'}
+        :ppRatio>1.3
+          ?{msg:`Push:pull ${ppStr}:1 — push-heavy, shoulder injury risk. Prioritise rows & pulldowns`,col:'var(--red)'}
+          :ppRatio>1.0
+            ?{msg:`Push:pull ${ppStr}:1 — slightly more pushing than pulling. Add 1–2 more pull sets`,col:'var(--orange)'}
+            :ppRatio<0.55
+              ?{msg:`Push:pull ${ppStr}:1 — you're pulling significantly more than pushing. Great for shoulder health ✓`,col:'var(--green)'}
+              :{msg:`Push:pull ${ppStr}:1 — well balanced ✓`,col:'var(--green)'};
+      // Upper / lower split
+      const upperSets=pushSets+pullSets+(muscleTotals.Core||0);
+      const lowerSets=(muscleTotals.Legs||0)+(muscleTotals.Hamstrings||0);
+      const lowerPct=totalMuscleSets>0?Math.round(lowerSets/totalMuscleSets*100):0;
+      const upperPct=totalMuscleSets>0?Math.round(upperSets/totalMuscleSets*100):0;
+      const ulMsg=lowerSets===0
+        ?{msg:'No lower body work this week — add squats, leg press or RDLs',col:'var(--red)'}
+        :lowerPct<15
+          ?{msg:`Upper:lower split ${upperPct}%:${lowerPct}% — leg volume very low. Aim for 25–30% lower`,col:'var(--orange)'}
+          :lowerPct<25
+            ?{msg:`Upper:lower split ${upperPct}%:${lowerPct}% — could do with more leg work`,col:'var(--text3)'}
+            :{msg:`Upper:lower split ${upperPct}%:${lowerPct}% — solid balance ✓`,col:'var(--green)'};
+      // Biceps : triceps
+      const bicSets=muscleTotals.Biceps||0;
+      const triSets=muscleTotals.Triceps||0;
+      let biTriMsg=null;
+      if(bicSets>0&&triSets===0)biTriMsg={msg:'No tricep work this week — add pushdowns, skull crushers or dips',col:'var(--orange)'};
+      else if(triSets>0&&bicSets===0)biTriMsg={msg:'No bicep work this week — add curls',col:'var(--orange)'};
+      else if(bicSets>0&&triSets>0){const r=bicSets/triSets;if(r>1.8)biTriMsg={msg:`Biceps:triceps ${r.toFixed(1)}:1 — biceps-dominant. Add more tricep volume`,col:'var(--orange)'};else if(r<0.55)biTriMsg={msg:`Triceps:biceps ${(triSets/bicSets).toFixed(1)}:1 — tricep-dominant. Add more curls`,col:'var(--orange)'};}
+      // Quads : hamstrings
+      const quadSets=muscleTotals.Legs||0;
+      const hamSets=muscleTotals.Hamstrings||0;
+      let qhMsg=null;
+      if(quadSets>0&&hamSets===0)qhMsg={msg:'No hamstring work this week — add RDLs or seated leg curls',col:'var(--orange)'};
+      else if(quadSets>0&&hamSets>0&&(hamSets/quadSets)<0.4)qhMsg={msg:`Quad:hamstring ${quadSets}:${hamSets} sets — quad-dominant. Add RDLs or leg curls`,col:'var(--text3)'};
+      // Historical frequency (sessions/week per muscle, last 12 weeks)
+      const allGymHist=loadGymData();
+      const muscleDays={};Object.keys(MUSCLE_MAP).forEach(m=>muscleDays[m]=new Set());
+      allGymHist.forEach(s=>(s.exercises||[]).forEach(e=>{const exL=e.name.toLowerCase();Object.entries(MUSCLE_MAP).forEach(([m,kws])=>{if(kws.some(k=>exL.includes(k)))muscleDays[m].add(s.date);});}));
+      const freqPerWk={};Object.keys(MUSCLE_MAP).forEach(m=>freqPerWk[m]=allGymHist.length>0?+(muscleDays[m].size/Math.max(weekPts.length,1)).toFixed(1):0);
+      const freqEntries=Object.entries(freqPerWk).filter(([,f])=>f>0).sort((a,b)=>b[1]-a[1]);
+      const mostFreq=freqEntries[0];const leastFreq=freqEntries[freqEntries.length-1];
+      const freqMsg=freqEntries.length>=2&&mostFreq&&leastFreq&&mostFreq[0]!==leastFreq[0]
+        ?{msg:`${mostFreq[0]} most frequent (${mostFreq[1]}×/wk) · ${leastFreq[0]} least (${leastFreq[1]}×/wk)`,col:'var(--text3)'}:null;
       // Not hit this week
-      const twMonStr=dk(getMonday(today()));
-      const twGymSessions=gym.filter(s=>s.date>=twMonStr);
+      const twGymSessions=gym.filter(s=>s.date>=dk(getMonday(today())));
       const twMuscles=new Set();
       twGymSessions.forEach(s=>(s.exercises||[]).forEach(e=>{const exL=e.name.toLowerCase();Object.entries(MUSCLE_MAP).forEach(([m,kws])=>{if(kws.some(k=>exL.includes(k)))twMuscles.add(m);});}));
       const notHitThisWeek=muscleEntries.filter(([m])=>!twMuscles.has(m)).map(([m])=>m);
-      const notHitLine=twGymSessions.length>0&&notHitThisWeek.length?`Not hit this week: ${notHitThisWeek.join(', ')}.`:twGymSessions.length===0?'No gym sessions logged this week yet.':null;
+      // Smart focus suggestion
+      const focusParts=[];
+      if(lowerSets===0||lowerPct<15)focusParts.push('Legs & Hamstrings');
+      else if(qhMsg)focusParts.push('Hamstrings');
+      if(biTriMsg)focusParts.push(bicSets>triSets?'Triceps':'Biceps');
+      if(ppRatio!==null&&ppRatio>1.0)focusParts.push('Pulling');
+      const focusSuggestion=focusParts.length?`Next session focus: ${focusParts.join(' + ')}`:null;
+      const insightPill=(msg,col)=>`<div style="padding:8px 10px;border-radius:8px;background:${col}18;border:1px solid ${col}44;"><div style="font-size:11px;font-weight:700;color:${col};">${msg}</div></div>`;
       return `<div class="chart-card">
         <div class="chart-card-header"><span class="chart-card-title">Muscle Balance</span></div>
         <div style="display:flex;align-items:center;padding:8px 0;">
@@ -2715,15 +2760,13 @@ function renderTrendsGymAnalysis(){
           <div style="flex:1;padding-left:14px;">${legend}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
-          <div style="padding:8px 10px;border-radius:8px;background:${balMsg.col}18;border:1px solid ${balMsg.col}44;">
-            <div style="font-size:11px;font-weight:700;color:${balMsg.col};">${balMsg.msg}</div>
-          </div>
-          ${neglectedLine?`<div style="padding:8px 10px;border-radius:8px;background:${neglectedCol}18;border:1px solid ${neglectedCol}44;">
-            <div style="font-size:11px;font-weight:700;color:${neglectedCol};">${neglectedLine}</div>
-          </div>`:''}
-          ${notHitLine?`<div style="padding:8px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);">${notHitLine}</div>
-          </div>`:''}
+          ${insightPill(ppMsg.msg,ppMsg.col)}
+          ${insightPill(ulMsg.msg,ulMsg.col)}
+          ${biTriMsg?insightPill(biTriMsg.msg,biTriMsg.col):''}
+          ${qhMsg?insightPill(qhMsg.msg,qhMsg.col):''}
+          ${freqMsg?insightPill(freqMsg.msg,freqMsg.col):''}
+          ${notHitThisWeek.length>0&&twGymSessions.length>0?insightPill(`Not hit this week: ${notHitThisWeek.join(', ')}`, 'var(--text3)'):''}
+          ${focusSuggestion?`<div style="padding:8px 10px;border-radius:8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);"><div style="font-size:11px;font-weight:700;color:var(--accent2);">→ ${focusSuggestion}</div></div>`:''}
         </div>
       </div>`;
     })();

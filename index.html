@@ -485,7 +485,10 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       <button class="type-btn" onclick="setRaceDist('21.1')">Half</button>
       <button class="type-btn" onclick="setRaceDist('42.2')">Marathon</button>
     </div>
-    <input class="modal-input" id="race-km-input" type="number" inputmode="decimal" placeholder="Custom km" step="0.1">
+    <input class="modal-input" id="race-km-input" type="number" inputmode="decimal" placeholder="Custom km" step="0.1" oninput="updateRacePacePreview()">
+    <label class="modal-label">Goal time (optional)</label>
+    <input class="modal-input" id="race-time-input" type="text" placeholder="mm:ss or h:mm:ss" oninput="updateRacePacePreview()">
+    <div id="race-pace-preview" style="font-size:12px;font-weight:700;color:var(--accent2);margin:-8px 0 14px;min-height:16px;"></div>
     <button class="btn-primary" onclick="saveRace()" style="margin-bottom:10px;">Save Race</button>
     <button class="btn-ghost" style="width:100%;color:var(--red);" onclick="clearRace()">Remove race target</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('race-modal')">Cancel</button>
@@ -1032,10 +1035,12 @@ function renderToday(){
   if(state.race&&state.race.date){
     const days=daysUntil(state.race.date);
     if(days>=0){
+      const rGoalSecs=state.race.goalTime?parseTimeToSecs(state.race.goalTime):0;
+      const rGoalPace=(state.race.km&&rGoalSecs)?fmtPace(state.race.km/rGoalSecs):null;
       raceWrap.innerHTML=`<div class="race-card" onclick="openRaceModal()">
         <div class="race-card-label">Race Countdown</div>
         <div class="race-card-days">${days}<span style="font-size:18px;color:var(--text2);font-weight:700;"> days</span></div>
-        <div class="race-card-meta">${esc(state.race.name||'Race')}${state.race.km?' · '+state.race.km+'km':''}</div>
+        <div class="race-card-meta">${esc(state.race.name||'Race')}${state.race.km?' · '+state.race.km+'km':''}${state.race.goalTime?' · Goal '+esc(state.race.goalTime):''}${rGoalPace?' ('+rGoalPace+')':''}</div>
       </div>`;
     }else{raceWrap.innerHTML='';}
   }else{raceWrap.innerHTML='';}
@@ -3437,11 +3442,17 @@ function renderRaceSection(){
     return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Race Target</span></div><div class="empty-state" style="padding:16px 0;"><strong>No race set</strong>Add a target race to see your countdown.</div><button class="btn-secondary" onclick="openRaceModal()" style="margin-top:8px;">Set Race Target</button></div>`;
   }
   const days=daysUntil(r.date);
+  const goalSecs=r.goalTime?parseTimeToSecs(r.goalTime):0;
+  const goalPace=(r.km&&goalSecs)?fmtPace(r.km/goalSecs):null;
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">Race Target</span><button onclick="openRaceModal()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Edit</button></div>
     <div style="font-size:14px;font-weight:800;margin-bottom:4px;">${esc(r.name||'Race')}</div>
     <div style="font-size:36px;font-weight:800;letter-spacing:-2px;color:${days<=14?'var(--red)':days<=42?'var(--orange)':'var(--text)'};">${days>=0?days:'Past'}<span style="font-size:16px;color:var(--text2);font-weight:600;"> days</span></div>
     <div style="font-size:13px;color:var(--text3);margin-top:4px;">${r.date}${r.km?' · '+r.km+'km':''}</div>
+    ${(r.goalTime||goalPace)?`<div style="display:flex;gap:8px;margin-top:10px;">
+      ${r.goalTime?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal time: ${esc(r.goalTime)}</span>`:''}
+      ${goalPace?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal pace: ${goalPace}</span>`:''}
+    </div>`:''}
   </div>`;
 }
 
@@ -3576,8 +3587,10 @@ function openRaceModal(){
   document.getElementById('race-name-input').value=r.name||'';
   document.getElementById('race-date-input').value=r.date||'';
   document.getElementById('race-km-input').value=r.km||'';
+  document.getElementById('race-time-input').value=r.goalTime||'';
   raceDist=r.km?String(r.km):'';
   document.querySelectorAll('#race-dist-row .type-btn').forEach(b=>b.classList.remove('active'));
+  updateRacePacePreview();
   openModal('race-modal');
 }
 function setRaceDist(km){
@@ -3589,13 +3602,20 @@ function setRaceDist(km){
     const map={'5k':'5','10k':'10','Half':'21.1','Marathon':'42.2'};
     b.classList.toggle('active',map[b.textContent]===km);
   });
+  updateRacePacePreview();
+}
+function updateRacePacePreview(){
+  const km=parseFloat(document.getElementById('race-km-input').value)||0;
+  const secs=parseTimeToSecs((document.getElementById('race-time-input').value||'').trim());
+  document.getElementById('race-pace-preview').textContent=km>0&&secs>0?`Goal pace: ${fmtPace(km/secs)}`:'';
 }
 function saveRace(){
   const name=(document.getElementById('race-name-input').value||'').trim();
   const date=document.getElementById('race-date-input').value;
   const km=parseFloat(document.getElementById('race-km-input').value)||0;
+  const goalTime=(document.getElementById('race-time-input').value||'').trim();
   if(!date){toastMsg('Pick a race date');return;}
-  state.race={name,date,km};saveState();
+  state.race={name,date,km,goalTime};saveState();
   closeModal('race-modal');toastMsg('Race saved');haptic('success');
   renderToday();if(document.getElementById('page-me').classList.contains('active'))renderMe();
 }

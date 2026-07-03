@@ -438,6 +438,21 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
+<!-- BODY COMP GOAL MODAL -->
+<div class="modal-overlay" id="body-comp-goal-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Body Comp Goal</h3>
+    <label class="modal-label">Target weight (kg, optional)</label>
+    <input class="modal-input" id="bcg-weight-input" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 70">
+    <label class="modal-label">Target body fat % (optional)</label>
+    <input class="modal-input" id="bcg-bodyfat-input" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 15">
+    <button class="btn-primary" onclick="saveBodyCompGoal()" style="margin-bottom:10px;">Save Goal</button>
+    <button class="btn-ghost" style="width:100%;color:var(--red);" onclick="clearBodyCompGoal()">Remove goal</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('body-comp-goal-modal')">Cancel</button>
+  </div>
+</div>
+
 <!-- VAPING LOG MODAL -->
 <div class="modal-overlay" id="vaping-modal">
   <div class="modal">
@@ -753,10 +768,11 @@ function loadState(){
       if(!p.runTarget)p.runTarget=0;
       if(!p.weekPlan)p.weekPlan=null;
       if(!Array.isArray(p.dismissedAlerts))p.dismissedAlerts=[];
+      if(!p.bodyCompGoal)p.bodyCompGoal=null;
       return p;
     }
   }catch(e){const ok=confirm('Your data could not be loaded. Reset?');if(ok)localStorage.removeItem('wt_v3');}
-  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,dismissedAlerts:[]};
+  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,dismissedAlerts:[],bodyCompGoal:null};
 }
 let state=loadState();
 let _saveTimer=null;
@@ -3155,6 +3171,7 @@ function renderMe(){
 
   el.innerHTML=`
     ${renderWeightSection(health)}
+    ${renderBodyCompGoalCard(health)}
     ${renderBodyFatSection(health)}
     ${renderVapingSection()}
     ${renderSleepTrendCard()}
@@ -3175,6 +3192,66 @@ function renderMe(){
 
 function renderWeightSection(health){return renderBodyCompCard(health);}
 function renderBodyFatSection(health){return'';}
+
+// Rolling 7-day average ending on `endDate`, vs the 7-day average ending 7 days before that.
+// Recalculates fresh every day off whatever's actually logged in each window - no minimum entry count.
+function rollingRate(entries,field,endDate){
+  const avgInWindow=(end)=>{
+    const start=addDays(end,-6);
+    const vals=entries.filter(e=>{
+      const [y,m,dd]=e.date.split('-').map(Number);
+      const ed=new Date(y,m-1,dd);
+      return ed>=start&&ed<=end;
+    }).map(e=>e[field]);
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  };
+  const now=avgInWindow(endDate);
+  const prev=avgInWindow(addDays(endDate,-7));
+  return{now,prev,weeklyRate:(now!=null&&prev!=null)?now-prev:null};
+}
+function projectToTarget(current,target,weeklyRate){
+  if(target==null||current==null)return null;
+  const gap=+(target-current).toFixed(2);
+  if(Math.abs(gap)<0.15)return{atTarget:true};
+  if(weeklyRate==null||Math.abs(weeklyRate)<0.02)return{atTarget:false,onTrack:null,gap};
+  const weeks=gap/weeklyRate;
+  if(weeks>0)return{atTarget:false,onTrack:true,weeks,gap};
+  return{atTarget:false,onTrack:false,gap,weeklyRate};
+}
+function renderBodyCompGoalCard(health){
+  const goal=state.bodyCompGoal;
+  const editBtn=`<button onclick="openBodyCompGoalModal()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${goal?'Edit':'Set Goal'}</button>`;
+  if(!goal){
+    return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Comp Goal</span>${editBtn}</div><div class="empty-state" style="padding:16px 0;"><strong>No goal set</strong>Set a target weight or body fat % to see your projected pace.</div></div>`;
+  }
+  const withW=health.filter(e=>e.weight!=null).sort((a,b)=>a.date.localeCompare(b.date));
+  const withBf=health.filter(e=>e.bodyFat!=null&&e.bodyFat>0).sort((a,b)=>a.date.localeCompare(b.date));
+  const now=today();
+  const rows=[];
+  [['weight','kg',withW],['bodyFat','%',withBf]].forEach(([field,unit,entries])=>{
+    if(goal[field]==null||!entries.length)return;
+    const r=rollingRate(entries,field,now);
+    const proj=projectToTarget(r.now,goal[field],r.weeklyRate);
+    let line,col;
+    if(!proj){line=`Not enough logged data yet to project a pace.`;col='var(--text3)';}
+    else if(proj.atTarget){line=`At your ${goal[field]}${unit} target — nice.`;col='var(--green)';}
+    else if(proj.onTrack===null){line=`Holding steady — no clear weekly trend yet.`;col='var(--text3)';}
+    else if(proj.onTrack){
+      const wks=proj.weeks;
+      const wholeWeeks=Math.round(wks);
+      line=`${wholeWeeks<1?'Under a week':wholeWeeks+' week'+(wholeWeeks===1?'':'s')} to go at this rate (${r.weeklyRate>0?'+':''}${r.weeklyRate.toFixed(2)}${unit}/week, 7-day avg ${r.now.toFixed(1)}${unit}).`;
+      col='var(--green)';
+    } else {
+      line=`Trending away from your ${goal[field]}${unit} target (${r.weeklyRate>0?'+':''}${r.weeklyRate.toFixed(2)}${unit}/week, 7-day avg ${r.now.toFixed(1)}${unit}).`;
+      col='var(--orange)';
+    }
+    rows.push(`<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.06em;margin-bottom:3px;">Target: ${goal[field]}${unit}</div><div style="font-size:13px;font-weight:700;color:${col};line-height:1.5;">${line}</div></div>`);
+  });
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Body Comp Goal</span>${editBtn}</div>
+    ${rows.length?rows.join(''):'<div style="font-size:13px;color:var(--text3);padding:4px 0;">Log a weight or body fat entry to start projecting toward your goal.</div>'}
+  </div>`;
+}
 
 function renderBodyCompCard(health){
   const withW=health.filter(e=>e.weight);
@@ -3570,6 +3647,28 @@ function saveWeight(){
   closeModal('health-modal');toastMsg('Health logged');haptic('success');
   if(document.getElementById('page-me').classList.contains('active'))renderMe();
 }
+
+function openBodyCompGoalModal(){
+  const g=state.bodyCompGoal||{};
+  document.getElementById('bcg-weight-input').value=g.weight||'';
+  document.getElementById('bcg-bodyfat-input').value=g.bodyFat||'';
+  openModal('body-comp-goal-modal');
+  setTimeout(()=>document.getElementById('bcg-weight-input').focus(),300);
+}
+function saveBodyCompGoal(){
+  const w=parseFloat(document.getElementById('bcg-weight-input').value)||null;
+  const bf=parseFloat(document.getElementById('bcg-bodyfat-input').value)||null;
+  if(!w&&!bf){toastMsg('Set a target weight or body fat %');return;}
+  state.bodyCompGoal={weight:w,bodyFat:bf};saveState();
+  closeModal('body-comp-goal-modal');toastMsg('Goal saved');haptic('success');
+  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+}
+function clearBodyCompGoal(){
+  if(!confirm('Remove body comp goal?'))return;
+  state.bodyCompGoal=null;saveState();closeModal('body-comp-goal-modal');toastMsg('Goal removed');
+  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+}
+
 let _vapEditTs=null;
 function openVapingModal(ts=null){
   _vapEditTs=ts||null;

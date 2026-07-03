@@ -3295,7 +3295,7 @@ function renderBodyCompGoalCard(health){
       line=`${wholeWeeks<1?'Under a week':wholeWeeks+' week'+(wholeWeeks===1?'':'s')} to go at this rate (${r.weeklyRate>0?'+':''}${r.weeklyRate.toFixed(2)}${unit}/week, 7-day avg ${r.now.toFixed(1)}${unit}).`;
       col='var(--green)';
     } else {
-      line=`Trending away from your ${goal[field]}${unit} target (${r.weeklyRate>0?'+':''}${r.weeklyRate.toFixed(2)}${unit}/week, 7-day avg ${r.now.toFixed(1)}${unit}).`;
+      line=`You're ${Math.abs(proj.gap).toFixed(1)}${unit} away from your ${goal[field]}${unit} target, and currently moving away from it at ${Math.abs(r.weeklyRate).toFixed(2)}${unit}/week (7-day avg ${r.now.toFixed(1)}${unit}) — you'd need to reverse that trend to make progress.`;
       col='var(--orange)';
     }
     rows.push(`<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.06em;margin-bottom:3px;">Target: ${goal[field]}${unit}</div><div style="font-size:13px;font-weight:700;color:${col};line-height:1.5;">${line}</div></div>`);

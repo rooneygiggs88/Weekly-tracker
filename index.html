@@ -920,14 +920,18 @@ function renderToday(){
     return{col:'var(--red)',glowA:'rgba(220,38,38,0.55)',glowB:'rgba(220,38,38,0.2)',badge:'Rest day'};
   }
   if(viewingToday){
-    const tier=readinessTier(readiness.score);
-    scoreEl.textContent=readiness.score!=null?readiness.score:'–';
+    // calcReadiness().score is a composite that still includes training load/fatigue
+    // even with zero sleep/HRV data, so it's basically never null - hasMorning (did
+    // *today* actually get logged) is the real signal for whether to show a genuine
+    // reading or the "log data" prompt.
+    const tier=readinessTier(readiness.hasMorning?readiness.score:null);
+    scoreEl.textContent=readiness.hasMorning?readiness.score:'–';
     scoreEl.style.color=tier.col;
     dialLblEl.textContent="today's score";
     badgeEl.textContent=tier.badge;
     badgeEl.style.color=tier.col;
     glowEl.style.background=`radial-gradient(circle at 32% 28%, ${tier.glowA} 0%, ${tier.glowB} 45%, transparent 75%)`;
-    if(readiness.score!=null){
+    if(readiness.hasMorning){
       statusEl.innerHTML=`<span style="color:${readiness.col};">${readiness.advice}</span>`;
     }else{
       statusEl.innerHTML=`<span style="color:var(--text3);cursor:pointer;" onclick="openMorningModal()">Log sleep &amp; HRV for a readiness score</span>`;
@@ -4109,14 +4113,17 @@ function renderReadinessCard(){
   const recent7R=Array.from({length:7},(_,i)=>allMorningR[dk(addDays(today(),-i))]).filter(Boolean);
   const avg7s=recent7R.filter(d=>d.sleep).length?Math.round(recent7R.filter(d=>d.sleep).reduce((a,d)=>a+d.sleep,0)/recent7R.filter(d=>d.sleep).length):null;
   const avg7h=recent7R.filter(d=>d.hrv).length?Math.round(recent7R.filter(d=>d.hrv).reduce((a,d)=>a+d.hrv,0)/recent7R.filter(d=>d.hrv).length):null;
-  const avgBadge=hasMorning&&(avg7s||avg7h)?`<div style="display:flex;gap:6px;margin-top:8px;">${avg7s?`<span style="padding:2px 8px;border-radius:10px;background:rgba(8,132,91,0.1);color:var(--green);font-size:10px;font-weight:700;">7d sleep: ${avg7s}</span>`:''}${avg7h?`<span style="padding:2px 8px;border-radius:10px;background:rgba(158,61,251,0.1);color:#9e3dfb;font-size:10px;font-weight:700;">7d HRV: ${avg7h}ms</span>`:''}</div>`:'';
+  // 7-day averages are a trend metric, not a "today" metric - they're meaningful
+  // from history alone, so they shouldn't be hidden just because today isn't logged yet
+  // (e.g. right after importing a backup, before you've done today's morning check-in).
+  const avgBadge=(avg7s||avg7h)?`<div style="display:flex;gap:6px;margin-top:8px;">${avg7s?`<span style="padding:2px 8px;border-radius:10px;background:rgba(8,132,91,0.1);color:var(--green);font-size:10px;font-weight:700;">7d sleep: ${avg7s}</span>`:''}${avg7h?`<span style="padding:2px 8px;border-radius:10px;background:rgba(158,61,251,0.1);color:#9e3dfb;font-size:10px;font-weight:700;">7d HRV: ${avg7h}ms</span>`:''}</div>`:'';
   // Score/advice now shown in the Today hero — this card just carries the supporting detail.
   const bodyHtml=hasMorning
     ?`${factors.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;">${factors.map(f=>`<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;">${f}</span>`).join('')}</div>`:''}
       ${avgBadge}`
-    :`<div style="color:var(--text3);font-size:13px;padding:4px 0 2px;">Log your Garmin sleep & HRV to get a readiness score.</div>`;
+    :`<div style="color:var(--text3);font-size:${avgBadge?'12px;margin-bottom:2px;':'13px;padding:4px 0 2px;'}">${avgBadge?"Log today's sleep &amp; HRV for a readiness score.":'Log your Garmin sleep &amp; HRV to get a readiness score.'}</div>${avgBadge}`;
   el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${(hasMorning&&(factors.length||avgBadge))?'10':'0'}px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${(factors.length||avgBadge)?'10':'0'}px;">
       <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Readiness factors</span>
       ${checkinBtn}
     </div>

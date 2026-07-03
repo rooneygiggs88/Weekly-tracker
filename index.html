@@ -1312,7 +1312,7 @@ function renderGymSection(){
       ${(last.exercises||[]).map(e=>{
         const ws=(e.sets||[]).filter(s=>!s.warmup);
         const top=ws.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,ws[0]||{});
-        return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;font-weight:700;">${esc(e.name)}</span><span style="font-size:13px;color:var(--text2);font-weight:600;">${ws.length} sets${top&&top.weight?` · ${top.weight}kg×${top.reps||'?'}`:''}</span></div>`;
+        return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;font-weight:700;">${esc(e.name)}</span><span style="font-size:13px;color:var(--text2);font-weight:600;">${ws.length} sets${top&&top.weight?` · ${top.weight}kg×${top.reps||'?'}`:top&&top.reps?` · ${top.reps} reps`:''}</span></div>`;
       }).join('')}
     </div>
     <button class="btn-secondary" onclick="_gymPickedType=null;renderGymTypeSelector();">+ Add another session</button>`;
@@ -1663,23 +1663,34 @@ function renderSupersetExercisesHtml(lastSame,prog,sessions){
 function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
   const _restSecs=getExRestSecs(ex.name||'');
   const nameLower=(ex.name||'').toLowerCase();
-  // Find most recent occurrence of this exercise across ALL session types
+  // Find most recent occurrence of this exercise across ALL session types - accepts
+  // either a weighted set or a bodyweight (reps-only) set, so pull-up-style exercises
+  // still get "last session" carryover even with the weight field left blank.
   const lastEx=nameLower?(sessions||[]).slice().reverse().reduce((found,s)=>{
     if(found)return found;
     const e=(s.exercises||[]).find(e=>e.name&&e.name.toLowerCase()===nameLower);
-    return(e&&(e.sets||[]).some(set=>!set.warmup&&parseFloat(set.weight||0)>0))?e:null;
+    return(e&&(e.sets||[]).some(set=>!set.warmup&&(parseFloat(set.weight||0)>0||parseFloat(set.reps||0)>0)))?e:null;
   },null):null;
   const lastSets=lastEx?(lastEx.sets||[]).filter(s=>!s.warmup):[];
-  const topLast=lastSets.length?lastSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,lastSets[0]):null;
-  // PB: highest weight across all history for this exercise
+  const lastHasWeight=lastSets.some(s=>parseFloat(s.weight||0)>0);
+  const topLast=lastSets.length?(lastHasWeight
+    ?lastSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,lastSets[0])
+    :lastSets.reduce((b,s)=>parseFloat(s.reps||0)>parseFloat(b.reps||0)?s:b,lastSets[0])):null;
+  // PB: highest weight ever logged - or, for exercises that have never once had a real
+  // weight (bodyweight movements like pull-ups), the most reps ever logged instead.
   const exProg=ex.name&&prog[ex.name];
-  const allHistorySets=(exProg&&exProg.history||[]).flatMap(h=>h.sets||[]).filter(s=>!s.warmup&&parseFloat(s.weight||0)>0);
-  // Also check all gym sessions (use pre-loaded sessions if available)
   const gymSessions=sessions||loadGymData();
+  const allHistorySets=(exProg&&exProg.history||[]).flatMap(h=>h.sets||[]).filter(s=>!s.warmup);
   const allSessionSets=gymSessions.flatMap(s=>(s.exercises||[]).filter(e=>e.name&&e.name.toLowerCase()===ex.name.toLowerCase()).flatMap(e=>(e.sets||[]).filter(ss=>!ss.warmup)));
-  const pbSet=[...allHistorySets,...allSessionSets].reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,{weight:0,reps:0});
+  const allSets=[...allHistorySets,...allSessionSets];
+  const everWeighted=allSets.some(s=>parseFloat(s.weight||0)>0);
+  const pbSet=everWeighted
+    ?allSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,{weight:0,reps:0})
+    :allSets.reduce((b,s)=>parseFloat(s.reps||0)>parseFloat(b.reps||0)?s:b,{weight:0,reps:0});
   const pb=parseFloat(pbSet.weight||0);
-  const targetWeight=topLast&&topLast.weight?Math.round((parseFloat(topLast.weight)+2.5)*2)/2:null;
+  const pbReps=everWeighted?0:parseFloat(pbSet.reps||0);
+  const targetWeight=lastHasWeight&&topLast&&topLast.weight?Math.round((parseFloat(topLast.weight)+2.5)*2)/2:null;
+  const targetReps=(!lastHasWeight&&topLast&&topLast.reps)?parseFloat(topLast.reps)+1:null;
   const sugg=getExerciseSuggestions(ex.name,gymSessions);
   return`<div class="chart-card" style="margin-bottom:10px;" id="ex-block-${i}">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
@@ -1689,9 +1700,9 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
       <datalist id="exs-${i}">${sugg.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
       <button onclick="gymRemoveEx(${i})" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:2px;flex-shrink:0;">×</button>
     </div>
-    ${pb>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pb}KG</div>`:''}
-    ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Session</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${s.weight}kg×${s.reps}</span>`).join('')}</div></div>`:''}
-    ${targetWeight?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetWeight}kg × ${topLast.reps||'?'} reps <span style="color:var(--green);">+2.5kg</span></div>`:`<div id="ex-hint-${i}"></div>`}
+    ${pb>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pb}KG</div>`:pbReps>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pbReps} REPS</div>`:''}
+    ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Session</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}</span>`).join('')}</div></div>`:''}
+    ${targetWeight?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetWeight}kg × ${topLast.reps||'?'} reps <span style="color:var(--green);">+2.5kg</span></div>`:targetReps?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetReps} reps <span style="color:var(--green);">+1</span></div>`:`<div id="ex-hint-${i}"></div>`}
     <div style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:6px;">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;">W</div>
       <div style="font-size:10px;font-weight:700;color:var(--text3);">kg</div>
@@ -1739,8 +1750,12 @@ function updateProgressHint(i){
   const hintEl=document.getElementById(`ex-hint-${i}`);if(!hintEl)return;
   if(lastEx){
     const ls=(lastEx.sets||[]).filter(s=>!s.warmup);
-    const top=ls.length?ls.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,ls[0]):null;
-    if(top&&top.weight)hintEl.innerHTML=`<div style="font-size:11px;color:var(--accent2);font-weight:700;padding:6px 10px;background:rgba(37,99,235,0.08);border-radius:8px;">Last: ${top.weight}kg × ${top.reps||'?'} — try ${Math.round((parseFloat(top.weight)+2.5)*2)/2}kg</div>`;
+    const hasWeight=ls.some(s=>parseFloat(s.weight||0)>0);
+    const top=ls.length?(hasWeight
+      ?ls.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,ls[0])
+      :ls.reduce((b,s)=>parseFloat(s.reps||0)>parseFloat(b.reps||0)?s:b,ls[0])):null;
+    if(top&&top.weight&&hasWeight)hintEl.innerHTML=`<div style="font-size:11px;color:var(--accent2);font-weight:700;padding:6px 10px;background:rgba(37,99,235,0.08);border-radius:8px;">Last: ${top.weight}kg × ${top.reps||'?'} — try ${Math.round((parseFloat(top.weight)+2.5)*2)/2}kg</div>`;
+    else if(top&&top.reps)hintEl.innerHTML=`<div style="font-size:11px;color:var(--accent2);font-weight:700;padding:6px 10px;background:rgba(37,99,235,0.08);border-radius:8px;">Last: ${top.reps} reps — try ${parseFloat(top.reps)+1}</div>`;
     else hintEl.innerHTML='';
   }else hintEl.innerHTML='';
 }
@@ -2160,42 +2175,74 @@ function renderPRs(){
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtD(ds){const d=new Date(ds+'T12:00:00');return`${d.getDate()} ${MONTHS[d.getMonth()]}`;}
 
-  // Build per-exercise data: sessions in chronological order, all working sets
+  // Build per-exercise data: sessions in chronological order, all working sets.
+  // An exercise is "bodyweight" if it's never once been logged with a real weight
+  // (e.g. pull-ups) - those get tracked by reps instead of weight/e1RM, since
+  // "heaviest weight lifted" has nothing to measure otherwise.
+  const exHasWeight={};
+  gym.forEach(session=>(session.exercises||[]).forEach(ex=>{
+    if(ex.name&&(ex.sets||[]).some(s=>!s.warmup&&parseFloat(s.weight||0)>0))exHasWeight[ex.name]=true;
+  }));
   const exMap={};
   gym.forEach(session=>{
     (session.exercises||[]).forEach(ex=>{
       if(!ex.name)return;
-      const workingSets=(ex.sets||[]).filter(s=>!s.warmup&&parseFloat(s.weight||0)>0);
-      if(!workingSets.length)return;
-      if(!exMap[ex.name])exMap[ex.name]={sessions:[]};
-      let bestE1rm=0,bestW=0,bestR=0;
-      workingSets.forEach(s=>{
-        const w=parseFloat(s.weight);const r=parseFloat(s.reps||0);
-        const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
-        if(est>bestE1rm){bestE1rm=est;bestW=w;bestR=r;}
-      });
-      exMap[ex.name].sessions.push({date:session.date,weight:bestW,reps:bestR,e1rm:bestE1rm});
+      const nonWarmup=(ex.sets||[]).filter(s=>!s.warmup);
+      if(exHasWeight[ex.name]){
+        const workingSets=nonWarmup.filter(s=>parseFloat(s.weight||0)>0);
+        if(!workingSets.length)return;
+        if(!exMap[ex.name])exMap[ex.name]={type:'weighted',sessions:[]};
+        let bestE1rm=0,bestW=0,bestR=0;
+        workingSets.forEach(s=>{
+          const w=parseFloat(s.weight);const r=parseFloat(s.reps||0);
+          const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
+          if(est>bestE1rm){bestE1rm=est;bestW=w;bestR=r;}
+        });
+        exMap[ex.name].sessions.push({date:session.date,weight:bestW,reps:bestR,e1rm:bestE1rm});
+      } else {
+        const workingSets=nonWarmup.filter(s=>parseFloat(s.reps||0)>0);
+        if(!workingSets.length)return;
+        if(!exMap[ex.name])exMap[ex.name]={type:'bodyweight',sessions:[]};
+        const bestR=Math.max(...workingSets.map(s=>parseFloat(s.reps||0)));
+        exMap[ex.name].sessions.push({date:session.date,reps:bestR});
+      }
     });
   });
 
-  if(!Object.keys(exMap).length){el.innerHTML=`<div class="empty-state"><strong>No PR data</strong>Log weights to track personal records.</div>`;return;}
+  if(!Object.keys(exMap).length){el.innerHTML=`<div class="empty-state"><strong>No PR data</strong>Log weights or reps to start tracking personal records.</div>`;return;}
 
-  // Compute PB, e1RM PB, and trend for each exercise
+  // Compute PB and trend for each exercise - weighted exercises rank on e1RM,
+  // bodyweight exercises rank on reps.
   Object.values(exMap).forEach(ex=>{
-    let pb={weight:0,reps:0,date:''},e1rmPB={weight:0,reps:0,e1rm:0,date:''};
-    ex.sessions.forEach(s=>{
-      if(s.weight>pb.weight)pb={weight:s.weight,reps:s.reps,date:s.date};
-      if(s.e1rm>e1rmPB.e1rm)e1rmPB={weight:s.weight,reps:s.reps,e1rm:s.e1rm,date:s.date};
-    });
-    ex.pb=pb;ex.e1rmPB=e1rmPB;
-    // Trend: avg e1rm last 3 sessions vs prior 3
     const s=ex.sessions;
-    const r3=s.slice(-3);const p3=s.slice(-6,-3);
-    if(r3.length>=2&&p3.length>=1){
-      const ra=r3.reduce((a,x)=>a+x.e1rm,0)/r3.length;
-      const pa=p3.reduce((a,x)=>a+x.e1rm,0)/p3.length;
-      ex.trendDelta=Math.round((ra-pa)*10)/10;
-    }else{ex.trendDelta=null;}
+    if(ex.type==='weighted'){
+      let pb={weight:0,reps:0,date:''},e1rmPB={weight:0,reps:0,e1rm:0,date:''};
+      s.forEach(x=>{
+        if(x.weight>pb.weight)pb={weight:x.weight,reps:x.reps,date:x.date};
+        if(x.e1rm>e1rmPB.e1rm)e1rmPB={weight:x.weight,reps:x.reps,e1rm:x.e1rm,date:x.date};
+      });
+      ex.pb=pb;ex.e1rmPB=e1rmPB;
+      ex.rank=e1rmPB.e1rm;
+      // Trend: avg e1rm last 3 sessions vs prior 3
+      const r3=s.slice(-3);const p3=s.slice(-6,-3);
+      if(r3.length>=2&&p3.length>=1){
+        const ra=r3.reduce((a,x)=>a+x.e1rm,0)/r3.length;
+        const pa=p3.reduce((a,x)=>a+x.e1rm,0)/p3.length;
+        ex.trendDelta=Math.round((ra-pa)*10)/10;
+      }else{ex.trendDelta=null;}
+    } else {
+      let pb={reps:0,date:''};
+      s.forEach(x=>{if(x.reps>pb.reps)pb={reps:x.reps,date:x.date};});
+      ex.pb=pb;
+      ex.rank=pb.reps;
+      // Trend: avg reps last 3 sessions vs prior 3
+      const r3=s.slice(-3);const p3=s.slice(-6,-3);
+      if(r3.length>=2&&p3.length>=1){
+        const ra=r3.reduce((a,x)=>a+x.reps,0)/r3.length;
+        const pa=p3.reduce((a,x)=>a+x.reps,0)/p3.length;
+        ex.trendDelta=Math.round((ra-pa)*10)/10;
+      }else{ex.trendDelta=null;}
+    }
   });
 
   function muscleGroup(name){
@@ -2213,43 +2260,57 @@ function renderPRs(){
   const overloadGroups={Push:[],Pull:[],Legs:[],Core:[],Other:[]};
   Object.entries(exMap).filter(([,ex])=>ex.sessions.length>=3)
     .forEach(([name,ex])=>overloadGroups[muscleGroup(name)].push([name,ex]));
-  Object.values(overloadGroups).forEach(arr=>arr.sort((a,b)=>b[1].e1rmPB.e1rm-a[1].e1rmPB.e1rm));
+  Object.values(overloadGroups).forEach(arr=>arr.sort((a,b)=>b[1].rank-a[1].rank));
   const overloadEntries=Object.values(overloadGroups).flat();
 
   function overloadCard(name,ex){
     const s=ex.sessions;
     const last5=s.slice(-5);
     const td=ex.trendDelta;
+    const isBW=ex.type==='bodyweight';
+    // Reps move in whole numbers, so a smaller average shift already means something -
+    // use a tighter progressing/regressing band than the kg-e1RM case.
+    const progressBand=isBW?0.5:1;
     let statusColor,statusLabel,suggestionHtml='';
     if(td===null){statusColor='var(--text3)';statusLabel='Building baseline';}
-    else if(td>1){statusColor='var(--green)';statusLabel='↑ Progressing';}
-    else if(td<-1){statusColor='var(--red)';statusLabel='↓ Regressing';}
+    else if(td>progressBand){statusColor='var(--green)';statusLabel='↑ Progressing';}
+    else if(td<-progressBand){statusColor='var(--red)';statusLabel='↓ Regressing';}
     else{statusColor='var(--orange)';statusLabel='→ Plateau';}
 
     if(td!==null){
       const lastS=s[s.length-1];
-      const suggestWeight=td>1
-        ? Math.ceil((lastS.weight*1.025)/2.5)*2.5
-        : td<-1
-          ? Math.floor((lastS.weight*0.95)/2.5)*2.5
-          : Math.ceil((lastS.weight*1.01)/2.5)*2.5;
-      const suggestBg=td>1?'rgba(76,175,80,0.08)':td<-1?'rgba(239,83,80,0.08)':'rgba(255,152,0,0.08)';
-      const suggestBorder=td>1?'var(--green)':td<-1?'var(--red)':'var(--orange)';
-      const suggestText=td>1
-        ?`<strong>Target ${suggestWeight}kg next session</strong> — keep the momentum going`
-        :td<-1
-          ?`<strong>Consider a deload week</strong>, then target ${suggestWeight}kg`
-          :`<strong>Try ${suggestWeight}kg</strong> to break through the plateau`;
+      const suggestBg=td>progressBand?'rgba(76,175,80,0.08)':td<-progressBand?'rgba(239,83,80,0.08)':'rgba(255,152,0,0.08)';
+      const suggestBorder=td>progressBand?'var(--green)':td<-progressBand?'var(--red)':'var(--orange)';
+      let suggestText;
+      if(isBW){
+        const suggestReps=td>progressBand?lastS.reps+1:td<-progressBand?Math.max(1,lastS.reps-1):lastS.reps+1;
+        suggestText=td>progressBand
+          ?`<strong>Target ${suggestReps} reps next session</strong> — keep the momentum going`
+          :td<-progressBand
+            ?`<strong>Consider extra recovery</strong>, then target ${suggestReps} reps`
+            :`<strong>Try ${suggestReps} reps</strong> to break through the plateau`;
+      } else {
+        const suggestWeight=td>progressBand
+          ? Math.ceil((lastS.weight*1.025)/2.5)*2.5
+          : td<-progressBand
+            ? Math.floor((lastS.weight*0.95)/2.5)*2.5
+            : Math.ceil((lastS.weight*1.01)/2.5)*2.5;
+        suggestText=td>progressBand
+          ?`<strong>Target ${suggestWeight}kg next session</strong> — keep the momentum going`
+          :td<-progressBand
+            ?`<strong>Consider a deload week</strong>, then target ${suggestWeight}kg`
+            :`<strong>Try ${suggestWeight}kg</strong> to break through the plateau`;
+      }
       suggestionHtml=`<div style="margin-top:10px;padding:8px 10px;border-left:3px solid ${suggestBorder};background:${suggestBg};border-radius:0 6px 6px 0;font-size:12px;color:var(--text1);">${suggestText}</div>`;
     }
 
     const sessionRows=last5.map((sess,i)=>{
       const isLatest=i===last5.length-1;
-      const isPR=sess.e1rm>=ex.e1rmPB.e1rm;
+      const isPR=isBW?sess.reps>=ex.pb.reps:sess.e1rm>=ex.e1rmPB.e1rm;
       return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i<last5.length-1?'border-bottom:1px solid var(--border);':''}">
         <div style="font-size:11px;color:var(--text3);width:52px;flex-shrink:0;">${fmtD(sess.date)}</div>
-        <div style="flex:1;font-size:13px;font-weight:${isLatest?'700':'500'};color:${isLatest?'var(--text1)':'var(--text2)'};">${sess.weight}kg × ${sess.reps}</div>
-        <div style="font-size:12px;font-weight:700;color:${isPR?'var(--accent2)':'var(--text3)'};">${isPR?'<span style="background:var(--accent2);color:#fff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px;letter-spacing:0.05em;">PR</span>':sess.e1rm+'kg e1RM'}</div>
+        <div style="flex:1;font-size:13px;font-weight:${isLatest?'700':'500'};color:${isLatest?'var(--text1)':'var(--text2)'};">${isBW?`${sess.reps} reps`:`${sess.weight}kg × ${sess.reps}`}</div>
+        <div style="font-size:12px;font-weight:700;color:${isPR?'var(--accent2)':'var(--text3)'};">${isPR?'<span style="background:var(--accent2);color:#fff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px;letter-spacing:0.05em;">PR</span>':isBW?'':sess.e1rm+'kg e1RM'}</div>
       </div>`;
     }).join('');
 
@@ -2267,7 +2328,7 @@ function renderPRs(){
   // ── SECTION 2: Personal Records ──
   const groups={Push:[],Pull:[],Legs:[],Core:[],Other:[]};
   Object.entries(exMap).forEach(([name,ex])=>groups[muscleGroup(name)].push([name,ex]));
-  Object.values(groups).forEach(arr=>arr.sort((a,b)=>b[1].pb.weight-a[1].pb.weight));
+  Object.values(groups).forEach(arr=>arr.sort((a,b)=>b[1].rank-a[1].rank));
 
   function trendArrow(td){
     if(td===null)return'';
@@ -2281,22 +2342,24 @@ function renderPRs(){
     return`
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:14px 0 6px;">${label}</div>
       <div class="chart-card" style="padding:0;margin-bottom:10px;">
-        ${entries.map(([name,ex],i)=>`
+        ${entries.map(([name,ex],i)=>{
+          const isBW=ex.type==='bodyweight';
+          return`
           <div style="padding:12px 16px;${i<entries.length-1?'border-bottom:1px solid var(--border);':''}">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
-                <div style="font-size:11px;color:var(--text3);margin-top:2px;">e1RM ${ex.e1rmPB.e1rm}kg</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px;">${isBW?'Bodyweight':`e1RM ${ex.e1rmPB.e1rm}kg`}</div>
               </div>
               <div style="text-align:right;flex-shrink:0;">
                 <div style="display:flex;align-items:baseline;justify-content:flex-end;">
-                  <div style="font-size:22px;font-weight:800;color:var(--green);line-height:1;">${ex.pb.weight}kg</div>
+                  <div style="font-size:22px;font-weight:800;color:var(--green);line-height:1;">${isBW?`${ex.pb.reps} reps`:`${ex.pb.weight}kg`}</div>
                   ${trendArrow(ex.trendDelta)}
                 </div>
-                <div style="font-size:11px;color:var(--text3);margin-top:2px;">× ${ex.pb.reps} reps · ${fmtD(ex.pb.date)}</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px;">${isBW?fmtD(ex.pb.date):`× ${ex.pb.reps} reps · ${fmtD(ex.pb.date)}`}</div>
               </div>
             </div>
-          </div>`).join('')}
+          </div>`;}).join('')}
       </div>`;
   }
 

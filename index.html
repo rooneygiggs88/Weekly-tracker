@@ -39,13 +39,13 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .today-badge{font-size:12px;font-weight:800;letter-spacing:0.04em;text-transform:none;}
 
 /* SCORE DIAL */
-.today-score-wrap{position:relative;width:184px;height:184px;margin:12px auto 18px;display:flex;align-items:center;justify-content:center;}
-.score-dial-glow{position:absolute;inset:0;border-radius:50%;filter:blur(12px);transition:background 0.4s ease;animation:dialBreathe 5s ease-in-out infinite;}
+.today-score-wrap{position:relative;width:272px;height:272px;margin:4px auto 10px;display:flex;align-items:center;justify-content:center;}
+.score-dial-glow{position:absolute;inset:-24px;border-radius:50%;filter:blur(20px);transition:background 0.4s ease;animation:dialBreathe 5s ease-in-out infinite;}
 @keyframes dialBreathe{0%,100%{transform:scale(1);opacity:0.75;}50%{transform:scale(1.05);opacity:1;}}
 @media (prefers-reduced-motion: reduce){.score-dial-glow{animation:none;}}
-.score-dial-core{position:relative;width:136px;height:136px;border-radius:50%;background:var(--surface);box-shadow:0 16px 32px -14px rgba(21,18,31,0.2),0 0 0 1px var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.today-score{font-size:44px;font-weight:800;line-height:1;letter-spacing:-1px;transition:color 0.4s ease;}
-.score-dial-lbl{font-size:10.5px;font-weight:700;color:var(--text2);letter-spacing:0.04em;margin-top:6px;}
+.score-dial-core{position:relative;width:236px;height:236px;border-radius:50%;background:var(--surface);box-shadow:0 20px 40px -16px rgba(21,18,31,0.22),0 0 0 1px var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.today-score{font-size:80px;font-weight:800;line-height:1;letter-spacing:-2px;transition:color 0.4s ease;}
+.score-dial-lbl{font-size:13px;font-weight:700;color:var(--text2);letter-spacing:0.04em;margin-top:8px;}
 
 .today-status{font-size:17px;font-weight:600;color:var(--text2);margin-bottom:8px;text-align:center;}
 .today-status span{color:var(--accent2);font-weight:700;}
@@ -889,11 +889,11 @@ function renderToday(){
   const glowEl=document.getElementById('score-dial-glow');
   const dialLblEl=document.getElementById('score-dial-lbl');
   function readinessTier(score){
-    if(score==null)return{col:'var(--text3)',badge:'Log data',glow:'rgba(166,162,192,0.22)'};
-    if(score>=80)return{col:'var(--green)',badge:'On track',glow:'rgba(5,150,105,0.32)'};
-    if(score>=60)return{col:'var(--accent2)',badge:'Moderate',glow:'rgba(29,78,216,0.28)'};
-    if(score>=40)return{col:'var(--orange)',badge:'Easy day',glow:'rgba(234,88,12,0.28)'};
-    return{col:'var(--red)',badge:'Rest day',glow:'rgba(220,38,38,0.26)'};
+    if(score==null)return{col:'var(--text3)',glowA:'rgba(166,162,192,0.55)',glowB:'rgba(166,162,192,0.22)',badge:'Log data'};
+    if(score>=80)return{col:'var(--green)',glowA:'rgba(5,150,105,0.65)',glowB:'rgba(5,150,105,0.25)',badge:'On track'};
+    if(score>=60)return{col:'var(--accent2)',glowA:'rgba(29,78,216,0.6)',glowB:'rgba(29,78,216,0.22)',badge:'Moderate'};
+    if(score>=40)return{col:'var(--orange)',glowA:'rgba(234,88,12,0.6)',glowB:'rgba(234,88,12,0.22)',badge:'Easy day'};
+    return{col:'var(--red)',glowA:'rgba(220,38,38,0.55)',glowB:'rgba(220,38,38,0.2)',badge:'Rest day'};
   }
   if(viewingToday){
     const tier=readinessTier(readiness.score);
@@ -902,7 +902,7 @@ function renderToday(){
     dialLblEl.textContent="today's score";
     badgeEl.textContent=tier.badge;
     badgeEl.style.color=tier.col;
-    glowEl.style.background=`radial-gradient(circle at 35% 30%, ${tier.glow} 0%, transparent 70%)`;
+    glowEl.style.background=`radial-gradient(circle at 32% 28%, ${tier.glowA} 0%, ${tier.glowB} 45%, transparent 75%)`;
     if(readiness.score!=null){
       statusEl.innerHTML=`<span style="color:${readiness.col};">${readiness.advice}</span>`;
     }else{
@@ -913,7 +913,7 @@ function renderToday(){
     scoreEl.style.color='var(--text)';
     dialLblEl.textContent='week score';
     badgeEl.textContent='';
-    glowEl.style.background=`radial-gradient(circle at 35% 30%, rgba(37,99,235,0.15) 0%, transparent 70%)`;
+    glowEl.style.background=`radial-gradient(circle at 32% 28%, rgba(37,99,235,0.45) 0%, rgba(37,99,235,0.16) 45%, transparent 75%)`;
   }
   const _n=state.userName?`, ${esc(state.userName)}`:'';
   // Date-seeded pick so message is stable all day but rotates daily

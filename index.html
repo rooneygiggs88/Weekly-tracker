@@ -3285,6 +3285,9 @@ function renderBodyCompCard(health){
   const withBf=health.filter(e=>e.bodyFat!=null&&e.bodyFat>0).sort((a,b)=>a.date.localeCompare(b.date));
   const latestW=withW.length?withW[withW.length-1]:null;
   const latestBf=withBf.length?withBf[withBf.length-1]:null;
+  const parseDate=ds=>{const [y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d);};
+  const wAvg7=withW.length>1?rollingRate(withW,'weight',parseDate(withW[withW.length-1].date)).now:null;
+  const bAvg7=withBf.length>1?rollingRate(withBf,'bodyFat',parseDate(withBf[withBf.length-1].date)).now:null;
   if(!latestW&&!latestBf){
     return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div></div>`;
   }
@@ -3322,15 +3325,14 @@ function renderBodyCompCard(health){
   </div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);margin-bottom:12px;padding-bottom:12px;">
-      <div>${latestW?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestW.weight}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Weight</div>`:'<div style="font-size:13px;color:var(--text3);">No weight yet</div>'}</div>
-      <div style="text-align:right;">${latestBf?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestBf.bodyFat}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:2px;">%</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Body Fat</div>`:'<div style="font-size:13px;color:var(--text3);">No body fat yet</div>'}
+      <div>${latestW?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestW.weight}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Weight</div>${wAvg7!=null?`<div style="font-size:12px;font-weight:700;color:var(--text2);margin-top:3px;">7-day avg ${wAvg7.toFixed(1)}kg</div>`:''}`:'<div style="font-size:13px;color:var(--text3);">No weight yet</div>'}</div>
+      <div style="text-align:right;">${latestBf?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestBf.bodyFat}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:2px;">%</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Body Fat</div>${bAvg7!=null?`<div style="font-size:12px;font-weight:700;color:var(--text2);margin-top:3px;">7-day avg ${bAvg7.toFixed(1)}%</div>`:''}`:'<div style="font-size:13px;color:var(--text3);">No body fat yet</div>'}
         <button onclick="openHealthModal()" style="margin-top:6px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
       </div>
     </div>
     ${chart}
     ${(()=>{
       if(!withW.length&&!withBf.length)return'';
-      const parseDate=ds=>{const [y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d);};
       const smoothedNow=(entries,field)=>entries.length?rollingRate(entries,field,parseDate(entries[entries.length-1].date)).now:null;
       const smoothedStart=(entries,field)=>entries.length?rollingRate(entries,field,addDays(parseDate(entries[0].date),6)).now:null;
       // Since started — endpoints are 7-day rolling averages, so one spiky day at the

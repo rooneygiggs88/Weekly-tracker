@@ -1701,8 +1701,10 @@ function updateProgressHint(i){
 function saveGymSession(){
   const notesEl=document.getElementById('gym-notes-field');
   if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
-  const exercises=(gymDraft.exercises||[]).filter(e=>(e.name||'').trim()&&(e.sets||[]).length)
-    .map(e=>{const n=e.name.trim();return{...e,name:_resolveExName(n)||n};});
+  const hasValue=s=>String(s.weight||'').trim()!==''||String(s.reps||'').trim()!=='';
+  const exercises=(gymDraft.exercises||[])
+    .map(e=>{const n=(e.name||'').trim();return{...e,name:_resolveExName(n)||n,sets:(e.sets||[]).filter(hasValue)};})
+    .filter(e=>e.name&&e.sets.length);
   if(!exercises.length){toastMsg('Add at least one exercise');return;}
   const sessions=loadGymData();
   sessions.push({date:dk(today()),type:gymDraft.type,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:Date.now()});

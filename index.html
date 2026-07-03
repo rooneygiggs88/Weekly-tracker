@@ -810,7 +810,10 @@ function goalAvatar(name,size=42){const{col,bg,d}=_goalIconData(name);const r=Ma
 function goalAvatarInline(name,size=36){return goalAvatar(name,size);}
 
 // ── GOALS ──
-const EFFORT_COLS={Recovery:{text:'#19835c',bg:'rgba(25,131,92,0.12)'},Easy:{text:'#19835c',bg:'rgba(25,131,92,0.12)'},'Long Run':{text:'#5261fa',bg:'rgba(82,97,250,0.12)'},'Long run':{text:'#5261fa',bg:'rgba(82,97,250,0.12)'},Long:{text:'#5261fa',bg:'rgba(82,97,250,0.12)'},Tempo:{text:'#bd5500',bg:'rgba(189,85,0,0.12)'},Fartlek:{text:'#bd5500',bg:'rgba(189,85,0,0.12)'},Intervals:{text:'#e90606',bg:'rgba(233,6,6,0.12)'},Hard:{text:'#e90606',bg:'rgba(233,6,6,0.12)'},Race:{text:'#956c00',bg:'rgba(149,108,0,0.12)'}};
+// Effort-type palette - validated for colorblind-safe separation (see scripts/validate_palette.js
+// in the dataviz skill). The old Tempo/Intervals pair (#bd5500/#e90606) had a deutan ΔE of only 3.7,
+// effectively indistinguishable - keep new additions running through this validator, not eyeballed.
+const EFFORT_COLS={Recovery:{text:'#1a9d6c',bg:'rgba(26,157,108,0.12)'},Easy:{text:'#1a9d6c',bg:'rgba(26,157,108,0.12)'},'Long Run':{text:'#3d6fe0',bg:'rgba(61,111,224,0.12)'},'Long run':{text:'#3d6fe0',bg:'rgba(61,111,224,0.12)'},Long:{text:'#3d6fe0',bg:'rgba(61,111,224,0.12)'},Tempo:{text:'#c96c1a',bg:'rgba(201,108,26,0.12)'},Fartlek:{text:'#c96c1a',bg:'rgba(201,108,26,0.12)'},Intervals:{text:'#e0393f',bg:'rgba(224,57,63,0.12)'},Hard:{text:'#e0393f',bg:'rgba(224,57,63,0.12)'},Race:{text:'#a23fb0',bg:'rgba(162,63,176,0.12)'}};
 function effortStyle(effort){return EFFORT_COLS[effort]||{text:'var(--text2)',bg:'var(--surface2)'};}
 const BUILTIN_DAILY=[{id:'steps',name:'10k Steps',type:'daily',inputStyle:'check'}];
 const BUILTIN_SESSIONS=[{id:'gym',name:'Gym',type:'weekly',weeklyTarget:3},{id:'run',name:'Running',type:'weekly',weeklyTarget:3}];
@@ -2554,12 +2557,12 @@ function renderTrendsRunAnalysis(){
       <div class="chart-card-header"><span class="chart-card-title">Pace Progression</span><span class="chart-card-val" style="color:${paceCol};">${paceLabel}</span></div>
       <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
       <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#19835c;"></div>Easy</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#5261fa;"></div>Long</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#bd5500;"></div>Tempo</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#e90606;"></div>Intervals</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#956c00;"></div>Race</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#ffffff;"></div>Best</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Easy').text};"></div>Easy</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Long').text};"></div>Long</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Tempo').text};"></div>Tempo</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Intervals').text};"></div>Intervals</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Race').text};"></div>Race</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#ffffff;border:1px solid var(--border);"></div>Best</div>
       </div>
       <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid ${paceCol};">
         <div style="font-size:12px;color:var(--text2);line-height:1.6;">${trendLine}</div>
@@ -2574,7 +2577,7 @@ function renderTrendsRunAnalysis(){
   const effortChart=(()=>{
     const tagged=runs.filter(r=>r.effort);
     if(tagged.length<2) return `<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Effort Balance</span></div><div class="empty-state" style="padding:16px 0 0;">Tag runs as Easy/Tempo/Intervals/Race to see your effort split.</div></div>`;
-    const GROUPS={'Easy / Long':{keywords:['easy','recovery','steady','long'],col:'#19835c'},Tempo:{keywords:['tempo','fartlek','parkrun'],col:'#bd5500'},Intervals:{keywords:['intervals','hard'],col:'#e90606'},Race:{keywords:['race'],col:'#956c00'}};
+    const GROUPS={'Easy / Long':{keywords:['easy','recovery','steady','long'],col:effortStyle('Easy').text},Tempo:{keywords:['tempo','fartlek','parkrun'],col:effortStyle('Tempo').text},Intervals:{keywords:['intervals','hard'],col:effortStyle('Intervals').text},Race:{keywords:['race'],col:effortStyle('Race').text}};
     const counts={'Easy / Long':0,Tempo:0,Intervals:0,Race:0,Other:0};
     tagged.forEach(r=>{
       const eff=(r.effort||'').toLowerCase();
@@ -2583,7 +2586,7 @@ function renderTrendsRunAnalysis(){
       if(!matched)counts.Other++;
     });
     const total=tagged.length;
-    const segs=[{label:'Easy / Long',count:counts['Easy / Long'],col:'#19835c'},{label:'Tempo',count:counts.Tempo,col:'#bd5500'},{label:'Intervals',count:counts.Intervals,col:'#e90606'},{label:'Race',count:counts.Race,col:'#956c00'},{label:'Other',count:counts.Other,col:'var(--text3)'}].filter(s=>s.count>0);
+    const segs=[{label:'Easy / Long',count:counts['Easy / Long'],col:effortStyle('Easy').text},{label:'Tempo',count:counts.Tempo,col:effortStyle('Tempo').text},{label:'Intervals',count:counts.Intervals,col:effortStyle('Intervals').text},{label:'Race',count:counts.Race,col:effortStyle('Race').text},{label:'Other',count:counts.Other,col:'var(--text3)'}].filter(s=>s.count>0);
     const R=52,cx=70,cy=68,stroke=18,circ=2*Math.PI*R;
     let offset=-0.25*circ;
     const arcs=segs.map(s=>{const dash=(s.count/total)*circ;const arc=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.col}" stroke-width="${stroke}" stroke-dasharray="${(dash-2).toFixed(1)} ${(circ-dash+2).toFixed(1)}" stroke-dashoffset="${(-offset).toFixed(1)}" opacity="0.9"/>`;offset+=dash;return arc;}).join('');
@@ -2694,7 +2697,7 @@ function renderTrendsRunAnalysis(){
     hrRuns.forEach((r,i)=>{
       const isLong=r.effort==='Long Run';
       const x=px(i),y=py(hrVals[i]);
-      svg+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${isLong?'#5261fa':'#e90606'}" opacity="0.9"/>`;
+      svg+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${isLong?effortStyle('Long Run').text:effortStyle('Easy').text}" opacity="0.9"/>`;
       // X-axis date label every few points
       if(i===0||i===hrRuns.length-1||(hrRuns.length>6&&i%Math.ceil(hrRuns.length/5)===0)){
         const d=new Date(r.date+'T12:00:00');
@@ -2717,8 +2720,8 @@ function renderTrendsRunAnalysis(){
       <div class="chart-card-header"><span class="chart-card-title">Aerobic HR Trend</span><span class="chart-card-val" style="color:${trendColor};">${trendLabel}</span></div>
       <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
       <div style="display:flex;gap:12px;margin-top:8px;">
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#e90606;"></div>Easy</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:#5261fa;"></div>Long Run</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Easy').text};"></div>Easy</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Long Run').text};"></div>Long Run</div>
       </div>
       <div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.5;">
         <strong>What this shows:</strong> Your heart rate on Easy and Long runs at a steady effort. As your aerobic fitness improves, your heart works less hard to cover the same distance — so a falling HR trend over weeks and months means you're getting fitter, even if your pace stays the same.

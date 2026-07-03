@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tracker</title>
-<meta name="theme-color" content="#07070f">
+<meta name="theme-color" content="#f5f5fb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tracker">
@@ -12,16 +12,16 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
-  --bg:#07070f;--surface:#0f0f1e;--surface2:#16162a;
-  --border:#242440;--text:#e8e8ff;--text2:#8080a8;--text3:#484868;
-  --accent:#6366f1;--accent2:#818cf8;
-  --green:#10b981;--red:#ef4444;--orange:#f97316;
+  --bg:#f5f5fb;--surface:#ffffff;--surface2:#eeeef7;
+  --border:#e2e2ee;--text:#15121f;--text2:#6b6690;--text3:#a6a2c0;
+  --accent:#6366f1;--accent2:#4338ca;
+  --green:#059669;--red:#dc2626;--orange:#ea580c;
   --radius:20px;--radius-sm:14px;--radius-xs:10px;
 }
 body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:88px;overflow-x:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation;}
 
 /* NAV */
-.nav{position:fixed;bottom:0;left:0;right:0;z-index:100;display:flex;justify-content:space-around;align-items:center;padding:10px 4px 28px;background:rgba(7,7,15,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:100;display:flex;justify-content:space-around;align-items:center;padding:10px 4px 28px;background:rgba(255,255,255,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);}
 .nav-btn{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:9px;font-weight:700;color:var(--text3);padding:6px 14px;border-radius:14px;transition:all 0.2s;letter-spacing:0.04em;text-transform:uppercase;}
 .nav-btn svg{width:22px;height:22px;transition:all 0.2s;}
 .nav-btn.active{color:var(--accent);}
@@ -37,9 +37,9 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .today-hero::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.12) 0%,transparent 70%);pointer-events:none;}
 .today-date{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;}
 .today-score-wrap{display:flex;align-items:flex-end;gap:12px;margin-bottom:4px;}
-.today-score{font-size:96px;font-weight:800;line-height:1;letter-spacing:-4px;background:linear-gradient(135deg,#e8e8ff 0%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.today-score{font-size:96px;font-weight:800;line-height:1;letter-spacing:-4px;background:linear-gradient(135deg,var(--text) 0%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .today-score-max{font-size:28px;font-weight:700;color:var(--text3);padding-bottom:16px;letter-spacing:-1px;}
-.today-status{font-size:18px;font-weight:600;color:var(--text2);margin-bottom:32px;}
+.today-status{font-size:18px;font-weight:600;color:var(--text2);margin-bottom:8px;}
 .today-status span{color:var(--accent2);font-weight:700;}
 
 /* WEEK STRIP */
@@ -72,6 +72,25 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .session-card-title{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.5px;margin-bottom:2px;}
 .session-card-meta{font-size:12px;color:var(--text2);font-weight:600;}
 .session-card-arrow{flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+
+/* PLAN + QUOTA CARD (rings for weekly gym/run targets, plan info alongside) */
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:16px;transition:all 0.2s;}
+.plan-card.clickable{cursor:pointer;}
+.plan-card.clickable:active{transform:scale(0.98);}
+.ring-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;}
+.ring-item .ring{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;}
+.ring-item .ring::after{content:'';position:absolute;inset:6px;border-radius:50%;background:var(--surface);}
+.ring-item .ring span{position:relative;z-index:1;font-size:11px;font-weight:800;color:var(--text);}
+.ring-item .ring-lbl{font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
+.plan-info{flex:1;min-width:0;border-left:1px solid var(--border);padding-left:14px;display:flex;align-items:center;gap:10px;}
+.plan-info-body{flex:1;min-width:0;}
+.plan-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#0e7c72;margin-bottom:2px;}
+.plan-title{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px;}
+.plan-meta{font-size:12px;color:var(--text2);font-weight:600;margin-top:1px;}
+
+/* HABITS (secondary line under the readiness hero) */
+.today-habits{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:20px;}
+.today-habits b{color:var(--text);font-weight:800;}
 
 /* GOAL CARDS */
 .goal-stack{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
@@ -176,7 +195,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .type-btn.active{background:var(--accent);border-color:var(--accent);color:white;}
 
 /* REST TIMER OVERLAY */
-.rest-overlay{position:fixed;inset:0;z-index:300;background:rgba(7,7,15,0.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;opacity:0;pointer-events:none;transition:opacity 0.25s ease;}
+.rest-overlay{position:fixed;inset:0;z-index:300;background:rgba(255,255,255,0.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;opacity:0;pointer-events:none;transition:opacity 0.25s ease;}
 .rest-overlay.active{opacity:1;pointer-events:all;}
 .rest-overlay-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);}
 .rest-ring-wrap{position:relative;display:flex;align-items:center;justify-content:center;}
@@ -285,6 +304,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       <div class="today-score-max">/ 100</div>
     </div>
     <div class="today-status" id="today-status">Let's get started</div>
+    <div class="today-habits" id="today-habits"></div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
       <button onclick="changeWeek(-1)" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <div id="week-label" style="flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;"></div>
@@ -554,7 +574,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <input class="modal-input" id="morning-hrv" type="number" inputmode="numeric" placeholder="e.g. 52" min="0" max="200">
     <div style="height:14px;"></div>
     <label class="modal-label">Wake Time</label>
-    <input class="modal-input" id="morning-wake" type="time" style="color-scheme:dark;">
+    <input class="modal-input" id="morning-wake" type="time" style="color-scheme:light;">
     <div style="height:20px;"></div>
     <button class="btn-primary" onclick="saveMorningCheckin()" style="margin-bottom:10px;">Save</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('morning-modal')">Cancel</button>
@@ -848,9 +868,28 @@ function renderToday(){
     ?`${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`
     :`Week of ${baseMonday.getDate()} ${MONTHS[baseMonday.getMonth()]}`;
 
-  const score=viewingToday?getTodayScore():getWeekScore();
-  document.getElementById('today-score').textContent=score;
+  const habitScore=getTodayScore();
+  const readiness=viewingToday?calcReadiness():null;
+  const scoreEl=document.getElementById('today-score');
   const statusEl=document.getElementById('today-status');
+  const habitsEl=document.getElementById('today-habits');
+  if(viewingToday){
+    const rCol=readiness.score!=null?readiness.col:'var(--text3)';
+    scoreEl.textContent=readiness.score!=null?readiness.score:'–';
+    scoreEl.style.background=`linear-gradient(135deg,var(--text) 0%,${rCol} 100%)`;
+    scoreEl.style.webkitBackgroundClip='text';
+    scoreEl.style.backgroundClip='text';
+    if(readiness.score!=null){
+      statusEl.innerHTML=`<span style="color:${readiness.col};">${readiness.advice}</span>`;
+    }else{
+      statusEl.innerHTML=`<span style="color:var(--text3);cursor:pointer;" onclick="openMorningModal()">Log sleep &amp; HRV for a readiness score</span>`;
+    }
+  }else{
+    scoreEl.textContent=getWeekScore();
+    scoreEl.style.background='';
+    scoreEl.style.webkitBackgroundClip='';
+    scoreEl.style.backgroundClip='';
+  }
   const _n=state.userName?`, ${esc(state.userName)}`:'';
   // Date-seeded pick so message is stable all day but rotates daily
   const _seed=parseInt(dk(now).replace(/-/g,''))%997;
@@ -916,12 +955,21 @@ function renderToday(){
       `All boxes ticked${_n}. Go rest.`,
     ],
   };
-  if(!viewingToday){statusEl.innerHTML=`Week score · <span>${allGoals().filter(g=>{let d=0;for(let i=0;i<7;i++){const day=addDays(baseMonday,i);if(day<=now&&goalDone(dk(day),g))d++;}return d>0;}).length}/${allGoals().length} goals hit</span>`;}
-  else if(score===100)statusEl.innerHTML=`<span>${pickMsg(_msgs.perfect)}</span>`;
-  else if(score>=75)statusEl.innerHTML=`<span>${pickMsg(_msgs.strong)}</span>`;
-  else if(score>=50)statusEl.innerHTML=pickMsg(_msgs.halfway);
-  else if(score>0)statusEl.innerHTML=pickMsg(_msgs.started);
-  else statusEl.innerHTML=pickMsg(_msgs.zero);
+  if(!viewingToday){
+    statusEl.innerHTML=`Week score · <span>${allGoals().filter(g=>{let d=0;for(let i=0;i<7;i++){const day=addDays(baseMonday,i);if(day<=now&&goalDone(dk(day),g))d++;}return d>0;}).length}/${allGoals().length} goals hit</span>`;
+    habitsEl.innerHTML='';
+  }else{
+    const gs=goalsActiveOn(ds);
+    const doneCount=gs.filter(g=>goalDone(ds,g)).length;
+    const totalCount=gs.length;
+    let msg;
+    if(habitScore===100)msg=pickMsg(_msgs.perfect);
+    else if(habitScore>=75)msg=pickMsg(_msgs.strong);
+    else if(habitScore>=50)msg=pickMsg(_msgs.halfway);
+    else if(habitScore>0)msg=pickMsg(_msgs.started);
+    else msg=pickMsg(_msgs.zero);
+    habitsEl.innerHTML=`<b>${doneCount}/${totalCount}</b> goals · ${msg}`;
+  }
 
   // Week nav label + next button
   const endOfWeek=addDays(baseMonday,6);
@@ -967,46 +1015,48 @@ function renderToday(){
     }else{raceWrap.innerHTML='';}
   }else{raceWrap.innerHTML='';}
 
-  // Weekly quota tracker + today's plan
+  // Weekly quota tracker (rings) + today's plan, combined into one card
   const wrap=document.getElementById('session-card-wrap');
   if(viewingToday){
     const quota=getWeeklyQuota();
     const todayPlan=getTodayPlanType();
     const planColor={Push:'#ef4444',Pull:'var(--accent2)',Legs:'var(--green)',Core:'#eab308',Custom:'#a855f7',Run:'#06b6d4'};
-    const planBgColor={Push:'rgba(239,68,68,0.08)',Pull:'rgba(99,102,241,0.08)',Legs:'rgba(16,185,129,0.08)',Core:'rgba(234,179,8,0.08)',Custom:'rgba(139,92,246,0.08)',Run:'rgba(6,182,212,0.08)'};
-    // Plan chip
-    let planChip='';
+    const ringColor={gym:'#0e7c72',run:'#ff7a59'};
+    const ringTrack={gym:'#e1ece9',run:'#fbe6df'};
+
+    const ringsHtml=quota.map(g=>{
+      const col=ringColor[g.id]||'var(--accent2)';
+      const track=ringTrack[g.id]||'var(--border)';
+      const pct=Math.min(100,Math.round(g.done/g.target*100));
+      const label=g.id==='run'?'Run':(g.name||'Gym');
+      return`<div class="ring-item">
+        <div class="ring" style="background:conic-gradient(${col} 0% ${pct}%, ${track} ${pct}% 100%);"><span>${g.done}/${g.target}</span></div>
+        <span class="ring-lbl">${esc(label)}</span>
+      </div>`;
+    }).join('');
+
+    let planInfoHtml='';
+    let cardClick='';
     if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
-      const pc=planColor[todayPlan]||'var(--accent)';
-      const pb=planBgColor[todayPlan]||'rgba(99,102,241,0.08)';
       const isGym=['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
       const tab=isGym?'gym':'run';
       const gymPreselect=isGym?`;setTimeout(()=>{_gymPickedType='${todayPlan}';renderGymTypeSelector();},50)`:'';
       const alreadyDone=isGym?getSessionDone(dk(now),'gym'):getSessionDone(dk(now),'run');
-      planChip=`<div class="session-card" style="--accent:${pc};margin-bottom:8px;" onclick="showPage('train');switchTrainTab('${tab}')${gymPreselect}">
-        <div class="session-card-body">
-          <div class="session-card-label">Today's Plan</div>
-          <div class="session-card-title">${esc(todayPlan)}</div>
-          <div class="session-card-meta" style="color:${alreadyDone?'var(--green)':'var(--text2)'};">${alreadyDone?'Session logged ✓':'Tap to start'}</div>
+      cardClick=`showPage('train');switchTrainTab('${tab}')${gymPreselect}`;
+      planInfoHtml=`<div class="plan-info">
+        <div class="plan-info-body">
+          <div class="plan-label">Today's Plan</div>
+          <div class="plan-title">${esc(todayPlan)}</div>
+          <div class="plan-meta">${alreadyDone?'Session logged ✓':'Tap to start'}</div>
         </div>
-        <div class="session-card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>`;
     }
-    // Slim quota row
-    const quotaRow=quota.map(g=>{
-      const isRun=g.id==='run';
-      const col=isRun?'#06b6d4':'var(--accent2)';
-      const complete=g.done>=g.target;
-      const dots=Array.from({length:g.target},(_,i)=>
-        `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${i<g.done?col:'var(--border)'};" ></span>`
-      ).join('');
-      return`<div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);width:26px;">${isRun?'Run':'Gym'}</span>
-        <div style="display:flex;gap:3px;align-items:center;">${dots}</div>
-        ${complete?`<span style="font-size:10px;font-weight:800;color:${col};">✓</span>`:''}
-      </div>`;
-    }).join('');
-    wrap.innerHTML=planChip+`<div style="display:flex;gap:16px;padding:6px 2px 10px;">${quotaRow}</div>`;
+
+    wrap.innerHTML=`<div class="plan-card${cardClick?' clickable':''}"${cardClick?` onclick="${cardClick}"`:''}>
+      <div style="display:flex;gap:14px;">${ringsHtml}</div>
+      ${planInfoHtml}
+    </div>`;
   }else{wrap.innerHTML='';}
 
   // Goal cards
@@ -3885,22 +3935,14 @@ function renderReadinessCard(){
   const avg7s=recent7R.filter(d=>d.sleep).length?Math.round(recent7R.filter(d=>d.sleep).reduce((a,d)=>a+d.sleep,0)/recent7R.filter(d=>d.sleep).length):null;
   const avg7h=recent7R.filter(d=>d.hrv).length?Math.round(recent7R.filter(d=>d.hrv).reduce((a,d)=>a+d.hrv,0)/recent7R.filter(d=>d.hrv).length):null;
   const avgBadge=hasMorning&&(avg7s||avg7h)?`<div style="display:flex;gap:6px;margin-top:8px;">${avg7s?`<span style="padding:2px 8px;border-radius:10px;background:rgba(16,185,129,0.1);color:var(--green);font-size:10px;font-weight:700;">7d sleep: ${avg7s}</span>`:''}${avg7h?`<span style="padding:2px 8px;border-radius:10px;background:rgba(168,85,247,0.1);color:#a855f7;font-size:10px;font-weight:700;">7d HRV: ${avg7h}ms</span>`:''}</div>`:'';
+  // Score/advice now shown in the Today hero — this card just carries the supporting detail.
   const bodyHtml=hasMorning
-    ?`<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
-        <div style="font-size:42px;font-weight:800;letter-spacing:-2px;color:${col};">${score}</div>
-        <div style="flex:1;">
-          <div style="height:8px;background:var(--surface2);border-radius:4px;margin-bottom:6px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width 0.5s;"></div>
-          </div>
-          <div style="font-size:12px;font-weight:700;color:${col};">${advice}</div>
-        </div>
-      </div>
-      ${factors.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;">${factors.map(f=>`<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;">${f}</span>`).join('')}</div>`:''}
+    ?`${factors.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;">${factors.map(f=>`<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;">${f}</span>`).join('')}</div>`:''}
       ${avgBadge}`
     :`<div style="color:var(--text3);font-size:13px;padding:4px 0 2px;">Log your Garmin sleep & HRV to get a readiness score.</div>`;
   el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${hasMorning?'10':'8'}px;">
-      <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Readiness</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${(hasMorning&&(factors.length||avgBadge))?'10':'0'}px;">
+      <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Readiness factors</span>
       ${checkinBtn}
     </div>
     ${bodyHtml}

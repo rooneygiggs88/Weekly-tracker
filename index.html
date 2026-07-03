@@ -569,6 +569,11 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   <div class="modal">
     <div class="modal-handle"></div>
     <h3 id="muscle-tag-modal-title">Tag Muscles</h3>
+    <div id="lib-rename-wrap" style="display:none;margin-bottom:16px;">
+      <label class="modal-label">Exercise name</label>
+      <input class="modal-input" id="lib-rename-input" placeholder="Exercise name" style="margin-bottom:6px;">
+      <div style="font-size:11px;color:var(--text3);">Changing this merges into an existing exercise of that name — use it to fix duplicates like "Hammer curl" vs "Hammer curls".</div>
+    </div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Which muscles does this exercise target?</p>
     <div class="muscle-check-grid" id="muscle-check-grid"></div>
     <button class="btn-primary" onclick="saveMuscleTag()" style="margin-bottom:8px;">Save Tags</button>
@@ -1489,13 +1494,18 @@ function openLibraryAddEx(){
 }
 let _newExMusclesSelected=[];
 function newExNameChange(val){
+  const prog=loadGymProg();const gym=loadGymData();
+  const nameSet=new Set(Object.keys(prog));
+  gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)nameSet.add(e.name);}));
+  const q=(val||'').trim().toLowerCase();
+  const matches=q?[...nameSet].filter(n=>n.toLowerCase().includes(q)):[];
+  document.getElementById('new-ex-suggestions').innerHTML=matches.slice(0,8).map(n=>`<option value="${esc(n)}">`).join('');
   const muscles=getExerciseMuscles(val)||[];
   _newExMusclesSelected=[...muscles];
   _renderNewExMuscles(muscles);
   const secs=getExRestSecs(val);
   _newExRestSecs=secs;
   _renderNewExRest(secs);
-  const prog=loadGymProg();
   const cat=prog[val]&&prog[val].category?prog[val].category:getExCategory(val);
   _newExCategory=cat;_renderNewExCategory(cat);
 }
@@ -1533,8 +1543,9 @@ function _renderNewExCategory(active){
 }
 function _setNewExCategory(v){_newExCategory=v;_renderNewExCategory(v);}
 function confirmNewEx(){
-  const name=document.getElementById('new-ex-name').value.trim();
-  if(!name){toastMsg('Enter an exercise name');return;}
+  const typed=document.getElementById('new-ex-name').value.trim();
+  if(!typed){toastMsg('Enter an exercise name');return;}
+  const name=_resolveExName(typed)||typed;
   const prog=loadGymProg();
   if(!prog[name])prog[name]={history:[]};
   if(_newExMusclesSelected.length)prog[name].muscles=[..._newExMusclesSelected];
@@ -1690,7 +1701,8 @@ function updateProgressHint(i){
 function saveGymSession(){
   const notesEl=document.getElementById('gym-notes-field');
   if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
-  const exercises=(gymDraft.exercises||[]).filter(e=>(e.name||'').trim()&&(e.sets||[]).length);
+  const exercises=(gymDraft.exercises||[]).filter(e=>(e.name||'').trim()&&(e.sets||[]).length)
+    .map(e=>{const n=e.name.trim();return{...e,name:_resolveExName(n)||n};});
   if(!exercises.length){toastMsg('Add at least one exercise');return;}
   const sessions=loadGymData();
   sessions.push({date:dk(today()),type:gymDraft.type,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:Date.now()});
@@ -4872,7 +4884,9 @@ function openExerciseEdit(name){
   const restSecs=getExRestSecs(name);
   _muscleTagExercise=name;
   _muscleTagSelected=[...muscles];
-  document.getElementById('muscle-tag-modal-title').textContent=name;
+  document.getElementById('muscle-tag-modal-title').textContent='Edit Exercise';
+  document.getElementById('lib-rename-wrap').style.display='block';
+  document.getElementById('lib-rename-input').value=name;
   document.getElementById('muscle-check-grid').innerHTML=ALL_MUSCLE_GROUPS.map(m=>{
     const sel=_muscleTagSelected.includes(m);
     return`<div class="muscle-check-item${sel?' selected':''}" onclick="toggleMuscleTag('${m}',this)" id="mcheck-${m}">
@@ -4912,6 +4926,7 @@ function openMuscleTagModal(name){
   const prog=loadGymProg();
   _muscleTagSelected=[...((prog[name]&&prog[name].muscles)||getExerciseMuscles(name)||[])];
   document.getElementById('muscle-tag-modal-title').textContent=`Tag: ${name}`;
+  document.getElementById('lib-rename-wrap').style.display='none';
   document.getElementById('muscle-check-grid').innerHTML=ALL_MUSCLE_GROUPS.map(m=>{
     const sel=_muscleTagSelected.includes(m);
     return`<div class="muscle-check-item${sel?' selected':''}" onclick="toggleMuscleTag('${m}',this)" id="mcheck-${m}">
@@ -4926,8 +4941,34 @@ function toggleMuscleTag(muscle,el){
   if(idx>=0){_muscleTagSelected.splice(idx,1);el.classList.remove('selected');el.querySelector('.muscle-check-box').innerHTML='';}
   else{_muscleTagSelected.push(muscle);el.classList.add('selected');el.querySelector('.muscle-check-box').innerHTML='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';}
 }
+function renameExerciseEverywhere(oldName,newNameRaw){
+  const newName=(newNameRaw||'').trim();
+  if(!newName||newName===oldName)return oldName;
+  const prog=loadGymProg();
+  const gym=loadGymData();
+  const oldEntry=prog[oldName]||{history:[]};
+  const existing=prog[newName];
+  if(existing){
+    existing.history=[...(existing.history||[]),...(oldEntry.history||[])];
+    if(!existing.muscles&&oldEntry.muscles)existing.muscles=oldEntry.muscles;
+    if(existing.restSeconds==null&&oldEntry.restSeconds!=null)existing.restSeconds=oldEntry.restSeconds;
+    if(!existing.category&&oldEntry.category)existing.category=oldEntry.category;
+  }else{
+    prog[newName]=oldEntry;
+  }
+  if(prog[oldName])delete prog[oldName];
+  saveGymProg(prog);
+  gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name===oldName)e.name=newName;}));
+  saveGymData(gym);
+  return newName;
+}
 function saveMuscleTag(){
   if(!_muscleTagExercise)return;
+  const renameWrap=document.getElementById('lib-rename-wrap');
+  if(renameWrap&&renameWrap.style.display!=='none'){
+    const renameInput=document.getElementById('lib-rename-input');
+    _muscleTagExercise=renameExerciseEverywhere(_muscleTagExercise,renameInput.value);
+  }
   const prog=loadGymProg();
   if(!prog[_muscleTagExercise])prog[_muscleTagExercise]={history:[]};
   prog[_muscleTagExercise].muscles=[..._muscleTagSelected];

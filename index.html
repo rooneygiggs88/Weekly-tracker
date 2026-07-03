@@ -1594,7 +1594,13 @@ function confirmNewEx(){
     renderExerciseLibrary();
     toastMsg(`${name} saved to library`);
   } else {
-    gymDraft.exercises.push({name,sets:[{weight:'',reps:'',warmup:false}]});
+    const existingIdx=gymDraft.exercises.findIndex(e=>(e.name||'').toLowerCase()===name.toLowerCase());
+    if(existingIdx>=0){
+      gymDraft.exercises[existingIdx].sets.push({weight:'',reps:'',warmup:false});
+      toastMsg(`${name} is already in this session — added another set`);
+    }else{
+      gymDraft.exercises.push({name,sets:[{weight:'',reps:'',warmup:false}]});
+    }
     closeModal('new-ex-modal');
     renderGymLogger();
   }

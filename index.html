@@ -1482,7 +1482,17 @@ function gymConfirmTypeChange(t){
 }
 let _newExRestSecs=90;
 let _newExCategory='custom';
+let _newExCategoryTouched=false;
 let _libAddMode=false;
+function categoryFromMuscles(muscles){
+  const PUSH_M=['Chest','Shoulders','Triceps'];
+  const PULL_M=['Back','Biceps'];
+  const LEGS_M=['Quads','Hamstrings','Glutes','Calves','Legs / Quads'];
+  if(muscles.some(m=>LEGS_M.includes(m)))return'legs';
+  if(muscles.some(m=>PULL_M.includes(m)))return'pull';
+  if(muscles.some(m=>PUSH_M.includes(m)))return'push';
+  return'custom';
+}
 function _newExPopulate(){
   const seen=new Set();
   loadGymData().forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)seen.add(e.name);}));
@@ -1490,6 +1500,7 @@ function _newExPopulate(){
   document.getElementById('new-ex-suggestions').innerHTML=[...seen].map(n=>`<option value="${esc(n)}">`).join('');
   document.getElementById('new-ex-name').value='';
   _newExMusclesSelected=[];
+  _newExCategoryTouched=false;
   _renderNewExMuscles([]);
   _renderNewExRest(90);
   _renderNewExCategory('custom');
@@ -1522,8 +1533,10 @@ function newExNameChange(val){
   const secs=getExRestSecs(val);
   _newExRestSecs=secs;
   _renderNewExRest(secs);
-  const cat=prog[val]&&prog[val].category?prog[val].category:getExCategory(val);
-  _newExCategory=cat;_renderNewExCategory(cat);
+  if(!_newExCategoryTouched){
+    const cat=prog[val]&&prog[val].category?prog[val].category:getExCategory(val);
+    _newExCategory=cat;_renderNewExCategory(cat);
+  }
 }
 function _renderNewExMuscles(selected){
   document.getElementById('new-ex-muscles').innerHTML=ALL_MUSCLE_GROUPS.map(m=>{
@@ -1540,6 +1553,10 @@ function _toggleNewExMuscle(m,el){
   const idx=_newExMusclesSelected.indexOf(m);
   if(idx>-1)_newExMusclesSelected.splice(idx,1);else _newExMusclesSelected.push(m);
   _renderNewExMuscles(_newExMusclesSelected);
+  if(!_newExCategoryTouched){
+    const cat=categoryFromMuscles(_newExMusclesSelected);
+    _newExCategory=cat;_renderNewExCategory(cat);
+  }
 }
 function _renderNewExRest(active){
   const opts=[60,90,120,180,240];
@@ -1557,7 +1574,7 @@ function _renderNewExCategory(active){
     return`<button onclick="_setNewExCategory('${c.v}')" style="padding:8px 16px;border-radius:12px;border:2px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${sel?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${c.l}</button>`;
   }).join('');
 }
-function _setNewExCategory(v){_newExCategory=v;_renderNewExCategory(v);}
+function _setNewExCategory(v){_newExCategory=v;_newExCategoryTouched=true;_renderNewExCategory(v);}
 function confirmNewEx(){
   const typed=document.getElementById('new-ex-name').value.trim();
   if(!typed){toastMsg('Enter an exercise name');return;}
@@ -4977,9 +4994,11 @@ function renderExerciseLibrary(){
 
 let _libEditName='';
 let _libRestSecs=90;
+let _libCategory='custom';
 function openExerciseEdit(name){
   _libEditName=name;
   _libRestSecs=getExRestSecs(name);
+  _libCategory=getExCategory(name);
   const prog=loadGymProg();
   const muscles=getExerciseMuscles(name);
   const restSecs=getExRestSecs(name);
@@ -5007,7 +5026,30 @@ function openExerciseEdit(name){
   if(existing)existing.remove();
   const restDiv=document.createElement('div');restDiv.id='lib-rest-selector';restDiv.innerHTML=restHtml;
   document.getElementById('muscle-tag-modal').querySelector('.modal').appendChild(restDiv);
+
+  // Inject workout-type (category) selector
+  const cats=[{v:'push',l:'Push'},{v:'pull',l:'Pull'},{v:'legs',l:'Legs'},{v:'custom',l:'Custom'}];
+  const catHtml=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:8px;">Workout Type</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${cats.map(c=>`<button id="cat-opt-${c.v}" onclick="libSetCategory('${c.v}')" style="padding:7px 14px;border-radius:12px;border:2px solid ${_libCategory===c.v?'var(--accent)':'var(--border)'};background:${_libCategory===c.v?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${_libCategory===c.v?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${c.l}</button>`).join('')}
+    </div>
+  </div>`;
+  const existingCat=document.getElementById('lib-category-selector');
+  if(existingCat)existingCat.remove();
+  const catDiv=document.createElement('div');catDiv.id='lib-category-selector';catDiv.innerHTML=catHtml;
+  document.getElementById('muscle-tag-modal').querySelector('.modal').appendChild(catDiv);
+
   openModal('muscle-tag-modal');
+}
+function libSetCategory(cat){
+  _libCategory=cat;
+  document.querySelectorAll('[id^="cat-opt-"]').forEach(btn=>{
+    const active=btn.id==='cat-opt-'+cat;
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(37,99,235,0.15)':'var(--surface2)';
+    btn.style.color=active?'var(--accent2)':'var(--text2)';
+  });
 }
 function libSetRest(secs){
   _libRestSecs=secs;
@@ -5028,6 +5070,10 @@ function openMuscleTagModal(name){
   _muscleTagSelected=[...((prog[name]&&prog[name].muscles)||getExerciseMuscles(name)||[])];
   document.getElementById('muscle-tag-modal-title').textContent=`Tag: ${name}`;
   document.getElementById('lib-rename-wrap').style.display='none';
+  const existingCat=document.getElementById('lib-category-selector');
+  if(existingCat)existingCat.remove();
+  const existingRest=document.getElementById('lib-rest-selector');
+  if(existingRest)existingRest.remove();
   document.getElementById('muscle-check-grid').innerHTML=ALL_MUSCLE_GROUPS.map(m=>{
     const sel=_muscleTagSelected.includes(m);
     return`<div class="muscle-check-item${sel?' selected':''}" onclick="toggleMuscleTag('${m}',this)" id="mcheck-${m}">
@@ -5050,10 +5096,11 @@ function renameExerciseEverywhere(oldName,newNameRaw){
   const oldEntry=prog[oldName]||{history:[]};
   const existing=prog[newName];
   if(existing){
+    // The surviving exercise's own muscles/rest/category are authoritative, including
+    // when unset (an unset category means "guess from muscle tags" - a duplicate
+    // created via Add Exercise defaults to category:'custom', which must not silently
+    // override that). Only history gets combined.
     existing.history=[...(existing.history||[]),...(oldEntry.history||[])];
-    if(!existing.muscles&&oldEntry.muscles)existing.muscles=oldEntry.muscles;
-    if(existing.restSeconds==null&&oldEntry.restSeconds!=null)existing.restSeconds=oldEntry.restSeconds;
-    if(!existing.category&&oldEntry.category)existing.category=oldEntry.category;
   }else{
     prog[newName]=oldEntry;
   }
@@ -5073,11 +5120,14 @@ function saveMuscleTag(){
   const prog=loadGymProg();
   if(!prog[_muscleTagExercise])prog[_muscleTagExercise]={history:[]};
   prog[_muscleTagExercise].muscles=[..._muscleTagSelected];
-  // Save rest seconds if set from library editor
+  // Save rest seconds / category if set from library editor
   const restDiv=document.getElementById('lib-rest-selector');
   if(restDiv&&_libRestSecs)prog[_muscleTagExercise].restSeconds=_libRestSecs;
+  const catDiv=document.getElementById('lib-category-selector');
+  if(catDiv&&_libCategory)prog[_muscleTagExercise].category=_libCategory;
   saveGymProg(prog);
   const restDiv2=document.getElementById('lib-rest-selector');if(restDiv2)restDiv2.remove();
+  const catDiv2=document.getElementById('lib-category-selector');if(catDiv2)catDiv2.remove();
   closeModal('muscle-tag-modal');toastMsg('Exercise saved');haptic('success');
   if(document.getElementById('train-library-content'))renderExerciseLibrary();
   const volEl=document.getElementById('train-volume-content');if(volEl)volEl.innerHTML=renderMuscleVolume();

@@ -3281,8 +3281,8 @@ function renderBodyCompGoalCard(health){
 }
 
 function renderBodyCompCard(health){
-  const withW=health.filter(e=>e.weight);
-  const withBf=health.filter(e=>e.bodyFat!=null&&e.bodyFat>0);
+  const withW=health.filter(e=>e.weight).sort((a,b)=>a.date.localeCompare(b.date));
+  const withBf=health.filter(e=>e.bodyFat!=null&&e.bodyFat>0).sort((a,b)=>a.date.localeCompare(b.date));
   const latestW=withW.length?withW[withW.length-1]:null;
   const latestBf=withBf.length?withBf[withBf.length-1]:null;
   if(!latestW&&!latestBf){
@@ -3330,11 +3330,15 @@ function renderBodyCompCard(health){
     ${chart}
     ${(()=>{
       if(!withW.length&&!withBf.length)return'';
-      // Since started
-      const wFirst=withW.length?withW[0]:null;
-      const bFirst=withBf.length?withBf[0]:null;
-      const wTotal=wFirst&&latestW?+(latestW.weight-wFirst.weight).toFixed(1):null;
-      const bTotal=bFirst&&latestBf?+(latestBf.bodyFat-bFirst.bodyFat).toFixed(1):null;
+      const parseDate=ds=>{const [y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d);};
+      const smoothedNow=(entries,field)=>entries.length?rollingRate(entries,field,parseDate(entries[entries.length-1].date)).now:null;
+      const smoothedStart=(entries,field)=>entries.length?rollingRate(entries,field,addDays(parseDate(entries[0].date),6)).now:null;
+      // Since started — endpoints are 7-day rolling averages, so one spiky day at the
+      // start or end doesn't swing the headline number.
+      const wStart=smoothedStart(withW,'weight'),wNow=smoothedNow(withW,'weight');
+      const bStart=smoothedStart(withBf,'bodyFat'),bNow=smoothedNow(withBf,'bodyFat');
+      const wTotal=(wStart!=null&&wNow!=null)?+(wNow-wStart).toFixed(1):null;
+      const bTotal=(bStart!=null&&bNow!=null)?+(bNow-bStart).toFixed(1):null;
       let overallLine='',overallCol='var(--text2)';
       if(wTotal!==null&&bTotal!==null){
         const wD=wTotal<-0.1?'down':wTotal>0.1?'up':'flat';
@@ -3350,13 +3354,12 @@ function renderBodyCompCard(health){
         else if(wTotal>0.1){overallLine=`Up ${Math.abs(wTotal)}kg since you started.`;overallCol='var(--orange)';}
         else{overallLine='Holding steady — every logged day builds the picture.';}
       }
-      // This week
-      const mon=new Date();mon.setHours(0,0,0,0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
-      const monStr=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
-      const twW=withW.filter(e=>e.date>=monStr);
-      const twBf=withBf.filter(e=>e.date>=monStr);
-      const wW=twW.length>=2?+(twW[twW.length-1].weight-twW[0].weight).toFixed(1):null;
-      const bW=twBf.length>=2?+(twBf[twBf.length-1].bodyFat-twBf[0].bodyFat).toFixed(1):null;
+      // This week — trailing 7-day average vs. the 7 days before that, so a single
+      // weekend spike doesn't dominate (and reverse itself a day later).
+      const wWk=withW.length?rollingRate(withW,'weight',parseDate(withW[withW.length-1].date)):null;
+      const bWk=withBf.length?rollingRate(withBf,'bodyFat',parseDate(withBf[withBf.length-1].date)):null;
+      const wW=wWk&&wWk.weeklyRate!=null?+wWk.weeklyRate.toFixed(1):null;
+      const bW=bWk&&bWk.weeklyRate!=null?+bWk.weeklyRate.toFixed(1):null;
       let weekLine='',weekCol='var(--text3)';
       if(wW!==null||bW!==null){
         const wD=wW!==null?(wW<-0.1?'down':wW>0.1?'up':'flat'):'n/a';
@@ -3367,9 +3370,9 @@ function renderBodyCompCard(health){
         else if(wD==='up'&&bD==='up'){weekLine=`This week you're up ${Math.abs(wW)}kg and ${Math.abs(bW)}% body fat — rein it in.`;weekCol='var(--red)';}
         else if(wD==='up'){weekLine=`This week you're up ${Math.abs(wW)}kg — keep an eye on it.`;weekCol='var(--orange)';}
         else if(wD==='flat'&&bD==='down'){weekLine=`This week: weight steady, fat down ${Math.abs(bW)}% — recomp working.`;weekCol='var(--green)';}
-        else{weekLine="This week: holding steady — the week isn't over yet.";weekCol='var(--text3)';}
+        else{weekLine="This week: holding steady.";weekCol='var(--text3)';}
       } else {
-        weekLine=twW.length===1?`This week: only one entry so far — keep logging daily.`:`This week: no entries yet — start logging for the full picture.`;
+        weekLine=`This week: not enough data yet for a clear trend — keep logging daily.`;
       }
       if(!overallLine)return'';
       return`<div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);">

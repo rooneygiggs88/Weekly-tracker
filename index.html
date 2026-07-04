@@ -2417,10 +2417,23 @@ function renderTrends(){
   const weekKm=weekRuns.reduce((s,r)=>s+(r.km||0),0);
   const weekGym=gym.filter(s=>{const d=new Date(s.date);return d>=mon&&d<=now;});
   const weekSets=weekGym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  // Consistency grade over a 28-day window, offset in days-ago (0 = today back to 27 days ago).
+  function consistencyGrade(offset){
+    const scores=[];
+    for(let i=offset;i<offset+28;i++)scores.push(getDayScore(dk(addDays(now,-i))));
+    const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
+    const stdDev=Math.sqrt(scores.reduce((a,b)=>a+Math.pow(b-avg,2),0)/scores.length);
+    const raw=avg-(stdDev*0.5);
+    const grade=raw>=85?'S':raw>=70?'A':raw>=50?'B':raw>=30?'C':'D';
+    return{grade,rank:'DCBAS'.indexOf(grade)};
+  }
+  const gradeNow=consistencyGrade(0),gradePrev=consistencyGrade(28);
+  const gradeColor=gradeNow.grade==='S'?'var(--accent2)':gradeNow.grade==='A'?'var(--green)':gradeNow.grade==='B'?'var(--orange)':'var(--text3)';
+  const gradeTrend=gradeNow.rank>gradePrev.rank?`<span style="color:var(--green);">↑ was ${gradePrev.grade}</span>`:gradeNow.rank<gradePrev.rank?`<span style="color:var(--red);">↓ was ${gradePrev.grade}</span>`:`<span style="color:var(--text3);">→ steady</span>`;
   el.innerHTML=`
     <div class="metric-row">
       <div class="metric-card accent"><div class="m-label">This Week</div><div class="m-val">${weekScore}</div><div class="m-unit">% complete</div></div>
-      ${(()=>{const scores=[];for(let i=27;i>=0;i--){const d=addDays(now,-i);scores.push(getDayScore(dk(d)));}const avg=scores.reduce((a,b)=>a+b,0)/scores.length;const stdDev=Math.sqrt(scores.reduce((a,b)=>a+Math.pow(b-avg,2),0)/scores.length);const raw=avg-(stdDev*0.5);const grade=raw>=85?'S':raw>=70?'A':raw>=50?'B':raw>=30?'C':'D';const gradeColor=grade==='S'?'var(--accent2)':grade==='A'?'var(--green)':grade==='B'?'var(--orange)':'var(--text3)';return`<div class="metric-card"><div class="m-label">Consistency</div><div style="font-size:42px;font-weight:800;color:${gradeColor};letter-spacing:-2px;line-height:1;">${grade}</div><div class="m-unit">last 28 days</div></div>`;})()}
+      <div class="metric-card"><div class="m-label">Consistency</div><div style="font-size:42px;font-weight:800;color:${gradeColor};letter-spacing:-2px;line-height:1;">${gradeNow.grade}</div><div class="m-unit">last 28 days · ${gradeTrend}</div></div>
     </div>
     <div class="metric-row">
       <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekSets}</div><div class="m-unit">sets this week</div></div>

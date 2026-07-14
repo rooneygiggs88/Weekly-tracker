@@ -228,6 +228,11 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 /* TOAST */
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:24px;font-size:14px;font-weight:700;z-index:300;opacity:0;transition:all 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.5);white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* PR CELEBRATION */
+.pr-celebration{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding-top:80px;z-index:500;pointer-events:none;opacity:0;transition:opacity 0.3s;}
+.pr-celebration.show{opacity:1;pointer-events:auto;}
+.pr-celebration-card{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:18px 26px;border-radius:20px;box-shadow:0 12px 40px rgba(37,99,235,0.45);text-align:center;transform:scale(0.85) translateY(-10px);transition:transform 0.35s cubic-bezier(.34,1.56,.64,1);max-width:88%;cursor:pointer;}
+.pr-celebration.show .pr-celebration-card{transform:scale(1) translateY(0);}
 
 /* ANOMALY ALERTS */
 .anomaly-alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
@@ -323,6 +328,8 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       <button onclick="changeWeek(1)" id="week-next-btn" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
     </div>
     <div id="readiness-card"></div>
+    <div id="weekly-win-card"></div>
+    <div id="flashback-card"></div>
     <div class="week-strip" id="week-strip"></div>
     <div id="race-card-wrap"></div>
     <div id="session-card-wrap"></div>
@@ -738,6 +745,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+<div class="pr-celebration" id="pr-celebration"></div>
 
 <script>
 // ── HELPERS ──
@@ -747,6 +755,26 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function fmtPace(kmPerSec){if(!kmPerSec||!isFinite(kmPerSec))return'—';const s=1/kmPerSec;const m=Math.floor(s/60);const ss=Math.round(s%60);return`${m}:${String(ss).padStart(2,'0')}/km`;}
 function parseTimeToSecs(t){if(!t)return 0;const p=t.split(':').map(Number);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return 0;}
 function toastMsg(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+let _prCelebTimer=null;
+function celebratePR(prs){
+  if(!prs||!prs.length)return;
+  const el=document.getElementById('pr-celebration');
+  if(!el)return;
+  const lines=prs.map(p=>`<div style="font-size:15px;font-weight:800;margin-top:2px;">${esc(p.name)} — ${p.detail}</div>`).join('');
+  el.innerHTML=`<div class="pr-celebration-card" onclick="dismissPRCelebration()">
+    <div style="font-size:28px;line-height:1;">🎉</div>
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85;margin-top:4px;">${prs.length>1?'New PRs!':'New PR!'}</div>
+    ${lines}
+  </div>`;
+  el.classList.add('show');
+  if(navigator.vibrate)navigator.vibrate([15,40,15,40,25]);
+  clearTimeout(_prCelebTimer);
+  _prCelebTimer=setTimeout(dismissPRCelebration,3200);
+}
+function dismissPRCelebration(){
+  const el=document.getElementById('pr-celebration');
+  if(el)el.classList.remove('show');
+}
 function haptic(type='light'){if(!navigator.vibrate)return;if(type==='light')navigator.vibrate(8);if(type==='medium')navigator.vibrate(20);if(type==='success')navigator.vibrate([10,50,20]);}
 function getMonday(date){const d=new Date(date),day=d.getDay();d.setDate(d.getDate()+(day===0?-6:1-day));d.setHours(0,0,0,0);return d;}
 function daysUntil(ds){const now=today();now.setHours(0,0,0,0);const t=new Date(ds+'T12:00:00');return Math.round((t-now)/86400000);}
@@ -907,6 +935,10 @@ function renderToday(){
     ?`${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`
     :`Week of ${baseMonday.getDate()} ${MONTHS[baseMonday.getMonth()]}`;
 
+  // These are about "right now", not whatever day is being browsed in the week strip -
+  // only show them when actually viewing today.
+  if(viewingToday){renderWeeklyWinCard();renderFlashbackCard();}
+  else{const wc=document.getElementById('weekly-win-card');if(wc)wc.innerHTML='';const fc=document.getElementById('flashback-card');if(fc)fc.innerHTML='';}
   const habitScore=getTodayScore();
   const readiness=viewingToday?calcReadiness():null;
   const scoreEl=document.getElementById('today-score');
@@ -1759,6 +1791,51 @@ function updateProgressHint(i){
     else hintEl.innerHTML='';
   }else hintEl.innerHTML='';
 }
+// Compares each exercise's best set in this session against its all-time best BEFORE
+// this session (weighted exercises rank by e1RM, bodyweight-only ones by reps - same
+// split used everywhere else PRs are tracked). Must be called before the session is
+// saved, since it reads current history as the "prior" baseline.
+function detectSessionPRs(exercises){
+  const gym=loadGymData();
+  const prs=[],nearMisses=[];
+  exercises.forEach(ex=>{
+    if(!ex.name)return;
+    const everWeighted=gym.some(s=>(s.exercises||[]).some(e=>e.name===ex.name&&(e.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0)))
+      ||(ex.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0);
+    if(everWeighted){
+      let priorBest=0;
+      gym.forEach(s=>(s.exercises||[]).forEach(e=>{
+        if(e.name!==ex.name)return;
+        (e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0).forEach(st=>{
+          const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);
+          const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
+          if(est>priorBest)priorBest=est;
+        });
+      }));
+      const newSets=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
+      if(!newSets.length)return;
+      let newBest=0,newW=0,newR=0;
+      newSets.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>newBest){newBest=est;newW=w;newR=r;}});
+      if(priorBest>0&&newBest>priorBest)prs.push({name:ex.name,detail:`${newW}kg × ${newR}`});
+      else if(priorBest>0&&newBest<priorBest&&newBest>=priorBest*0.95)nearMisses.push({name:ex.name,gapText:`${+(priorBest-newBest).toFixed(1)}kg e1RM`});
+    } else {
+      let priorBest=0;
+      gym.forEach(s=>(s.exercises||[]).forEach(e=>{
+        if(e.name!==ex.name)return;
+        (e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.reps||0)>0).forEach(st=>{
+          const r=parseFloat(st.reps||0);
+          if(r>priorBest)priorBest=r;
+        });
+      }));
+      const newSets=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.reps||0)>0);
+      if(!newSets.length)return;
+      const newBest=Math.max(...newSets.map(x=>parseFloat(x.reps||0)));
+      if(priorBest>0&&newBest>priorBest)prs.push({name:ex.name,detail:`${newBest} reps`});
+      else if(priorBest>0&&newBest<priorBest&&newBest>=priorBest-1){const gap=priorBest-newBest;nearMisses.push({name:ex.name,gapText:`${gap} rep${gap===1?'':'s'}`});}
+    }
+  });
+  return{prs,nearMisses};
+}
 function saveGymSession(){
   const notesEl=document.getElementById('gym-notes-field');
   if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
@@ -1767,6 +1844,7 @@ function saveGymSession(){
     .map(e=>{const n=(e.name||'').trim();return{...e,name:_resolveExName(n)||n,sets:(e.sets||[]).filter(hasValue)};})
     .filter(e=>e.name&&e.sets.length);
   if(!exercises.length){toastMsg('Add at least one exercise');return;}
+  const{prs,nearMisses}=detectSessionPRs(exercises);
   const sessions=loadGymData();
   sessions.push({date:dk(today()),type:gymDraft.type,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:Date.now()});
   saveGymData(sessions);
@@ -1777,7 +1855,15 @@ function saveGymSession(){
   if(!state.data[`${d}:session:gym`])state.data[`${d}:session:gym`]=[];
   state.data[`${d}:session:gym`].push(gymDraft.type);
   saveState();gymDraft=null;
-  toastMsg('Session saved');haptic('success');renderGymSection();
+  if(prs.length){
+    celebratePR(prs);
+    toastMsg(prs.length>1?`${prs.length} new PRs!`:`New PR: ${prs[0].name}`);
+  } else if(nearMisses.length){
+    toastMsg(`So close! ${nearMisses[0].gapText} off your ${nearMisses[0].name} PR`);
+  } else {
+    toastMsg('Session saved');
+  }
+  haptic('success');renderGymSection();
 }
 function renderRecentGymCard(){
   const {score,advice,col,hasMorning}=calcReadiness();
@@ -4226,10 +4312,10 @@ function calcReadiness(){
 
   let advice,col;
   if(score==null){advice='Log sleep & HRV for readiness score';col='var(--text3)';}
-  else if(score>=80){advice='Ready to train hard';col='var(--green)';}
-  else if(score>=60){advice='Good for a moderate session';col='var(--accent2)';}
-  else if(score>=40){advice='Easy session or rest recommended';col='var(--orange)';}
-  else{advice='Rest day — recovery priority';col='var(--red)';}
+  else if(score>=80){advice='Ready to train hard — good day to chase a PR';col='var(--green)';}
+  else if(score>=60){advice='Good for a moderate session — stick to your plan';col='var(--accent2)';}
+  else if(score>=40){advice='Dial back intensity today — favour technique over max effort';col='var(--orange)';}
+  else{advice='Rest day — recovery priority. If you must train, keep it light';col='var(--red)';}
 
   return{score,factors,advice,col,hasMorning:!!todayMorning};
 }
@@ -4262,6 +4348,124 @@ function renderReadinessCard(){
       ${checkinBtn}
     </div>
     ${bodyHtml}
+  </div>`;
+}
+
+// Best PR set in the last 7 days, across gym (weighted or bodyweight-reps) and runs
+// (longest distance, fastest pace). Scans chronologically and tracks a running best so
+// each session is judged against what was actually the record at the time it happened.
+function getWeeklyWin(){
+  const now=today();const weekAgo=addDays(now,-6);
+  const gym=[...loadGymData()].sort((a,b)=>a.date.localeCompare(b.date));
+  const runs=[...loadRunData()].sort((a,b)=>a.date.localeCompare(b.date));
+  const wins=[];
+  const exHasWeight={};
+  gym.forEach(s=>(s.exercises||[]).forEach(ex=>{if(ex.name&&(ex.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0))exHasWeight[ex.name]=true;}));
+  const bestWeighted={},bestReps={};
+  gym.forEach(s=>{
+    const inWeek=new Date(s.date+'T12:00:00')>=weekAgo;
+    (s.exercises||[]).forEach(ex=>{
+      if(!ex.name)return;
+      if(exHasWeight[ex.name]){
+        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
+        if(!ws.length)return;
+        let bestE1rm=0,bestW=0,bestR=0;
+        ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm){bestE1rm=est;bestW=w;bestR=r;}});
+        const prior=bestWeighted[ex.name]||0;
+        if(inWeek&&prior>0&&bestE1rm>prior)wins.push({type:'gym',name:ex.name,detail:`${bestW}kg × ${bestR}`,date:s.date});
+        if(bestE1rm>prior)bestWeighted[ex.name]=bestE1rm;
+      } else {
+        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.reps||0)>0);
+        if(!ws.length)return;
+        const bestR=Math.max(...ws.map(x=>parseFloat(x.reps||0)));
+        const prior=bestReps[ex.name]||0;
+        if(inWeek&&prior>0&&bestR>prior)wins.push({type:'gym',name:ex.name,detail:`${bestR} reps`,date:s.date});
+        if(bestR>prior)bestReps[ex.name]=bestR;
+      }
+    });
+  });
+  let bestKm=0,bestPace=Infinity;
+  runs.forEach(r=>{
+    const inWeek=new Date(r.date+'T12:00:00')>=weekAgo;
+    if(r.km>bestKm){
+      if(inWeek&&bestKm>0)wins.push({type:'run',name:'Longest run',detail:`${r.km}km`,date:r.date});
+      bestKm=r.km;
+    }
+    if(r.km&&r.time){
+      const pace=parseTimeToSecs(r.time)/r.km;
+      if(pace<bestPace){
+        if(inWeek&&bestPace<Infinity)wins.push({type:'run',name:'Fastest pace',detail:fmtPace(pace),date:r.date});
+        bestPace=pace;
+      }
+    }
+  });
+  if(!wins.length)return null;
+  wins.sort((a,b)=>b.date.localeCompare(a.date));
+  return wins[0];
+}
+function renderWeeklyWinCard(){
+  const el=document.getElementById('weekly-win-card');
+  if(!el)return;
+  const win=getWeeklyWin();
+  if(!win){el.innerHTML='';return;}
+  const dateLabel=new Date(win.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const icon=win.type==='run'?'🏃':'🏆';
+  el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;border-left:3px solid var(--green);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:6px;">${icon} This week's win</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">${esc(win.name)}</strong> — ${win.detail} on ${dateLabel}</div>
+  </div>`;
+}
+
+// "On this day" flashback - finds the closest gym session to 1/2/4/8/12 weeks ago and
+// compares an exercise from it against that exercise's current all-time best, picking
+// whichever comparison shows the biggest relative gain.
+function getFlashback(){
+  const gym=loadGymData();
+  if(gym.length<2)return null;
+  const now=today();
+  const curBestMap={};
+  gym.forEach(s=>(s.exercises||[]).forEach(e=>{
+    if(!e.name)return;
+    (e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0).forEach(st=>{
+      const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);
+      const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
+      if(!curBestMap[e.name]||est>curBestMap[e.name])curBestMap[e.name]=est;
+    });
+  }));
+  const windows=[{days:7,label:'1 week ago'},{days:14,label:'2 weeks ago'},{days:28,label:'4 weeks ago'},{days:56,label:'8 weeks ago'},{days:84,label:'12 weeks ago'}];
+  let best=null;
+  windows.forEach(w=>{
+    const target=addDays(now,-w.days);
+    let closest=null,closestDiff=Infinity;
+    gym.forEach(s=>{
+      const d=new Date(s.date+'T12:00:00');
+      const diff=Math.abs((d-target)/86400000);
+      if(diff<=2&&diff<closestDiff){closest=s;closestDiff=diff;}
+    });
+    if(!closest)return;
+    (closest.exercises||[]).forEach(ex=>{
+      if(!ex.name)return;
+      const oldSets=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
+      if(!oldSets.length)return;
+      let oldBestE1rm=0,oldW=0,oldR=0;
+      oldSets.forEach(s=>{const w=parseFloat(s.weight);const r=parseFloat(s.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>oldBestE1rm){oldBestE1rm=est;oldW=w;oldR=r;}});
+      const curBest=curBestMap[ex.name]||0;
+      if(curBest<=oldBestE1rm)return;
+      const delta=+(curBest-oldBestE1rm).toFixed(1);
+      const pctGain=delta/oldBestE1rm;
+      if(!best||pctGain>best.pctGain)best={name:ex.name,label:w.label,oldW,oldR,delta,curBest,pctGain};
+    });
+  });
+  return best;
+}
+function renderFlashbackCard(){
+  const el=document.getElementById('flashback-card');
+  if(!el)return;
+  const fb=getFlashback();
+  if(!fb){el.innerHTML='';return;}
+  el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(5,150,105,0.05));border-color:rgba(37,99,235,0.25);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);margin-bottom:6px;">📅 On this day · ${fb.label}</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;">You did <strong style="color:var(--text);">${esc(fb.name)}</strong> at ${fb.oldW}kg × ${fb.oldR}. You've since added <strong style="color:var(--green);">+${fb.delta}kg</strong> — now at ${fb.curBest}kg e1RM.</div>
   </div>`;
 }
 

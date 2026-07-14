@@ -321,6 +321,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       </div>
     </div>
     <div class="today-status" id="today-status">Let's get started</div>
+    <div id="rest-day-nudge"></div>
     <div class="today-habits" id="today-habits"></div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
       <button onclick="changeWeek(-1)" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -328,6 +329,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       <button onclick="changeWeek(1)" id="week-next-btn" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
     </div>
     <div id="readiness-card"></div>
+    <div id="monday-recap-card"></div>
     <div id="weekly-win-card"></div>
     <div id="flashback-card"></div>
     <div class="week-strip" id="week-strip"></div>
@@ -877,6 +879,105 @@ function getWeekScore(){
   for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(d.getDate()+i);if(d>now)break;const ds=dk(d);goalsActiveOn(ds).forEach(g=>{total++;if(goalDone(ds,g))done++;});}
   return total?Math.round(done/total*100):0;
 }
+// Same daily-goal completion % as getWeekScore, but for an arbitrary (fully elapsed) week.
+function getWeekScoreForMonday(mon){
+  let total=0,done=0;
+  for(let i=0;i<7;i++){const ds=dk(addDays(mon,i));goalsActiveOn(ds).forEach(g=>{total++;if(goalDone(ds,g))done++;});}
+  return total?Math.round(done/total*100):0;
+}
+// Monday recap - last week's numbers, shown once you open the app on Monday. Reuses the
+// same "running best, scanned chronologically" PR-detection technique as getWeeklyWin,
+// just counting how many PRs landed in last week's date range instead of picking one.
+function getMondayRecap(){
+  const now=today();
+  if(now.getDay()!==1)return null;
+  const thisMon=getMonday(now);
+  const lastMon=addDays(thisMon,-7),lastSun=addDays(thisMon,-1);
+  const gym=loadGymData();const runs=loadRunData();
+  const weekGym=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=lastMon&&d<=lastSun;});
+  const sets=weekGym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  const weekRuns=runs.filter(r=>{const d=new Date(r.date+'T12:00:00');return d>=lastMon&&d<=lastSun;});
+  const km=weekRuns.reduce((s,r)=>s+(r.km||0),0);
+  const score=getWeekScoreForMonday(lastMon);
+  const exHasWeight={};
+  gym.forEach(s=>(s.exercises||[]).forEach(ex=>{if(ex.name&&(ex.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0))exHasWeight[ex.name]=true;}));
+  const sorted=[...gym].sort((a,b)=>a.date.localeCompare(b.date));
+  const bestWeighted={},bestReps={};
+  let prCount=0;
+  sorted.forEach(s=>{
+    const d=new Date(s.date+'T12:00:00');
+    const inWeek=d>=lastMon&&d<=lastSun;
+    (s.exercises||[]).forEach(ex=>{
+      if(!ex.name)return;
+      if(exHasWeight[ex.name]){
+        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
+        if(!ws.length)return;
+        let bestE1rm=0;
+        ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm)bestE1rm=est;});
+        const prior=bestWeighted[ex.name]||0;
+        if(inWeek&&prior>0&&bestE1rm>prior)prCount++;
+        if(bestE1rm>prior)bestWeighted[ex.name]=bestE1rm;
+      } else {
+        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.reps||0)>0);
+        if(!ws.length)return;
+        const bestR=Math.max(...ws.map(x=>parseFloat(x.reps||0)));
+        const prior=bestReps[ex.name]||0;
+        if(inWeek&&prior>0&&bestR>prior)prCount++;
+        if(bestR>prior)bestReps[ex.name]=bestR;
+      }
+    });
+  });
+  if(!sets&&!km&&!score)return null;
+  return{sets,km:+km.toFixed(1),score,prCount};
+}
+function renderMondayRecapCard(){
+  const el=document.getElementById('monday-recap-card');
+  if(!el)return;
+  const r=getMondayRecap();
+  if(!r){el.innerHTML='';return;}
+  el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(5,150,105,0.06));border-color:rgba(37,99,235,0.25);">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);margin-bottom:8px;">📬 Last week</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6;"><strong style="color:var(--text);">${r.sets} sets</strong> · <strong style="color:var(--text);">${r.km}km</strong> · <strong style="color:var(--text);">${r.score}%</strong> daily goals${r.prCount?` · <strong style="color:var(--green);">${r.prCount} PR${r.prCount>1?'s':''}</strong>`:''}</div>
+  </div>`;
+}
+// Consecutive fully-completed weeks where every weekly session goal (Gym 3x, Run 3x,
+// plus any custom weekly goals) hit its target - same target logic as getWeeklyQuota,
+// just replayed backwards week by week instead of only the current week.
+function getWeeklyQuotaForWeek(mon){
+  const goals=allSessionGoals();
+  return goals.map(g=>{
+    const target=(state.builtinTargets&&state.builtinTargets[g.id])||g.weeklyTarget||3;
+    let done=0;
+    for(let i=0;i<7;i++){if(getSessionDone(dk(addDays(mon,i)),g.id))done++;}
+    return{...g,done,target};
+  });
+}
+function getWeeklyStreak(){
+  const now=today();
+  let weekStart=addDays(getMonday(now),-7);
+  let streak=0;
+  while(streak<104){
+    const quota=getWeeklyQuotaForWeek(weekStart);
+    if(!quota.length||!quota.every(g=>g.done>=g.target))break;
+    streak++;
+    weekStart=addDays(weekStart,-7);
+  }
+  return streak;
+}
+// Standing observation, not a live nudge - only returns something when categories are
+// meaningfully out of balance (gap of 2+ sessions) so it stays quiet the rest of the time.
+function getPPLBalance(){
+  const now=today();const mon=getMonday(now);
+  const gym=loadGymData().filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=mon&&d<=now;});
+  const counts={Push:0,Pull:0,Legs:0};
+  gym.forEach(s=>{if(counts[s.type]!==undefined)counts[s.type]++;});
+  const vals=Object.entries(counts);
+  const max=Math.max(...vals.map(v=>v[1])),min=Math.min(...vals.map(v=>v[1]));
+  if(max-min<2)return null;
+  const behind=vals.filter(([,v])=>v===min).map(([k])=>k);
+  const ahead=vals.filter(([,v])=>v===max).map(([k])=>k);
+  return{behind,ahead,gap:max-min};
+}
 function getWeeklyQuota(){
   const now=today();const mon=getMonday(now);
   const goals=allSessionGoals();
@@ -937,8 +1038,8 @@ function renderToday(){
 
   // These are about "right now", not whatever day is being browsed in the week strip -
   // only show them when actually viewing today.
-  if(viewingToday){renderWeeklyWinCard();renderFlashbackCard();}
-  else{const wc=document.getElementById('weekly-win-card');if(wc)wc.innerHTML='';const fc=document.getElementById('flashback-card');if(fc)fc.innerHTML='';}
+  if(viewingToday){renderWeeklyWinCard();renderFlashbackCard();renderMondayRecapCard();}
+  else{const wc=document.getElementById('weekly-win-card');if(wc)wc.innerHTML='';const fc=document.getElementById('flashback-card');if(fc)fc.innerHTML='';const mc=document.getElementById('monday-recap-card');if(mc)mc.innerHTML='';}
   const habitScore=getTodayScore();
   const readiness=viewingToday?calcReadiness():null;
   const scoreEl=document.getElementById('today-score');
@@ -977,6 +1078,13 @@ function renderToday(){
     dialLblEl.textContent='week score';
     badgeEl.textContent='';
     glowEl.style.background=`radial-gradient(circle at 32% 28%, rgba(37,99,235,0.45) 0%, rgba(37,99,235,0.16) 45%, transparent 75%)`;
+  }
+  const nudgeEl=document.getElementById('rest-day-nudge');
+  if(nudgeEl){
+    if(viewingToday){
+      const lr=getLoadRatio();
+      nudgeEl.innerHTML=lr.ratio>1.3?`<div style="font-size:12px;font-weight:700;color:var(--orange);margin-top:6px;">⚠️ 7-day load ${Math.round(lr.avg7)}/day vs 28-day avg ${Math.round(lr.avg28)}/day — running high, consider a lighter session or rest day</div>`:'';
+    }else{nudgeEl.innerHTML='';}
   }
   const _n=state.userName?`, ${esc(state.userName)}`:'';
   // Date-seeded pick so message is stable all day but rotates daily
@@ -2516,6 +2624,10 @@ function renderTrends(){
   const gradeNow=consistencyGrade(0),gradePrev=consistencyGrade(28);
   const gradeColor=gradeNow.grade==='S'?'var(--accent2)':gradeNow.grade==='A'?'var(--green)':gradeNow.grade==='B'?'var(--orange)':'var(--text3)';
   const gradeTrend=gradeNow.rank>gradePrev.rank?`<span style="color:var(--green);">↑ was ${gradePrev.grade}</span>`:gradeNow.rank<gradePrev.rank?`<span style="color:var(--red);">↓ was ${gradePrev.grade}</span>`:`<span style="color:var(--text3);">→ steady</span>`;
+  const streak=getWeeklyStreak();
+  const streakHtml=streak>0?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--orange);"><div style="font-size:13px;font-weight:700;color:var(--text);">🔥 ${streak} week${streak>1?'s':''} running — every weekly session target hit</div></div>`:'';
+  const balance=getPPLBalance();
+  const balanceHtml=balance?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--accent2);"><div style="font-size:13px;font-weight:700;color:var(--text);">⚖️ ${balance.behind.join('/')} ${balance.behind.length>1?'are':'is'} ${balance.gap} session${balance.gap>1?'s':''} behind ${balance.ahead.join('/')} this week</div></div>`:'';
   el.innerHTML=`
     <div class="metric-row">
       <div class="metric-card accent"><div class="m-label">This Week</div><div class="m-val">${weekScore}</div><div class="m-unit">% complete</div></div>
@@ -2525,6 +2637,8 @@ function renderTrends(){
       <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekSets}</div><div class="m-unit">sets this week</div></div>
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week</div></div>
     </div>
+    ${streakHtml}
+    ${balanceHtml}
     ${renderActivityLoad()}
     ${renderWeeklyTrendChart()}
     ${renderDayOfWeekHeatmap()}
@@ -3768,6 +3882,25 @@ function renderVapingChart(data){
   </div>`;
 }
 
+function fmtDurationFromSecs(s){
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.round(s%60);
+  return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
+}
+// Projects a finish time from recent quality-run pace (Tempo/Fartlek/Intervals/Hard) -
+// a simple heuristic (recent tempo pace applied directly to race distance), not a proper
+// VDOT-style multi-distance conversion, so the copy says so rather than overclaiming precision.
+function getRaceProjection(){
+  const r=state.race;
+  if(!r||!r.date||!r.km)return null;
+  const QUALITY=new Set(['Tempo','Fartlek','Intervals','Hard']);
+  const runs=loadRunData().filter(x=>x.km&&x.time&&QUALITY.has(x.effort));
+  const recent=runs.slice(-6);
+  if(recent.length<2)return null;
+  const paces=recent.map(x=>x.km/parseTimeToSecs(x.time));
+  const avgPace=paces.reduce((a,b)=>a+b,0)/paces.length;
+  const projSecs=Math.round(r.km/avgPace);
+  return{projSecs,pace:fmtPace(avgPace),projTime:fmtDurationFromSecs(projSecs)};
+}
 function renderRaceSection(){
   const r=state.race;
   if(!r||!r.date){
@@ -3776,6 +3909,17 @@ function renderRaceSection(){
   const days=daysUntil(r.date);
   const goalSecs=r.goalTime?parseTimeToSecs(r.goalTime):0;
   const goalPace=(r.km&&goalSecs)?fmtPace(r.km/goalSecs):null;
+  const proj=getRaceProjection();
+  const projHtml=proj?(()=>{
+    let compareLine='';
+    if(goalSecs){
+      const diff=proj.projSecs-goalSecs;
+      if(Math.abs(diff)<30)compareLine=` — right on pace for your ${esc(r.goalTime)} goal`;
+      else if(diff<0)compareLine=` — ahead of your ${esc(r.goalTime)} goal by ${fmtDurationFromSecs(Math.abs(diff))}`;
+      else compareLine=` — ${fmtDurationFromSecs(diff)} off your ${esc(r.goalTime)} goal`;
+    }
+    return`<div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">Projected: ${proj.projTime}</strong> at your recent tempo pace (${proj.pace})${compareLine}</div>`;
+  })():'';
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">Race Target</span><button onclick="openRaceModal()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Edit</button></div>
     <div style="font-size:14px;font-weight:800;margin-bottom:4px;">${esc(r.name||'Race')}</div>
@@ -3785,6 +3929,7 @@ function renderRaceSection(){
       ${r.goalTime?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal time: ${esc(r.goalTime)}</span>`:''}
       ${goalPace?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal pace: ${goalPace}</span>`:''}
     </div>`:''}
+    ${projHtml}
   </div>`;
 }
 
@@ -4256,6 +4401,21 @@ function saveMorningCheckin(){
   renderReadinessCard();
 }
 
+// 7-day vs 28-day training load ratio - same load model as calcReadiness/Activity Load,
+// pulled out standalone so the Today page can surface it directly as a proactive nudge
+// instead of only showing up if you go look at the Activity Load gauge yourself.
+function getLoadRatio(){
+  const now=today();const gym=loadGymData();const runs=loadRunData();
+  const effortMult={Recovery:0.6,Easy:1.0,'Long Run':1.1,Long:1.1,Tempo:1.75,Intervals:2.0,Hard:2.0,Race:2.2};
+  function runLoad(r){const mult=effortMult[r.effort]||1.0;if(r.time){const secs=parseTimeToSecs(r.time);if(secs>0)return Math.round((secs/60)*mult);}if(r.km)return Math.round(r.km*6*mult);return Math.round(30*mult);}
+  function gymSessionLoad(s){const sets=(s.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);return sets>0?sets*2:30;}
+  function dayLoad(ds){let l=0;gym.filter(s=>s.date===ds).forEach(s=>{l+=gymSessionLoad(s);});runs.filter(r=>r.date===ds).forEach(r=>{l+=runLoad(r);});return l;}
+  let load7=0,load28=0;
+  for(let i=0;i<7;i++)load7+=dayLoad(dk(addDays(now,-i)));
+  for(let i=0;i<28;i++)load28+=dayLoad(dk(addDays(now,-i)));
+  const avg7=load7/7,avg28=load28/28;
+  return{ratio:avg28>0?avg7/avg28:1,avg7,avg28};
+}
 function calcReadiness(){
   const ds=dk(today());
   const morning=loadMorningData();

@@ -332,6 +332,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div id="monday-recap-card"></div>
     <div id="weekly-win-card"></div>
     <div id="flashback-card"></div>
+    <div id="did-you-know-card"></div>
     <div class="week-strip" id="week-strip"></div>
     <div id="race-card-wrap"></div>
     <div id="session-card-wrap"></div>
@@ -964,6 +965,25 @@ function getWeeklyStreak(){
   }
   return streak;
 }
+// Longest streak ever achieved (not just the current one) - scans every fully-elapsed
+// week from your first logged session forward.
+function getBestStreakEver(){
+  const gym=loadGymData();const runs=loadRunData();
+  const allDates=[...gym.map(s=>s.date),...runs.map(r=>r.date)].filter(Boolean).sort();
+  if(!allDates.length)return 0;
+  const now=today();
+  let wk=getMonday(new Date(allDates[0]+'T12:00:00'));
+  let cur=0,best=0;
+  while(wk<=now){
+    const weekEnd=addDays(wk,6);
+    if(weekEnd>now)break;
+    const quota=getWeeklyQuotaForWeek(wk);
+    if(quota.length&&quota.every(g=>g.done>=g.target)){cur++;best=Math.max(best,cur);}
+    else cur=0;
+    wk=addDays(wk,7);
+  }
+  return best;
+}
 // Standing observation, not a live nudge - only returns something when categories are
 // meaningfully out of balance (gap of 2+ sessions) so it stays quiet the rest of the time.
 function getPPLBalance(){
@@ -977,6 +997,26 @@ function getPPLBalance(){
   const behind=vals.filter(([,v])=>v===min).map(([k])=>k);
   const ahead=vals.filter(([,v])=>v===max).map(([k])=>k);
   return{behind,ahead,gap:max-min};
+}
+// Compares this (in-progress) week's sets/km against your all-time weekly average,
+// computed as lifetime totals divided by weeks elapsed since your first logged session.
+function getWeekVsAverage(){
+  const now=today();const mon=getMonday(now);
+  const gym=loadGymData();const runs=loadRunData();
+  const weekSets=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=mon&&d<=now;}).reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  const weekKm=runs.filter(r=>{const d=new Date(r.date+'T12:00:00');return d>=mon&&d<=now;}).reduce((s,r)=>s+(r.km||0),0);
+  const allDates=[...gym.map(s=>s.date),...runs.map(r=>r.date)].filter(Boolean).sort();
+  if(!allDates.length)return null;
+  const firstDate=new Date(allDates[0]+'T12:00:00');
+  const weeksElapsed=Math.max(1,Math.ceil((now-getMonday(firstDate))/(7*86400000)));
+  const totalSets=gym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  const totalKm=runs.reduce((s,r)=>s+(r.km||0),0);
+  const avgSets=totalSets/weeksElapsed,avgKm=totalKm/weeksElapsed;
+  if(!avgSets&&!avgKm)return null;
+  return{
+    setsPct:avgSets>0?Math.round((weekSets/avgSets-1)*100):null,
+    kmPct:avgKm>0?Math.round((weekKm/avgKm-1)*100):null,
+  };
 }
 function getWeeklyQuota(){
   const now=today();const mon=getMonday(now);
@@ -1038,8 +1078,8 @@ function renderToday(){
 
   // These are about "right now", not whatever day is being browsed in the week strip -
   // only show them when actually viewing today.
-  if(viewingToday){renderWeeklyWinCard();renderFlashbackCard();renderMondayRecapCard();}
-  else{const wc=document.getElementById('weekly-win-card');if(wc)wc.innerHTML='';const fc=document.getElementById('flashback-card');if(fc)fc.innerHTML='';const mc=document.getElementById('monday-recap-card');if(mc)mc.innerHTML='';}
+  if(viewingToday){renderWeeklyWinCard();renderFlashbackCard();renderMondayRecapCard();renderDidYouKnowCard();}
+  else{['weekly-win-card','flashback-card','monday-recap-card','did-you-know-card'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
   const habitScore=getTodayScore();
   const readiness=viewingToday?calcReadiness():null;
   const scoreEl=document.getElementById('today-score');
@@ -1082,8 +1122,13 @@ function renderToday(){
   const nudgeEl=document.getElementById('rest-day-nudge');
   if(nudgeEl){
     if(viewingToday){
-      const lr=getLoadRatio();
-      nudgeEl.innerHTML=lr.ratio>1.3?`<div style="font-size:12px;font-weight:700;color:var(--orange);margin-top:6px;">⚠️ 7-day load ${Math.round(lr.avg7)}/day vs 28-day avg ${Math.round(lr.avg28)}/day — running high, consider a lighter session or rest day</div>`:'';
+      const deload=getDeloadFlag();
+      if(deload){
+        nudgeEl.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--red);margin-top:6px;">🔻 Load's been high for 2+ weeks running (${Math.round(deload.now.avg7)}/day vs ${Math.round(deload.now.avg28)}/day avg) — a deload week could help</div>`;
+      }else{
+        const lr=getLoadRatio();
+        nudgeEl.innerHTML=lr.ratio>1.3?`<div style="font-size:12px;font-weight:700;color:var(--orange);margin-top:6px;">⚠️ 7-day load ${Math.round(lr.avg7)}/day vs 28-day avg ${Math.round(lr.avg28)}/day — running high, consider a lighter session or rest day</div>`:'';
+      }
     }else{nudgeEl.innerHTML='';}
   }
   const _n=state.userName?`, ${esc(state.userName)}`:'';
@@ -1775,6 +1820,22 @@ function gymCheckSetDone(i,si){
     el.style.background=done?'rgba(8,132,91,0.08)':'';
     el.style.borderColor=done?'rgba(8,132,91,0.4)':'';
   });
+  // "Beat your ghost" - live-compare the set being typed against the same set number
+  // from last session, using the ghost values stashed on the row at render time.
+  const ghostEl=document.getElementById(`ghost-${i}-${si}`);
+  if(ghostEl&&row&&row.dataset.ghostW!==undefined&&row.dataset.ghostW!==''){
+    const gw=parseFloat(row.dataset.ghostW),gr=parseFloat(row.dataset.ghostR||'0');
+    const curW=parseFloat(kgEl&&kgEl.value)||0,curR=parseFloat(repsEl&&repsEl.value)||0;
+    const label=gw>0?`${gw}kg×${gr}`:`${gr} reps`;
+    if(!curW&&!curR){ghostEl.style.color='var(--text3)';ghostEl.textContent=`vs last time: ${label}`;}
+    else{
+      const beat=curW>gw||(curW===gw&&curR>gr);
+      const matched=curW===gw&&curR===gr;
+      if(beat){ghostEl.style.color='var(--green)';ghostEl.textContent=`✓ beat last time (${label})`;}
+      else if(matched){ghostEl.style.color='var(--accent2)';ghostEl.textContent=`= matched last time (${label})`;}
+      else{ghostEl.style.color='var(--text3)';ghostEl.textContent=`vs last time: ${label}`;}
+    }
+  }
 }
 
 function renderSupersetExercisesHtml(lastSame,prog,sessions){
@@ -1858,14 +1919,18 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
       const inputBg=s.warmup?'rgba(194,80,0,0.08)':done?'rgba(8,132,91,0.08)':'';
       const inputBdr=s.warmup?'rgba(194,80,0,0.35)':done?'rgba(8,132,91,0.4)':'';
       const inputStyle=`padding:10px 12px;${inputBg?'background:'+inputBg+';':''}${inputBdr?'border-color:'+inputBdr+';':''}`;
-      return`<div id="set-row-${i}-${si}" style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:6px;align-items:center;border-radius:8px;${rowBg?'background:'+rowBg+';':''}">
+      const ghost=lastSets[si]||null;
+      const ghostW=ghost?parseFloat(ghost.weight||0):null;
+      const ghostR=ghost?parseFloat(ghost.reps||0):null;
+      const ghostLine=ghost?`<div id="ghost-${i}-${si}" style="font-size:10px;color:var(--text3);margin:-2px 0 6px 34px;">vs last time: ${ghostW>0?`${ghostW}kg×${ghostR}`:`${ghostR} reps`}</div>`:'';
+      return`<div id="set-row-${i}-${si}" data-ghost-w="${ghostW!=null?ghostW:''}" data-ghost-r="${ghostR!=null?ghostR:''}" style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:2px;align-items:center;border-radius:8px;${rowBg?'background:'+rowBg+';':''}">
       <button id="set-num-${i}-${si}" onclick="gymToggleWarmup(${i},${si})" style="width:28px;height:28px;border-radius:8px;border:1px solid ${btnBdr};background:${btnBg};color:${btnCol};font-size:10px;font-weight:800;cursor:pointer;" title="${s.warmup?'Warmup':'Tap to mark warmup'}">${s.warmup?'W':si+1}</button>
       <input id="set-kg-${i}-${si}" class="run-field" type="number" inputmode="decimal" placeholder="kg" value="${esc(String(s.weight||''))}"
         style="${inputStyle}" oninput="gymSetWeight(${i},${si},this.value)">
       <input id="set-reps-${i}-${si}" class="run-field" type="number" inputmode="numeric" placeholder="reps" value="${esc(String(s.reps||''))}"
         style="${inputStyle}" oninput="gymSetReps(${i},${si},this.value)">
       <button onclick="gymRemoveSet(${i},${si})" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;">×</button>
-    </div>`;}).join('')}
+    </div>${ghostLine}`;}).join('')}
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="gymAddSet(${i})" style="flex:1;padding:8px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
       ${hideRest?'':`<button onclick="startRestTimer(${_restSecs})" style="padding:8px 14px;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${_restSecs>=60?Math.floor(_restSecs/60)+'m'+(_restSecs%60?_restSecs%60+'s':''):_restSecs+'s'} rest</button>`}
@@ -2366,6 +2431,8 @@ function renderPRs(){
   const gym=loadGymData();
   if(!gym.length){el.innerHTML=`<div class="empty-state"><strong>No sessions yet</strong>Log your first gym session to start tracking PRs.</div>`;return;}
 
+  const healthData=loadHealthData();
+  const latestBW=healthData.length?healthData[healthData.length-1].weight:null;
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtD(ds){const d=new Date(ds+'T12:00:00');return`${d.getDate()} ${MONTHS[d.getMonth()]}`;}
   // Median, not mean - resists a single light/deload or single fluke-great session
@@ -2560,7 +2627,7 @@ function renderPRs(){
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
-                <div style="font-size:11px;color:var(--text3);margin-top:2px;">${isBW?'Bodyweight':`e1RM ${ex.e1rmPB.e1rm}kg`}</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px;">${isBW?'Bodyweight':`e1RM ${ex.e1rmPB.e1rm}kg${latestBW?` · ${(ex.pb.weight/latestBW).toFixed(2)}x bodyweight`:''}`}</div>
               </div>
               <div style="text-align:right;flex-shrink:0;">
                 <div style="display:flex;align-items:baseline;justify-content:flex-end;">
@@ -2628,14 +2695,16 @@ function renderTrends(){
   const streakHtml=streak>0?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--orange);"><div style="font-size:13px;font-weight:700;color:var(--text);">🔥 ${streak} week${streak>1?'s':''} running — every weekly session target hit</div></div>`:'';
   const balance=getPPLBalance();
   const balanceHtml=balance?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--accent2);"><div style="font-size:13px;font-weight:700;color:var(--text);">⚖️ ${balance.behind.join('/')} ${balance.behind.length>1?'are':'is'} ${balance.gap} session${balance.gap>1?'s':''} behind ${balance.ahead.join('/')} this week</div></div>`:'';
+  const vsAvg=getWeekVsAverage();
+  const vsAvgLine=(field,pct)=>pct==null?'':`<span style="color:${pct>=0?'var(--green)':'var(--red)'};">${pct>=0?'+':''}${pct}% vs your ${field} avg</span>`;
   el.innerHTML=`
     <div class="metric-row">
       <div class="metric-card accent"><div class="m-label">This Week</div><div class="m-val">${weekScore}</div><div class="m-unit">% complete</div></div>
       <div class="metric-card"><div class="m-label">Consistency</div><div style="font-size:42px;font-weight:800;color:${gradeColor};letter-spacing:-2px;line-height:1;">${gradeNow.grade}</div><div class="m-unit">last 28 days · ${gradeTrend}</div></div>
     </div>
     <div class="metric-row">
-      <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekSets}</div><div class="m-unit">sets this week</div></div>
-      <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week</div></div>
+      <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekSets}</div><div class="m-unit">sets this week${vsAvg&&vsAvg.setsPct!=null?`<br>${vsAvgLine('weekly',vsAvg.setsPct)}`:''}</div></div>
+      <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week${vsAvg&&vsAvg.kmPct!=null?`<br>${vsAvgLine('weekly',vsAvg.kmPct)}`:''}</div></div>
     </div>
     ${streakHtml}
     ${balanceHtml}
@@ -3512,6 +3581,111 @@ function renderSleepTrendCard(){
 }
 
 // ── ME PAGE ──
+// All-time bests across every logged type, in one place - distinct from the per-exercise
+// PR Tracker, which only covers gym lifts. "Best readiness day" isn't included since
+// calcReadiness() is hardcoded to today and isn't cheaply date-parameterizable; sleep
+// score and HRV bests stand in as honest, directly-computable substitutes.
+function getHallOfFame(){
+  const gym=loadGymData();const runs=loadRunData();
+  const entries=[];
+  let heaviest=null;
+  gym.forEach(s=>(s.exercises||[]).forEach(ex=>(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0).forEach(st=>{
+    const w=parseFloat(st.weight);
+    if(!heaviest||w>heaviest.weight)heaviest={weight:w,name:ex.name,date:s.date,reps:st.reps};
+  })));
+  if(heaviest)entries.push({icon:'🏋️',label:'Heaviest lift',value:`${heaviest.weight}kg`,detail:`${esc(heaviest.name)} · ${fmtShortDate(heaviest.date)}`});
+  let longestRun=null;
+  runs.forEach(r=>{if(r.km&&(!longestRun||r.km>longestRun.km))longestRun=r;});
+  if(longestRun)entries.push({icon:'🏃',label:'Longest run',value:`${longestRun.km}km`,detail:fmtShortDate(longestRun.date)});
+  const QUALITY=new Set(['Tempo','Fartlek','Intervals','Hard','Race']);
+  let fastest=null;
+  runs.forEach(r=>{if(r.km&&r.time&&QUALITY.has(r.effort)){const speed=r.km/parseTimeToSecs(r.time);if(!fastest||speed>fastest.speed)fastest={speed,date:r.date};}});
+  if(fastest)entries.push({icon:'⚡',label:'Fastest pace',value:fmtPace(fastest.speed),detail:fmtShortDate(fastest.date)});
+  const morning=loadMorningData();
+  let bestSleep=null,bestHRV=null;
+  Object.entries(morning).forEach(([ds,v])=>{
+    if(v&&v.sleep!=null&&(!bestSleep||v.sleep>bestSleep.val))bestSleep={val:v.sleep,ds};
+    if(v&&v.hrv!=null&&(!bestHRV||v.hrv>bestHRV.val))bestHRV={val:v.hrv,ds};
+  });
+  if(bestSleep)entries.push({icon:'😴',label:'Best sleep score',value:bestSleep.val,detail:fmtShortDate(bestSleep.ds)});
+  if(bestHRV)entries.push({icon:'💓',label:'Best HRV',value:`${bestHRV.val}ms`,detail:fmtShortDate(bestHRV.ds)});
+  const bestStreak=getBestStreakEver();
+  if(bestStreak>0)entries.push({icon:'🔥',label:'Longest streak',value:`${bestStreak} week${bestStreak>1?'s':''}`,detail:'every weekly target hit'});
+  return entries;
+}
+function renderHallOfFameCard(){
+  const entries=getHallOfFame();
+  if(!entries.length)return'';
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">🏆 Hall of Fame</span></div>
+    ${entries.map((e,idx)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${idx<entries.length-1?'border-bottom:1px solid var(--border);':''}">
+      <div style="font-size:22px;width:28px;text-align:center;flex-shrink:0;">${e.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text2);">${e.label}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px;">${e.detail}</div>
+      </div>
+      <div style="font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;">${e.value}</div>
+    </div>`).join('')}
+  </div>`;
+}
+// Fixed milestone thresholds against lifetime totals. Not configurable - deliberately
+// simple unlock/locked state rather than a full progression system.
+function getMilestones(){
+  const gym=loadGymData();const runs=loadRunData();
+  const totalKm=runs.reduce((s,r)=>s+(r.km||0),0);
+  const totalSets=gym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  const exHasWeight={};
+  gym.forEach(s=>(s.exercises||[]).forEach(ex=>{if(ex.name&&(ex.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0))exHasWeight[ex.name]=true;}));
+  const sorted=[...gym].sort((a,b)=>a.date.localeCompare(b.date));
+  const bestWeighted={},bestReps={};
+  let prCount=0;
+  sorted.forEach(s=>{
+    (s.exercises||[]).forEach(ex=>{
+      if(!ex.name)return;
+      if(exHasWeight[ex.name]){
+        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
+        if(!ws.length)return;
+        let bestE1rm=0;
+        ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm)bestE1rm=est;});
+        const prior=bestWeighted[ex.name]||0;
+        if(prior>0&&bestE1rm>prior)prCount++;
+        if(bestE1rm>prior)bestWeighted[ex.name]=bestE1rm;
+      } else {
+        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.reps||0)>0);
+        if(!ws.length)return;
+        const bestR=Math.max(...ws.map(x=>parseFloat(x.reps||0)));
+        const prior=bestReps[ex.name]||0;
+        if(prior>0&&bestR>prior)prCount++;
+        if(bestR>prior)bestReps[ex.name]=bestR;
+      }
+    });
+  });
+  const bestStreak=getBestStreakEver();
+  const defs=[
+    {icon:'🏋️',name:'First Session',need:1,have:gym.length},
+    {icon:'💯',name:'100 Sessions',need:100,have:gym.length},
+    {icon:'🏃',name:'50km Run Total',need:50,have:totalKm},
+    {icon:'🏅',name:'Marathon Distance',need:42.2,have:totalKm},
+    {icon:'🔟',name:'10 PRs',need:10,have:prCount},
+    {icon:'📈',name:'1,000 Sets',need:1000,have:totalSets},
+    {icon:'🔥',name:'4-Week Streak',need:4,have:bestStreak},
+  ];
+  return defs.map(d=>({...d,unlocked:d.have>=d.need,pct:Math.min(100,Math.round(d.have/d.need*100))}));
+}
+function renderMilestonesCard(){
+  const badges=getMilestones();
+  const unlockedCount=badges.filter(b=>b.unlocked).length;
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Milestones</span><span class="chart-card-val">${unlockedCount}/${badges.length}</span></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      ${badges.map(b=>`<div style="text-align:center;opacity:${b.unlocked?1:0.35};">
+        <div style="font-size:26px;line-height:1;">${b.icon}</div>
+        <div style="font-size:9px;font-weight:700;color:var(--text2);margin-top:4px;line-height:1.2;">${esc(b.name)}</div>
+        ${!b.unlocked?`<div style="font-size:8px;color:var(--text3);margin-top:2px;">${b.pct}%</div>`:''}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
 function renderMe(){
   const el=document.getElementById('me-content');
   const name=state.userName||'';
@@ -3520,6 +3694,8 @@ function renderMe(){
   const latestW=health.length?health[health.length-1].weight:null;
 
   el.innerHTML=`
+    ${renderHallOfFameCard()}
+    ${renderMilestonesCard()}
     ${renderWeightSection(health)}
     ${renderBodyCompGoalCard(health)}
     ${renderBodyFatSection(health)}
@@ -4281,6 +4457,26 @@ function clearAllData(){
 }
 
 // ── MONTHLY HISTORY ──
+// Short written summary for the current month vs last month - same underlying per-month
+// stats as the monthly cards below, just in a sentence instead of a stat grid.
+function getMonthlyNarrative(){
+  const now=today();
+  const gym=loadGymData();const runs=loadRunData();
+  function statsFor(year,month){
+    const mGym=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d.getFullYear()===year&&d.getMonth()===month;});
+    const mRun=runs.filter(r=>{const d=new Date(r.date+'T12:00:00');return d.getFullYear()===year&&d.getMonth()===month;});
+    return{gymCount:mGym.length,km:+mRun.reduce((s,r)=>s+(r.km||0),0).toFixed(1)};
+  }
+  const cur=statsFor(now.getFullYear(),now.getMonth());
+  const lastM=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const prev=statsFor(lastM.getFullYear(),lastM.getMonth());
+  if(!cur.gymCount&&!cur.km)return null;
+  const kmDelta=prev.km>0?Math.round((cur.km/prev.km-1)*100):null;
+  const monthName=now.toLocaleDateString('en-GB',{month:'long'});
+  let line=`This ${monthName} you've logged <strong>${cur.gymCount}</strong> gym session${cur.gymCount===1?'':'s'} and run <strong>${cur.km}km</strong>`;
+  if(kmDelta!=null)line+=`, <strong style="color:${kmDelta>=0?'var(--green)':'var(--red)'};">${kmDelta>=0?'up':'down'} ${Math.abs(kmDelta)}%</strong> on last month`;
+  return line+'.';
+}
 function renderMonthlyHistory(){
   const el=document.getElementById('train-monthly-content');
   const now=today();const months=[];
@@ -4296,7 +4492,9 @@ function renderMonthlyHistory(){
     m++;if(m>11){m=0;y++;}
   }
   const MNAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  el.innerHTML=months.slice().reverse().map(({year,month,label})=>{
+  const narrative=getMonthlyNarrative();
+  const narrativeHtml=narrative?`<div class="chart-card" style="margin-bottom:10px;"><div style="font-size:13px;color:var(--text2);line-height:1.6;">${narrative}</div></div>`:'';
+  el.innerHTML=narrativeHtml+months.slice().reverse().map(({year,month,label})=>{
     const mGym=gym.filter(s=>{const d=new Date(s.date);return d.getFullYear()===year&&d.getMonth()===month;});
     const mRun=runs.filter(r=>{const d=new Date(r.date);return d.getFullYear()===year&&d.getMonth()===month;});
     const km=mRun.reduce((s,r)=>s+(r.km||0),0);
@@ -4338,6 +4536,57 @@ function renderMonthlyHistory(){
 function goalDone_f(ds,g){return goalDone(ds,g);}
 
 // ── BEST TIME OF DAY ──
+// Performance BY time of day, not just frequency - normalises each gym session to "% of
+// that exercise's current best" so sessions aren't unfairly compared across different
+// lifts, and only draws a conclusion once a slot has 3+ qualifying samples.
+function getTimeOfDayPerformance(){
+  const gym=loadGymData();const runs=loadRunData();
+  const curBest={};
+  gym.forEach(s=>(s.exercises||[]).forEach(e=>{
+    if(!e.name)return;
+    (e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0).forEach(st=>{
+      const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);
+      const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
+      if(!curBest[e.name]||est>curBest[e.name])curBest[e.name]=est;
+    });
+  }));
+  const slots=[{label:'Morning',test:h=>h>=6&&h<12},{label:'Afternoon',test:h=>h>=12&&h<17},{label:'Evening',test:h=>h>=17&&h<21},{label:'Night',test:h=>h>=21||h<6}];
+  const QUALITY=new Set(['Tempo','Fartlek','Intervals','Hard']);
+  const gymQuality=slots.map(()=>[]),runPace=slots.map(()=>[]);
+  gym.forEach(s=>{
+    if(!s.ts)return;
+    const h=new Date(s.ts).getHours();
+    const slotIdx=slots.findIndex(sl=>sl.test(h));
+    if(slotIdx<0)return;
+    const ratios=[];
+    (s.exercises||[]).forEach(e=>{
+      if(!e.name||!curBest[e.name])return;
+      const ws=(e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
+      if(!ws.length)return;
+      let bestE1rm=0;
+      ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm)bestE1rm=est;});
+      ratios.push(bestE1rm/curBest[e.name]);
+    });
+    if(ratios.length)gymQuality[slotIdx].push(ratios.reduce((a,b)=>a+b,0)/ratios.length);
+  });
+  runs.forEach(r=>{
+    if(!r.ts||!r.km||!r.time||!QUALITY.has(r.effort))return;
+    const h=new Date(r.ts).getHours();
+    const slotIdx=slots.findIndex(sl=>sl.test(h));
+    if(slotIdx<0)return;
+    runPace[slotIdx].push(r.km/parseTimeToSecs(r.time));
+  });
+  const gymAvg=gymQuality.map(arr=>arr.length>=3?arr.reduce((a,b)=>a+b,0)/arr.length:null);
+  const runAvg=runPace.map(arr=>arr.length>=3?arr.reduce((a,b)=>a+b,0)/arr.length:null);
+  let bestGymIdx=-1,bestGymVal=0;
+  gymAvg.forEach((v,i)=>{if(v!=null&&v>bestGymVal){bestGymVal=v;bestGymIdx=i;}});
+  let bestRunIdx=-1,bestRunVal=0;
+  runAvg.forEach((v,i)=>{if(v!=null&&v>bestRunVal){bestRunVal=v;bestRunIdx=i;}});
+  return{
+    gym:bestGymIdx>=0?{slot:slots[bestGymIdx].label,pct:Math.round(bestGymVal*100)}:null,
+    run:bestRunIdx>=0?{slot:slots[bestRunIdx].label,pace:fmtPace(bestRunVal)}:null,
+  };
+}
 function renderTimeOfDay(){
   const gym=loadGymData();const runs=loadRunData();
   const sessions=[
@@ -4373,6 +4622,14 @@ function renderTimeOfDay(){
     <div style="font-size:13px;color:var(--text2);font-weight:600;padding-top:12px;line-height:1.5;">
       ${[best.gym?`<strong>${best.gym} gym session${best.gym===1?'':'s'}</strong>`:'',best.run?`<strong>${best.run} run${best.run===1?'':'s'}</strong>`:''].filter(Boolean).join(' and ')} logged in the <strong>${best.label.toLowerCase()}</strong>.
     </div>
+    ${(()=>{
+      const perf=getTimeOfDayPerformance();
+      if(!perf.gym&&!perf.run)return'';
+      const lines=[];
+      if(perf.gym)lines.push(`You lift closest to your PBs in the <strong>${perf.gym.slot.toLowerCase()}</strong> (avg ${perf.gym.pct}% of best).`);
+      if(perf.run)lines.push(`Your fastest quality-run pace is in the <strong>${perf.run.slot.toLowerCase()}</strong> (${perf.run.pace}).`);
+      return`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.6;">${lines.join('<br>')}</div>`;
+    })()}
   </div>`;
 }
 
@@ -4404,8 +4661,8 @@ function saveMorningCheckin(){
 // 7-day vs 28-day training load ratio - same load model as calcReadiness/Activity Load,
 // pulled out standalone so the Today page can surface it directly as a proactive nudge
 // instead of only showing up if you go look at the Activity Load gauge yourself.
-function getLoadRatio(){
-  const now=today();const gym=loadGymData();const runs=loadRunData();
+function getLoadRatio(offsetDays=0){
+  const now=addDays(today(),-offsetDays);const gym=loadGymData();const runs=loadRunData();
   const effortMult={Recovery:0.6,Easy:1.0,'Long Run':1.1,Long:1.1,Tempo:1.75,Intervals:2.0,Hard:2.0,Race:2.2};
   function runLoad(r){const mult=effortMult[r.effort]||1.0;if(r.time){const secs=parseTimeToSecs(r.time);if(secs>0)return Math.round((secs/60)*mult);}if(r.km)return Math.round(r.km*6*mult);return Math.round(30*mult);}
   function gymSessionLoad(s){const sets=(s.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);return sets>0?sets*2:30;}
@@ -4415,6 +4672,13 @@ function getLoadRatio(){
   for(let i=0;i<28;i++)load28+=dayLoad(dk(addDays(now,-i)));
   const avg7=load7/7,avg28=load28/28;
   return{ratio:avg28>0?avg7/avg28:1,avg7,avg28};
+}
+// Deload flag - only fires when load has been *sustained* high (both today and a week
+// ago), not just a single busy day, which the same-day rest-day nudge already covers.
+function getDeloadFlag(){
+  const now=getLoadRatio(0),weekAgo=getLoadRatio(7);
+  if(now.ratio>1.25&&weekAgo.ratio>1.25)return{now,weekAgo};
+  return null;
 }
 function calcReadiness(){
   const ds=dk(today());
@@ -4480,6 +4744,37 @@ function calcReadiness(){
   return{score,factors,advice,col,hasMorning:!!todayMorning};
 }
 
+// Rolling sleep-score deficit vs your own trailing baseline (not hours - the logged
+// value is a 0-100 Garmin-style score, so "debt" is framed as points, not hours).
+// Needs 7+ logged days total before it'll say anything, to avoid a baseline built off
+// a handful of entries.
+function getSleepDeficit(){
+  const morning=loadMorningData();
+  const now=today();
+  const all=Object.entries(morning).filter(([,v])=>v&&v.sleep!=null).map(([ds,v])=>({ds,sleep:v.sleep}));
+  if(all.length<7)return null;
+  const baseline=all.reduce((a,e)=>a+e.sleep,0)/all.length;
+  const last7=all.filter(e=>{const d=new Date(e.ds+'T12:00:00');return d>=addDays(now,-6)&&d<=now;});
+  if(!last7.length)return null;
+  const deficit=Math.round(last7.reduce((a,e)=>a+(baseline-e.sleep),0));
+  return{baseline:Math.round(baseline),deficit,daysLogged:last7.length};
+}
+// Ties your most recent gym session to the very next morning's HRV, compared against your
+// trailing baseline - a direct, dated example instead of an abstract correlation.
+function getRecoveryFeedback(){
+  const gym=[...loadGymData()].sort((a,b)=>b.date.localeCompare(a.date));
+  if(!gym.length)return null;
+  const last=gym[0];
+  const morning=loadMorningData();
+  const baseDate=new Date(last.date+'T12:00:00');
+  const nextEntry=morning[dk(addDays(baseDate,1))];
+  if(!nextEntry||nextEntry.hrv==null)return null;
+  const baseVals=[];
+  for(let i=1;i<=14;i++){const e=morning[dk(addDays(baseDate,-i))];if(e&&e.hrv!=null)baseVals.push(e.hrv);}
+  if(baseVals.length<3)return null;
+  const baseline=baseVals.reduce((a,b)=>a+b,0)/baseVals.length;
+  return{type:last.type,date:last.date,hrv:nextEntry.hrv,baseline:Math.round(baseline),diff:Math.round(nextEntry.hrv-baseline)};
+}
 function renderReadinessCard(){
   const el=document.getElementById('readiness-card');
   if(!el)return;
@@ -4502,12 +4797,18 @@ function renderReadinessCard(){
     ?`${factors.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;">${factors.map(f=>`<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;">${f}</span>`).join('')}</div>`:''}
       ${avgBadge}`
     :`<div style="color:var(--text3);font-size:${avgBadge?'12px;margin-bottom:2px;':'13px;padding:4px 0 2px;'}">${avgBadge?"Log today's sleep &amp; HRV for a readiness score.":'Log your Garmin sleep &amp; HRV to get a readiness score.'}</div>${avgBadge}`;
+  const sleepDef=getSleepDeficit();
+  const sleepDefHtml=(sleepDef&&sleepDef.deficit>10)?`<div style="margin-top:8px;font-size:11px;font-weight:700;color:var(--orange);">😴 ${sleepDef.deficit}pt sleep deficit this week vs your ${sleepDef.baseline} baseline</div>`:'';
+  const recovery=getRecoveryFeedback();
+  const recoveryHtml=recovery?`<div style="margin-top:8px;font-size:11px;font-weight:600;color:var(--text2);">HRV was <strong style="color:${recovery.diff>=0?'var(--green)':'var(--orange)'};">${recovery.hrv}ms</strong> the morning after your ${esc(recovery.type)} session (${fmtShortDate(dk(new Date(recovery.date+'T12:00:00')))}) — ${recovery.diff>=0?`${recovery.diff}pt above`:`${Math.abs(recovery.diff)}pt below`} your recent average</div>`:'';
   el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${(factors.length||avgBadge)?'10':'0'}px;">
       <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Readiness factors</span>
       ${checkinBtn}
     </div>
     ${bodyHtml}
+    ${sleepDefHtml}
+    ${recoveryHtml}
   </div>`;
 }
 
@@ -4626,6 +4927,40 @@ function renderFlashbackCard(){
   el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(5,150,105,0.05));border-color:rgba(37,99,235,0.25);">
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);margin-bottom:6px;">📅 On this day · ${fb.label}</div>
     <div style="font-size:13px;color:var(--text2);line-height:1.5;">You did <strong style="color:var(--text);">${esc(fb.name)}</strong> at ${fb.oldW}kg × ${fb.oldR}. You've since added <strong style="color:var(--green);">+${fb.delta}kg</strong> — now at ${fb.curBest}kg e1RM.</div>
+  </div>`;
+}
+// A pool of fun aggregate facts (distinct flavour from the trend/PR cards - lifetime
+// totals, not recent performance), one picked per day via the same date-seed rotation
+// pattern used for the Today hero's status messages, so it's stable within a day.
+function getDidYouKnow(){
+  const gym=loadGymData();const runs=loadRunData();
+  const facts=[];
+  if(gym.length)facts.push(`You've logged <strong>${gym.length}</strong> gym session${gym.length===1?'':'s'} since you started tracking.`);
+  const totalKm=runs.reduce((s,r)=>s+(r.km||0),0);
+  if(totalKm>0)facts.push(`You've run <strong>${totalKm.toFixed(0)}km</strong> total — that's ${totalKm>=42.2?`${(totalKm/42.2).toFixed(1)} marathons`:`${(totalKm/21.1).toFixed(1)} half marathons`} worth.`);
+  const totalSets=gym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  if(totalSets>0)facts.push(`You've logged <strong>${totalSets}</strong> working sets since you started tracking.`);
+  if(gym.length+runs.length>=5){
+    const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const counts=[0,0,0,0,0,0,0];
+    [...gym,...runs].forEach(s=>{if(s.date)counts[new Date(s.date+'T12:00:00').getDay()]++;});
+    const maxIdx=counts.indexOf(Math.max(...counts));
+    if(counts[maxIdx]>0)facts.push(`<strong>${dayNames[maxIdx]}</strong> is your most-trained day of the week.`);
+  }
+  const longestRun=runs.reduce((m,r)=>(r.km||0)>m?r.km:m,0);
+  if(longestRun>0)facts.push(`Your longest run so far is <strong>${longestRun}km</strong>.`);
+  if(!facts.length)return null;
+  const seed=parseInt(dk(today()).replace(/-/g,''))%facts.length;
+  return facts[seed];
+}
+function renderDidYouKnowCard(){
+  const el=document.getElementById('did-you-know-card');
+  if(!el)return;
+  const fact=getDidYouKnow();
+  if(!fact){el.innerHTML='';return;}
+  el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;">💡 Did you know</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;">${fact}</div>
   </div>`;
 }
 

@@ -239,10 +239,12 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .anomaly-banner{border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;position:relative;}
 .anomaly-banner.alert-gym{background:rgba(194,80,0,0.1);border:1px solid rgba(194,80,0,0.3);}
 .anomaly-banner.alert-score{background:rgba(232,14,14,0.1);border:1px solid rgba(232,14,14,0.3);}
+.anomaly-banner.alert-backup{background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);}
 .anomaly-banner-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
 .anomaly-banner-body{flex:1;}
 .anomaly-banner-title{font-size:13px;font-weight:800;margin-bottom:2px;}
 .anomaly-banner-desc{font-size:12px;font-weight:500;opacity:0.8;}
+.anomaly-banner-action{margin-top:8px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.15);color:var(--accent2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;}
 .anomaly-dismiss{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:2px;}
 
 /* RUN TARGET PROGRESS */
@@ -1998,6 +2000,18 @@ function renderRecentGymCard(){
 
 // ── RUN ──
 let selectedEffort='';
+// Suggests today's run intensity from the same readiness score already shown on the
+// Today page - purely advisory, doesn't touch the effort buttons below it.
+function renderRunEffortSuggestion(){
+  const {score}=calcReadiness();
+  if(score==null)return'';
+  let suggestion;
+  if(score>=80)suggestion='Ready to push — good day for Tempo or Intervals';
+  else if(score>=60)suggestion='Good for a steady effort — Easy or Long Run';
+  else if(score>=40)suggestion='Dial it back today — Easy or Recovery';
+  else suggestion='Low readiness — Recovery or rest';
+  return`<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:8px;padding:7px 10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:8px;border-left:3px solid var(--accent2);color:var(--accent2);">💡 <span style="color:var(--text);">${esc(suggestion)}</span> <span style="color:var(--text3);font-weight:600;">(readiness ${score})</span></div>`;
+}
 function renderRunSection(){
   const el=document.getElementById('run-content');
   const runs=loadRunData();const last=runs[runs.length-1];
@@ -2053,6 +2067,7 @@ function renderRunSection(){
     <div id="pace-preview" style="font-size:13px;color:var(--accent2);font-weight:700;min-height:20px;margin-top:6px;"></div>
     <div style="height:12px;"></div>
     <label>Effort</label>
+    ${_runLogDate===dk(now)?renderRunEffortSuggestion():''}
     <div id="effort-container" style="border-radius:10px;border:1px solid transparent;padding:3px;margin:-3px;transition:border-color 0.2s;">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
         ${['Easy','Tempo','Intervals','Race','Long Run','Recovery'].map(e=>`<button onclick="selectEffort('${e}')" id="eff-${e.replace(' ','-')}" style="padding:8px 6px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
@@ -3948,6 +3963,38 @@ function getRaceProjection(){
   const projSecs=Math.round(r.km/avgPace);
   return{projSecs,pace:fmtPace(avgPace),projTime:fmtDurationFromSecs(projSecs)};
 }
+// This week's mileage target on the way to the race - baselined off your own trailing
+// 4-week average (needs 2+ weeks with logged runs to baseline off), not a generic plan.
+// Build weeks cap at +10% over baseline (standard no-more-than-10%/week guidance);
+// final 3 weeks taper down. Deliberately only projects one week ahead, not a full
+// multi-week table, since a stale baseline shouldn't be dressed up as a training plan.
+function getRaceBuildPlan(){
+  const r=state.race;
+  if(!r||!r.date||!r.km)return null;
+  const now=today();
+  const days=daysUntil(r.date);
+  if(days<0||days>168)return null;
+  const raceMon=getMonday(new Date(r.date+'T12:00:00'));
+  const thisMon=getMonday(now);
+  const weeksToRace=Math.round((raceMon-thisMon)/(7*86400000));
+  const runs=loadRunData();
+  let totalKm=0,weeksCounted=0;
+  for(let w=1;w<=4;w++){
+    const wkStart=addDays(thisMon,-7*w);const wkEnd=addDays(wkStart,6);
+    const wkKm=runs.filter(x=>{const d=new Date(x.date+'T12:00:00');return d>=wkStart&&d<=wkEnd;}).reduce((a,x)=>a+(x.km||0),0);
+    if(wkKm>0){totalKm+=wkKm;weeksCounted++;}
+  }
+  if(weeksCounted<2)return null;
+  const baseline=totalKm/weeksCounted;
+  const thisWeekKm=runs.filter(x=>{const d=new Date(x.date+'T12:00:00');return d>=thisMon&&d<=now;}).reduce((a,x)=>a+(x.km||0),0);
+  let targetKm,phase;
+  if(weeksToRace<=0){targetKm=Math.round(r.km*0.3);phase='Race week';}
+  else if(weeksToRace===1){targetKm=Math.round(baseline*0.5);phase='Taper';}
+  else if(weeksToRace===2){targetKm=Math.round(baseline*0.7);phase='Taper';}
+  else if(weeksToRace===3){targetKm=Math.round(baseline*0.85);phase='Taper';}
+  else{targetKm=Math.round(Math.min(baseline*1.1,baseline+8));phase='Build';}
+  return{baseline:Math.round(baseline*10)/10,targetKm,thisWeekKm:Math.round(thisWeekKm*10)/10,weeksToRace,phase};
+}
 function renderRaceSection(){
   const r=state.race;
   if(!r||!r.date){
@@ -3967,6 +4014,14 @@ function renderRaceSection(){
     }
     return`<div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">Projected: ${proj.projTime}</strong> at your recent tempo pace (${proj.pace})${compareLine}</div>`;
   })():'';
+  const plan=getRaceBuildPlan();
+  const planHtml=plan?`<div style="margin-top:10px;padding:10px 12px;background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2);border-radius:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);">${esc(plan.phase)} · this week's target</span>
+      <span style="font-size:13px;font-weight:800;color:${plan.thisWeekKm>=plan.targetKm?'var(--green)':'var(--text)'};">${plan.thisWeekKm} / ${plan.targetKm}km</span>
+    </div>
+    <div style="font-size:11px;color:var(--text3);">Based on your ${plan.baseline}km/wk average${plan.weeksToRace>0?` · ${plan.weeksToRace} week${plan.weeksToRace===1?'':'s'} out`:''}</div>
+  </div>`:'';
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">Race Target</span><button onclick="openRaceModal()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Edit</button></div>
     <div style="font-size:14px;font-weight:800;margin-bottom:4px;">${esc(r.name||'Race')}</div>
@@ -3977,6 +4032,7 @@ function renderRaceSection(){
       ${goalPace?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal pace: ${goalPace}</span>`:''}
     </div>`:''}
     ${projHtml}
+    ${planHtml}
   </div>`;
 }
 
@@ -4184,6 +4240,8 @@ function exportData(){
   const data={state,gym:loadGymData(),run:loadRunData(),health:loadHealthData(),prog:loadGymProg(),vaping:loadVapingData(),morning:loadMorningData()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${dk(today()).split('-').reverse().join('-')}-tracker-backup.json`;a.click();
+  state.lastBackupAt=dk(today());saveState();
+  const banner=document.getElementById(`anomaly-backup_${dk(today())}`);if(banner)banner.remove();
   toastMsg('Data exported');
 }
 function importData(evt){
@@ -5034,6 +5092,14 @@ function getAnomalyAlerts(){
   if(lastWeekScore>0&&thisWeekScore<lastWeekScore-25){
     alerts.push({id:`score_drop_${ds}`,type:'alert-score',icon:'📉',title:'Score dip',desc:`This week ${thisWeekScore}% vs last week ${lastWeekScore}% (−${lastWeekScore-thisWeekScore}pts)`});
   }
+  // 3) No backup taken in 7+ days (only nag once there's actually something to lose)
+  const runs=loadRunData();
+  if(gym.length+runs.length>0){
+    const daysSinceBackup=state.lastBackupAt?Math.floor((now-new Date(state.lastBackupAt+'T12:00:00'))/86400000):Infinity;
+    if(daysSinceBackup>=7){
+      alerts.push({id:`backup_${ds}`,type:'alert-backup',icon:'💾',title:'Back up your data',desc:state.lastBackupAt?`${daysSinceBackup} days since your last backup`:'You\'ve never exported a backup — all your data lives only on this device',action:{label:'Back up now',onclick:'exportData()'}});
+    }
+  }
   // Filter dismissed
   const dismissed=state.dismissedAlerts||[];
   return alerts.filter(a=>!dismissed.includes(a.id));
@@ -5043,7 +5109,7 @@ function renderAnomalyAlerts(){
   if(!alerts.length)return'';
   return`<div class="anomaly-alerts">${alerts.map(a=>`<div class="anomaly-banner ${esc(a.type)}" id="anomaly-${esc(a.id)}">
     <div class="anomaly-banner-icon">${a.icon}</div>
-    <div class="anomaly-banner-body"><div class="anomaly-banner-title">${esc(a.title)}</div><div class="anomaly-banner-desc">${esc(a.desc)}</div></div>
+    <div class="anomaly-banner-body"><div class="anomaly-banner-title">${esc(a.title)}</div><div class="anomaly-banner-desc">${esc(a.desc)}</div>${a.action?`<button class="anomaly-banner-action" onclick="${a.action.onclick}">${esc(a.action.label)}</button>`:''}</div>
     <button class="anomaly-dismiss" onclick="dismissAlert('${esc(a.id)}')">×</button>
   </div>`).join('')}</div>`;
 }

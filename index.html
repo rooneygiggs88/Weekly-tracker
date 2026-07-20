@@ -329,10 +329,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       <button onclick="changeWeek(1)" id="week-next-btn" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
     </div>
     <div id="readiness-card"></div>
-    <div id="monday-recap-card"></div>
-    <div id="weekly-win-card"></div>
-    <div id="flashback-card"></div>
-    <div id="did-you-know-card"></div>
+    <div id="story-card"></div>
     <div class="week-strip" id="week-strip"></div>
     <div id="race-card-wrap"></div>
     <div id="session-card-wrap"></div>
@@ -880,67 +877,6 @@ function getWeekScore(){
   for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(d.getDate()+i);if(d>now)break;const ds=dk(d);goalsActiveOn(ds).forEach(g=>{total++;if(goalDone(ds,g))done++;});}
   return total?Math.round(done/total*100):0;
 }
-// Same daily-goal completion % as getWeekScore, but for an arbitrary (fully elapsed) week.
-function getWeekScoreForMonday(mon){
-  let total=0,done=0;
-  for(let i=0;i<7;i++){const ds=dk(addDays(mon,i));goalsActiveOn(ds).forEach(g=>{total++;if(goalDone(ds,g))done++;});}
-  return total?Math.round(done/total*100):0;
-}
-// Monday recap - last week's numbers, shown once you open the app on Monday. Reuses the
-// same "running best, scanned chronologically" PR-detection technique as getWeeklyWin,
-// just counting how many PRs landed in last week's date range instead of picking one.
-function getMondayRecap(){
-  const now=today();
-  if(now.getDay()!==1)return null;
-  const thisMon=getMonday(now);
-  const lastMon=addDays(thisMon,-7),lastSun=addDays(thisMon,-1);
-  const gym=loadGymData();const runs=loadRunData();
-  const weekGym=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=lastMon&&d<=lastSun;});
-  const sets=weekGym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
-  const weekRuns=runs.filter(r=>{const d=new Date(r.date+'T12:00:00');return d>=lastMon&&d<=lastSun;});
-  const km=weekRuns.reduce((s,r)=>s+(r.km||0),0);
-  const score=getWeekScoreForMonday(lastMon);
-  const exHasWeight={};
-  gym.forEach(s=>(s.exercises||[]).forEach(ex=>{if(ex.name&&(ex.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0))exHasWeight[ex.name]=true;}));
-  const sorted=[...gym].sort((a,b)=>a.date.localeCompare(b.date));
-  const bestWeighted={},bestReps={};
-  let prCount=0;
-  sorted.forEach(s=>{
-    const d=new Date(s.date+'T12:00:00');
-    const inWeek=d>=lastMon&&d<=lastSun;
-    (s.exercises||[]).forEach(ex=>{
-      if(!ex.name)return;
-      if(exHasWeight[ex.name]){
-        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
-        if(!ws.length)return;
-        let bestE1rm=0;
-        ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm)bestE1rm=est;});
-        const prior=bestWeighted[ex.name]||0;
-        if(inWeek&&prior>0&&bestE1rm>prior)prCount++;
-        if(bestE1rm>prior)bestWeighted[ex.name]=bestE1rm;
-      } else {
-        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.reps||0)>0);
-        if(!ws.length)return;
-        const bestR=Math.max(...ws.map(x=>parseFloat(x.reps||0)));
-        const prior=bestReps[ex.name]||0;
-        if(inWeek&&prior>0&&bestR>prior)prCount++;
-        if(bestR>prior)bestReps[ex.name]=bestR;
-      }
-    });
-  });
-  if(!sets&&!km&&!score)return null;
-  return{sets,km:+km.toFixed(1),score,prCount};
-}
-function renderMondayRecapCard(){
-  const el=document.getElementById('monday-recap-card');
-  if(!el)return;
-  const r=getMondayRecap();
-  if(!r){el.innerHTML='';return;}
-  el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(5,150,105,0.06));border-color:rgba(37,99,235,0.25);">
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);margin-bottom:8px;">📬 Last week</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.6;"><strong style="color:var(--text);">${r.sets} sets</strong> · <strong style="color:var(--text);">${r.km}km</strong> · <strong style="color:var(--text);">${r.score}%</strong> daily goals${r.prCount?` · <strong style="color:var(--green);">${r.prCount} PR${r.prCount>1?'s':''}</strong>`:''}</div>
-  </div>`;
-}
 // Consecutive fully-completed weeks where every weekly session goal (Gym 3x, Run 3x,
 // plus any custom weekly goals) hit its target - same target logic as getWeeklyQuota,
 // just replayed backwards week by week instead of only the current week.
@@ -1076,10 +1012,10 @@ function renderToday(){
     ?`${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`
     :`Week of ${baseMonday.getDate()} ${MONTHS[baseMonday.getMonth()]}`;
 
-  // These are about "right now", not whatever day is being browsed in the week strip -
-  // only show them when actually viewing today.
-  if(viewingToday){renderWeeklyWinCard();renderFlashbackCard();renderMondayRecapCard();renderDidYouKnowCard();}
-  else{['weekly-win-card','flashback-card','monday-recap-card','did-you-know-card'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
+  // About "right now", not whatever day is being browsed in the week strip - only show
+  // when actually viewing today.
+  if(viewingToday){renderStoryCard();}
+  else{const e=document.getElementById('story-card');if(e)e.innerHTML='';}
   const habitScore=getTodayScore();
   const readiness=viewingToday?calcReadiness():null;
   const scoreEl=document.getElementById('today-score');
@@ -3588,12 +3524,6 @@ function renderSleepTrendCard(){
 function getHallOfFame(){
   const gym=loadGymData();const runs=loadRunData();
   const entries=[];
-  let heaviest=null;
-  gym.forEach(s=>(s.exercises||[]).forEach(ex=>(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0).forEach(st=>{
-    const w=parseFloat(st.weight);
-    if(!heaviest||w>heaviest.weight)heaviest={weight:w,name:ex.name,date:s.date,reps:st.reps};
-  })));
-  if(heaviest)entries.push({icon:'🏋️',label:'Heaviest lift',value:`${heaviest.weight}kg`,detail:`${esc(heaviest.name)} · ${fmtShortDate(heaviest.date)}`});
   let longestRun=null;
   runs.forEach(r=>{if(r.km&&(!longestRun||r.km>longestRun.km))longestRun=r;});
   if(longestRun)entries.push({icon:'🏃',label:'Longest run',value:`${longestRun.km}km`,detail:fmtShortDate(longestRun.date)});
@@ -3628,64 +3558,6 @@ function renderHallOfFameCard(){
     </div>`).join('')}
   </div>`;
 }
-// Fixed milestone thresholds against lifetime totals. Not configurable - deliberately
-// simple unlock/locked state rather than a full progression system.
-function getMilestones(){
-  const gym=loadGymData();const runs=loadRunData();
-  const totalKm=runs.reduce((s,r)=>s+(r.km||0),0);
-  const totalSets=gym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
-  const exHasWeight={};
-  gym.forEach(s=>(s.exercises||[]).forEach(ex=>{if(ex.name&&(ex.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0))exHasWeight[ex.name]=true;}));
-  const sorted=[...gym].sort((a,b)=>a.date.localeCompare(b.date));
-  const bestWeighted={},bestReps={};
-  let prCount=0;
-  sorted.forEach(s=>{
-    (s.exercises||[]).forEach(ex=>{
-      if(!ex.name)return;
-      if(exHasWeight[ex.name]){
-        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
-        if(!ws.length)return;
-        let bestE1rm=0;
-        ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm)bestE1rm=est;});
-        const prior=bestWeighted[ex.name]||0;
-        if(prior>0&&bestE1rm>prior)prCount++;
-        if(bestE1rm>prior)bestWeighted[ex.name]=bestE1rm;
-      } else {
-        const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.reps||0)>0);
-        if(!ws.length)return;
-        const bestR=Math.max(...ws.map(x=>parseFloat(x.reps||0)));
-        const prior=bestReps[ex.name]||0;
-        if(prior>0&&bestR>prior)prCount++;
-        if(bestR>prior)bestReps[ex.name]=bestR;
-      }
-    });
-  });
-  const bestStreak=getBestStreakEver();
-  const defs=[
-    {icon:'🏋️',name:'First Session',need:1,have:gym.length},
-    {icon:'💯',name:'100 Sessions',need:100,have:gym.length},
-    {icon:'🏃',name:'50km Run Total',need:50,have:totalKm},
-    {icon:'🏅',name:'Marathon Distance',need:42.2,have:totalKm},
-    {icon:'🔟',name:'10 PRs',need:10,have:prCount},
-    {icon:'📈',name:'1,000 Sets',need:1000,have:totalSets},
-    {icon:'🔥',name:'4-Week Streak',need:4,have:bestStreak},
-  ];
-  return defs.map(d=>({...d,unlocked:d.have>=d.need,pct:Math.min(100,Math.round(d.have/d.need*100))}));
-}
-function renderMilestonesCard(){
-  const badges=getMilestones();
-  const unlockedCount=badges.filter(b=>b.unlocked).length;
-  return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Milestones</span><span class="chart-card-val">${unlockedCount}/${badges.length}</span></div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-      ${badges.map(b=>`<div style="text-align:center;opacity:${b.unlocked?1:0.35};">
-        <div style="font-size:26px;line-height:1;">${b.icon}</div>
-        <div style="font-size:9px;font-weight:700;color:var(--text2);margin-top:4px;line-height:1.2;">${esc(b.name)}</div>
-        ${!b.unlocked?`<div style="font-size:8px;color:var(--text3);margin-top:2px;">${b.pct}%</div>`:''}
-      </div>`).join('')}
-    </div>
-  </div>`;
-}
 function renderMe(){
   const el=document.getElementById('me-content');
   const name=state.userName||'';
@@ -3695,7 +3567,6 @@ function renderMe(){
 
   el.innerHTML=`
     ${renderHallOfFameCard()}
-    ${renderMilestonesCard()}
     ${renderWeightSection(health)}
     ${renderBodyCompGoalCard(health)}
     ${renderBodyFatSection(health)}
@@ -4864,19 +4735,6 @@ function getWeeklyWin(){
   wins.sort((a,b)=>b.date.localeCompare(a.date));
   return wins[0];
 }
-function renderWeeklyWinCard(){
-  const el=document.getElementById('weekly-win-card');
-  if(!el)return;
-  const win=getWeeklyWin();
-  if(!win){el.innerHTML='';return;}
-  const dateLabel=new Date(win.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-  const icon=win.type==='run'?'🏃':'🏆';
-  el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;border-left:3px solid var(--green);">
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:6px;">${icon} This week's win</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">${esc(win.name)}</strong> — ${win.detail} on ${dateLabel}</div>
-  </div>`;
-}
-
 // "On this day" flashback - finds the closest gym session to 1/2/4/8/12 weeks ago and
 // compares an exercise from it against that exercise's current all-time best, picking
 // whichever comparison shows the biggest relative gain.
@@ -4919,49 +4777,30 @@ function getFlashback(){
   });
   return best;
 }
-function renderFlashbackCard(){
-  const el=document.getElementById('flashback-card');
+// Merged "story" slot: prefers this week's win (most recent, most relevant), falls
+// back to an "on this day" flashback when there's been no PR in the last 7 days.
+function renderStoryCard(){
+  const el=document.getElementById('story-card');
   if(!el)return;
-  const fb=getFlashback();
-  if(!fb){el.innerHTML='';return;}
-  el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(5,150,105,0.05));border-color:rgba(37,99,235,0.25);">
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);margin-bottom:6px;">📅 On this day · ${fb.label}</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.5;">You did <strong style="color:var(--text);">${esc(fb.name)}</strong> at ${fb.oldW}kg × ${fb.oldR}. You've since added <strong style="color:var(--green);">+${fb.delta}kg</strong> — now at ${fb.curBest}kg e1RM.</div>
-  </div>`;
-}
-// A pool of fun aggregate facts (distinct flavour from the trend/PR cards - lifetime
-// totals, not recent performance), one picked per day via the same date-seed rotation
-// pattern used for the Today hero's status messages, so it's stable within a day.
-function getDidYouKnow(){
-  const gym=loadGymData();const runs=loadRunData();
-  const facts=[];
-  if(gym.length)facts.push(`You've logged <strong>${gym.length}</strong> gym session${gym.length===1?'':'s'} since you started tracking.`);
-  const totalKm=runs.reduce((s,r)=>s+(r.km||0),0);
-  if(totalKm>0)facts.push(`You've run <strong>${totalKm.toFixed(0)}km</strong> total — that's ${totalKm>=42.2?`${(totalKm/42.2).toFixed(1)} marathons`:`${(totalKm/21.1).toFixed(1)} half marathons`} worth.`);
-  const totalSets=gym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
-  if(totalSets>0)facts.push(`You've logged <strong>${totalSets}</strong> working sets since you started tracking.`);
-  if(gym.length+runs.length>=5){
-    const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const counts=[0,0,0,0,0,0,0];
-    [...gym,...runs].forEach(s=>{if(s.date)counts[new Date(s.date+'T12:00:00').getDay()]++;});
-    const maxIdx=counts.indexOf(Math.max(...counts));
-    if(counts[maxIdx]>0)facts.push(`<strong>${dayNames[maxIdx]}</strong> is your most-trained day of the week.`);
+  const win=getWeeklyWin();
+  if(win){
+    const dateLabel=new Date(win.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    const icon=win.type==='run'?'🏃':'🏆';
+    el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;border-left:3px solid var(--green);">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:6px;">${icon} This week's win</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">${esc(win.name)}</strong> — ${win.detail} on ${dateLabel}</div>
+    </div>`;
+    return;
   }
-  const longestRun=runs.reduce((m,r)=>(r.km||0)>m?r.km:m,0);
-  if(longestRun>0)facts.push(`Your longest run so far is <strong>${longestRun}km</strong>.`);
-  if(!facts.length)return null;
-  const seed=parseInt(dk(today()).replace(/-/g,''))%facts.length;
-  return facts[seed];
-}
-function renderDidYouKnowCard(){
-  const el=document.getElementById('did-you-know-card');
-  if(!el)return;
-  const fact=getDidYouKnow();
-  if(!fact){el.innerHTML='';return;}
-  el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;">
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;">💡 Did you know</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.5;">${fact}</div>
-  </div>`;
+  const fb=getFlashback();
+  if(fb){
+    el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(5,150,105,0.05));border-color:rgba(37,99,235,0.25);">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);margin-bottom:6px;">📅 On this day · ${fb.label}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.5;">You did <strong style="color:var(--text);">${esc(fb.name)}</strong> at ${fb.oldW}kg × ${fb.oldR}. You've since added <strong style="color:var(--green);">+${fb.delta}kg</strong> — now at ${fb.curBest}kg e1RM.</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML='';
 }
 
 // ── GYM LOG MODAL ──

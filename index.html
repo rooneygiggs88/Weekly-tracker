@@ -903,25 +903,6 @@ function getWeeklyStreak(){
   }
   return streak;
 }
-// Longest streak ever achieved (not just the current one) - scans every fully-elapsed
-// week from your first logged session forward.
-function getBestStreakEver(){
-  const gym=loadGymData();const runs=loadRunData();
-  const allDates=[...gym.map(s=>s.date),...runs.map(r=>r.date)].filter(Boolean).sort();
-  if(!allDates.length)return 0;
-  const now=today();
-  let wk=getMonday(new Date(allDates[0]+'T12:00:00'));
-  let cur=0,best=0;
-  while(wk<=now){
-    const weekEnd=addDays(wk,6);
-    if(weekEnd>now)break;
-    const quota=getWeeklyQuotaForWeek(wk);
-    if(quota.length&&quota.every(g=>g.done>=g.target)){cur++;best=Math.max(best,cur);}
-    else cur=0;
-    wk=addDays(wk,7);
-  }
-  return best;
-}
 // Standing observation, not a live nudge - only returns something when categories are
 // meaningfully out of balance (gap of 2+ sessions) so it stays quiet the rest of the time.
 function getPPLBalance(){
@@ -3534,37 +3515,6 @@ function renderSleepTrendCard(){
 // ── ME PAGE ──
 // All-time bests across every logged type, in one place - distinct from the per-exercise
 // PR Tracker, which only covers gym lifts. Sleep/HRV bests were cut - a body metric
-// peaking on some random day isn't an achievement, unlike these three which all take
-// sustained effort to earn.
-function getHallOfFame(){
-  const runs=loadRunData();
-  const entries=[];
-  let longestRun=null;
-  runs.forEach(r=>{if(r.km&&(!longestRun||r.km>longestRun.km))longestRun=r;});
-  if(longestRun)entries.push({icon:'🏃',label:'Longest run',value:`${longestRun.km}km`,detail:fmtShortDate(longestRun.date)});
-  const QUALITY=new Set(['Tempo','Fartlek','Intervals','Hard','Race']);
-  let fastest=null;
-  runs.forEach(r=>{if(r.km&&r.time&&QUALITY.has(r.effort)){const speed=r.km/parseTimeToSecs(r.time);if(!fastest||speed>fastest.speed)fastest={speed,date:r.date};}});
-  if(fastest)entries.push({icon:'⚡',label:'Fastest pace',value:fmtPace(fastest.speed),detail:fmtShortDate(fastest.date)});
-  const bestStreak=getBestStreakEver();
-  if(bestStreak>0)entries.push({icon:'🔥',label:'Longest streak',value:`${bestStreak} week${bestStreak>1?'s':''}`,detail:'every weekly target hit'});
-  return entries;
-}
-function renderHallOfFameCard(){
-  const entries=getHallOfFame();
-  if(!entries.length)return'';
-  return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">🏆 Hall of Fame</span></div>
-    ${entries.map((e,idx)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${idx<entries.length-1?'border-bottom:1px solid var(--border);':''}">
-      <div style="font-size:22px;width:28px;text-align:center;flex-shrink:0;">${e.icon}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:var(--text2);">${e.label}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:1px;">${e.detail}</div>
-      </div>
-      <div style="font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;">${e.value}</div>
-    </div>`).join('')}
-  </div>`;
-}
 function renderMe(){
   const el=document.getElementById('me-content');
   const name=state.userName||'';
@@ -3573,7 +3523,6 @@ function renderMe(){
   const latestW=health.length?health[health.length-1].weight:null;
 
   el.innerHTML=`
-    ${renderHallOfFameCard()}
     ${renderWeightSection(health)}
     ${renderBodyCompGoalCard(health)}
     ${renderBodyFatSection(health)}

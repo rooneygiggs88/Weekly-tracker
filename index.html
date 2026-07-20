@@ -3533,11 +3533,11 @@ function renderSleepTrendCard(){
 
 // ── ME PAGE ──
 // All-time bests across every logged type, in one place - distinct from the per-exercise
-// PR Tracker, which only covers gym lifts. "Best readiness day" isn't included since
-// calcReadiness() is hardcoded to today and isn't cheaply date-parameterizable; sleep
-// score and HRV bests stand in as honest, directly-computable substitutes.
+// PR Tracker, which only covers gym lifts. Sleep/HRV bests were cut - a body metric
+// peaking on some random day isn't an achievement, unlike these three which all take
+// sustained effort to earn.
 function getHallOfFame(){
-  const gym=loadGymData();const runs=loadRunData();
+  const runs=loadRunData();
   const entries=[];
   let longestRun=null;
   runs.forEach(r=>{if(r.km&&(!longestRun||r.km>longestRun.km))longestRun=r;});
@@ -3546,14 +3546,6 @@ function getHallOfFame(){
   let fastest=null;
   runs.forEach(r=>{if(r.km&&r.time&&QUALITY.has(r.effort)){const speed=r.km/parseTimeToSecs(r.time);if(!fastest||speed>fastest.speed)fastest={speed,date:r.date};}});
   if(fastest)entries.push({icon:'⚡',label:'Fastest pace',value:fmtPace(fastest.speed),detail:fmtShortDate(fastest.date)});
-  const morning=loadMorningData();
-  let bestSleep=null,bestHRV=null;
-  Object.entries(morning).forEach(([ds,v])=>{
-    if(v&&v.sleep!=null&&(!bestSleep||v.sleep>bestSleep.val))bestSleep={val:v.sleep,ds};
-    if(v&&v.hrv!=null&&(!bestHRV||v.hrv>bestHRV.val))bestHRV={val:v.hrv,ds};
-  });
-  if(bestSleep)entries.push({icon:'😴',label:'Best sleep score',value:bestSleep.val,detail:fmtShortDate(bestSleep.ds)});
-  if(bestHRV)entries.push({icon:'💓',label:'Best HRV',value:`${bestHRV.val}ms`,detail:fmtShortDate(bestHRV.ds)});
   const bestStreak=getBestStreakEver();
   if(bestStreak>0)entries.push({icon:'🔥',label:'Longest streak',value:`${bestStreak} week${bestStreak>1?'s':''}`,detail:'every weekly target hit'});
   return entries;

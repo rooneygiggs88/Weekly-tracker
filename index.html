@@ -2487,12 +2487,17 @@ function renderPRs(){
     else{statusColor='var(--orange)';statusLabel='→ Plateau';}
 
     if(td!==null){
-      const lastS=s[s.length-1];
+      // Base the suggestion on the recent-3 median, same window the verdict itself is
+      // built from - not the single last session, which lets one light/technique day
+      // (exactly the kind of outlier the median is meant to resist) drag the next
+      // target down from an already-anomalous number instead of your real baseline.
+      const baseReps=median(r3.map(x=>x.reps));
+      const baseWeight=median(r3.map(x=>x.weight));
       const suggestBg=td>progressBand?'rgba(76,175,80,0.08)':td<-progressBand?'rgba(239,83,80,0.08)':'rgba(255,152,0,0.08)';
       const suggestBorder=td>progressBand?'var(--green)':td<-progressBand?'var(--red)':'var(--orange)';
       let suggestText;
       if(isBW){
-        const suggestReps=td>progressBand?lastS.reps+1:td<-progressBand?Math.max(1,lastS.reps-1):lastS.reps+1;
+        const suggestReps=td>progressBand?Math.round(baseReps)+1:td<-progressBand?Math.max(1,Math.round(baseReps)-1):Math.round(baseReps)+1;
         suggestText=td>progressBand
           ?`<strong>Target ${suggestReps} reps next session</strong> — keep the momentum going`
           :td<-progressBand
@@ -2500,10 +2505,10 @@ function renderPRs(){
             :`<strong>Try ${suggestReps} reps</strong> to break through the plateau`;
       } else {
         const suggestWeight=td>progressBand
-          ? Math.ceil((lastS.weight*1.025)/2.5)*2.5
+          ? Math.ceil((baseWeight*1.025)/2.5)*2.5
           : td<-progressBand
-            ? Math.floor((lastS.weight*0.95)/2.5)*2.5
-            : Math.ceil((lastS.weight*1.01)/2.5)*2.5;
+            ? Math.floor((baseWeight*0.95)/2.5)*2.5
+            : Math.ceil((baseWeight*1.01)/2.5)*2.5;
         suggestText=td>progressBand
           ?`<strong>Target ${suggestWeight}kg next session</strong> — keep the momentum going`
           :td<-progressBand

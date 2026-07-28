@@ -1984,14 +1984,17 @@ let selectedEffort='';
 // Suggests today's run intensity from the same readiness score already shown on the
 // Today page - purely advisory, doesn't touch the effort buttons below it.
 function renderRunEffortSuggestion(){
-  const {score}=calcReadiness();
+  const {score,hasMorning}=calcReadiness();
   if(score==null)return'';
   let suggestion;
   if(score>=80)suggestion='Ready to push — good day for Tempo or Intervals';
   else if(score>=60)suggestion='Good for a steady effort — Easy or Long Run';
   else if(score>=40)suggestion='Dial it back today — Easy or Recovery';
   else suggestion='Low readiness — Recovery or rest';
-  return`<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:8px;padding:7px 10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:8px;border-left:3px solid var(--accent2);color:var(--accent2);">💡 <span style="color:var(--text);">${esc(suggestion)}</span> <span style="color:var(--text3);font-weight:600;">(readiness ${score})</span></div>`;
+  // Without today's sleep/HRV logged, this is load-only - don't dress it up as a
+  // precise composite score the way the Today page's readiness dial does.
+  const basisLabel=hasMorning?`readiness ${score}`:'based on training load only';
+  return`<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:8px;padding:7px 10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:8px;border-left:3px solid var(--accent2);color:var(--accent2);">💡 <span style="color:var(--text);">${esc(suggestion)}</span> <span style="color:var(--text3);font-weight:600;">(${basisLabel})</span></div>`;
 }
 function renderRunSection(){
   const el=document.getElementById('run-content');

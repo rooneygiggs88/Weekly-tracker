@@ -1716,7 +1716,18 @@ function confirmNewEx(){
 function gymRemoveEx(i){gymDraft.exercises.splice(i,1);renderGymLogger();}
 function gymAddSet(i){gymDraft.exercises[i].sets.push({weight:'',reps:'',warmup:false});renderGymLogger();}
 function gymRemoveSet(i,si){gymDraft.exercises[i].sets.splice(si,1);renderGymLogger();}
-function gymToggleWarmup(i,si){gymDraft.exercises[i].sets[si].warmup=!gymDraft.exercises[i].sets[si].warmup;renderGymLogger();}
+// Cycles a set through Normal -> Warmup -> Technique -> Normal. Warmup sets are
+// excluded from training volume/load everywhere; Technique sets still count as real
+// training (volume, load, session history) but are excluded from the PR Tracker's
+// trend/suggested-target calc and the live "last session"/target-next hints, since a
+// deliberately lighter form/high-rep day shouldn't be read as a strength regression.
+function gymCycleSetFlag(i,si){
+  const s=gymDraft.exercises[i].sets[si];
+  if(s.warmup){s.warmup=false;s.technique=true;}
+  else if(s.technique){s.technique=false;}
+  else{s.warmup=true;}
+  renderGymLogger();
+}
 function gymSetExName(i,v){if(gymDraft.exercises[i])gymDraft.exercises[i].name=v;updateProgressHint(i);}
 function gymSetWeight(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si]){gymDraft.exercises[i].sets[si].weight=v;gymCheckSetDone(i,si);}}
 function gymSetReps(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si]){gymDraft.exercises[i].sets[si].reps=v;gymCheckSetDone(i,si);}}
@@ -1785,13 +1796,15 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
   const nameLower=(ex.name||'').toLowerCase();
   // Find most recent occurrence of this exercise across ALL session types - accepts
   // either a weighted set or a bodyweight (reps-only) set, so pull-up-style exercises
-  // still get "last session" carryover even with the weight field left blank.
+  // still get "last session" carryover even with the weight field left blank. Skips
+  // technique-day sets too, same as warmup, so the ghost line and target-next hint
+  // compare against your last real working session, not a deliberately light day.
   const lastEx=nameLower?(sessions||[]).slice().reverse().reduce((found,s)=>{
     if(found)return found;
     const e=(s.exercises||[]).find(e=>e.name&&e.name.toLowerCase()===nameLower);
-    return(e&&(e.sets||[]).some(set=>!set.warmup&&(parseFloat(set.weight||0)>0||parseFloat(set.reps||0)>0)))?e:null;
+    return(e&&(e.sets||[]).some(set=>!set.warmup&&!set.technique&&(parseFloat(set.weight||0)>0||parseFloat(set.reps||0)>0)))?e:null;
   },null):null;
-  const lastSets=lastEx?(lastEx.sets||[]).filter(s=>!s.warmup):[];
+  const lastSets=lastEx?(lastEx.sets||[]).filter(s=>!s.warmup&&!s.technique):[];
   const lastHasWeight=lastSets.some(s=>parseFloat(s.weight||0)>0);
   const topLast=lastSets.length?(lastHasWeight
     ?lastSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,lastSets[0])
@@ -1830,20 +1843,20 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
       <div></div>
     </div>
     ${(ex.sets||[]).map((s,si)=>{
-      const done=!s.warmup&&!!(s.weight&&s.reps);
-      const btnCol=s.warmup?'var(--orange)':done?'var(--green)':'var(--text3)';
-      const btnBdr=s.warmup?'rgba(194,80,0,0.5)':done?'rgba(8,132,91,0.4)':'var(--border)';
-      const btnBg=s.warmup?'rgba(194,80,0,0.15)':done?'rgba(8,132,91,0.12)':'transparent';
-      const rowBg=s.warmup?'rgba(194,80,0,0.04)':done?'rgba(8,132,91,0.05)':'';
-      const inputBg=s.warmup?'rgba(194,80,0,0.08)':done?'rgba(8,132,91,0.08)':'';
-      const inputBdr=s.warmup?'rgba(194,80,0,0.35)':done?'rgba(8,132,91,0.4)':'';
+      const done=!s.warmup&&!s.technique&&!!(s.weight&&s.reps);
+      const btnCol=s.warmup?'var(--orange)':s.technique?'#9e3dfb':done?'var(--green)':'var(--text3)';
+      const btnBdr=s.warmup?'rgba(194,80,0,0.5)':s.technique?'rgba(158,61,251,0.5)':done?'rgba(8,132,91,0.4)':'var(--border)';
+      const btnBg=s.warmup?'rgba(194,80,0,0.15)':s.technique?'rgba(158,61,251,0.15)':done?'rgba(8,132,91,0.12)':'transparent';
+      const rowBg=s.warmup?'rgba(194,80,0,0.04)':s.technique?'rgba(158,61,251,0.04)':done?'rgba(8,132,91,0.05)':'';
+      const inputBg=s.warmup?'rgba(194,80,0,0.08)':s.technique?'rgba(158,61,251,0.08)':done?'rgba(8,132,91,0.08)':'';
+      const inputBdr=s.warmup?'rgba(194,80,0,0.35)':s.technique?'rgba(158,61,251,0.35)':done?'rgba(8,132,91,0.4)':'';
       const inputStyle=`padding:10px 12px;${inputBg?'background:'+inputBg+';':''}${inputBdr?'border-color:'+inputBdr+';':''}`;
       const ghost=lastSets[si]||null;
       const ghostW=ghost?parseFloat(ghost.weight||0):null;
       const ghostR=ghost?parseFloat(ghost.reps||0):null;
       const ghostLine=ghost?`<div id="ghost-${i}-${si}" style="font-size:10px;color:var(--text3);margin:-2px 0 6px 34px;">vs last time: ${ghostW>0?`${ghostW}kg×${ghostR}`:`${ghostR} reps`}</div>`:'';
       return`<div id="set-row-${i}-${si}" data-ghost-w="${ghostW!=null?ghostW:''}" data-ghost-r="${ghostR!=null?ghostR:''}" style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:2px;align-items:center;border-radius:8px;${rowBg?'background:'+rowBg+';':''}">
-      <button id="set-num-${i}-${si}" onclick="gymToggleWarmup(${i},${si})" style="width:28px;height:28px;border-radius:8px;border:1px solid ${btnBdr};background:${btnBg};color:${btnCol};font-size:10px;font-weight:800;cursor:pointer;" title="${s.warmup?'Warmup':'Tap to mark warmup'}">${s.warmup?'W':si+1}</button>
+      <button id="set-num-${i}-${si}" onclick="gymCycleSetFlag(${i},${si})" style="width:28px;height:28px;border-radius:8px;border:1px solid ${btnBdr};background:${btnBg};color:${btnCol};font-size:10px;font-weight:800;cursor:pointer;" title="${s.warmup?'Warmup':s.technique?'Technique — still counts as training, excluded from PR trend':'Tap to mark warmup'}">${s.warmup?'W':s.technique?'T':si+1}</button>
       <input id="set-kg-${i}-${si}" class="run-field" type="number" inputmode="decimal" placeholder="kg" value="${esc(String(s.weight||''))}"
         style="${inputStyle}" oninput="gymSetWeight(${i},${si},this.value)">
       <input id="set-reps-${i}-${si}" class="run-field" type="number" inputmode="numeric" placeholder="reps" value="${esc(String(s.reps||''))}"
@@ -1873,7 +1886,7 @@ function updateProgressHint(i){
   },null);
   const hintEl=document.getElementById(`ex-hint-${i}`);if(!hintEl)return;
   if(lastEx){
-    const ls=(lastEx.sets||[]).filter(s=>!s.warmup);
+    const ls=(lastEx.sets||[]).filter(s=>!s.warmup&&!s.technique);
     const hasWeight=ls.some(s=>parseFloat(s.weight||0)>0);
     const top=ls.length?(hasWeight
       ?ls.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,ls[0])
@@ -2390,7 +2403,10 @@ function renderPRs(){
   gym.forEach(session=>{
     (session.exercises||[]).forEach(ex=>{
       if(!ex.name)return;
-      const nonWarmup=(ex.sets||[]).filter(s=>!s.warmup);
+      // Technique-day sets are excluded here too, same as warmup - they still count
+      // toward training volume/load everywhere else, but shouldn't be read as your
+      // real working weight when judging PB/trend/suggested target.
+      const nonWarmup=(ex.sets||[]).filter(s=>!s.warmup&&!s.technique);
       if(exHasWeight[ex.name]){
         const workingSets=nonWarmup.filter(s=>parseFloat(s.weight||0)>0);
         if(!workingSets.length)return;
@@ -5123,7 +5139,7 @@ function copyLastSession(){
     startedAt:Date.now(),
     exercises:(last.exercises||[]).map(e=>({
       name:e.name,
-      sets:(e.sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:s.warmup||false}))
+      sets:(e.sets||[]).map(s=>({weight:s.weight,reps:s.reps,warmup:s.warmup||false,technique:s.technique||false}))
     }))
   };
   renderGymLogger();toastMsg('Last session copied — edit before saving');haptic('light');
@@ -5154,7 +5170,7 @@ function getExercisesForMakeup(){
       return(e&&(e.sets||[]).some(set=>!set.warmup&&parseFloat(set.weight||0)>0))?e:null;
     },null);
     if(lastEx){
-      return{name:ex.name,sets:(lastEx.sets||[]).map(s=>({weight:s.weight,reps:'',warmup:s.warmup||false}))};
+      return{name:ex.name,sets:(lastEx.sets||[]).map(s=>({weight:s.weight,reps:'',warmup:s.warmup||false,technique:s.technique||false}))};
     }
     return{name:ex.name,sets:[{weight:'',reps:'',warmup:false}]};
   });
@@ -5181,7 +5197,7 @@ function copyLastSameSession(){
     },null);
     if(lastEx){
       anyFilled=true;
-      return{name:ex.name,sets:(lastEx.sets||[]).map(s=>({weight:s.weight,reps:'',warmup:s.warmup||false}))};
+      return{name:ex.name,sets:(lastEx.sets||[]).map(s=>({weight:s.weight,reps:'',warmup:s.warmup||false,technique:s.technique||false}))};
     }
     return{name:ex.name,sets:[{weight:'',reps:'',warmup:false}]};
   });
@@ -5287,10 +5303,10 @@ function openSessionDetail(sessionIdx){
     const sets=e.sets||[];
     return`<div style="margin-bottom:14px;"><div style="font-size:14px;font-weight:800;margin-bottom:8px;">${esc(e.name)}</div>
       ${sets.map((ss,si)=>`<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:10px;font-weight:800;color:${ss.warmup?'var(--orange)':'var(--text3)'};min-width:20px;">${ss.warmup?'W':si+1}</span>
+        <span style="font-size:10px;font-weight:800;color:${ss.warmup?'var(--orange)':ss.technique?'#9e3dfb':'var(--text3)'};min-width:20px;">${ss.warmup?'W':ss.technique?'T':si+1}</span>
         <span style="font-size:14px;font-weight:700;">${ss.weight?ss.weight+'kg':'—'}</span>
         <span style="font-size:13px;color:var(--text2);">× ${ss.reps||'?'}</span>
-        ${ss.warmup?`<span style="font-size:10px;color:var(--orange);font-weight:700;margin-left:auto;">Warmup</span>`:''}
+        ${ss.warmup?`<span style="font-size:10px;color:var(--orange);font-weight:700;margin-left:auto;">Warmup</span>`:ss.technique?`<span style="font-size:10px;color:#9e3dfb;font-weight:700;margin-left:auto;">Technique</span>`:''}
       </div>`).join('')}
     </div>`;
   }).join('')}

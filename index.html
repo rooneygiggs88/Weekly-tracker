@@ -1756,6 +1756,7 @@ function gymToggleCollapse(i){const ex=gymDraft.exercises[i];if(!ex)return;ex._c
 // deliberately lighter form/high-rep day shouldn't be read as a strength regression.
 function gymCycleSetFlag(i,si){
   const s=gymDraft.exercises[i].sets[si];
+  gymSetActiveEx(i);
   if(s.warmup){s.warmup=false;s.technique=true;}
   else if(s.technique){s.technique=false;}
   else{s.warmup=true;}
@@ -1765,9 +1766,14 @@ function gymSetExName(i,v){if(gymDraft.exercises[i])gymDraft.exercises[i].name=v
 function gymSetWeight(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si]){gymDraft.exercises[i].sets[si].weight=v;gymCheckSetDone(i,si);}}
 function gymSetReps(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si]){gymDraft.exercises[i].sets[si].reps=v;gymCheckSetDone(i,si);}}
 // Quick +/- steppers for mid-set thumb use - update the input directly rather than a
-// full re-render, same lightweight-update pattern gymCheckSetDone already uses.
+// full re-render, same lightweight-update pattern gymCheckSetDone already uses. Also
+// mark this exercise active (gymSetActiveEx) same as focusing the input directly would -
+// the stepper buttons are tabindex="-1" and never focus the input themselves, so without
+// this, filling a set entirely via +/- never signals "I'm working this exercise" and
+// the previous exercise never auto-collapses.
 function gymStepWeight(i,si,delta){
   const s=gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];if(!s)return;
+  gymSetActiveEx(i);
   const next=Math.max(0,Math.round(((parseFloat(s.weight)||0)+delta)*2)/2);
   s.weight=next===0?'':String(next);
   const el=document.getElementById(`set-kg-${i}-${si}`);if(el)el.value=s.weight;
@@ -1775,6 +1781,7 @@ function gymStepWeight(i,si,delta){
 }
 function gymStepReps(i,si,delta){
   const s=gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];if(!s)return;
+  gymSetActiveEx(i);
   const next=Math.max(0,(parseInt(s.reps)||0)+delta);
   s.reps=next===0?'':String(next);
   const el=document.getElementById(`set-reps-${i}-${si}`);if(el)el.value=s.reps;

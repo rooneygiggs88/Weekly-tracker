@@ -1818,22 +1818,6 @@ function gymCheckSetDone(i,si){
       else{ghostEl.style.color='var(--text3)';ghostEl.textContent=`vs last time: ${label}`;}
     }
   }
-  // Auto-start the rest timer the moment a set is completed - only on the rising edge
-  // (not on every keystroke while already done), and not for superset-paired exercises,
-  // which already have their own "rest after completing both" button. Tracked on the
-  // set itself (_restFired), not the DOM, since unrelated actions elsewhere in the
-  // session (adding a set, adding an exercise) trigger a full re-render that would
-  // otherwise reset a DOM-based flag and make an unrelated edit re-fire the timer.
-  if(done&&!s._restFired){
-    const isPaired=(gymDraft.pairs||[]).some(p=>p.includes(i));
-    if(!isPaired){
-      const ex=gymDraft.exercises[i];
-      startRestTimer(getExRestSecs(ex&&ex.name||''));
-    }
-    s._restFired=true;
-  }else if(!done){
-    s._restFired=false;
-  }
 }
 
 function renderSupersetExercisesHtml(lastSame,prog,sessions){
@@ -2044,7 +2028,7 @@ function saveGymSession(){
   const notesEl=document.getElementById('gym-notes-field');
   if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
   const hasValue=s=>String(s.weight||'').trim()!==''||String(s.reps||'').trim()!=='';
-  // Strip live-session-only UI state (_collapsed, _restFired, ...) before persisting.
+  // Strip live-session-only UI state (_collapsed, ...) before persisting.
   const stripTransient=obj=>{const out={};Object.keys(obj).forEach(k=>{if(!k.startsWith('_'))out[k]=obj[k];});return out;};
   const exercises=(gymDraft.exercises||[])
     .map(e=>{const n=(e.name||'').trim();return{...stripTransient(e),name:_resolveExName(n)||n,sets:(e.sets||[]).filter(hasValue).map(stripTransient)};})

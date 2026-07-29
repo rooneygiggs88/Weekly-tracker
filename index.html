@@ -757,6 +757,14 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function fmtPace(kmPerSec){if(!kmPerSec||!isFinite(kmPerSec))return'—';const s=1/kmPerSec;const m=Math.floor(s/60);const ss=Math.round(s%60);return`${m}:${String(ss).padStart(2,'0')}/km`;}
 function parseTimeToSecs(t){if(!t)return 0;const p=t.split(':').map(Number);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return 0;}
 function toastMsg(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+// Same toast, but with an inline action button and a longer default duration so
+// there's time to actually notice and tap it.
+function toastUndo(msg,onclickAttr,dur=4500){
+  const t=document.getElementById('toast');
+  t.innerHTML=`${esc(msg)} <button onclick="${onclickAttr}" style="margin-left:10px;background:none;border:none;color:var(--accent2);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;padding:0;">Undo</button>`;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
 let _prCelebTimer=null;
 function celebratePR(prs){
   if(!prs||!prs.length)return;
@@ -1747,7 +1755,32 @@ function gymAddSet(i){
   sets.push({weight:prefillWeight,reps:'',warmup:false,technique:false});
   renderGymLogger();
 }
-function gymRemoveSet(i,si){gymDraft.exercises[i].sets.splice(si,1);renderGymLogger();}
+// Blank sets delete instantly - nothing to lose. A set with real weight/reps in it
+// gets a brief undo window instead, since a mis-tap here would otherwise silently
+// destroy a logged data point with no way back.
+let _lastRemovedSet=null;
+function gymRemoveSet(i,si){
+  const sets=gymDraft.exercises[i].sets;
+  const removed=sets[si];
+  const hadData=!!(removed&&!removed.warmup&&removed.weight&&removed.reps);
+  sets.splice(si,1);
+  renderGymLogger();
+  if(hadData){
+    _lastRemovedSet={exIdx:i,si,set:removed};
+    toastUndo(`Set removed (${removed.weight}kg×${removed.reps})`,'gymUndoRemoveSet()');
+  }
+}
+function gymUndoRemoveSet(){
+  if(!_lastRemovedSet||!gymDraft)return;
+  const{exIdx,si,set}=_lastRemovedSet;
+  const ex=gymDraft.exercises[exIdx];
+  _lastRemovedSet=null;
+  if(!ex)return;
+  ex.sets.splice(Math.min(si,ex.sets.length),0,set);
+  document.getElementById('toast').classList.remove('show');
+  renderGymLogger();
+  toastMsg('Set restored');
+}
 function gymToggleCollapse(i){const ex=gymDraft.exercises[i];if(!ex)return;ex._collapsed=!ex._collapsed;renderGymLogger();}
 // Cycles a set through Normal -> Warmup -> Technique -> Normal. Warmup sets are
 // excluded from training volume/load everywhere; Technique sets still count as real

@@ -1706,6 +1706,11 @@ function confirmNewEx(){
       gymDraft.exercises[existingIdx].sets.push({weight:'',reps:'',warmup:false});
       toastMsg(`${name} is already in this session — added another set`);
     }else{
+      // Adding a genuinely new exercise is the clearest signal you've moved on, so
+      // auto-collapse anything already finished - tap a collapsed card to reopen it.
+      gymDraft.exercises.forEach(e=>{
+        if((e.sets||[]).some(s=>!s.warmup&&s.weight&&s.reps))e._collapsed=true;
+      });
       gymDraft.exercises.push({name,sets:[{weight:'',reps:'',warmup:false}]});
     }
     closeModal('new-ex-modal');
@@ -1714,8 +1719,18 @@ function confirmNewEx(){
   haptic('success');
 }
 function gymRemoveEx(i){gymDraft.exercises.splice(i,1);renderGymLogger();}
-function gymAddSet(i){gymDraft.exercises[i].sets.push({weight:'',reps:'',warmup:false});renderGymLogger();}
+// Prefills weight from the previous set in this session (weight tends to stay constant
+// set-to-set, reps is what changes as you fatigue) - reps left blank since that's the
+// one thing you actually need to type each set.
+function gymAddSet(i){
+  const sets=gymDraft.exercises[i].sets;
+  const prev=sets[sets.length-1];
+  const prefillWeight=prev&&!prev.warmup&&prev.weight?prev.weight:'';
+  sets.push({weight:prefillWeight,reps:'',warmup:false,technique:false});
+  renderGymLogger();
+}
 function gymRemoveSet(i,si){gymDraft.exercises[i].sets.splice(si,1);renderGymLogger();}
+function gymToggleCollapse(i){const ex=gymDraft.exercises[i];if(!ex)return;ex._collapsed=!ex._collapsed;renderGymLogger();}
 // Cycles a set through Normal -> Warmup -> Technique -> Normal. Warmup sets are
 // excluded from training volume/load everywhere; Technique sets still count as real
 // training (volume, load, session history) but are excluded from the PR Tracker's
@@ -1731,6 +1746,22 @@ function gymCycleSetFlag(i,si){
 function gymSetExName(i,v){if(gymDraft.exercises[i])gymDraft.exercises[i].name=v;updateProgressHint(i);}
 function gymSetWeight(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si]){gymDraft.exercises[i].sets[si].weight=v;gymCheckSetDone(i,si);}}
 function gymSetReps(i,si,v){if(gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si]){gymDraft.exercises[i].sets[si].reps=v;gymCheckSetDone(i,si);}}
+// Quick +/- steppers for mid-set thumb use - update the input directly rather than a
+// full re-render, same lightweight-update pattern gymCheckSetDone already uses.
+function gymStepWeight(i,si,delta){
+  const s=gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];if(!s)return;
+  const next=Math.max(0,Math.round(((parseFloat(s.weight)||0)+delta)*2)/2);
+  s.weight=next===0?'':String(next);
+  const el=document.getElementById(`set-kg-${i}-${si}`);if(el)el.value=s.weight;
+  gymCheckSetDone(i,si);
+}
+function gymStepReps(i,si,delta){
+  const s=gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];if(!s)return;
+  const next=Math.max(0,(parseInt(s.reps)||0)+delta);
+  s.reps=next===0?'':String(next);
+  const el=document.getElementById(`set-reps-${i}-${si}`);if(el)el.value=s.reps;
+  gymCheckSetDone(i,si);
+}
 function gymCheckSetDone(i,si){
   const s=gymDraft&&gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];
   if(!s||s.warmup)return;
@@ -1739,16 +1770,19 @@ function gymCheckSetDone(i,si){
   const row=document.getElementById(`set-row-${i}-${si}`);
   const kgEl=document.getElementById(`set-kg-${i}-${si}`);
   const repsEl=document.getElementById(`set-reps-${i}-${si}`);
+  // Technique sets keep their purple styling regardless of done-state, matching the
+  // initial render - this incremental update used to ignore that and would flash a
+  // technique set's button green once both fields were filled in.
   if(btn){
-    btn.style.color=done?'var(--green)':'var(--text3)';
-    btn.style.borderColor=done?'rgba(8,132,91,0.4)':'var(--border)';
-    btn.style.background=done?'rgba(8,132,91,0.12)':'transparent';
+    btn.style.color=s.technique?'#9e3dfb':done?'var(--green)':'var(--text3)';
+    btn.style.borderColor=s.technique?'rgba(158,61,251,0.5)':done?'rgba(8,132,91,0.4)':'var(--border)';
+    btn.style.background=s.technique?'rgba(158,61,251,0.15)':done?'rgba(8,132,91,0.12)':'transparent';
   }
-  if(row)row.style.background=done?'rgba(8,132,91,0.05)':'';
+  if(row)row.style.background=s.technique?'rgba(158,61,251,0.04)':done?'rgba(8,132,91,0.05)':'';
   [kgEl,repsEl].forEach(el=>{
     if(!el)return;
-    el.style.background=done?'rgba(8,132,91,0.08)':'';
-    el.style.borderColor=done?'rgba(8,132,91,0.4)':'';
+    el.style.background=s.technique?'rgba(158,61,251,0.08)':done?'rgba(8,132,91,0.08)':'';
+    el.style.borderColor=s.technique?'rgba(158,61,251,0.35)':done?'rgba(8,132,91,0.4)':'';
   });
   // "Beat your ghost" - live-compare the set being typed against the same set number
   // from last session, using the ghost values stashed on the row at render time.
@@ -1765,6 +1799,22 @@ function gymCheckSetDone(i,si){
       else if(matched){ghostEl.style.color='var(--accent2)';ghostEl.textContent=`= matched last time (${label})`;}
       else{ghostEl.style.color='var(--text3)';ghostEl.textContent=`vs last time: ${label}`;}
     }
+  }
+  // Auto-start the rest timer the moment a set is completed - only on the rising edge
+  // (not on every keystroke while already done), and not for superset-paired exercises,
+  // which already have their own "rest after completing both" button. Tracked on the
+  // set itself (_restFired), not the DOM, since unrelated actions elsewhere in the
+  // session (adding a set, adding an exercise) trigger a full re-render that would
+  // otherwise reset a DOM-based flag and make an unrelated edit re-fire the timer.
+  if(done&&!s._restFired){
+    const isPaired=(gymDraft.pairs||[]).some(p=>p.includes(i));
+    if(!isPaired){
+      const ex=gymDraft.exercises[i];
+      startRestTimer(getExRestSecs(ex&&ex.name||''));
+    }
+    s._restFired=true;
+  }else if(!done){
+    s._restFired=false;
   }
 }
 
@@ -1792,6 +1842,23 @@ function renderSupersetExercisesHtml(lastSame,prog,sessions){
   return`<div id="gym-exercises">${pairBlocks}${soloBlocks}</div>`;
 }
 function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
+  // Collapsed summary - auto-set when a new exercise is added elsewhere in the
+  // session (see confirmNewEx), or toggled manually via the chevron. Tap anywhere on
+  // the card to reopen it.
+  if(ex._collapsed){
+    const realSets=(ex.sets||[]).filter(s=>!s.warmup&&s.weight&&s.reps);
+    const summary=realSets.map(s=>`${s.weight}kg×${s.reps}${s.technique?' (T)':''}`).join(' · ')||'No sets logged';
+    return`<div class="chart-card" style="margin-bottom:10px;padding:12px 16px;cursor:pointer;" id="ex-block-${i}" onclick="gymToggleCollapse(${i})">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(8,132,91,0.15);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">✓</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(ex.name||'Exercise')}</div>
+          <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${summary}</div>
+        </div>
+        <div style="font-size:14px;color:var(--text3);flex-shrink:0;">⌄</div>
+      </div>
+    </div>`;
+  }
   const _restSecs=getExRestSecs(ex.name||'');
   const nameLower=(ex.name||'').toLowerCase();
   // Find most recent occurrence of this exercise across ALL session types - accepts
@@ -1831,6 +1898,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
       <input class="modal-input" style="flex:1;margin-bottom:0;" value="${esc(ex.name||'')}" placeholder="Exercise name"
         oninput="gymSetExName(${i},this.value)" list="exs-${i}">
       <datalist id="exs-${i}">${sugg.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+      <button onclick="gymToggleCollapse(${i})" title="Collapse" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0;">⌃</button>
       <button onclick="gymRemoveEx(${i})" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:2px;flex-shrink:0;">×</button>
     </div>
     ${pb>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pb}KG</div>`:pbReps>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pbReps} REPS</div>`:''}
@@ -1850,17 +1918,26 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
       const rowBg=s.warmup?'rgba(194,80,0,0.04)':s.technique?'rgba(158,61,251,0.04)':done?'rgba(8,132,91,0.05)':'';
       const inputBg=s.warmup?'rgba(194,80,0,0.08)':s.technique?'rgba(158,61,251,0.08)':done?'rgba(8,132,91,0.08)':'';
       const inputBdr=s.warmup?'rgba(194,80,0,0.35)':s.technique?'rgba(158,61,251,0.35)':done?'rgba(8,132,91,0.4)':'';
-      const inputStyle=`padding:10px 12px;${inputBg?'background:'+inputBg+';':''}${inputBdr?'border-color:'+inputBdr+';':''}`;
+      const inputStyle=`padding:10px 4px;text-align:center;${inputBg?'background:'+inputBg+';':''}${inputBdr?'border-color:'+inputBdr+';':''}`;
+      const stepBtn=`width:20px;height:34px;flex-shrink:0;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text2);font-size:14px;font-weight:800;cursor:pointer;padding:0;line-height:1;`;
       const ghost=lastSets[si]||null;
       const ghostW=ghost?parseFloat(ghost.weight||0):null;
       const ghostR=ghost?parseFloat(ghost.reps||0):null;
       const ghostLine=ghost?`<div id="ghost-${i}-${si}" style="font-size:10px;color:var(--text3);margin:-2px 0 6px 34px;">vs last time: ${ghostW>0?`${ghostW}kg×${ghostR}`:`${ghostR} reps`}</div>`:'';
       return`<div id="set-row-${i}-${si}" data-ghost-w="${ghostW!=null?ghostW:''}" data-ghost-r="${ghostR!=null?ghostR:''}" style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:6px;margin-bottom:2px;align-items:center;border-radius:8px;${rowBg?'background:'+rowBg+';':''}">
       <button id="set-num-${i}-${si}" onclick="gymCycleSetFlag(${i},${si})" style="width:28px;height:28px;border-radius:8px;border:1px solid ${btnBdr};background:${btnBg};color:${btnCol};font-size:10px;font-weight:800;cursor:pointer;" title="${s.warmup?'Warmup':s.technique?'Technique — still counts as training, excluded from PR trend':'Tap to mark warmup'}">${s.warmup?'W':s.technique?'T':si+1}</button>
-      <input id="set-kg-${i}-${si}" class="run-field" type="number" inputmode="decimal" placeholder="kg" value="${esc(String(s.weight||''))}"
-        style="${inputStyle}" oninput="gymSetWeight(${i},${si},this.value)">
-      <input id="set-reps-${i}-${si}" class="run-field" type="number" inputmode="numeric" placeholder="reps" value="${esc(String(s.reps||''))}"
-        style="${inputStyle}" oninput="gymSetReps(${i},${si},this.value)">
+      <div style="display:flex;align-items:center;gap:3px;">
+        <button onclick="gymStepWeight(${i},${si},-2.5)" style="${stepBtn}" tabindex="-1">−</button>
+        <input id="set-kg-${i}-${si}" class="run-field" type="number" inputmode="decimal" placeholder="kg" value="${esc(String(s.weight||''))}"
+          style="${inputStyle}" oninput="gymSetWeight(${i},${si},this.value)">
+        <button onclick="gymStepWeight(${i},${si},2.5)" style="${stepBtn}" tabindex="-1">+</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:3px;">
+        <button onclick="gymStepReps(${i},${si},-1)" style="${stepBtn}" tabindex="-1">−</button>
+        <input id="set-reps-${i}-${si}" class="run-field" type="number" inputmode="numeric" placeholder="reps" value="${esc(String(s.reps||''))}"
+          style="${inputStyle}" oninput="gymSetReps(${i},${si},this.value)">
+        <button onclick="gymStepReps(${i},${si},1)" style="${stepBtn}" tabindex="-1">+</button>
+      </div>
       <button onclick="gymRemoveSet(${i},${si})" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;">×</button>
     </div>${ghostLine}`;}).join('')}
     <div style="display:flex;gap:8px;margin-top:6px;">
@@ -1945,8 +2022,10 @@ function saveGymSession(){
   const notesEl=document.getElementById('gym-notes-field');
   if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
   const hasValue=s=>String(s.weight||'').trim()!==''||String(s.reps||'').trim()!=='';
+  // Strip live-session-only UI state (_collapsed, _restFired, ...) before persisting.
+  const stripTransient=obj=>{const out={};Object.keys(obj).forEach(k=>{if(!k.startsWith('_'))out[k]=obj[k];});return out;};
   const exercises=(gymDraft.exercises||[])
-    .map(e=>{const n=(e.name||'').trim();return{...e,name:_resolveExName(n)||n,sets:(e.sets||[]).filter(hasValue)};})
+    .map(e=>{const n=(e.name||'').trim();return{...stripTransient(e),name:_resolveExName(n)||n,sets:(e.sets||[]).filter(hasValue).map(stripTransient)};})
     .filter(e=>e.name&&e.sets.length);
   if(!exercises.length){toastMsg('Add at least one exercise');return;}
   const{prs,nearMisses}=detectSessionPRs(exercises);

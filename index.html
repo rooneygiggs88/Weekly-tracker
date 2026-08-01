@@ -694,7 +694,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div class="modal-handle"></div>
     <h3>Discard session?</h3>
     <p style="color:var(--text2);font-size:14px;margin-bottom:20px;">All exercises and sets logged so far will be lost.</p>
-    <button class="btn-primary" style="background:var(--red);margin-bottom:10px;" onclick="closeModal('gym-discard-modal');gymDraft=null;_gymPickedType=null;renderGymSection();">Discard</button>
+    <button class="btn-primary" style="background:var(--red);margin-bottom:10px;" onclick="gymDiscardSession()">Discard</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('gym-discard-modal')">Keep going</button>
   </div>
 </div>
@@ -1434,7 +1434,32 @@ function renderTrainSection(tab){
 }
 
 // ── GYM ──
-let gymDraft=null;
+// An in-progress session used to live only in memory - if the tab reloaded (phone
+// reclaimed it in the background, browser closed, whatever) the whole session was
+// gone with zero trace, dumping you back at the "start a session" screen. Now the
+// draft is persisted to localStorage as you go and restored automatically on load,
+// so it survives exactly that.
+const GYM_DRAFT_KEY='gym_draft_v1';
+function saveGymDraft(){
+  if(gymDraft)localStorage.setItem(GYM_DRAFT_KEY,JSON.stringify(gymDraft));
+  else localStorage.removeItem(GYM_DRAFT_KEY);
+}
+function loadGymDraftFromStorage(){
+  try{const raw=localStorage.getItem(GYM_DRAFT_KEY);return raw?JSON.parse(raw):null;}catch(e){return null;}
+}
+function clearGymDraftStorage(){localStorage.removeItem(GYM_DRAFT_KEY);}
+let gymDraft=loadGymDraftFromStorage();
+// Train defaults to the Run tab - without this, a restored session would sit there
+// correctly in memory but stay invisible until you happened to tap into Gym yourself.
+if(gymDraft)activeTrainTab='gym';
+let _gymPersistInterval=null;
+function startGymPersist(){
+  if(_gymPersistInterval)clearInterval(_gymPersistInterval);
+  _gymPersistInterval=setInterval(()=>{
+    if(gymDraft)saveGymDraft();
+    else{clearInterval(_gymPersistInterval);_gymPersistInterval=null;}
+  },5000);
+}
 // Tracks which exercise you're currently typing into, so moving to a different one
 // (tapping into its fields) can auto-collapse whichever you just left - this is the
 // trigger that also covers "Copy this"/makeup sessions, where every exercise is
@@ -1597,6 +1622,7 @@ function startGymTimer(){
 }
 
 function renderGymLogger(){
+  saveGymDraft();
   const el=document.getElementById('gym-content');
   const sessions=loadGymData();
   const lastSame=sessions.filter(s=>s.type===gymDraft.type).slice(-1)[0];
@@ -1628,10 +1654,11 @@ function renderGymLogger(){
   ${gymDraft.superset?renderSupersetExercisesHtml(lastSame,prog,sessions):`<div id="gym-exercises">${gymDraft.exercises.map((ex,i)=>renderExBlock(ex,i,lastSame,prog,sessions)).join('')}</div>`}
   <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
   <label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label>
-  <textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;margin-bottom:10px;" oninput="gymDraft.notes=this.value;">${esc(gymDraft.notes||'')}</textarea>
+  <textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;margin-bottom:10px;" oninput="gymDraft.notes=this.value;saveGymDraft();">${esc(gymDraft.notes||'')}</textarea>
   <button class="btn-primary" onclick="openModal('gym-save-modal')" style="margin-bottom:8px;">Save Session</button>
   <button class="btn-ghost" style="width:100%;" onclick="openModal('gym-discard-modal')">Discard session</button>`;
   startGymTimer();
+  startGymPersist();
 }
 function gymSetType(t){gymDraft.type=t;renderGymLogger();}
 function gymShowTypeEdit(){const el=document.getElementById('gym-type-edit');if(el)el.style.display='block';}
@@ -1845,6 +1872,7 @@ function gymStepReps(i,si,delta){
   gymCheckSetDone(i,si);
 }
 function gymCheckSetDone(i,si){
+  saveGymDraft();
   const s=gymDraft&&gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];
   if(!s||s.warmup)return;
   const done=!!(s.weight&&s.reps);
@@ -2088,6 +2116,12 @@ function detectSessionPRs(exercises){
   });
   return{prs,nearMisses};
 }
+function gymDiscardSession(){
+  closeModal('gym-discard-modal');
+  gymDraft=null;clearGymDraftStorage();
+  _gymPickedType=null;
+  renderGymSection();
+}
 function saveGymSession(){
   const notesEl=document.getElementById('gym-notes-field');
   if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
@@ -2108,7 +2142,7 @@ function saveGymSession(){
   const d=dk(today());
   if(!state.data[`${d}:session:gym`])state.data[`${d}:session:gym`]=[];
   state.data[`${d}:session:gym`].push(gymDraft.type);
-  saveState();gymDraft=null;
+  saveState();gymDraft=null;clearGymDraftStorage();
   if(prs.length){
     celebratePR(prs);
     toastMsg(prs.length>1?`${prs.length} new PRs!`:`New PR: ${prs[0].name}`);

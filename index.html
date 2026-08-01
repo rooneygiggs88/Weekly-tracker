@@ -18,7 +18,13 @@
   --green:#059669;--red:#dc2626;--orange:#ea580c;
   --radius:20px;--radius-sm:14px;--radius-xs:10px;
 }
-body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:88px;overflow-x:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation;}
+/* 100vh on iOS Safari is fixed to the largest possible viewport (keyboard hidden) -
+   focusing a number input opens the keyboard, which shrinks the real visible area
+   without body actually resizing, so the browser's scroll-into-view overshoots and
+   the position:fixed bottom nav gets left stuck at a stale position. 100dvh tracks
+   the actual visible viewport; 100vh stays first as a fallback for anything that
+   doesn't understand dvh. */
+body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding-bottom:88px;overflow-x:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation;}
 
 /* NAV */
 .nav{position:fixed;bottom:0;left:0;right:0;z-index:100;display:flex;justify-content:space-around;align-items:center;padding:10px 4px 28px;background:rgba(255,255,255,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);}
@@ -33,7 +39,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 
 /* TODAY */
-.today-hero{min-height:100vh;display:flex;flex-direction:column;padding:36px 24px 24px;position:relative;overflow:hidden;}
+.today-hero{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:36px 24px 24px;position:relative;overflow:hidden;}
 .today-hero::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.12) 0%,transparent 70%);pointer-events:none;}
 .today-date{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;}
 .today-badge{font-size:12px;font-weight:800;letter-spacing:0.04em;text-transform:none;}
@@ -977,6 +983,24 @@ function showPage(name){
   if(name==='train')renderTrain();
   if(name==='trends')renderTrends();
   if(name==='me')renderMe();
+}
+
+// iOS Safari can leave position:fixed elements stuck at a stale offset once the
+// on-screen keyboard opens/closes and the page has scrolled - reported as the bottom
+// nav getting stranded mid-page while logging a set. The 100dvh fix above (see body/
+// .today-hero) addresses the root cause, but this actively re-pins the nav to the
+// real visible viewport as a backstop, since that's the one thing this can't be
+// tested against in a desktop browser.
+if(window.visualViewport){
+  const _navEl=document.querySelector('.nav');
+  const _syncNavToViewport=()=>{
+    if(!_navEl)return;
+    const vv=window.visualViewport;
+    const offset=window.innerHeight-vv.height-vv.offsetTop;
+    _navEl.style.bottom=(offset>0.5?offset:0)+'px';
+  };
+  window.visualViewport.addEventListener('resize',_syncNavToViewport);
+  window.visualViewport.addEventListener('scroll',_syncNavToViewport);
 }
 
 // ── TODAY + WEEK NAV ──

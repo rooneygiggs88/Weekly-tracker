@@ -1,7 +1,0 @@
-name = "weekly-tracker-strava"
-main = "index.js"
-compatibility_date = "2025-01-01"
-
-# Deploy secrets via CLI (never commit actual values):
-#   wrangler secret put STRAVA_CLIENT_ID
-#   wrangler secret put STRAVA_CLIENT_SECRET

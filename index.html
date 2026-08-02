@@ -2264,7 +2264,6 @@ function renderRunSection(){
     <input class="run-field" type="text" id="run-note" placeholder="How did it feel?">
     <div style="height:16px;"></div>
     <button class="btn-primary" onclick="saveRun()">Save Run</button>
-    ${stravaBtn()}
   </div>
   ${last?`<div class="chart-card" onclick="showPage('trends');switchTrendsTab('running');" style="cursor:pointer;">
     <div class="chart-card-header"><span class="chart-card-title">Last Run</span><span style="font-size:11px;color:var(--accent2);font-weight:700;">View all →</span></div>
@@ -6156,98 +6155,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   localStorage.setItem('rest_time_migration_v2','done');
 })();
 
-// ── STRAVA INTEGRATION ──
-// Fill these in after setup (see worker/wrangler.toml for instructions)
-const STRAVA_CLIENT_ID = '';      // from strava.com/settings/api → Client ID
-const STRAVA_WORKER_URL = '';     // your deployed Worker URL, no trailing slash
-
-function loadStravaAuth(){try{return JSON.parse(localStorage.getItem('strava_auth')||'null');}catch(e){return null;}}
-function saveStravaAuth(d){localStorage.setItem('strava_auth',JSON.stringify(d));}
-function clearStravaAuth(){localStorage.removeItem('strava_auth');}
-
-function stravaConnect(){
-  if(!STRAVA_CLIENT_ID){toastMsg('Set STRAVA_CLIENT_ID in the app first');return;}
-  const redirect=encodeURIComponent(window.location.href.split('?')[0]);
-  window.location.href=`https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&response_type=code&redirect_uri=${redirect}&approval_prompt=auto&scope=activity:read_all`;
-}
-
-async function stravaHandleCallback(){
-  const params=new URLSearchParams(window.location.search);
-  if(!params.has('code'))return;
-  const code=params.get('code');
-  window.history.replaceState({},'',window.location.pathname);
-  if(!STRAVA_WORKER_URL)return;
-  try{
-    toastMsg('Connecting to Strava…');
-    const res=await fetch(`${STRAVA_WORKER_URL}/exchange?code=${encodeURIComponent(code)}`);
-    const data=await res.json();
-    if(data.access_token){
-      saveStravaAuth({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:data.expires_at,athlete_name:data.athlete?(data.athlete.firstname||''):'Connected'});
-      toastMsg('Strava connected!');haptic('success');renderRunSection();
-    }else{toastMsg('Strava connection failed');}
-  }catch(e){toastMsg('Strava connection failed');}
-}
-
-async function stravaEnsureToken(){
-  const auth=loadStravaAuth();
-  if(!auth)return null;
-  if(Date.now()/1000<auth.expires_at-60)return auth.access_token;
-  try{
-    const res=await fetch(`${STRAVA_WORKER_URL}/refresh`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:auth.refresh_token})});
-    const data=await res.json();
-    if(data.access_token){saveStravaAuth({...auth,access_token:data.access_token,expires_at:data.expires_at});return data.access_token;}
-  }catch(e){}
-  clearStravaAuth();return null;
-}
-
-function _stravaSecsToTime(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;const mm=String(m).padStart(2,'0'),ss=String(sec).padStart(2,'0');return h>0?`${h}:${mm}:${ss}`:`${mm}:${ss}`;}
-
-async function stravaSync(){
-  if(!STRAVA_WORKER_URL){toastMsg('Configure STRAVA_WORKER_URL first');return;}
-  const token=await stravaEnsureToken();
-  if(!token){toastMsg('Connect Strava first');renderRunSection();return;}
-  toastMsg('Syncing runs…');
-  try{
-    const existing=loadRunData();
-    const existingIds=new Set(existing.filter(r=>r.stravaId).map(r=>r.stravaId));
-    const res=await fetch(`${STRAVA_WORKER_URL}/activities?per_page=60&page=1`,{headers:{Authorization:`Bearer ${token}`}});
-    const activities=await res.json();
-    if(!Array.isArray(activities)){toastMsg('Sync failed');return;}
-    let added=0;
-    activities
-      .filter(a=>a.type==='Run'||(a.sport_type||'').includes('Run'))
-      .forEach(a=>{
-        if(existingIds.has(String(a.id)))return;
-        const date=a.start_date_local.slice(0,10);
-        const km=Math.round((a.distance/1000)*100)/100;
-        if(existing.some(r=>r.date===date&&Math.abs((r.km||0)-km)<0.1))return;
-        existing.push({date,km,time:a.moving_time?_stravaSecsToTime(a.moving_time):'',note:a.name||'',effort:'',startTime:a.start_date_local.slice(11,16),ts:new Date(a.start_date).getTime(),stravaId:String(a.id)});
-        added++;
-      });
-    existing.sort((a,b)=>a.date.localeCompare(b.date));
-    saveRunData(existing);
-    toastMsg(added?`${added} run${added!==1?'s':''} synced`:'Already up to date');
-    haptic('success');renderRunSection();
-  }catch(e){toastMsg('Sync failed');}
-}
-
-function stravaDisconnect(){clearStravaAuth();toastMsg('Strava disconnected');renderRunSection();}
-
-function stravaBtn(){
-  if(!STRAVA_CLIENT_ID)return'';
-  const auth=loadStravaAuth();
-  const logo=`<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7.04 13.828h4.172"/></svg>`;
-  if(auth){
-    return`<div style="margin-top:8px;display:flex;gap:6px;">
-      <button onclick="stravaSync()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #fc4c02;background:rgba(252,76,2,0.07);color:#fc4c02;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">${logo} Sync · ${esc(auth.athlete_name||'Strava')}</button>
-      <button onclick="stravaDisconnect()" style="padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Disconnect Strava">✕</button>
-    </div>`;
-  }
-  return`<button onclick="stravaConnect()" style="width:100%;margin-top:8px;padding:11px;border-radius:10px;border:1px solid #fc4c02;background:rgba(252,76,2,0.07);color:#fc4c02;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">${logo} Connect Strava</button>`;
-}
-
 // ── INIT ──
-stravaHandleCallback();
 renderToday();
 </script>
 </body>

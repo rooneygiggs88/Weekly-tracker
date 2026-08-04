@@ -4217,12 +4217,19 @@ function getTodayWorkoutSuggestion(){
   const runType=getWeekPlanRunType(dow);
   const weekPlan=state.weekPlan||[];
   const runDayIdxs=weekPlan.map((t,i)=>t==='Run'?i:-1).filter(i=>i>=0);
+  // Only split what's left of the target across the run days still ahead (today included) -
+  // not the full week's target across every scheduled day regardless of what's already been
+  // run. So running long today genuinely eases up what's suggested later in the week, and
+  // running short bumps later suggestions up, since it's reacting to plan.thisWeekKm (actual
+  // logged km so far this week), not just the static weekly total.
+  const remainingRunDayIdxs=runDayIdxs.filter(i=>i>=dow);
   const plan=getRaceBuildPlan();
   let shareKm=null;
-  if(plan&&runDayIdxs.length){
-    const totalWeight=runDayIdxs.reduce((s,i)=>s+(RUN_TYPE_WEIGHT[getWeekPlanRunType(i)]||1),0);
+  if(plan&&remainingRunDayIdxs.length){
+    const remainingKm=Math.max(0,plan.targetKm-plan.thisWeekKm);
+    const totalWeight=remainingRunDayIdxs.reduce((s,i)=>s+(RUN_TYPE_WEIGHT[getWeekPlanRunType(i)]||1),0);
     const myWeight=RUN_TYPE_WEIGHT[runType]||1;
-    shareKm=Math.round((plan.targetKm*myWeight/totalWeight)*10)/10;
+    shareKm=Math.round((remainingKm*myWeight/totalWeight)*10)/10;
   }
   const goalSecs=(r&&r.goalTime)?parseTimeToSecs(r.goalTime):0;
   const goalSecsPerKm=(r&&r.km&&goalSecs)?goalSecs/r.km:null;

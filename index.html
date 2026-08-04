@@ -5001,7 +5001,7 @@ function renderReadinessCard(){
       ${avgBadge}`
     :`<div style="color:var(--text3);font-size:${avgBadge?'12px;margin-bottom:2px;':'13px;padding:4px 0 2px;'}">${avgBadge?"Log today's sleep &amp; HRV for a readiness score.":'Log your Garmin sleep &amp; HRV to get a readiness score.'}</div>${avgBadge}`;
   const sleepDef=getSleepDeficit();
-  const sleepDefHtml=(sleepDef&&sleepDef.deficit>10)?`<div style="margin-top:8px;font-size:11px;font-weight:700;color:var(--orange);">😴 ${sleepDef.deficit}pt sleep deficit this week vs your ${sleepDef.baseline} baseline</div>`:'';
+  const sleepDefHtml=(sleepDef&&sleepDef.deficit>10)?`<div style="margin-top:8px;font-size:11px;font-weight:700;color:var(--orange);">😴 ${sleepDef.deficit}pt sleep deficit over the last 7 days vs your ${sleepDef.baseline} baseline</div>`:'';
   const recovery=getRecoveryFeedback();
   const recoveryHtml=recovery?`<div style="margin-top:8px;font-size:11px;font-weight:600;color:var(--text2);">HRV was <strong style="color:${recovery.diff>=0?'var(--green)':'var(--orange)'};">${recovery.hrv}ms</strong> the morning after your ${esc(recovery.type)} session (${fmtShortDate(dk(new Date(recovery.date+'T12:00:00')))}) — ${recovery.diff>=0?`${recovery.diff}pt above`:`${Math.abs(recovery.diff)}pt below`} your recent average</div>`:'';
   el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
@@ -5271,7 +5271,7 @@ function renderActivityLoad(){
   const gymSets=recentGym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
   const runCount=runs.filter(r=>{const d=new Date(r.date);return d>=addDays(now,-6)&&d<=now;}).length;
   const sessionDesc=[gymCount?`${gymCount} gym session${gymCount>1?'s':''} (${gymSets} sets)`:'',runCount?`${runCount} run${runCount>1?'s':''}`:''].filter(Boolean).join(' · ');
-  const advice=isHigh?'High load — consider an easier day soon.':isRest?'Low load this week — good time to push harder.':'Load is balanced — keep it up.';
+  const advice=isHigh?'High load — consider an easier day soon.':isRest?'Low load over the last 7 days — good time to push harder.':'Load is balanced — keep it up.';
   const adviceColor=isHigh?'var(--orange)':isRest?'var(--accent2)':'var(--green)';
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">Activity Load</span><span class="chart-card-val">7d vs 28d avg</span></div>

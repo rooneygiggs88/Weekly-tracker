@@ -4224,30 +4224,46 @@ function getTodayWorkoutSuggestion(){
   // logged km so far this week), not just the static weekly total.
   const remainingRunDayIdxs=runDayIdxs.filter(i=>i>=dow);
   const plan=getRaceBuildPlan();
-  let shareKm=null;
-  if(plan&&remainingRunDayIdxs.length){
-    const remainingKm=Math.max(0,plan.targetKm-plan.thisWeekKm);
-    const totalWeight=remainingRunDayIdxs.reduce((s,i)=>s+(RUN_TYPE_WEIGHT[getWeekPlanRunType(i)]||1),0);
-    const myWeight=RUN_TYPE_WEIGHT[runType]||1;
-    shareKm=Math.round((remainingKm*myWeight/totalWeight)*10)/10;
-  }
   const goalSecs=(r&&r.goalTime)?parseTimeToSecs(r.goalTime):0;
   const goalSecsPerKm=(r&&r.km&&goalSecs)?goalSecs/r.km:null;
   const offsets={Tempo:-10,Easy:50,Long:35,Intervals:-25,Race:0};
-  const paceSecsPerKm=goalSecsPerKm?goalSecsPerKm+offsets[runType]:null;
-  const paceStr=paceSecsPerKm?fmtPace(1/paceSecsPerKm):null;
   const easySecsPerKm=goalSecsPerKm?goalSecsPerKm+offsets.Easy:null;
   // Tempo/Intervals are duration-based (fixed warm-up/main-effort/cool-down minutes), so
-  // their distance has to come from those blocks' own paces - stapling on the weekly-target
-  // share (shareKm) produced a total that didn't match the stated pace/time at all.
-  // shareKm is only valid for the pure distance days (Easy/Long/Race), used directly below.
-  const timeBlockKm=mainMin=>(paceSecsPerKm&&easySecsPerKm)?Math.round(((10*60)/easySecsPerKm+(mainMin*60)/paceSecsPerKm+(10*60)/easySecsPerKm)*10)/10:null;
+  // their distance comes from those blocks' own paces, not a share of the weekly pool.
+  // rawTimeBlockKm is unrounded so it can also be used below to reserve each remaining
+  // Tempo/Intervals day's distance out of the pool before Easy/Long/Race split what's left -
+  // otherwise their weight alone shrank Easy/Long's share without the pool actually
+  // accounting for what Tempo/Intervals were going to use.
+  const DURATION_TYPES=new Set(['Tempo','Intervals']);
+  const rawTimeBlockKm=type=>{
+    const paceSPK=goalSecsPerKm?goalSecsPerKm+offsets[type]:null;
+    return(paceSPK&&easySecsPerKm)?((10*60)/easySecsPerKm+(20*60)/paceSPK+(10*60)/easySecsPerKm):null;
+  };
+  let shareKm=null;
+  if(plan&&remainingRunDayIdxs.length&&!DURATION_TYPES.has(runType)){
+    let pool=Math.max(0,plan.targetKm-plan.thisWeekKm);
+    const distanceIdxs=[];
+    remainingRunDayIdxs.forEach(i=>{
+      const t=getWeekPlanRunType(i);
+      if(DURATION_TYPES.has(t)){
+        const reserve=rawTimeBlockKm(t);
+        if(reserve)pool=Math.max(0,pool-reserve);
+      }else distanceIdxs.push(i);
+    });
+    if(distanceIdxs.length){
+      const totalWeight=distanceIdxs.reduce((s,i)=>s+(RUN_TYPE_WEIGHT[getWeekPlanRunType(i)]||1),0);
+      const myWeight=RUN_TYPE_WEIGHT[runType]||1;
+      shareKm=Math.round((pool*myWeight/totalWeight)*10)/10;
+    }
+  }
+  const paceSecsPerKm=goalSecsPerKm?goalSecsPerKm+offsets[runType]:null;
+  const paceStr=paceSecsPerKm?fmtPace(1/paceSecsPerKm):null;
   let distKm,structure;
   switch(runType){
-    case'Tempo':distKm=timeBlockKm(20);structure=`10min warm-up, ~20min @ tempo pace${paceStr?` (${paceStr})`:''}, 10min cool-down${distKm?` — ~${distKm}km total`:''}`;break;
+    case'Tempo':{const raw=rawTimeBlockKm('Tempo');distKm=raw?Math.round(raw*10)/10:null;structure=`10min warm-up, ~20min @ tempo pace${paceStr?` (${paceStr})`:''}, 10min cool-down${distKm?` — ~${distKm}km total`:''}`;break;}
     case'Easy':distKm=shareKm;structure=`${distKm?distKm+'km ':''}easy, conversational effort${paceStr?` (~${paceStr})`:''}`;break;
     case'Long':distKm=shareKm;structure=`${distKm?distKm+'km ':''}steady long run${paceStr?` (~${paceStr})`:''}, focus on time on feet`;break;
-    case'Intervals':distKm=timeBlockKm(20);structure=`Warm-up, then ~20min of intervals${paceStr?` @ ${paceStr}`:''} with jog recovery, cool-down${distKm?` — ~${distKm}km total`:''}`;break;
+    case'Intervals':{const raw=rawTimeBlockKm('Intervals');distKm=raw?Math.round(raw*10)/10:null;structure=`Warm-up, then ~20min of intervals${paceStr?` @ ${paceStr}`:''} with jog recovery, cool-down${distKm?` — ~${distKm}km total`:''}`;break;}
     case'Race':distKm=shareKm;structure=`${distKm?distKm+'km ':''}@ goal race pace${paceStr?` (${paceStr})`:''}`;break;
     default:distKm=null;structure='';
   }

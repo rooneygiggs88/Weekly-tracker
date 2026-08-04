@@ -4231,10 +4231,10 @@ function getTodayWorkoutSuggestion(){
   const paceStr=paceSecsPerKm?fmtPace(1/paceSecsPerKm):null;
   let structure;
   switch(runType){
-    case'Tempo':structure=`10min warm-up, ~20min @ tempo pace${paceStr?` (${paceStr})`:''}, 10min cool-down`;break;
+    case'Tempo':structure=`10min warm-up, ~20min @ tempo pace${paceStr?` (${paceStr})`:''}, 10min cool-down${distKm?` — ~${distKm}km total`:''}`;break;
     case'Easy':structure=`${distKm?distKm+'km ':''}easy, conversational effort${paceStr?` (~${paceStr})`:''}`;break;
     case'Long':structure=`${distKm?distKm+'km ':''}steady long run${paceStr?` (~${paceStr})`:''}, focus on time on feet`;break;
-    case'Intervals':structure=`Warm-up, then intervals${paceStr?` @ ${paceStr}`:''} with jog recovery, cool-down`;break;
+    case'Intervals':structure=`Warm-up, then intervals${paceStr?` @ ${paceStr}`:''} with jog recovery, cool-down${distKm?` — ~${distKm}km total`:''}`;break;
     case'Race':structure=`${distKm?distKm+'km ':''}@ goal race pace${paceStr?` (${paceStr})`:''}`;break;
     default:structure='';
   }

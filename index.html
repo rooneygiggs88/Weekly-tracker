@@ -5019,7 +5019,7 @@ function renderReadinessCard(){
 // (longest distance, fastest pace). Scans chronologically and tracks a running best so
 // each session is judged against what was actually the record at the time it happened.
 function getWeeklyWin(){
-  const now=today();const weekAgo=addDays(now,-6);
+  const now=today();const weekStartStr=dk(getMonday(now));
   const gym=[...loadGymData()].sort((a,b)=>a.date.localeCompare(b.date));
   const runs=[...loadRunData()].sort((a,b)=>a.date.localeCompare(b.date));
   const wins=[];
@@ -5027,7 +5027,7 @@ function getWeeklyWin(){
   gym.forEach(s=>(s.exercises||[]).forEach(ex=>{if(ex.name&&(ex.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0))exHasWeight[ex.name]=true;}));
   const bestWeighted={},bestReps={};
   gym.forEach(s=>{
-    const inWeek=new Date(s.date+'T12:00:00')>=weekAgo;
+    const inWeek=s.date>=weekStartStr;
     (s.exercises||[]).forEach(ex=>{
       if(!ex.name)return;
       if(exHasWeight[ex.name]){
@@ -5050,7 +5050,7 @@ function getWeeklyWin(){
   });
   let bestKm=0,bestPace=Infinity;
   runs.forEach(r=>{
-    const inWeek=new Date(r.date+'T12:00:00')>=weekAgo;
+    const inWeek=r.date>=weekStartStr;
     if(r.km>bestKm){
       if(inWeek&&bestKm>0)wins.push({type:'run',name:'Longest run',detail:`${r.km}km`,date:r.date});
       bestKm=r.km;
@@ -5110,7 +5110,7 @@ function getFlashback(){
   return best;
 }
 // Merged "story" slot: prefers this week's win (most recent, most relevant), falls
-// back to an "on this day" flashback when there's been no PR in the last 7 days.
+// back to an "on this day" flashback when there's been no PR since Monday.
 function renderStoryCard(){
   const el=document.getElementById('story-card');
   if(!el)return;

@@ -341,6 +341,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div class="week-strip" id="week-strip"></div>
     <div id="race-card-wrap"></div>
     <div id="workout-suggestion-wrap"></div>
+    <div id="gym-week-wrap"></div>
     <div id="session-card-wrap"></div>
     <div class="goal-stack" id="goal-stack"></div>
   </div>
@@ -1228,6 +1229,19 @@ function renderToday(){
       </div>
       <div style="font-size:13px;color:var(--text);font-weight:600;line-height:1.5;">${esc(suggestion.structure)}</div>
       <div style="font-size:10px;color:var(--text3);margin-top:6px;">Rule-of-thumb pacing off your goal, not personalized coaching.</div>
+    </div>`:'';
+  }
+
+  // Gym week overview: done vs. remaining against the Training Plan, this calendar week
+  const gwWrap=document.getElementById('gym-week-wrap');
+  if(gwWrap){
+    const gymWeek=viewingToday?getGymWeekOverview():null;
+    gwWrap.innerHTML=gymWeek?`<div class="chart-card" style="margin-bottom:10px;padding:12px 14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Gym this week</span>
+        <span style="font-size:13px;font-weight:800;color:${gymWeek.doneCount>=gymWeek.total?'var(--green)':'var(--text)'};">${gymWeek.doneCount}/${gymWeek.total} done</span>
+      </div>
+      ${gymWeek.remaining.length?`<div style="font-size:12px;color:var(--text2);font-weight:600;">Remaining: ${gymWeek.remaining.map(r=>`${esc(r.type)} (${esc(r.day)})`).join(', ')}</div>`:`<div style="font-size:12px;color:var(--green);font-weight:700;">All sessions done for the week</div>`}
     </div>`:'';
   }
 
@@ -5646,6 +5660,28 @@ function getTodayPlanType(){
 function getWeekPlanRunType(i){
   const explicit=state.weekPlanRunType&&state.weekPlanRunType[i];
   return explicit||RUN_TYPE_DEFAULT_BY_DOW[i]||'Easy';
+}
+// Weekly gym overview vs. the Training Plan - just done vs. remaining against what's
+// actually scheduled, no baseline/volume comparators. Mirrors the race card's "where do
+// I stand this week" framing, scoped to the calendar week (Monday-Sunday).
+const GYM_PLAN_TYPES=new Set(['Push','Pull','Legs','Core','Custom']);
+function getGymWeekOverview(){
+  if(!state.weekPlan||!Array.isArray(state.weekPlan))return null;
+  const now=today();
+  const mon=getMonday(now);
+  const dayLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const scheduled=[];
+  for(let i=0;i<7;i++){
+    const type=state.weekPlan[i];
+    if(!GYM_PLAN_TYPES.has(type))continue;
+    const d=addDays(mon,i);
+    const ds=dk(d);
+    scheduled.push({day:dayLabels[i],type,ds,done:getSessionDone(ds,'gym'),isToday:ds===dk(now)});
+  }
+  if(!scheduled.length)return null;
+  const doneCount=scheduled.filter(s=>s.done).length;
+  const remaining=scheduled.filter(s=>!s.done);
+  return{total:scheduled.length,doneCount,remaining,scheduled};
 }
 function renderWeekPlanSection(){
   const plan=state.weekPlan;

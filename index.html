@@ -2433,7 +2433,8 @@ function renderGymAnalysis(gym){
   const freqWeeks=[];
   for(let w=11;w>=0;w--){
     const mon=addDays(getMonday(now),-w*7);const sun=addDays(mon,6);
-    const count=gym.filter(s=>new Date(s.date)>=mon&&new Date(s.date)<=sun).length;
+    const monStr=dk(mon),sunStr=dk(sun);
+    const count=gym.filter(s=>s.date>=monStr&&s.date<=sunStr).length;
     freqWeeks.push({label:`${mon.getDate()}/${mon.getMonth()+1}`,count});
   }
   const maxFreq=Math.max(...freqWeeks.map(w=>w.count),1);
@@ -2449,7 +2450,8 @@ function renderGymAnalysis(gym){
   const volWeeks=[];
   for(let w=11;w>=0;w--){
     const mon=addDays(getMonday(now),-w*7);const sun=addDays(mon,6);
-    const sessions=gym.filter(s=>new Date(s.date)>=mon&&new Date(s.date)<=sun);
+    const monStr=dk(mon),sunStr=dk(sun);
+    const sessions=gym.filter(s=>s.date>=monStr&&s.date<=sunStr);
     const vol=sessions.reduce((t,s)=>(s.exercises||[]).reduce((tt,e)=>(e.sets||[]).filter(ss=>!ss.warmup).reduce((ttt,ss)=>ttt+(parseFloat(ss.weight||0)*parseFloat(ss.reps||0)),tt),t),0);
     volWeeks.push({vol:Math.round(vol/1000*10)/10});
   }
@@ -2502,7 +2504,8 @@ function renderRunAnalysis(runs){
   const kmWeeks=[];
   for(let w=25;w>=0;w--){
     const mon=addDays(getMonday(now),-w*7);const sun=addDays(mon,6);
-    const wRuns=runs.filter(r=>new Date(r.date)>=mon&&new Date(r.date)<=sun);
+    const monStr=dk(mon),sunStr=dk(sun);
+    const wRuns=runs.filter(r=>r.date>=monStr&&r.date<=sunStr);
     const km=wRuns.reduce((s,r)=>s+(r.km||0),0);
     kmWeeks.push({km,label:`${mon.getDate()}/${mon.getMonth()+1}`});
   }
@@ -2537,7 +2540,8 @@ function renderRunAnalysis(runs){
   // Long run progression: max km per week
   const longRuns=trimmed.map((w,i)=>{
     const mon=addDays(getMonday(now),-(trimmed.length-1-i)*7);const sun=addDays(mon,6);
-    const wRuns=runs.filter(r=>new Date(r.date)>=mon&&new Date(r.date)<=sun);
+    const monStr=dk(mon),sunStr=dk(sun);
+    const wRuns=runs.filter(r=>r.date>=monStr&&r.date<=sunStr);
     return Math.max(0,...wRuns.map(r=>r.km||0));
   });
   const maxLR=Math.max(...longRuns,1);
@@ -4128,12 +4132,17 @@ function getRaceBuildPlan(){
   let totalKm=0,weeksCounted=0;
   for(let w=1;w<=4;w++){
     const wkStart=addDays(thisMon,-7*w);const wkEnd=addDays(wkStart,6);
-    const wkKm=runs.filter(x=>{const d=new Date(x.date+'T12:00:00');return d>=wkStart&&d<=wkEnd;}).reduce((a,x)=>a+(x.km||0),0);
+    // Compare as date-key strings, not Date objects - wkEnd lands at midnight (from
+    // getMonday/addDays), but a run's own date was being parsed at noon, so any run
+    // logged on the LAST day of the window compared later-than-midnight and was
+    // silently excluded from its own week every time.
+    const wkStartStr=dk(wkStart),wkEndStr=dk(wkEnd);
+    const wkKm=runs.filter(x=>x.date>=wkStartStr&&x.date<=wkEndStr).reduce((a,x)=>a+(x.km||0),0);
     if(wkKm>0){totalKm+=wkKm;weeksCounted++;}
   }
   if(weeksCounted<2)return null;
   const baseline=totalKm/weeksCounted;
-  const thisWeekKm=runs.filter(x=>{const d=new Date(x.date+'T12:00:00');return d>=thisMon&&d<=now;}).reduce((a,x)=>a+(x.km||0),0);
+  const thisWeekKm=runs.filter(x=>x.date>=dk(thisMon)&&x.date<=dk(now)).reduce((a,x)=>a+(x.km||0),0);
   let targetKm,phase;
   if(weeksToRace<=0){targetKm=Math.round(r.km*0.3);phase='Race week';}
   else if(weeksToRace===1){targetKm=Math.round(baseline*0.5);phase='Taper';}
@@ -5757,9 +5766,11 @@ function renderVolumeTab(){
   }
 
   const {from,to,days}=getRange(_volPeriod);
-  const sessions=gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=from&&d<=to;});
-  const runsInPeriod=run.filter(r=>{const d=new Date(r.date+'T12:00:00');return d>=from&&d<=to;});
-  const prevSessions=days?gym.filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=addDays(from,-days)&&d<from;}):[];
+  const fromStr=dk(from),toStr=dk(to);
+  const sessions=gym.filter(s=>s.date>=fromStr&&s.date<=toStr);
+  const runsInPeriod=run.filter(r=>r.date>=fromStr&&r.date<=toStr);
+  const prevFromStr=days?dk(addDays(from,-days)):null;
+  const prevSessions=days?gym.filter(s=>s.date>=prevFromStr&&s.date<fromStr):[];
   const prevCounts=countMuscles(prevSessions);
 
   const gymCounts=countMuscles(sessions);

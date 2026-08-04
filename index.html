@@ -4226,6 +4226,7 @@ function getRaceStatusLines(){
 // standard training-zone rules of thumb, not personalized coaching.
 function getTodayWorkoutSuggestion(){
   if(getTodayPlanType()!=='Run')return null;
+  if(getSessionDone(dk(today()),'run'))return null; // already logged - the prescription is stale
   const r=state.race;
   const dow=(today().getDay()+6)%7;
   const runType=getWeekPlanRunType(dow);

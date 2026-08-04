@@ -340,6 +340,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div id="story-card"></div>
     <div class="week-strip" id="week-strip"></div>
     <div id="race-card-wrap"></div>
+    <div id="workout-suggestion-wrap"></div>
     <div id="session-card-wrap"></div>
     <div class="goal-stack" id="goal-stack"></div>
   </div>
@@ -811,12 +812,13 @@ function loadState(){
       if(!p.userName)p.userName='';
       if(!p.runTarget)p.runTarget=0;
       if(!p.weekPlan)p.weekPlan=null;
+      if(!Array.isArray(p.weekPlanRunType))p.weekPlanRunType=new Array(7).fill(null);
       if(!Array.isArray(p.dismissedAlerts))p.dismissedAlerts=[];
       if(!p.bodyCompGoal)p.bodyCompGoal=null;
       return p;
     }
   }catch(e){const ok=confirm('Your data could not be loaded. Reset?');if(ok)localStorage.removeItem('wt_v3');}
-  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,dismissedAlerts:[],bodyCompGoal:null};
+  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,weekPlanRunType:new Array(7).fill(null),dismissedAlerts:[],bodyCompGoal:null};
 }
 let state=loadState();
 let _saveTimer=null;
@@ -1201,13 +1203,33 @@ function renderToday(){
     if(days>=0){
       const rGoalSecs=state.race.goalTime?parseTimeToSecs(state.race.goalTime):0;
       const rGoalPace=(state.race.km&&rGoalSecs)?fmtPace(state.race.km/rGoalSecs):null;
+      const statusLines=getRaceStatusLines();
+      const statusColor=ot=>ot===true?'var(--green)':ot===false?'var(--orange)':'var(--text3)';
+      const statusHtml=statusLines?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.08);">
+        <div style="font-size:12px;font-weight:700;color:${statusColor(statusLines.volume.onTrack)};margin-bottom:3px;">${esc(statusLines.volume.text)}</div>
+        <div style="font-size:12px;font-weight:700;color:${statusColor(statusLines.pace.onTrack)};">${esc(statusLines.pace.text)}</div>
+      </div>`:'';
       raceWrap.innerHTML=`<div class="race-card" onclick="openRaceModal()">
         <div class="race-card-label">Race Countdown</div>
         <div class="race-card-days">${days}<span style="font-size:18px;color:var(--text2);font-weight:700;"> days</span></div>
         <div class="race-card-meta">${esc(state.race.name||'Race')}${state.race.km?' · '+state.race.km+'km':''}${state.race.goalTime?' · Goal '+esc(state.race.goalTime):''}${rGoalPace?' ('+rGoalPace+')':''}</div>
+        ${statusHtml}
       </div>`;
     }else{raceWrap.innerHTML='';}
   }else{raceWrap.innerHTML='';}
+
+  // Today's workout suggestion (only when today's plan is a Run day)
+  const wsWrap=document.getElementById('workout-suggestion-wrap');
+  if(wsWrap){
+    const suggestion=viewingToday?getTodayWorkoutSuggestion():null;
+    wsWrap.innerHTML=suggestion?`<div class="chart-card" style="margin-bottom:10px;padding:12px 14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);">Today's run · ${esc(suggestion.runType)}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);font-weight:600;line-height:1.5;">${esc(suggestion.structure)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px;">Rule-of-thumb pacing off your goal, not personalized coaching.</div>
+    </div>`:'';
+  }
 
   // Weekly quota tracker (rings) + today's plan, combined into one card
   const wrap=document.getElementById('session-card-wrap');
@@ -4151,6 +4173,73 @@ function getRaceBuildPlan(){
   else{targetKm=Math.round(Math.min(baseline*1.1,baseline+8));phase='Build';}
   return{baseline:Math.round(baseline*10)/10,targetKm,thisWeekKm:Math.round(thisWeekKm*10)/10,weeksToRace,phase};
 }
+// Always-on volume + pace status vs. the race goal, shown on the Today countdown card.
+// onTrack is true/false/null (null = not enough data yet to judge either way).
+function getRaceStatusLines(){
+  const r=state.race;
+  if(!r||!r.date)return null;
+  const plan=getRaceBuildPlan();
+  const proj=getRaceProjection();
+  const goalSecs=r.goalTime?parseTimeToSecs(r.goalTime):0;
+  let volume;
+  if(!plan){
+    volume={text:'Log a couple more weeks of runs to set a weekly target.',onTrack:null};
+  }else{
+    const dow=(today().getDay()+6)%7;const daysLeft=6-dow;
+    if(plan.thisWeekKm>=plan.targetKm){
+      volume={text:`${plan.thisWeekKm} / ${plan.targetKm}km this week — target hit`,onTrack:true};
+    }else{
+      const remain=Math.round((plan.targetKm-plan.thisWeekKm)*10)/10;
+      volume={text:`${plan.thisWeekKm} / ${plan.targetKm}km this week — ${remain}km behind${daysLeft>0?`, ${daysLeft} day${daysLeft===1?'':'s'} left`:''}`,onTrack:false};
+    }
+  }
+  let pace;
+  if(!proj){
+    pace={text:'Log a tempo/interval run or two to get a pace comparison.',onTrack:null};
+  }else if(!goalSecs){
+    pace={text:`Recent quality pace ${proj.pace}`,onTrack:null};
+  }else{
+    const diff=proj.projSecs-goalSecs;
+    if(Math.abs(diff)<30){pace={text:`Recent pace right on your ${esc(r.goalTime)} goal`,onTrack:true};}
+    else if(diff<0){pace={text:`Recent pace ahead of goal by ${fmtDurationFromSecs(Math.abs(diff))}`,onTrack:true};}
+    else{pace={text:`Recent pace ${fmtDurationFromSecs(diff)} off goal`,onTrack:false};}
+  }
+  return{volume,pace};
+}
+// Rule-of-thumb workout suggestion for today, when today's plan type is "Run".
+// Distance is this week's build-plan target split across scheduled run days, weighted
+// by run type (long run gets the biggest share). Pace is offset from goal pace using
+// standard training-zone rules of thumb, not personalized coaching.
+function getTodayWorkoutSuggestion(){
+  if(getTodayPlanType()!=='Run')return null;
+  const r=state.race;
+  const dow=(today().getDay()+6)%7;
+  const runType=getWeekPlanRunType(dow);
+  const weekPlan=state.weekPlan||[];
+  const runDayIdxs=weekPlan.map((t,i)=>t==='Run'?i:-1).filter(i=>i>=0);
+  const plan=getRaceBuildPlan();
+  let distKm=null;
+  if(plan&&runDayIdxs.length){
+    const totalWeight=runDayIdxs.reduce((s,i)=>s+(RUN_TYPE_WEIGHT[getWeekPlanRunType(i)]||1),0);
+    const myWeight=RUN_TYPE_WEIGHT[runType]||1;
+    distKm=Math.round((plan.targetKm*myWeight/totalWeight)*10)/10;
+  }
+  const goalSecs=(r&&r.goalTime)?parseTimeToSecs(r.goalTime):0;
+  const goalSecsPerKm=(r&&r.km&&goalSecs)?goalSecs/r.km:null;
+  const offsets={Tempo:-10,Easy:50,Long:35,Intervals:-25,Race:0};
+  const paceSecsPerKm=goalSecsPerKm?goalSecsPerKm+offsets[runType]:null;
+  const paceStr=paceSecsPerKm?fmtPace(1/paceSecsPerKm):null;
+  let structure;
+  switch(runType){
+    case'Tempo':structure=`10min warm-up, ~20min @ tempo pace${paceStr?` (${paceStr})`:''}, 10min cool-down`;break;
+    case'Easy':structure=`${distKm?distKm+'km ':''}easy, conversational effort${paceStr?` (~${paceStr})`:''}`;break;
+    case'Long':structure=`${distKm?distKm+'km ':''}steady long run${paceStr?` (~${paceStr})`:''}, focus on time on feet`;break;
+    case'Intervals':structure=`Warm-up, then intervals${paceStr?` @ ${paceStr}`:''} with jog recovery, cool-down`;break;
+    case'Race':structure=`${distKm?distKm+'km ':''}@ goal race pace${paceStr?` (${paceStr})`:''}`;break;
+    default:structure='';
+  }
+  return{runType,distKm,paceStr,structure};
+}
 function renderRaceSection(){
   const r=state.race;
   if(!r||!r.date){
@@ -5517,10 +5606,17 @@ function saveSessionNotes(idx){
 
 // ── WEEK PLAN ──
 const PLAN_TYPES=['Push','Pull','Legs','Core','Custom','Run','Rest','Off'];
+const RUN_TYPES=['Easy','Tempo','Long','Intervals','Race'];
+const RUN_TYPE_WEIGHT={Easy:1,Tempo:2,Long:3,Intervals:1.8,Race:3};
+const RUN_TYPE_DEFAULT_BY_DOW={1:'Tempo',3:'Easy',6:'Long'}; // 0=Mon; Tue/Thu/Sun defaults
 function getTodayPlanType(){
   if(!state.weekPlan||!Array.isArray(state.weekPlan))return null;
   const dow=(today().getDay()+6)%7; // 0=Mon
   return state.weekPlan[dow]||null;
+}
+function getWeekPlanRunType(i){
+  const explicit=state.weekPlanRunType&&state.weekPlanRunType[i];
+  return explicit||RUN_TYPE_DEFAULT_BY_DOW[i]||'Easy';
 }
 function renderWeekPlanSection(){
   const plan=state.weekPlan;
@@ -5528,8 +5624,10 @@ function renderWeekPlanSection(){
   const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};
   const planColor={Push:'#e80e0e',Pull:'var(--accent2)',Legs:'var(--green)',Core:'#906d01',Custom:'#9e3dfb',Run:'#017d92'};
   const planShort={Push:'PSH',Pull:'PLL',Legs:'LEG',Core:'COR',Custom:'CST',Run:'RUN',Rest:'—',Off:'—'};
+  const runTypeShort={Easy:'EZY',Tempo:'TMP',Long:'LNG',Intervals:'INT',Race:'RCE'};
   const summary=plan?days.map((d,i)=>{
-    const t=plan[i]||'Rest';const c=planColor[t]||'var(--text3)';const s=planShort[t]||'—';
+    const t=plan[i]||'Rest';const c=planColor[t]||'var(--text3)';
+    const s=t==='Run'?(runTypeShort[getWeekPlanRunType(i)]||'RUN'):(planShort[t]||'—');
     return`<div style="text-align:center;"><div style="font-size:8px;font-weight:800;color:var(--text3);margin-bottom:3px;">${d.slice(0,1)}</div><div style="font-size:10px;font-weight:800;color:${c};">${s}</div></div>`;
   }).join(''):'';
   return`<div class="chart-card" style="margin-bottom:10px;">
@@ -5543,10 +5641,14 @@ function renderWeekPlanSection(){
         ${days.map((day,i)=>{
           const cur=(plan&&plan[i])||'Rest';
           const cls=typeColorClass[cur]||'active-rest';
+          const curRunType=getWeekPlanRunType(i);
           return`<div class="week-plan-day">
             <div class="week-plan-day-label">${day}</div>
             <select class="week-plan-pill ${cls}" id="wplan-${i}" onchange="updateWeekPlanPill(${i},this.value)">
               ${PLAN_TYPES.map(t=>`<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('')}
+            </select>
+            <select class="week-plan-pill" id="wplan-run-${i}" onchange="updateWeekPlanRunType(${i},this.value)" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
+              ${RUN_TYPES.map(t=>`<option value="${t}"${t===curRunType?' selected':''}>${t}</option>`).join('')}
             </select>
           </div>`;
         }).join('')}
@@ -5572,20 +5674,31 @@ function updateWeekPlanPill(idx,val){
   const el=document.getElementById(`wplan-${idx}`);if(!el)return;
   const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};
   el.className=`week-plan-pill ${typeColorClass[val]||'active-rest'}`;
+  const runSel=document.getElementById(`wplan-run-${idx}`);
+  if(runSel)runSel.style.display=val==='Run'?'':'none';
+}
+function updateWeekPlanRunType(idx,val){
+  if(!state.weekPlanRunType||!Array.isArray(state.weekPlanRunType))state.weekPlanRunType=new Array(7).fill(null);
+  state.weekPlanRunType[idx]=val;
 }
 function saveWeekPlan(){
   const plan=[];
+  const runTypes=[...(state.weekPlanRunType||new Array(7).fill(null))];
   for(let i=0;i<7;i++){
     const el=document.getElementById(`wplan-${i}`);
     plan.push(el?el.value:'Rest');
+    const runEl=document.getElementById(`wplan-run-${i}`);
+    if(runEl&&plan[i]==='Run')runTypes[i]=runEl.value;
   }
-  state.weekPlan=plan;_weekPlanDraft=null;saveState();toastMsg('Plan saved');haptic('success');
+  state.weekPlan=plan;state.weekPlanRunType=runTypes;_weekPlanDraft=null;saveState();toastMsg('Plan saved');haptic('success');
   if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
 function clearWeekPlan(){
   if(!confirm('Remove training plan?'))return;
   state.weekPlan=null;_weekPlanDraft=null;saveState();toastMsg('Plan removed');
   if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
 // ── EXERCISE LIBRARY & MUSCLE TRACKING ──
 const DEFAULT_MUSCLE_MAP={

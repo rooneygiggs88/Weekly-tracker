@@ -4936,14 +4936,22 @@ function calcReadiness(){
   const hrvRaw=todayMorning&&todayMorning.hrv!=null?todayMorning.hrv:null;
   const hrvScore=hrvRaw!=null?Math.min(100,Math.round((hrvRaw/80)*100)):null;
 
-  // Weighted composite
+  // Weighted composite - sleep carries the heaviest weight since it's the signal you
+  // actually feel and trust, HRV next (useful but normalised against a flat scale, not
+  // your personal baseline, so it's a weaker signal than sleep).
   let totalWeight=0,totalScore=0;
   const add=(val,w)=>{if(val!=null){totalScore+=val*w;totalWeight+=w;}};
   add(loadScore,2);
   add(fatigueScore,1);
-  add(sleepScore,3);
-  add(hrvScore,4);
-  const score=totalWeight>0?Math.round(totalScore/totalWeight):null;
+  add(sleepScore,5);
+  add(hrvScore,3);
+  let score=totalWeight>0?Math.round(totalScore/totalWeight):null;
+  // Genuinely bad sleep (<55) caps the day's score outright - good HRV/low load
+  // shouldn't be able to fully paper over a bad night. Above 55 this is a no-op and
+  // the blend above applies as normal.
+  if(score!=null&&sleepScore!=null&&sleepScore<55){
+    score=Math.min(score,sleepScore+10);
+  }
 
   // Labels
   const factors=[];

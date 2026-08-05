@@ -1002,11 +1002,13 @@ if(window.visualViewport){
   const _syncNavToViewport=()=>{
     if(!_navEl)return;
     const vv=window.visualViewport;
-    // Only reposition for a genuine on-screen keyboard (viewport height shrinks by a
-    // real amount) - this was firing on ordinary scroll too (vv fires 'scroll' on any
-    // pan, and offsetTop/height can shift slightly during normal scrolling, especially
-    // with viewport-fit=cover), which sent the nav to a stale mid-page offset.
-    const keyboardOpen=window.innerHeight-vv.height>100;
+    // A keyboard is only ever open when a text input/textarea/contenteditable actually
+    // has focus - checking viewport height alone isn't enough, since pull-to-refresh
+    // rubber-band overscroll also shrinks visualViewport's reported height/offsetTop
+    // momentarily and was triggering the same false "keyboard open" repositioning.
+    const ae=document.activeElement;
+    const fieldFocused=ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.isContentEditable);
+    const keyboardOpen=fieldFocused&&(window.innerHeight-vv.height>100);
     _navEl.style.bottom=keyboardOpen?(window.innerHeight-vv.height-vv.offsetTop)+'px':'0px';
   };
   window.visualViewport.addEventListener('resize',_syncNavToViewport);

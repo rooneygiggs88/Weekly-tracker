@@ -12,6 +12,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
+  --dbg-safe-top:env(safe-area-inset-top,0px);
   --bg:#f5f5fb;--surface:#ffffff;--surface2:#eeeef7;
   --border:#e2e2ee;--text:#15121f;--text2:#6b6690;--text3:#a6a2c0;
   --accent:#2563eb;--accent2:#1d4ed8;
@@ -321,6 +322,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 <!-- TODAY PAGE -->
 <div class="page active" id="page-today">
   <div class="today-hero">
+    <div id="dbg-line" style="font-size:10px;color:#999;text-align:center;margin-bottom:6px;font-family:monospace;"></div>
     <div class="today-date">
       <span id="today-date-label"></span>
       <span class="today-badge" id="today-badge"></span>
@@ -6359,6 +6361,32 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
 
 // ── INIT ──
 renderToday();
+
+// Temporary diagnostic line for the status-bar seam issue - safe to remove once resolved.
+(function debugLine(){
+  const el=document.getElementById('dbg-line');
+  if(!el)return;
+  const safeTop=getComputedStyle(document.documentElement).getPropertyValue('--dbg-safe-top').trim();
+  const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+  let line=`build:dbg1 safe-top:${safeTop} standalone:${standalone} dpr:${window.devicePixelRatio}`;
+  const finish=()=>{
+    requestAnimationFrame(()=>{
+      setTimeout(()=>{
+        const glow=document.getElementById('score-dial-glow');
+        const wrap=document.querySelector('.today-score-wrap');
+        const hero=document.querySelector('.today-hero');
+        if(glow&&wrap&&hero){
+          const g=glow.getBoundingClientRect(),h=hero.getBoundingClientRect();
+          line+=` heroTop:${Math.round(h.top)} glowTop:${Math.round(g.top)} glowVsHero:${Math.round(g.top-h.top)}`;
+        }
+        el.textContent=line;
+      },300);
+    });
+  };
+  if('caches' in window){
+    caches.keys().then(keys=>{line+=` cache:${keys.join(',')||'none'}`;finish();}).catch(finish);
+  }else finish();
+})();
 </script>
 </body>
 </html>

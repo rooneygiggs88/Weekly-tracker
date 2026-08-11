@@ -3898,8 +3898,12 @@ function renderBodyCompCard(health){
     svg+=`<text x="${(lastX+5).toFixed(1)}" y="${(lastY+3).toFixed(1)}" font-size="8" font-weight="800" fill="${col}" font-family="-apple-system,sans-serif">${pts[pts.length-1][1]}${unit}</text>`;
     return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible;">${svg}</svg>`;
   }
-  const wPts=health.filter(e=>e.weight).map(e=>[e.date,e.weight]);
-  const bPts=health.filter(e=>e.bodyFat>0).map(e=>[e.date,e.bodyFat]);
+  // Plot the 7-day rolling average rather than raw daily readings - day-to-day noise
+  // (hydration, timing, etc) is roughly the same size as the real trend, so a raw-point
+  // line just looks like a flat zigzag even when there's a clear underlying direction.
+  const smoothedPts=(entries,field)=>entries.map(e=>[e.date,+rollingRate(entries,field,parseDate(e.date)).now.toFixed(2)]);
+  const wPts=smoothedPts(withW,'weight');
+  const bPts=smoothedPts(withBf,'bodyFat');
   const chart=`<div style="margin-top:10px;">
     ${wPts.length>=2?`<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Weight</div>${sparkline(wPts,'#e80e0e','kg')}</div>`:''}
     ${bPts.length>=2?`<div><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Body Fat</div>${sparkline(bPts,'#5261fa','%')}</div>`:''}

@@ -2986,15 +2986,28 @@ function renderTrendsRunAnalysis(){
       axisSvg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="${km===0?1.5:0.8}" stroke-dasharray="${km===0?'':'4,3'}"/>`;
       axisSvg+=`<text x="${(PL-4).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${km}</text>`;
     }
+    // With many weeks logged, a label on every bar collides with its neighbours - a
+    // fixed-width chart with 7px text just doesn't have room for 20-30 labels side by
+    // side. Only label the current week and the peak week (like Pace Progression only
+    // labels its best/last dots), and only print a date label when it won't overlap the
+    // previous one given the actual slot width.
+    const peakKm=Math.max(...trimmed.map(w=>w.km));
+    const minDateLabelGap=18;
+    let lastDateLabelX=-Infinity;
     const bars=trimmed.map((w,i)=>{
       const cx=PL+slotW*i+slotW/2;
       const x=cx-barW/2;
       const bh=Math.max(2,Math.round((w.km/maxKm)*chartH));
       const by=PT+chartH-bh;
       const isNow=i===trimmed.length-1;
+      const isPeak=w.km>0&&w.km===peakKm;
       const fill=isNow?'var(--orange)':'var(--accent)';
-      const label=`<text x="${cx.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${w.label}</text>`;
-      const val=w.km>0?`<text x="${cx.toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle" font-size="7" fill="${fill}" font-family="-apple-system,sans-serif" font-weight="800">${w.km}</text>`:'';
+      let label='';
+      if(cx-lastDateLabelX>=minDateLabelGap||i===trimmed.length-1){
+        label=`<text x="${cx.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${w.label}</text>`;
+        lastDateLabelX=cx;
+      }
+      const val=(w.km>0&&(isNow||isPeak))?`<text x="${cx.toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle" font-size="7" fill="${fill}" font-family="-apple-system,sans-serif" font-weight="800">${w.km}</text>`:'';
       return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${fill}" opacity="${w.km?0.85:0.2}"/>${label}${val}`;
     }).join('');
     return `<div class="chart-card">
@@ -3015,12 +3028,20 @@ function renderTrendsRunAnalysis(){
     const bestP=Math.max(...paceVals);
     // Work in sec/km for axis math (avoids km/s padding distortion)
     const secPerKmVals=paceVals.map(p=>Math.round(1/p));
-    const fastestSec=Math.min(...secPerKmVals),slowestSec=Math.max(...secPerKmVals);
+    // Scale the axis to the normal cluster of runs, not a single extreme outlier (e.g. an
+    // ultra) - otherwise one very slow run stretches the whole range and squashes every
+    // normal-pace run into a thin sliver near the top. Points slower than the visible
+    // range are clamped to the bottom edge (see py()) rather than expanding the axis.
+    const fastestSec=Math.min(...secPerKmVals);
+    const sortedSecs=[...secPerKmVals].sort((a,b)=>a-b);
+    const medianSec=sortedSecs[Math.floor(sortedSecs.length/2)];
+    const inRangeSecs=secPerKmVals.filter(s=>s<=medianSec*1.5);
+    const slowestVisibleSec=inRangeSecs.length?Math.max(...inRangeSecs):Math.max(...secPerKmVals);
     const padSecs=30;
-    const axisMinSec=fastestSec-padSecs,axisMaxSec=slowestSec+padSecs;
+    const axisMinSec=fastestSec-padSecs,axisMaxSec=slowestVisibleSec+padSecs;
     const minP=1/axisMaxSec,maxP=1/Math.max(axisMinSec,1);
     const rangeP=Math.max(maxP-minP,0.00001);
-    const py=p=>PT+((maxP-p)/rangeP)*chartH;
+    const py=p=>Math.min(PT+((maxP-p)/rangeP)*chartH,PT+chartH);
     const px=i=>PL+(i/Math.max(paceRuns.length-1,1))*chartW;
     let svg='';
     // Y-axis gridlines every 30s in sec/km space
@@ -3043,13 +3064,22 @@ function renderTrendsRunAnalysis(){
       const p=paceVals[i];
       const cx=px(i),cy=py(p);
       const isBest=p===bestP,isLast=i===paceRuns.length-1;
+      const isOffScale=1/p>axisMaxSec;
       const col=isBest?'#ffffff':EFFORT_COL(r.effort);
       const radius=isBest?6:isLast?5:4;
-      svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius}" fill="${col}" stroke="var(--surface)" stroke-width="1.5" opacity="0.9"/>`;
-      if(isBest||isLast){
-        const anchor=i===0?'start':i===paceRuns.length-1?'end':'middle';
-        const labelY=cy-(radius+5);
-        svg+=`<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="${isBest?'#ffffff':'var(--text)'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(p)}</text>`;
+      // An off-scale point (clamped to the bottom edge) gets a hollow ring instead of a
+      // filled dot, plus its real pace always labelled - otherwise it reads as a normal
+      // point sitting exactly on the bottom gridline instead of one that's off the chart.
+      if(isOffScale){
+        svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius}" fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="2,2"/>`;
+        svg+=`<text x="${cx.toFixed(1)}" y="${(cy-radius-5).toFixed(1)}" text-anchor="${i===0?'start':i===paceRuns.length-1?'end':'middle'}" font-size="9" fill="${col}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(p)} ↓</text>`;
+      } else {
+        svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius}" fill="${col}" stroke="var(--surface)" stroke-width="1.5" opacity="0.9"/>`;
+        if(isBest||isLast){
+          const anchor=i===0?'start':i===paceRuns.length-1?'end':'middle';
+          const labelY=cy-(radius+5);
+          svg+=`<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="${isBest?'#ffffff':'var(--text)'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(p)}</text>`;
+        }
       }
     });
     // X-axis: show date on month change
@@ -3078,22 +3108,31 @@ function renderTrendsRunAnalysis(){
     const trendV=useQuality?qualityV:paceVals;
     const recentPace=trendV.slice(-3).reduce((a,b)=>a+b,0)/3;
     const earlyPace=trendV.slice(0,3).reduce((a,b)=>a+b,0)/3;
-    const improving=recentPace>=earlyPace;
-    const paceRegressing=!improving&&(earlyPace-recentPace)/earlyPace>0.1;
+    // A tiny difference (within 3%) is normal run-to-run noise, not a real trend - without
+    // this deadband, a 1-3s/km blip got flagged with the same "slowing" arrow as a genuine
+    // regression, just in a less alarming colour, which still reads as more meaningful
+    // than it is.
+    const relDelta=(recentPace-earlyPace)/earlyPace;
+    const DEADBAND=0.03;
+    const improving=relDelta>DEADBAND;
+    const paceRegressing=relDelta<-0.1;
+    const steady=!improving&&!paceRegressing&&Math.abs(relDelta)<=DEADBAND;
     const recentEasyCount=paceRuns.slice(-3).filter(r=>EASY_EFF.has(r.effort)).length;
     const easyDominated=!useQuality&&recentEasyCount>=2;
-    const paceCol=improving?'var(--green)':paceRegressing?'var(--red)':easyDominated?'var(--text3)':'var(--orange)';
-    const paceLabel=improving?'↑ Getting faster':paceRegressing?'↓ Quality pace dropping':easyDominated?'→ Easy/base work phase':'↓ Pace slowing';
+    const paceCol=improving?'var(--green)':paceRegressing?'var(--red)':(easyDominated||steady)?'var(--text3)':'var(--orange)';
+    const paceLabel=improving?'↑ Getting faster':paceRegressing?'↓ Quality pace dropping':easyDominated?'→ Easy/base work phase':steady?'→ Holding steady':'↓ Pace slowing';
     // Text analysis
     const bestIdx=paceVals.indexOf(bestP);
     const bestRun=paceRuns[bestIdx];
     const bestDate=new Date(bestRun.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
     const deltaSec=Math.abs(Math.round(1/recentPace)-Math.round(1/earlyPace));
     let trendLine;
-    if(useQuality){
-      trendLine=`Quality run pace ${improving?'improved':'slowed'} by <strong>${fmtDelta(deltaSec)}</strong> — recent avg <strong>${fmtPace(recentPace)}</strong> vs <strong>${fmtPace(earlyPace)}</strong> early on.`;
-    } else if(easyDominated){
+    if(easyDominated){
       trendLine=`Recent sessions are mainly easy/long runs — slower pace is intentional base work, not a fitness drop.`;
+    } else if(steady){
+      trendLine=`${useQuality?'Quality run':'Pace'} holding steady — recent avg <strong>${fmtPace(recentPace)}</strong>, basically unchanged from <strong>${fmtPace(earlyPace)}</strong> early on.`;
+    } else if(useQuality){
+      trendLine=`Quality run pace ${improving?'improved':'slowed'} by <strong>${fmtDelta(deltaSec)}</strong> — recent avg <strong>${fmtPace(recentPace)}</strong> vs <strong>${fmtPace(earlyPace)}</strong> early on.`;
     } else {
       trendLine=`Pace ${improving?'improved':'slowed'} by <strong>${fmtDelta(deltaSec)}</strong> — recent average <strong>${fmtPace(recentPace)}</strong> vs <strong>${fmtPace(earlyPace)}</strong> early on.`;
     }

@@ -3915,7 +3915,21 @@ function renderBodyCompCard(health){
     ${(()=>{
       if(!withW.length&&!withBf.length)return'';
       const smoothedNow=(entries,field)=>entries.length?rollingRate(entries,field,parseDate(entries[entries.length-1].date)).now:null;
-      const smoothedStart=(entries,field)=>entries.length?rollingRate(entries,field,addDays(parseDate(entries[0].date),6)).now:null;
+      // A one-off entry logged long before regular tracking began (e.g. a single weigh-in
+      // then a month-plus gap) shouldn't anchor "since you started" - walk forward past any
+      // leading gap bigger than 21 days to find where consistent logging actually begins.
+      const trueStart=entries=>{
+        let i=0;
+        while(i<entries.length-1){
+          const gap=(parseDate(entries[i+1].date)-parseDate(entries[i].date))/86400000;
+          if(gap>21)i++;else break;
+        }
+        return entries.slice(i);
+      };
+      const smoothedStart=(entries,field)=>{
+        const trimmed=trueStart(entries);
+        return trimmed.length?rollingRate(trimmed,field,addDays(parseDate(trimmed[0].date),6)).now:null;
+      };
       // Since started — endpoints are 7-day rolling averages, so one spiky day at the
       // start or end doesn't swing the headline number.
       const wStart=smoothedStart(withW,'weight'),wNow=smoothedNow(withW,'weight');

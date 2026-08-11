@@ -3884,24 +3884,28 @@ function renderBodyCompCard(health){
     const px=(i)=>PL+(i/(pts.length-1))*cW;
     const py=(v)=>PT+((axMx-v)/rng)*cH;
     const pathD=pts.map((p,i)=>`${i===0?'M':'L'}${px(i).toFixed(1)},${py(p[1]).toFixed(1)}`).join(' ');
-    // Y axis ticks (3)
+    // Y axis ticks (5, up from 3) - finer gridlines make small moves easier to read off
     let svg='';
-    for(let i=0;i<=2;i++){const v=axMx-i*(rng/2);const y=PT+i*(cH/2);svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+cW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;svg+=`<text x="${(PL-3).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${v.toFixed(1)}</text>`;}
+    for(let i=0;i<=4;i++){const v=axMx-i*(rng/4);const y=PT+i*(cH/4);svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+cW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;svg+=`<text x="${(PL-3).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${v.toFixed(1)}</text>`;}
     // Date labels first and last
     const fmt=d=>{const dt=new Date(d+'T12:00:00');return`${dt.getDate()}/${dt.getMonth()+1}`;};
     svg+=`<text x="${PL}" y="${H-2}" text-anchor="start" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${fmt(pts[0][0])}</text>`;
     svg+=`<text x="${PL+cW}" y="${H-2}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${fmt(pts[pts.length-1][0])}</text>`;
-    // Line + last dot + last label
+    // Line + start dot/label + end dot/label - labeling both ends makes the actual
+    // movement explicit instead of relying on eyeballing the line's slope.
+    const firstX=px(0),firstY=py(pts[0][1]);
     const lastX=px(pts.length-1),lastY=py(pts[pts.length-1][1]);
     svg+=`<path d="${pathD}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
+    svg+=`<circle cx="${firstX.toFixed(1)}" cy="${firstY.toFixed(1)}" r="3" fill="${col}" opacity="0.6"/>`;
+    svg+=`<text x="${(firstX+3).toFixed(1)}" y="${(firstY-6<PT+8?firstY+14:firstY-6).toFixed(1)}" text-anchor="start" font-size="8" font-weight="800" fill="${col}" opacity="0.7" font-family="-apple-system,sans-serif">${pts[0][1]}${unit}</text>`;
     svg+=`<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3" fill="${col}"/>`;
-    svg+=`<text x="${(lastX+5).toFixed(1)}" y="${(lastY+3).toFixed(1)}" font-size="8" font-weight="800" fill="${col}" font-family="-apple-system,sans-serif">${pts[pts.length-1][1]}${unit}</text>`;
+    svg+=`<text x="${(lastX-3).toFixed(1)}" y="${(lastY-6<PT+8?lastY+14:lastY-6).toFixed(1)}" text-anchor="end" font-size="8" font-weight="800" fill="${col}" font-family="-apple-system,sans-serif">${pts[pts.length-1][1]}${unit}</text>`;
     return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible;">${svg}</svg>`;
   }
   // Plot the 7-day rolling average rather than raw daily readings - day-to-day noise
   // (hydration, timing, etc) is roughly the same size as the real trend, so a raw-point
   // line just looks like a flat zigzag even when there's a clear underlying direction.
-  const smoothedPts=(entries,field)=>entries.map(e=>[e.date,+rollingRate(entries,field,parseDate(e.date)).now.toFixed(2)]);
+  const smoothedPts=(entries,field)=>entries.map(e=>[e.date,+rollingRate(entries,field,parseDate(e.date)).now.toFixed(1)]);
   const wPts=smoothedPts(withW,'weight');
   const bPts=smoothedPts(withBf,'bodyFat');
   const chart=`<div style="margin-top:10px;">

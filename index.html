@@ -3066,10 +3066,13 @@ function renderTrendsRunAnalysis(){
     });
     // Format a seconds delta as "1m 19s/km" rather than "79s/km"
     const fmtDelta=s=>{const m=Math.floor(s/60),sec=s%60;return m>0?(sec>0?`${m}m ${sec}s/km`:`${m}m/km`):`${s}s/km`;};
-    // Effort-aware trend: quality runs (Tempo/Intervals/Race) drive the badge
+    // Effort-aware trend: quality runs (Tempo/Intervals/Race) drive the badge - but a
+    // marathon/ultra "Race" is deliberately paced for endurance, not speed, so it isn't
+    // a real quality-pace signal and would otherwise skew the average against genuinely
+    // fast shorter races. Cap at half-marathon distance for a race to count here.
     const QUALITY_EFF=new Set(['Tempo','Fartlek','Intervals','Hard','Race']);
     const EASY_EFF=new Set(['Easy','Recovery','Long Run','Long run','Long']);
-    const qualityR=paceRuns.filter(r=>QUALITY_EFF.has(r.effort));
+    const qualityR=paceRuns.filter(r=>QUALITY_EFF.has(r.effort)&&!(r.effort==='Race'&&r.km>21.5));
     const qualityV=qualityR.map(r=>r.km/parseTimeToSecs(r.time));
     const useQuality=qualityV.length>=3;
     const trendV=useQuality?qualityV:paceVals;

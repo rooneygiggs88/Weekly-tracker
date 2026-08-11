@@ -3926,14 +3926,17 @@ function renderBodyCompCard(health){
         }
         return entries.slice(i);
       };
-      const smoothedStart=(entries,field)=>{
+      // The start point is a real, deliberate first log (not a smoothed window) - the
+      // actual number you saw on day one is more motivating and just as accurate a
+      // "started from" figure as any average would be.
+      const rawStart=(entries,field)=>{
         const trimmed=trueStart(entries);
-        return trimmed.length?rollingRate(trimmed,field,addDays(parseDate(trimmed[0].date),6)).now:null;
+        return trimmed.length?trimmed[0][field]:null;
       };
-      // Since started — endpoints are 7-day rolling averages, so one spiky day at the
-      // start or end doesn't swing the headline number.
-      const wStart=smoothedStart(withW,'weight'),wNow=smoothedNow(withW,'weight');
-      const bStart=smoothedStart(withBf,'bodyFat'),bNow=smoothedNow(withBf,'bodyFat');
+      // Since started — "now" is a 7-day rolling average so a single spiky recent day
+      // doesn't swing the headline number, compared against the actual day-one reading.
+      const wStart=rawStart(withW,'weight'),wNow=smoothedNow(withW,'weight');
+      const bStart=rawStart(withBf,'bodyFat'),bNow=smoothedNow(withBf,'bodyFat');
       const wTotal=(wStart!=null&&wNow!=null)?+(wNow-wStart).toFixed(1):null;
       const bTotal=(bStart!=null&&bNow!=null)?+(bNow-bStart).toFixed(1):null;
       let overallLine='',overallCol='var(--text2)';

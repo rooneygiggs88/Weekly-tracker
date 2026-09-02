@@ -176,6 +176,13 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .train-tabs::-webkit-scrollbar{display:none;}
 .train-tab{flex-shrink:0;padding:8px 18px;border-radius:24px;border:1px solid var(--border);background:var(--surface);font-family:inherit;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.15s;}
 .train-tab.active{background:var(--accent);border-color:var(--accent);color:white;box-shadow:0 4px 12px rgba(37,99,235,0.35);}
+
+/* Trends page tabs - a single segmented control rather than separate pill buttons,
+   since there are always exactly 3 fixed options (unlike Train's tab row). */
+.seg-tabs{padding:16px 24px 12px;}
+.seg-track{display:flex;width:100%;background:var(--surface2);border-radius:20px;padding:3px;gap:2px;}
+.seg-tab{flex:1;padding:8px 0;border-radius:16px;border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.15s;}
+.seg-tab.active{background:var(--text);color:#fff;}
 .train-content{padding:0 24px 24px;}
 .train-section{display:none;}
 .train-section.active{display:block;}
@@ -435,10 +442,12 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <h1>Trends</h1>
     <p>Your progress over time</p>
   </div>
-  <div class="train-tabs" id="trends-tabs">
-    <button class="train-tab active" data-tab="overview" onclick="switchTrendsTab('overview')">Overview</button>
-    <button class="train-tab" data-tab="running" onclick="switchTrendsTab('running')">Running</button>
-    <button class="train-tab" data-tab="gym" onclick="switchTrendsTab('gym')">Gym</button>
+  <div class="seg-tabs" id="trends-tabs">
+    <div class="seg-track">
+      <button class="seg-tab active" data-tab="overview" onclick="switchTrendsTab('overview')">All</button>
+      <button class="seg-tab" data-tab="running" onclick="switchTrendsTab('running')">Run</button>
+      <button class="seg-tab" data-tab="gym" onclick="switchTrendsTab('gym')">Gym</button>
+    </div>
   </div>
   <div id="trends-content" class="pad"></div>
 </div>
@@ -3128,7 +3137,7 @@ function renderPRs(){
 let _activeTrendsTab='overview';
 function switchTrendsTab(tab){
   _activeTrendsTab=tab;
-  document.querySelectorAll('#trends-tabs .train-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('#trends-tabs .seg-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
   renderTrends();
 }
 function renderTrends(){

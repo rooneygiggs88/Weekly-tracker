@@ -2564,11 +2564,10 @@ function renderRunSection(){
     ${weekNavHtml}
     <div style="display:flex;gap:4px;margin-bottom:16px;">${dayBtns}</div>
     ${dayRunsHtml}
-    <label>Distance (km)</label>
-    <input class="run-field" type="number" id="run-km" inputmode="decimal" placeholder="0.0" step="0.1" oninput="updatePacePreview();this.style.borderColor=''">
-    <div style="height:12px;"></div>
-    <label>Time</label>
-    <input class="run-field" type="text" id="run-time" placeholder="mm:ss or h:mm:ss" oninput="updatePacePreview();this.style.borderColor=''">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><label>Distance (km)</label><input class="run-field" type="number" id="run-km" inputmode="decimal" placeholder="0.0" step="0.1" oninput="updatePacePreview();this.style.borderColor=''"></div>
+      <div><label>Time</label><input class="run-field" type="text" id="run-time" placeholder="e.g. 43:10" oninput="updatePacePreview();this.style.borderColor=''"></div>
+    </div>
     <div id="pace-preview" style="font-size:13px;color:var(--accent2);font-weight:700;min-height:20px;margin-top:6px;"></div>
     <div style="height:12px;"></div>
     <label>Effort</label>
@@ -2579,11 +2578,10 @@ function renderRunSection(){
       </div>
     </div>
     <div style="height:12px;"></div>
-    <label>Start time</label>
-    <input class="run-field" type="time" id="run-starttime" value="${new Date().toTimeString().slice(0,5)}" oninput="this.style.borderColor=''">
-    <div style="height:12px;"></div>
-    <label>Avg Heart Rate</label>
-    <input class="run-field" type="number" id="run-hr" inputmode="numeric" placeholder="e.g. 145" min="60" max="220" oninput="this.style.borderColor=''">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><label>Start time</label><input class="run-field" type="time" id="run-starttime" value="${new Date().toTimeString().slice(0,5)}" oninput="this.style.borderColor=''"></div>
+      <div><label>Avg Heart Rate</label><input class="run-field" type="number" id="run-hr" inputmode="numeric" placeholder="e.g. 145" min="60" max="220" oninput="this.style.borderColor=''"></div>
+    </div>
     <div style="height:12px;"></div>
     <label>Notes (optional)</label>
     <input class="run-field" type="text" id="run-note" placeholder="How did it feel?">

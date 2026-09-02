@@ -149,6 +149,20 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .goal-chip.done .goal-chip-check{background:var(--green);border-color:var(--green);}
 .goal-text-input{width:100%;background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:12px;font-weight:600;padding:2px 0;margin-top:2px;border-bottom:1px solid var(--border);}
 
+/* MORNING CHECK-IN - drag-to-set sleep slider + HRV quick-picks, with a live
+   readiness preview on the Save button, instead of two plain number inputs. */
+.checkin-modal-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);}
+.checkin-row-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+.checkin-row-head span:first-child{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
+.checkin-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent2);}
+.checkin-slider-track{height:40px;border-radius:12px;background:linear-gradient(90deg,#dc2626 0%,#ea580c 35%,#1d4ed8 70%,#059669 100%);position:relative;margin-bottom:6px;opacity:0.85;cursor:pointer;touch-action:none;}
+.checkin-slider-handle{position:absolute;top:-4px;bottom:-4px;width:6px;border-radius:4px;background:#15121f;box-shadow:0 2px 8px rgba(0,0,0,0.35);left:0%;transform:translateX(-50%);pointer-events:none;}
+.checkin-slider-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text3);margin-bottom:6px;}
+.checkin-hrv-picks{display:flex;gap:8px;}
+.checkin-hrv-pick{flex:1;padding:13px 0;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--mono);font-size:15px;font-weight:700;text-align:center;cursor:pointer;}
+.checkin-hrv-pick.active{border:2px solid var(--accent);background:rgba(37,99,235,0.12);color:var(--accent2);}
+.checkin-hrv-pick.type{border-style:dashed;color:var(--text3);font-family:inherit;font-size:13px;}
+
 /* TRAIN */
 .train-header{padding:60px 24px 20px;background:linear-gradient(180deg,rgba(37,99,235,0.08) 0%,transparent 100%);}
 .train-header h1{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:4px;}
@@ -652,19 +666,28 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 <div class="modal-overlay" id="morning-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>Morning Check-in</h3>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:20px;">Log your Garmin scores from this morning.</p>
-    <label class="modal-label">Sleep Score <span style="color:var(--text3);font-weight:600;">(Garmin, 0–100)</span></label>
-    <input class="modal-input" id="morning-sleep" type="number" inputmode="numeric" placeholder="e.g. 74" min="0" max="100">
-    <div style="height:14px;"></div>
-    <label class="modal-label">HRV Status <span style="color:var(--text3);font-weight:600;">(ms, from Garmin morning report)</span></label>
-    <input class="modal-input" id="morning-hrv" type="number" inputmode="numeric" placeholder="e.g. 52" min="0" max="200">
-    <div style="height:14px;"></div>
-    <label class="modal-label">Wake Time</label>
+    <div class="checkin-modal-label">5-second check-in</div>
+    <h3 style="margin-top:2px;">How did you sleep?</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:20px;">Straight off your Garmin morning report.</p>
+
+    <div class="checkin-row-head"><span>Sleep score</span><span class="checkin-val" id="checkin-sleep-val">–</span></div>
+    <div class="checkin-slider-track" id="checkin-slider-track">
+      <div class="checkin-slider-handle" id="checkin-slider-handle"></div>
+    </div>
+    <div class="checkin-slider-labels"><span>0</span><span>drag to set</span><span>100</span></div>
+
+    <div class="checkin-row-head" style="margin-top:18px;"><span>HRV</span><span class="checkin-val" id="checkin-hrv-val">–<span style="font-size:12px;color:var(--text3);"> ms</span></span></div>
+    <div class="checkin-hrv-picks" id="checkin-hrv-picks"></div>
+    <input class="modal-input" id="checkin-hrv-type" type="number" inputmode="numeric" placeholder="Enter HRV (ms)" style="display:none;margin-top:8px;">
+
+    <label class="modal-label" style="margin-top:18px;">Wake Time</label>
     <input class="modal-input" id="morning-wake" type="time" style="color-scheme:light;">
-    <div style="height:20px;"></div>
-    <button class="btn-primary" onclick="saveMorningCheckin()" style="margin-bottom:10px;">Save</button>
-    <button class="btn-ghost" style="width:100%;" onclick="closeModal('morning-modal')">Cancel</button>
+    <input type="hidden" id="morning-sleep">
+    <input type="hidden" id="morning-hrv">
+
+    <div style="height:16px;"></div>
+    <button class="btn-primary" id="checkin-save-btn" onclick="saveMorningCheckin()" style="margin-bottom:6px;">Save</button>
+    <button class="btn-ghost" style="width:100%;background:none;border:none;color:var(--text3);" onclick="closeModal('morning-modal')">Skip today</button>
   </div>
 </div>
 
@@ -5028,13 +5051,84 @@ function renderTimeOfDay(){
 function loadMorningData(){try{return JSON.parse(localStorage.getItem('morning_data_v1')||'{}');}catch(e){return{};}}
 function saveMorningData(d){localStorage.setItem('morning_data_v1',JSON.stringify(d));}
 
+// Last 3 distinct HRV values actually logged (most recent occurrence first) - quick-pick
+// shortcuts so a normal morning is a single tap instead of typing the same ~3 numbers
+// over and over.
+function getRecentHrvPicks(){
+  const morning=loadMorningData();
+  const entries=Object.entries(morning).filter(([,v])=>v&&v.hrv!=null).sort((a,b)=>b[0].localeCompare(a[0]));
+  const seen=[];
+  for(const[,v]of entries){if(!seen.includes(v.hrv))seen.push(v.hrv);if(seen.length>=3)break;}
+  return seen;
+}
+let _checkinSleep=null,_checkinHrv=null;
 function openMorningModal(){
   const saved=loadMorningData()[dk(today())]||{};
-  document.getElementById('morning-sleep').value=saved.sleep!=null?saved.sleep:'';
-  document.getElementById('morning-hrv').value=saved.hrv!=null?saved.hrv:'';
+  _checkinSleep=saved.sleep!=null?saved.sleep:70;
+  _checkinHrv=saved.hrv!=null?saved.hrv:null;
   document.getElementById('morning-wake').value=saved.wake||'';
+  document.getElementById('checkin-hrv-type').style.display='none';
+  document.getElementById('checkin-hrv-type').value='';
+  const picks=getRecentHrvPicks();
+  const picksEl=document.getElementById('checkin-hrv-picks');
+  picksEl.innerHTML=picks.map(v=>`<div class="checkin-hrv-pick" data-val="${v}" onclick="_pickCheckinHrv(${v})">${v}</div>`).join('')
+    +`<div class="checkin-hrv-pick type" onclick="_showCheckinHrvType()">Type</div>`;
+  _renderCheckinSleep();
+  _renderCheckinHrv();
   openModal('morning-modal');
 }
+function _renderCheckinSleep(){
+  document.getElementById('checkin-sleep-val').textContent=_checkinSleep!=null?_checkinSleep:'–';
+  document.getElementById('checkin-slider-handle').style.left=(_checkinSleep!=null?_checkinSleep:0)+'%';
+  document.getElementById('morning-sleep').value=_checkinSleep!=null?_checkinSleep:'';
+  _updateCheckinSavePreview();
+}
+function _setCheckinSleep(pct){
+  _checkinSleep=Math.max(0,Math.min(100,Math.round(pct)));
+  _renderCheckinSleep();
+}
+function _renderCheckinHrv(){
+  const valEl=document.getElementById('checkin-hrv-val');
+  valEl.innerHTML=(_checkinHrv!=null?_checkinHrv:'–')+'<span style="font-size:12px;color:var(--text3);"> ms</span>';
+  document.getElementById('morning-hrv').value=_checkinHrv!=null?_checkinHrv:'';
+  document.querySelectorAll('.checkin-hrv-pick').forEach(el=>{
+    el.classList.toggle('active',!el.classList.contains('type')&&+el.dataset.val===_checkinHrv);
+  });
+  _updateCheckinSavePreview();
+}
+function _pickCheckinHrv(v){
+  _checkinHrv=v;
+  document.getElementById('checkin-hrv-type').style.display='none';
+  _renderCheckinHrv();
+}
+function _showCheckinHrvType(){
+  const el=document.getElementById('checkin-hrv-type');
+  el.style.display='block';
+  el.value=_checkinHrv!=null?_checkinHrv:'';
+  el.focus();
+  el.oninput=function(){_checkinHrv=parseInt(this.value)||null;_renderCheckinHrv();};
+}
+function _updateCheckinSavePreview(){
+  const btn=document.getElementById('checkin-save-btn');
+  if(!btn)return;
+  const preview=calcReadiness({sleep:_checkinSleep,hrv:_checkinHrv});
+  btn.textContent=preview.score!=null?`Save — readiness ${preview.score}`:'Save';
+}
+// Drag-to-set slider - pointer events cover mouse and touch in one listener, attached
+// once at load rather than per-open since the modal element itself never gets rebuilt.
+(function initCheckinSlider(){
+  const track=document.getElementById('checkin-slider-track');
+  if(!track)return;
+  let dragging=false;
+  const pctFromEvent=e=>{
+    const rect=track.getBoundingClientRect();
+    return((e.clientX-rect.left)/rect.width)*100;
+  };
+  track.addEventListener('pointerdown',e=>{dragging=true;track.setPointerCapture(e.pointerId);_setCheckinSleep(pctFromEvent(e));});
+  track.addEventListener('pointermove',e=>{if(dragging)_setCheckinSleep(pctFromEvent(e));});
+  track.addEventListener('pointerup',()=>{dragging=false;});
+  track.addEventListener('pointercancel',()=>{dragging=false;});
+})();
 
 function saveMorningCheckin(){
   const sleep=parseInt(document.getElementById('morning-sleep').value)||null;
@@ -5047,6 +5141,7 @@ function saveMorningCheckin(){
   closeModal('morning-modal');
   toastMsg('Morning data saved');haptic('success');
   renderReadinessCard();
+  if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
 
 // 7-day vs 28-day training load ratio - same load model as calcReadiness/Activity Load,
@@ -5071,10 +5166,12 @@ function getDeloadFlag(){
   if(now.ratio>1.25&&weekAgo.ratio>1.25)return{now,weekAgo};
   return null;
 }
-function calcReadiness(){
+// morningOverride lets the check-in modal preview a readiness score from unsaved
+// slider/HRV values without writing them to storage first.
+function calcReadiness(morningOverride){
   const ds=dk(today());
   const morning=loadMorningData();
-  const todayMorning=morning[ds]||null;
+  const todayMorning=morningOverride!==undefined?morningOverride:(morning[ds]||null);
   const gym=loadGymData();const runs=loadRunData();
 
   // Load signals

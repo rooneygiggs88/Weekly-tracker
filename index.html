@@ -4108,7 +4108,6 @@ function renderMe(){
 
   el.innerHTML=`
     ${renderWeightSection(health)}
-    ${renderBodyCompGoalCard(health)}
     ${renderBodyFatSection(health)}
     ${renderVapingSection()}
     ${renderSleepTrendCard()}
@@ -4155,11 +4154,16 @@ function projectToTarget(current,target,weeklyRate){
   if(weeks>0)return{atTarget:false,onTrack:true,weeks,gap};
   return{atTarget:false,onTrack:false,gap,weeklyRate};
 }
-function renderBodyCompGoalCard(health){
+// Inner content only (no card wrapper/header) - folded into the bottom of
+// renderBodyCompCard so weight/body-fat and the goal projection read as one card
+// instead of two, matching the mockup's single consolidated body-comp card.
+function renderBodyCompGoalInner(health){
   const goal=state.bodyCompGoal;
-  const editBtn=`<button onclick="openBodyCompGoalModal()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${goal?'Edit':'Set Goal'}</button>`;
+  const editBtn=`<button onclick="openBodyCompGoalModal()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">${goal?'Edit':'Set Goal'}</button>`;
   if(!goal){
-    return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Comp Goal</span>${editBtn}</div><div class="empty-state" style="padding:16px 0;"><strong>No goal set</strong>Set a target weight or body fat % to see your projected pace.</div></div>`;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:13px;color:var(--text3);">No goal set — track your projected pace.</span>${editBtn}
+    </div>`;
   }
   const withW=health.filter(e=>e.weight!=null).sort((a,b)=>a.date.localeCompare(b.date));
   const withBf=health.filter(e=>e.bodyFat!=null&&e.bodyFat>0).sort((a,b)=>a.date.localeCompare(b.date));
@@ -4184,10 +4188,10 @@ function renderBodyCompGoalCard(health){
     }
     rows.push(`<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.06em;margin-bottom:3px;">Target: ${goal[field]}${unit}</div><div style="font-size:13px;font-weight:700;color:${col};line-height:1.5;">${line}</div></div>`);
   });
-  return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Body Comp Goal</span>${editBtn}</div>
-    ${rows.length?rows.join(''):'<div style="font-size:13px;color:var(--text3);padding:4px 0;">Log a weight or body fat entry to start projecting toward your goal.</div>'}
-  </div>`;
+  return`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${rows.length?'8px':'0'};">
+      <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Goal</span>${editBtn}
+    </div>
+    ${rows.length?rows.join(''):'<div style="font-size:13px;color:var(--text3);">Log a weight or body fat entry to start projecting toward your goal.</div>'}`;
 }
 
 function renderBodyCompCard(health){
@@ -4199,7 +4203,9 @@ function renderBodyCompCard(health){
   const wAvg7=withW.length>1?rollingRate(withW,'weight',parseDate(withW[withW.length-1].date)).now:null;
   const bAvg7=withBf.length>1?rollingRate(withBf,'bodyFat',parseDate(withBf[withBf.length-1].date)).now:null;
   if(!latestW&&!latestBf){
-    return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div></div>`;
+    return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">${renderBodyCompGoalInner(health)}</div>
+    </div>`;
   }
   // Two sparklines: weight over time, body fat over time
   function sparkline(pts,col,unit,W=300,H=56){
@@ -4317,6 +4323,7 @@ function renderBodyCompCard(health){
         ${weekLine?`<div style="font-size:12px;font-weight:600;color:${weekCol};line-height:1.5;">${weekLine}</div>`:''}
       </div>`;
     })()}
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">${renderBodyCompGoalInner(health)}</div>
     ${health.length>1?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">${health.slice(-5).reverse().map(e=>`<div class="health-entry"><span style="font-size:14px;font-weight:700;">${e.weight?e.weight+'kg':''}${e.bodyFat?` <span style="font-size:12px;color:#5261fa;font-weight:600;">· ${e.bodyFat}%</span>`:''}</span><span style="font-size:12px;color:var(--text3);">${new Date(e.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}${e.note?' · '+esc(e.note):''}</span></div>`).join('')}</div>`:''}
   </div>`;
 }

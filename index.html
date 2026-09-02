@@ -1650,6 +1650,10 @@ let gymDraft=loadGymDraftFromStorage();
 // Train defaults to the Run tab - without this, a restored session would sit there
 // correctly in memory but stay invisible until you happened to tap into Gym yourself.
 if(gymDraft)activeTrainTab='gym';
+// Which exercise the focused one-at-a-time logging view is showing - null means
+// "not yet computed", so renderGymFocusFlow lands on the first not-yet-done exercise.
+let _gymFocusIdx=null;
+let _gymShowAllEx=false;
 let _gymPersistInterval=null;
 function startGymPersist(){
   if(_gymPersistInterval)clearInterval(_gymPersistInterval);
@@ -1680,6 +1684,7 @@ function renderGymSection(){
   const el=document.getElementById('gym-content');
   if(gymDraft){renderGymLogger();return;}
   _gymPickedType=null;
+  _gymShowOtherTypes=false;
   const sessions=loadGymData();
   const todaySessions=sessions.filter(s=>s.date===dk(today()));
   if(todaySessions.length){
@@ -1701,21 +1706,65 @@ function renderGymSection(){
 // Step 1: pick the session type
 let _gymPickedType='Push';
 let _gymSupersetMode=false;
+let _gymShowOtherTypes=false;
 function toggleSupersetMode(){_gymSupersetMode=!_gymSupersetMode;renderGymTypeSelector();}
+// Today's scheduled type from the Training Plan, if any - drives the "on the plan
+// today" lead card so starting your actual planned session is a single tap instead
+// of picking it back out of the full type grid every time.
+function getTodayPlanType(){
+  if(!state.weekPlan)return null;
+  const dow=(today().getDay()+6)%7;
+  return state.weekPlan[dow]||null;
+}
+function renderPlanExercisePreview(type){
+  const sessions=loadGymData();
+  const exList=getDefaultExercisesForType(type).slice(0,6);
+  return exList.map(({name})=>{
+    const lastSets=getLastExSets(name,sessions);
+    if(!lastSets.length)return`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);"><span style="font-size:13px;font-weight:700;">${esc(name)}</span><span style="font-size:11px;color:var(--text3);font-weight:600;">New</span></div>`;
+    const hasWeight=lastSets.some(s=>parseFloat(s.weight||0)>0);
+    const top=hasWeight
+      ?lastSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,lastSets[0])
+      :lastSets.reduce((b,s)=>parseFloat(s.reps||0)>parseFloat(b.reps||0)?s:b,lastSets[0]);
+    const label=hasWeight?`${top.weight}kg×${top.reps}`:`${top.reps} reps`;
+    return`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);"><span style="font-size:13px;font-weight:700;">${esc(name)}</span><span style="font-size:11px;color:var(--text2);font-weight:600;">${label} last</span></div>`;
+  }).join('');
+}
+function gymStartPlanType(type){_gymPickedType=type;confirmGymSession();}
+function gymPlanSuperset(){_gymSupersetMode=!_gymSupersetMode;renderGymTypeSelector();}
+function gymShowOtherTypes(){_gymShowOtherTypes=true;_gymPickedType=null;renderGymTypeSelector();}
+function gymBackToPlan(){_gymShowOtherTypes=false;_gymPickedType=null;renderGymTypeSelector();}
 function renderGymTypeSelector(){
   const el=document.getElementById('gym-content');
   const sessions=loadGymData();
   const types=['Push','Pull','Legs','Core','Custom','Makeup'];
+  const planType=getTodayPlanType();
+  const isPlannedGymDay=planType&&['Push','Pull','Legs','Core','Custom'].includes(planType);
+  const showPlanCard=isPlannedGymDay&&!_gymShowOtherTypes;
   // Suggest next in PPL rotation
   if(!_gymPickedType){
-    const ppl=['Push','Pull','Legs'];
-    if(sessions.length){const idx=ppl.indexOf(sessions[sessions.length-1].type);_gymPickedType=idx>=0?ppl[(idx+1)%3]:'Push';}
-    else _gymPickedType='Push';
+    if(showPlanCard)_gymPickedType=planType;
+    else{
+      const ppl=['Push','Pull','Legs'];
+      if(sessions.length){const idx=ppl.indexOf(sessions[sessions.length-1].type);_gymPickedType=idx>=0?ppl[(idx+1)%3]:'Push';}
+      else _gymPickedType='Push';
+    }
   }
   const hasPrev=sessions.length>0;
   const isMakeup=_gymPickedType==='Makeup';
-  el.innerHTML=`
-    <div class="chart-card" style="margin-bottom:10px;">
+  const planCardHtml=showPlanCard?`<div class="chart-card" style="margin-bottom:10px;">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:2px;">On the plan today</div>
+      <div style="font-size:24px;font-weight:800;letter-spacing:-0.8px;margin-bottom:10px;">${esc(planType)}</div>
+      ${renderPlanExercisePreview(planType)}
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn-primary" style="flex:1;" onclick="gymStartPlanType('${planType}')">Start ${esc(planType)}</button>
+        <button onclick="gymPlanSuperset()" title="Superset mode" style="padding:0 16px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;">⚡</button>
+      </div>
+      ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair</div>`:''}
+    </div>
+    <button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="gymShowOtherTypes()">Or something else</button>`:'';
+  const gridCardHtml=showPlanCard?'':`<div class="chart-card" style="margin-bottom:10px;">
+      ${isPlannedGymDay?`<button onclick="gymBackToPlan()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0;margin-bottom:10px;">← Back to today's plan (${esc(planType)})</button>`:''}
       <div class="chart-card-header"><span class="chart-card-title">Select Session Type</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent)'):'var(--border)'};background:${_gymPickedType===t?(t==='Makeup'?'rgba(210,153,34,0.15)':'rgba(37,99,235,0.15)'):'var(--surface2)'};color:${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent2)'):'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
@@ -1724,8 +1773,8 @@ function renderGymTypeSelector(){
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair · Push, Pull &amp; Legs only</div>`:''}`}
       ${hasPrev&&!isMakeup?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
       <button class="btn-primary" style="width:100%;${isMakeup?'background:var(--amber);border-color:var(--amber);':''}" onclick="confirmGymSession()">${isMakeup?'Build Makeup session →':_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`⚡ Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>
-    </div>
-    ${renderRecentGymCard()}`;
+    </div>`;
+  el.innerHTML=`${planCardHtml}${gridCardHtml}${renderRecentGymCard()}`;
 }
 function gymPickType(t){
   _gymPickedType=t;
@@ -1746,6 +1795,7 @@ function _resolveExName(name){
 }
 function confirmGymSession(){
   const type=_gymPickedType;
+  _gymFocusIdx=null;_gymShowAllEx=false;
   if(type==='Makeup'){
     const exercises=getExercisesForMakeup();
     if(!exercises.length){toastMsg('All exercises done this week — great work!');haptic('light');return;}
@@ -1849,7 +1899,7 @@ function renderGymLogger(){
     <div style="font-size:12px;color:var(--text3);font-weight:600;">Last ${esc(gymDraft.type)}: ${lastSame.date} · ${(lastSame.exercises||[]).length} ex</div>
     <button onclick="copyLastSameSession()" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.12);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Copy this</button>
   </div>`:''}
-  ${gymDraft.superset?renderSupersetExercisesHtml(lastSame,prog,sessions):`<div id="gym-exercises">${gymDraft.exercises.map((ex,i)=>renderExBlock(ex,i,lastSame,prog,sessions)).join('')}</div>`}
+  ${gymDraft.superset?renderSupersetExercisesHtml(lastSame,prog,sessions):renderGymFocusFlow(lastSame,prog,sessions)}
   <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
   <label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label>
   <textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;margin-bottom:10px;" oninput="gymDraft.notes=this.value;saveGymDraft();">${esc(gymDraft.notes||'')}</textarea>
@@ -1980,14 +2030,21 @@ function confirmNewEx(){
     if(existingIdx>=0){
       gymDraft.exercises[existingIdx].sets.push({weight:'',reps:'',warmup:false});
       toastMsg(`${name} is already in this session — added another set`);
+      _gymFocusIdx=existingIdx;
     }else{
-      // Adding a genuinely new exercise is the clearest signal you've moved on, so
-      // auto-collapse anything already finished - tap a collapsed card to reopen it.
-      gymDraft.exercises.forEach(e=>{
-        if((e.sets||[]).some(s=>!s.warmup&&s.weight&&s.reps))e._collapsed=true;
-      });
+      // Superset sessions still show every exercise at once (see renderSupersetExercisesHtml),
+      // so adding a genuinely new one there is the clearest signal you've moved on -
+      // auto-collapse anything already finished. Normal sessions use the one-at-a-time
+      // focus view instead, where this doesn't apply.
+      if(gymDraft.superset){
+        gymDraft.exercises.forEach(e=>{
+          if((e.sets||[]).some(s=>!s.warmup&&s.weight&&s.reps))e._collapsed=true;
+        });
+      }
       gymDraft.exercises.push({name,sets:[{weight:'',reps:'',warmup:false}]});
+      _gymFocusIdx=gymDraft.exercises.length-1;
     }
+    _gymShowAllEx=false;
     closeModal('new-ex-modal');
     renderGymLogger();
   }
@@ -2074,6 +2131,15 @@ function gymCheckSetDone(i,si){
   const s=gymDraft&&gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];
   if(!s||s.warmup)return;
   const done=!!(s.weight&&s.reps);
+  // Auto-start the rest timer the moment a set is newly completed, instead of making
+  // you tap the rest button yourself every time. _restFired only flips back to false
+  // if the set is cleared out again, so editing an already-done set doesn't re-trigger it.
+  if(done&&!s._restFired){
+    s._restFired=true;
+    startRestTimer(getExRestSecs(gymDraft.exercises[i].name||''));
+  }else if(!done){
+    s._restFired=false;
+  }
   const btn=document.getElementById(`set-num-${i}-${si}`);
   const row=document.getElementById(`set-row-${i}-${si}`);
   const kgEl=document.getElementById(`set-kg-${i}-${si}`);
@@ -2150,24 +2216,27 @@ function renderCollapsedExCard(ex,i){
     </div>
   </div>`;
 }
-function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
-  // Collapsed summary - auto-set when you add a new exercise (see confirmNewEx) or
-  // move your typing to a different exercise (see gymSetActiveEx), or toggled
-  // manually via the chevron. Tap anywhere on the card to reopen it.
-  if(ex._collapsed)return renderCollapsedExCard(ex,i);
-  const _restSecs=getExRestSecs(ex.name||'');
-  const nameLower=(ex.name||'').toLowerCase();
-  // Find most recent occurrence of this exercise across ALL session types - accepts
-  // either a weighted set or a bodyweight (reps-only) set, so pull-up-style exercises
-  // still get "last session" carryover even with the weight field left blank. Skips
-  // technique-day sets too, same as warmup, so the ghost line and target-next hint
-  // compare against your last real working session, not a deliberately light day.
+// Find most recent occurrence of this exercise across ALL session types - accepts
+// either a weighted set or a bodyweight (reps-only) set, so pull-up-style exercises
+// still get "last session" carryover even with the weight field left blank. Skips
+// technique-day sets too, same as warmup, so the ghost line and target-next hint
+// compare against your last real working session, not a deliberately light day.
+function getLastExSets(name,sessions){
+  const nameLower=(name||'').toLowerCase();
   const lastEx=nameLower?(sessions||[]).slice().reverse().reduce((found,s)=>{
     if(found)return found;
     const e=(s.exercises||[]).find(e=>e.name&&e.name.toLowerCase()===nameLower);
     return(e&&(e.sets||[]).some(set=>!set.warmup&&!set.technique&&(parseFloat(set.weight||0)>0||parseFloat(set.reps||0)>0)))?e:null;
   },null):null;
-  const lastSets=lastEx?(lastEx.sets||[]).filter(s=>!s.warmup&&!s.technique):[];
+  return lastEx?(lastEx.sets||[]).filter(s=>!s.warmup&&!s.technique):[];
+}
+function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=false){
+  // Collapsed summary - auto-set when you add a new exercise (see confirmNewEx) or
+  // move your typing to a different exercise (see gymSetActiveEx), or toggled
+  // manually via the chevron. Tap anywhere on the card to reopen it.
+  if(ex._collapsed)return renderCollapsedExCard(ex,i);
+  const _restSecs=getExRestSecs(ex.name||'');
+  const lastSets=getLastExSets(ex.name,sessions);
   const lastHasWeight=lastSets.some(s=>parseFloat(s.weight||0)>0);
   const topLast=lastSets.length?(lastHasWeight
     ?lastSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,lastSets[0])
@@ -2194,11 +2263,12 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
       <input class="modal-input" style="flex:1;margin-bottom:0;" value="${esc(ex.name||'')}" placeholder="Exercise name"
         oninput="gymSetExName(${i},this.value)" onfocus="gymSetActiveEx(${i})" list="exs-${i}">
       <datalist id="exs-${i}">${sugg.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
-      <button onclick="gymToggleCollapse(${i})" title="Collapse" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0;">⌃</button>
+      ${focusMode?'':`<button onclick="gymToggleCollapse(${i})" title="Collapse" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0;">⌃</button>`}
       <button onclick="gymRemoveEx(${i})" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:2px;flex-shrink:0;">×</button>
     </div>
     ${pb>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pb}KG</div>`:pbReps>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pbReps} REPS</div>`:''}
     ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Session</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}</span>`).join('')}</div></div>`:''}
+    ${focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&s.weight&&s.reps)?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
     ${targetWeight?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetWeight}kg × ${topLast.reps||'?'} reps <span style="color:var(--green);">+2.5kg</span></div>`:targetReps?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetReps} reps <span style="color:var(--green);">+1</span></div>`:`<div id="ex-hint-${i}"></div>`}
     <div style="display:grid;grid-template-columns:28px 1fr 1fr 38px;gap:6px;margin-bottom:6px;">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;">W</div>
@@ -2242,6 +2312,63 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false){
     </div>
     ${renderPlateCalc((ex.sets||[]).filter(s=>!s.warmup).reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b||0)?parseFloat(s.weight):b,0))}
   </div>`;
+}
+function gymFillFromLast(i){
+  const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
+  const lastSets=getLastExSets(ex.name,loadGymData());
+  if(!lastSets.length)return;
+  ex.sets=lastSets.map(s=>({weight:s.weight,reps:s.reps,warmup:false,technique:false}));
+  gymSetActiveEx(i);
+  renderGymLogger();
+  toastMsg(`Filled ${lastSets.length} set${lastSets.length!==1?'s':''} from last time`);
+}
+
+// One exercise at a time, with a dot strip to jump between them and an optional
+// expandable list of the rest - replaces the old "every exercise stacked in one long
+// scroll" layout for a normal (non-superset) session.
+function renderGymFocusFlow(lastSame,prog,sessions){
+  const exs=gymDraft.exercises;
+  if(!exs.length)return'<div id="gym-exercises"></div>';
+  if(_gymFocusIdx==null||_gymFocusIdx>=exs.length){
+    const firstUnfinished=exs.findIndex(ex=>!(ex.sets||[]).some(s=>!s.warmup&&s.weight&&s.reps));
+    _gymFocusIdx=firstUnfinished===-1?exs.length-1:firstUnfinished;
+  }
+  const i=_gymFocusIdx;
+  const ex=exs[i];
+  ex._collapsed=false; // focus mode always shows the current exercise expanded
+  const dots=exs.map((e,idx)=>{
+    const doneCount=(e.sets||[]).filter(s=>!s.warmup&&s.weight&&s.reps).length;
+    const isDone=doneCount>0&&doneCount>=(e.sets||[]).length;
+    const col=idx===i?'var(--accent)':isDone?'var(--green)':'var(--border)';
+    return`<button onclick="gymFocusJump(${idx})" style="width:${idx===i?'20px':'8px'};height:8px;border-radius:4px;background:${col};border:none;cursor:pointer;padding:0;transition:all 0.15s;"></button>`;
+  }).join('');
+  return`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px 6px;">
+    <button onclick="gymFocusNav(-1)" ${i===0?'disabled':''} style="background:none;border:none;color:${i===0?'var(--border)':'var(--text3)'};cursor:${i===0?'default':'pointer'};padding:4px;display:flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div style="display:flex;gap:4px;align-items:center;">${dots}</div>
+    <button onclick="gymFocusNav(1)" ${i===exs.length-1?'disabled':''} style="background:none;border:none;color:${i===exs.length-1?'var(--border)':'var(--text3)'};cursor:${i===exs.length-1?'default':'pointer'};padding:4px;display:flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+  </div>
+  <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;text-align:center;margin-bottom:8px;">Exercise ${i+1} of ${exs.length}</div>
+  <div id="gym-exercises">${renderExBlock(ex,i,lastSame,prog,sessions,false,true)}</div>
+  ${exs.length>1?`<button class="btn-secondary" style="margin-bottom:10px;" onclick="_gymShowAllEx=!_gymShowAllEx;renderGymLogger();">${_gymShowAllEx?'Hide other exercises':'View all exercises'}</button>`:''}
+  ${_gymShowAllEx?`<div style="margin-bottom:10px;">${exs.map((e,idx)=>idx===i?'':gymFocusRowSummary(e,idx)).join('')}</div>`:''}`;
+}
+function gymFocusRowSummary(ex,idx){
+  const realSets=(ex.sets||[]).filter(s=>!s.warmup&&s.weight&&s.reps);
+  const summary=realSets.map(s=>parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`).join(' · ')||'Not started';
+  return`<div onclick="gymFocusJump(${idx})" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-xs);border:1px solid var(--border);margin-bottom:6px;cursor:pointer;">
+    <div style="width:20px;height:20px;border-radius:50%;background:${realSets.length?'rgba(8,132,91,0.15)':'var(--surface2)'};color:${realSets.length?'var(--green)':'var(--text3)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">${realSets.length?'✓':idx+1}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(ex.name||'Exercise')}</div>
+      <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${summary}</div>
+    </div>
+  </div>`;
+}
+function gymFocusJump(idx){_gymFocusIdx=idx;_gymShowAllEx=false;renderGymLogger();}
+function gymFocusNav(dir){
+  if(!gymDraft)return;
+  const n=gymDraft.exercises.length;
+  _gymFocusIdx=Math.max(0,Math.min(n-1,(_gymFocusIdx==null?0:_gymFocusIdx)+dir));
+  renderGymLogger();
 }
 
 function getExerciseSuggestions(cur,sessions){

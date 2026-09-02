@@ -2402,7 +2402,7 @@ function renderRunSection(){
       </div>`;
     }).join('')}
   </div>`:'';
-  el.innerHTML=renderRunTarget()+`
+  el.innerHTML=`
   <div class="run-input-card">
     ${weekNavHtml}
     <div style="display:flex;gap:4px;margin-bottom:16px;">${dayBtns}</div>
@@ -5666,6 +5666,8 @@ function saveRunTarget(val){
   const v=parseFloat(val)||0;
   state.runTarget=v;saveState();
   toastMsg(v>0?`Target: ${v} km/week`:'Target cleared');
+  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
 function editRunTargetInline(){
   const display=document.getElementById('run-target-display');
@@ -5933,6 +5935,7 @@ function renderWeekPlanSection(){
       <button onclick="toggleWeekPlanEditor()" id="wplan-edit-btn" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">${plan?'Edit':'Set Plan'}</button>
     </div>
     ${plan?`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">${summary}</div>`:`<div style="font-size:13px;color:var(--text3);padding:4px 0 8px;">No plan set. Tap Set Plan to assign workout types to each day.</div>`}
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">${renderRunTarget()}</div>
     <div id="wplan-editor" style="display:none;margin-top:10px;">
       <div class="week-plan-grid" id="week-plan-grid">
         ${days.map((day,i)=>{

@@ -5363,50 +5363,8 @@ function getWeeklyWin(){
   wins.sort((a,b)=>b.date.localeCompare(a.date));
   return wins[0];
 }
-// "On this day" flashback - finds the closest gym session to 1/2/4/8/12 weeks ago and
-// compares an exercise from it against that exercise's current all-time best, picking
-// whichever comparison shows the biggest relative gain.
-function getFlashback(){
-  const gym=loadGymData();
-  if(gym.length<2)return null;
-  const now=today();
-  const curBestMap={};
-  gym.forEach(s=>(s.exercises||[]).forEach(e=>{
-    if(!e.name)return;
-    (e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0).forEach(st=>{
-      const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);
-      const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
-      if(!curBestMap[e.name]||est>curBestMap[e.name])curBestMap[e.name]=est;
-    });
-  }));
-  const windows=[{days:7,label:'1 week ago'},{days:14,label:'2 weeks ago'},{days:28,label:'4 weeks ago'},{days:56,label:'8 weeks ago'},{days:84,label:'12 weeks ago'}];
-  let best=null;
-  windows.forEach(w=>{
-    const target=addDays(now,-w.days);
-    let closest=null,closestDiff=Infinity;
-    gym.forEach(s=>{
-      const d=new Date(s.date+'T12:00:00');
-      const diff=Math.abs((d-target)/86400000);
-      if(diff<=2&&diff<closestDiff){closest=s;closestDiff=diff;}
-    });
-    if(!closest)return;
-    (closest.exercises||[]).forEach(ex=>{
-      if(!ex.name)return;
-      const oldSets=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
-      if(!oldSets.length)return;
-      let oldBestE1rm=0,oldW=0,oldR=0;
-      oldSets.forEach(s=>{const w=parseFloat(s.weight);const r=parseFloat(s.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>oldBestE1rm){oldBestE1rm=est;oldW=w;oldR=r;}});
-      const curBest=curBestMap[ex.name]||0;
-      if(curBest<=oldBestE1rm)return;
-      const delta=+(curBest-oldBestE1rm).toFixed(1);
-      const pctGain=delta/oldBestE1rm;
-      if(!best||pctGain>best.pctGain)best={name:ex.name,label:w.label,oldW,oldR,delta,curBest,pctGain};
-    });
-  });
-  return best;
-}
-// Merged "story" slot: prefers this week's win (most recent, most relevant), falls
-// back to an "on this day" flashback when there's been no PR since Monday.
+// Story slot: shows this week's win when there is one. No fallback content when
+// there isn't - a stale "on this day" flashback wasn't a signal worth showing.
 function renderStoryCard(){
   const el=document.getElementById('story-card');
   if(!el)return;
@@ -5417,14 +5375,6 @@ function renderStoryCard(){
     el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;border-left:3px solid var(--green);">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:6px;">${icon} This week's win</div>
       <div style="font-size:13px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">${esc(win.name)}</strong> — ${win.detail} on ${dateLabel}</div>
-    </div>`;
-    return;
-  }
-  const fb=getFlashback();
-  if(fb){
-    el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(5,150,105,0.05));border-color:rgba(37,99,235,0.25);">
-      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);margin-bottom:6px;">📅 On this day · ${fb.label}</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.5;">You did <strong style="color:var(--text);">${esc(fb.name)}</strong> at ${fb.oldW}kg × ${fb.oldR}. You've since added <strong style="color:var(--green);">+${fb.delta}kg</strong> — now at ${fb.curBest}kg e1RM.</div>
     </div>`;
     return;
   }

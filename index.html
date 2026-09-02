@@ -132,21 +132,20 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .today-habits{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:20px;text-align:center;}
 .today-habits b{color:var(--text);font-weight:800;}
 
-/* GOAL CARDS */
-.goal-stack{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
-.goal-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
-.goal-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border);transition:background 0.2s;}
-.goal-card.done::before{background:var(--green);}
-.goal-card.done{border-color:rgba(8,132,91,0.2);background:rgba(8,132,91,0.04);}
-.goal-card:active{transform:scale(0.98);}
-.goal-card-body{flex:1;min-width:0;}
-.goal-card-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;}
-.goal-card.done .goal-card-name{color:var(--text2);}
-.goal-card-meta{font-size:12px;color:var(--text3);font-weight:600;}
-.goal-streak{color:var(--orange);font-weight:800;}
-.goal-card-check{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);}
-.goal-card.done .goal-card-check{background:var(--green);border-color:var(--green);box-shadow:0 0 12px rgba(8,132,91,0.4);}
-.goal-text-input{width:100%;background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:14px;font-weight:600;padding:4px 0;margin-top:4px;border-bottom:1px solid var(--border);}
+/* GOAL CHIPS - 2-column grid of compact checkable chips, matching the redesign mockup
+   (was a vertical stack of full-width cards). */
+.goal-stack{margin-bottom:16px;}
+.goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.goal-chip{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all 0.2s;min-width:0;}
+.goal-chip.done{border-color:rgba(8,132,91,0.25);background:rgba(8,132,91,0.04);}
+.goal-chip:active{transform:scale(0.97);}
+.goal-chip-body{flex:1;min-width:0;}
+.goal-chip-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.25;}
+.goal-chip.done .goal-chip-name{color:var(--text2);}
+.goal-streak{font-size:10px;font-weight:800;color:var(--orange);margin-top:2px;}
+.goal-chip-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);}
+.goal-chip.done .goal-chip-check{background:var(--green);border-color:var(--green);}
+.goal-text-input{width:100%;background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:12px;font-weight:600;padding:2px 0;margin-top:2px;border-bottom:1px solid var(--border);}
 
 /* TRAIN */
 .train-header{padding:60px 24px 20px;background:linear-gradient(180deg,rgba(37,99,235,0.08) 0%,transparent 100%);}
@@ -1385,25 +1384,29 @@ function renderToday(){
     }
   }else{wrap.innerHTML='';}
 
-  // Goal cards
+  // Goal chips - compact 2-col grid instead of a full-width card per goal
   const stack=document.getElementById('goal-stack');
   stack.innerHTML='';
+  const grid=document.createElement('div');
+  grid.className='goal-grid';
   goalsActiveOn(ds).forEach(g=>{
     const done=goalDone(ds,g);
     const streak=getGoalStreak(g);
-    const streakBadge=streak>0?` · <span class="goal-streak">🔥 ${streak}</span>`:'';
-    const card=document.createElement('div');
-    card.className='goal-card'+(done?' done':'');
+    const streakHtml=streak>0?`<div class="goal-streak">🔥 ${streak}</div>`:'';
+    const checkHtml=done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>':'';
+    const chip=document.createElement('div');
+    chip.className='goal-chip'+(done?' done':'');
     if(g.inputStyle==='check'){
-      card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><div class="goal-card-meta">${done?'Completed':'Tap to complete'}${streakBadge}</div></div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
-      card.onclick=()=>toggleCheck(ds,g.id);
+      chip.innerHTML=`<div class="goal-chip-check">${checkHtml}</div><div class="goal-chip-body"><div class="goal-chip-name">${esc(g.name)}</div>${streakHtml}</div>`;
+      chip.onclick=()=>toggleCheck(ds,g.id);
     }else{
       const val=getTextEntry(ds,g.id);
-      card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()">${streak>0?`<div class="goal-card-meta" style="margin-top:4px;"><span class="goal-streak">🔥 ${streak}</span></div>`:''}</div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
-      card.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
+      chip.innerHTML=`<div class="goal-chip-check">${checkHtml}</div><div class="goal-chip-body"><div class="goal-chip-name">${esc(g.name)}</div><input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()">${streakHtml}</div>`;
+      chip.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
     }
-    stack.appendChild(card);
+    grid.appendChild(chip);
   });
+  stack.appendChild(grid);
 
   // Render readiness card
   renderReadinessCard();
@@ -1446,20 +1449,26 @@ function renderDayGoals(ds){
     header.textContent=`${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}`;
     stack.appendChild(header);
   }
+  const grid=document.createElement('div');
+  grid.className='goal-grid';
   goalsActiveOn(ds).forEach(g=>{
     const done=goalDone(ds,g);
-    const card=document.createElement('div');
-    card.className='goal-card'+(done?' done':'');
+    const streak=getGoalStreak(g);
+    const streakHtml=streak>0?`<div class="goal-streak">🔥 ${streak}</div>`:'';
+    const checkHtml=done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>':'';
+    const chip=document.createElement('div');
+    chip.className='goal-chip'+(done?' done':'');
     if(g.inputStyle==='check'){
-      card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><div class="goal-card-meta">${done?'Completed':'Not done'}</div></div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
-      card.onclick=()=>toggleCheck(ds,g.id);
+      chip.innerHTML=`<div class="goal-chip-check">${checkHtml}</div><div class="goal-chip-body"><div class="goal-chip-name">${esc(g.name)}</div>${streakHtml}</div>`;
+      chip.onclick=()=>toggleCheck(ds,g.id);
     }else{
       const val=getTextEntry(ds,g.id);
-      card.innerHTML=`${goalAvatar(g.name)}<div class="goal-card-body"><div class="goal-card-name">${esc(g.name)}</div><input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()"></div><div class="goal-card-check">${done?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
-      card.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
+      chip.innerHTML=`<div class="goal-chip-check">${checkHtml}</div><div class="goal-chip-body"><div class="goal-chip-name">${esc(g.name)}</div><input class="goal-text-input" placeholder="Type entry…" value="${esc(val)}" onclick="event.stopPropagation()">${streakHtml}</div>`;
+      chip.querySelector('input').oninput=function(){setTextEntry(ds,g.id,this.value);};
     }
-    stack.appendChild(card);
+    grid.appendChild(chip);
   });
+  stack.appendChild(grid);
 }
 
 // ── REST TIMER ──

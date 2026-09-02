@@ -885,6 +885,14 @@ function getMonday(date){const d=new Date(date),day=d.getDay();d.setDate(d.getDa
 function daysUntil(ds){const now=today();now.setHours(0,0,0,0);const t=new Date(ds+'T12:00:00');return Math.round((t-now)/86400000);}
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function fmtShortDate(ds){const d=new Date(ds);return`${d.getDate()}/${d.getMonth()+1}`;}
+// Rounds a distance to 1 decimal for display - a stored value can carry more float
+// precision than the 0.1 input step suggests (an import, a paste, arithmetic elsewhere),
+// and showing that raw looks broken even though the underlying number is fine.
+function fmtKm(km){
+  if(km==null||km==='')return'';
+  const n=parseFloat(km);
+  return isFinite(n)?String(Math.round(n*10)/10):'';
+}
 
 // ── DATA ──
 function loadState(){
@@ -1717,7 +1725,8 @@ function renderGymSection(){
         return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;font-weight:700;">${esc(e.name)}</span><span style="font-size:13px;color:var(--text2);font-weight:600;">${ws.length} sets${top&&top.weight?` · ${top.weight}kg×${top.reps||'?'}`:top&&top.reps?` · ${top.reps} reps`:''}</span></div>`;
       }).join('')}
     </div>
-    <button class="btn-secondary" onclick="_gymPickedType=null;renderGymTypeSelector();">+ Add another session</button>`;
+    <button class="btn-secondary" style="margin-bottom:10px;" onclick="_gymPickedType=null;renderGymTypeSelector();">+ Add another session</button>
+    ${renderRecentGymCard()}`;
   }else{
     renderGymTypeSelector();
   }
@@ -2704,7 +2713,7 @@ function renderRunSection(){
       const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):null;
       return`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;${i<dayRuns.length-1?'border-bottom:1px solid rgba(8,132,91,0.15);':''}">
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          ${r.km?`<span style="font-size:12px;font-weight:700;color:var(--green);">${r.km}km</span>`:''}
+          ${r.km?`<span style="font-size:12px;font-weight:700;color:var(--green);">${fmtKm(r.km)}km</span>`:''}
           ${r.time?`<span style="font-size:12px;color:var(--text2);font-weight:600;">${r.time}</span>`:''}
           ${pace?`<span style="font-size:12px;color:var(--orange);font-weight:600;">${pace}</span>`:''}
           ${r.effort?`<span style="padding:2px 7px;border-radius:8px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
@@ -2746,7 +2755,7 @@ function renderRunSection(){
   ${last?`<div class="chart-card" onclick="showPage('trends');switchTrendsTab('running');" style="cursor:pointer;">
     <div class="chart-card-header"><span class="chart-card-title">Last Run</span><span style="font-size:11px;color:var(--accent2);font-weight:700;">View all →</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div><div style="font-size:22px;font-weight:800;letter-spacing:-1px;">${last.km?last.km+'<span style="font-size:14px;font-weight:600;margin-left:2px;">km</span>':last.time||'—'}</div><div style="font-size:12px;color:var(--text3);margin-top:3px;">${last.date}${last.effort?' · '+last.effort:''}</div></div>
+      <div><div style="font-size:22px;font-weight:800;letter-spacing:-1px;">${last.km?fmtKm(last.km)+'<span style="font-size:14px;font-weight:600;margin-left:2px;">km</span>':last.time||'—'}</div><div style="font-size:12px;color:var(--text3);margin-top:3px;">${last.date}${last.effort?' · '+last.effort:''}</div></div>
       ${last.km&&last.time?`<div style="text-align:right;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${fmtPace(last.km/parseTimeToSecs(last.time))}</div><div style="font-size:11px;color:var(--text3);">avg pace</div></div>`:''}
     </div></div>`:''}
 `;
@@ -2819,7 +2828,7 @@ function renderRunHistory(runs){
   const rows=shown.map(r=>{
     const pace=r.km&&r.time?fmtPace(r.km/parseTimeToSecs(r.time)):'';
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);">
-      <div><div style="font-size:14px;font-weight:700;">${r.km?r.km+'km':r.time||'Run'}</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${r.date}${r.effort?' · '+r.effort:''}</div></div>
+      <div><div style="font-size:14px;font-weight:700;">${r.km?fmtKm(r.km)+'km':r.time||'Run'}</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${r.date}${r.effort?' · '+r.effort:''}</div></div>
       <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:var(--accent2);">${pace}</div>${r.time?`<div style="font-size:11px;color:var(--text3);">${r.time}</div>`:''}</div>
     </div>`;
   }).join('');
@@ -2878,7 +2887,7 @@ function renderTrainHistory(){
       const effortTag=e.effort?sessionTypeTag('Run'):'';
       const detail=expanded?`<div style="padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px;">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
-          ${e.km?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.km}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">km</div></div>`:''}
+          ${e.km?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${fmtKm(e.km)}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">km</div></div>`:''}
           ${e.time?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${e.time}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">time</div></div>`:''}
           ${pace?`<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${pace}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;">pace</div></div>`:''}
         </div>
@@ -2892,7 +2901,7 @@ function renderTrainHistory(){
               ${e.effort?`<span style="padding:3px 9px;border-radius:20px;background:${effortStyle(e.effort).bg};font-size:11px;font-weight:700;color:${effortStyle(e.effort).text};">${esc(e.effort)}</span>`:''}
               <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
             </div>
-            <div style="font-size:12px;color:var(--text2);">${e.km?e.km+'km':''}${e.km&&e.time?' · ':''}${e.time||''}${pace?' · '+pace:''}</div>
+            <div style="font-size:12px;color:var(--text2);">${e.km?fmtKm(e.km)+'km':''}${e.km&&e.time?' · ':''}${e.time||''}${pace?' · '+pace:''}</div>
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="transform:rotate(${expanded?90:0}deg);transition:transform 0.2s;flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
@@ -3684,7 +3693,7 @@ function renderTrendsRunAnalysis(){
           ${r.effort?`<span style="padding:2px 8px;border-radius:20px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
           <span style="font-size:11px;color:var(--text3);font-weight:600;">${dl}</span>
         </div>
-        <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
+        <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?fmtKm(r.km)+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
       </div>
       <button onclick="openRunEdit(${globalIdx})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>
     </div>`;
@@ -4849,7 +4858,7 @@ function renderRaceSection(){
     <div class="chart-card-header"><span class="chart-card-title">Race Target</span><button onclick="openRaceModal()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Edit</button></div>
     <div style="font-size:14px;font-weight:800;margin-bottom:4px;">${esc(r.name||'Race')}</div>
     <div style="font-size:36px;font-weight:800;letter-spacing:-2px;color:${days<=14?'var(--red)':days<=42?'var(--orange)':'var(--text)'};">${days>=0?days:'Past'}<span style="font-size:16px;color:var(--text2);font-weight:600;"> days</span></div>
-    <div style="font-size:13px;color:var(--text3);margin-top:4px;">${r.date}${r.km?' · '+r.km+'km':''}</div>
+    <div style="font-size:13px;color:var(--text3);margin-top:4px;">${r.date}${r.km?' · '+fmtKm(r.km)+'km':''}</div>
     ${(r.goalTime||goalPace)?`<div style="display:flex;gap:8px;margin-top:10px;">
       ${r.goalTime?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal time: ${esc(r.goalTime)}</span>`:''}
       ${goalPace?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal pace: ${goalPace}</span>`:''}
@@ -5683,7 +5692,7 @@ function getWeeklyWin(){
   runs.forEach(r=>{
     const inWeek=r.date>=weekStartStr;
     if(r.km>bestKm){
-      if(inWeek&&bestKm>0)wins.push({type:'run',name:'Longest run',detail:`${r.km}km`,date:r.date});
+      if(inWeek&&bestKm>0)wins.push({type:'run',name:'Longest run',detail:`${fmtKm(r.km)}km`,date:r.date});
       bestKm=r.km;
     }
     if(r.km&&r.time){
@@ -5757,7 +5766,7 @@ function openRunLogModal(){
           ${r.effort?`<span style="padding:2px 8px;border-radius:20px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
           <span style="font-size:11px;color:var(--text3);font-weight:600;">${dl}</span>
         </div>
-        <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
+        <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?fmtKm(r.km)+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}${r.note?` · <span style="color:var(--text3);font-style:italic;">${esc(r.note)}</span>`:''}</div>
       </div>
       <button onclick="closeModal('run-log-modal');openRunEdit(${idx})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>
     </div>`;
@@ -6175,7 +6184,7 @@ function renderDayModalContent(ds){
         ${r.effort?`<span style="padding:3px 9px;border-radius:10px;background:${effortBg};color:${effortCol};font-size:12px;font-weight:700;">${esc(r.effort)}</span>`:''}
         ${r.startTime?`<span style="font-size:11px;color:var(--text3);font-weight:600;">🕐 ${r.startTime}</span>`:''}
       </div>
-      <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?r.km+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}</div>
+      <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?fmtKm(r.km)+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}</div>
       ${r.note?`<div style="font-size:12px;color:var(--text3);margin-top:5px;font-style:italic;">${esc(r.note)}</div>`:''}
     </div>`;
   });

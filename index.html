@@ -54,6 +54,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .today-plan-meta{font-size:12px;font-weight:600;color:var(--text2);line-height:1.4;margin-top:3px;}
 .today-plan-cta{margin-top:auto;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px -6px rgba(37,99,235,0.7);}
 .today-plan-cta.done{background:var(--surface2);color:var(--green);box-shadow:none;border:1px solid rgba(8,132,91,0.3);}
+.today-plan-alt{background:none;border:none;color:var(--text3);font-family:inherit;font-size:11px;font-weight:600;text-align:center;margin-top:8px;cursor:pointer;padding:2px;}
 .today-mini{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
 .today-mini span{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 7px;border-radius:8px;background:var(--surface2);color:var(--text2);}
 
@@ -82,20 +83,17 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .today-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:dialBreathe 3s ease-in-out infinite;}
 .today-status span{color:var(--accent2);font-weight:700;}
 
-/* WEEK STRIP */
+/* WEEK STRIP - a colored bar per day (plan's activity type) instead of a plain
+   done/not-done dot; today is a solid dark pill instead of a light accent border. */
 .week-strip{display:flex;gap:6px;margin-bottom:20px;overflow-x:auto;scrollbar-width:none;padding:2px 0;}
 .week-strip::-webkit-scrollbar{display:none;}
-.week-day{flex:1;min-width:40px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:var(--radius-xs);background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
-.week-day.today{border-color:var(--accent);background:rgba(37,99,235,0.12);}
-.week-day.past-done{border-color:rgba(8,132,91,0.3);}
+.week-day{flex:1;min-width:40px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px 8px;border-radius:var(--radius-xs);background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
+.week-day.today{background:var(--text);border-color:var(--text);}
 .week-day-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);}
-.week-day.today .week-day-label{color:var(--accent2);}
-.week-day-dot{width:8px;height:8px;border-radius:50%;background:var(--border);}
-.week-day.past-done .week-day-dot{background:var(--green);box-shadow:0 0 6px rgba(8,132,91,0.5);}
-.week-day.today .week-day-dot{background:var(--accent);box-shadow:0 0 6px rgba(37,99,235,0.5);}
+.week-day.today .week-day-label{color:rgba(255,255,255,0.55);}
 .week-day-num{font-size:13px;font-weight:800;color:var(--text2);}
-.week-day.today .week-day-num{color:var(--text);}
-.week-day-plan{font-size:8px;font-weight:800;letter-spacing:0.04em;margin-top:-2px;}
+.week-day.today .week-day-num{color:#fff;}
+.week-day-bar{width:70%;height:3px;border-radius:2px;background:var(--border);margin-top:2px;}
 
 /* RACE CARD */
 .race-card{background:linear-gradient(135deg,rgba(194,80,0,0.12) 0%,rgba(194,80,0,0.04) 100%);border:1px solid rgba(194,80,0,0.25);border-radius:var(--radius);padding:18px 20px;margin-bottom:10px;cursor:pointer;}
@@ -113,20 +111,24 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .session-card-meta{font-size:12px;color:var(--text2);font-weight:600;}
 .session-card-arrow{flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 
-/* PLAN + QUOTA CARD (rings for weekly gym/run targets, plan info alongside) */
-.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:16px;transition:all 0.2s;}
-.plan-card.clickable{cursor:pointer;}
-.plan-card.clickable:active{transform:scale(0.98);}
-.ring-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;}
-.ring-item .ring{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;}
-.ring-item .ring::after{content:'';position:absolute;inset:6px;border-radius:50%;background:var(--surface);}
-.ring-item .ring span{position:relative;z-index:1;font-size:11px;font-weight:800;color:var(--text);}
-.ring-item .ring-lbl{font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
-.plan-info{flex:1;min-width:0;border-left:1px solid var(--border);padding-left:14px;display:flex;align-items:center;gap:10px;}
-.plan-info-body{flex:1;min-width:0;}
-.plan-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#0e7c72;margin-bottom:2px;}
-.plan-title{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px;}
-.plan-meta{font-size:12px;color:var(--text2);font-weight:600;margin-top:1px;}
+/* THIS WEEK CARD - gym as a segmented bar (one segment per scheduled session),
+   running as a continuous km bar, race countdown as a footer row. */
+.week-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;}
+.week-card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+.week-card-head span:first-child{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
+.week-card-head span:last-child{font-size:12px;font-weight:700;color:var(--text3);}
+.week-card-row{margin-bottom:12px;}
+.week-card-row-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+.week-card-row-label{font-size:13px;font-weight:700;color:var(--text);}
+.week-card-row-val{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text2);}
+.week-seg-bar{display:flex;gap:4px;}
+.week-seg-bar .seg{flex:1;height:7px;border-radius:4px;background:#e1ece9;}
+.week-seg-bar .seg.filled{background:#0e7c72;}
+.week-bar-track{height:7px;border-radius:4px;overflow:hidden;background:#fbe6df;}
+.week-bar-fill{height:100%;border-radius:4px;background:#ff7a59;}
+.week-race-row{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border);}
+.week-race-row-name{font-size:12px;font-weight:600;color:var(--text2);}
+.week-race-row-days{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--orange);}
 
 /* HABITS (secondary line under the readiness hero) */
 .today-habits{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:20px;text-align:center;}
@@ -354,7 +356,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
           <div class="score-dial-glow" id="score-dial-glow"></div>
           <div class="score-dial-core">
             <div class="today-score" id="today-score">0</div>
-            <div class="score-dial-lbl" id="score-dial-lbl">today's score</div>
+            <div class="score-dial-lbl" id="score-dial-lbl">readiness</div>
           </div>
         </div>
         <div class="today-mini" id="today-mini"></div>
@@ -1117,7 +1119,7 @@ function renderToday(){
     const tier=readinessTier(readiness.hasMorning?readiness.score:null);
     scoreEl.textContent=readiness.hasMorning?readiness.score:'–';
     scoreEl.style.color=tier.col;
-    dialLblEl.textContent="today's score";
+    dialLblEl.textContent="readiness";
     badgeEl.textContent=tier.badge;
     badgeEl.style.color=tier.col;
     glowEl.style.background=`radial-gradient(circle at 42% 38%, ${tier.glowA} 0%, ${tier.glowB} 45%, transparent 75%)`;
@@ -1258,7 +1260,6 @@ function renderToday(){
   const stripEl=document.getElementById('week-strip');
   stripEl.innerHTML='';
   const planTypeColor={Push:'#e80e0e',Pull:'var(--accent2)',Legs:'var(--green)',Core:'#906d01',Custom:'#9e3dfb',Run:'#017d92'};
-  const planTypeShort={Push:'PSH',Pull:'PLL',Legs:'LEG',Core:'COR',Custom:'CST',Run:'RUN',Rest:'',Off:''};
   ['M','T','W','T','F','S','S'].forEach((lbl,i)=>{
     const d=addDays(baseMonday,i);
     const dds=dk(d);
@@ -1266,39 +1267,19 @@ function renderToday(){
     const isFuture=d>now;
     const dayScore=!isFuture?getDayScore(dds):0;
     const planType=state.weekPlan?state.weekPlan[i]:null;
-    const planShort=planType?planTypeShort[planType]||'':'';
-    const planColor=planType?planTypeColor[planType]||'':'';
+    const planColor=planType?planTypeColor[planType]||'var(--accent)':'';
+    // Bar is colored by the day's planned activity type, not done/not-done - but faded
+    // for a past day that wasn't actually logged, so there's still a passive done signal.
+    const barOpacity=(!isFuture&&!isActive&&dayScore<80)?'0.35':'1';
     const el=document.createElement('div');
-    el.className='week-day'+(isActive?' today':!isFuture&&dayScore>=80?' past-done':'');
+    el.className='week-day'+(isActive?' today':'');
     if(isFuture)el.style.opacity='0.3';
     el.dataset.ds=dds;
-    el.innerHTML=`<div class="week-day-label">${lbl}</div><div class="week-day-dot"></div><div class="week-day-num">${d.getDate()}</div>${planShort?`<div class="week-day-plan" style="color:${planColor};">${planShort}</div>`:'<div class="week-day-plan"></div>'}`;
+    el.innerHTML=`<div class="week-day-label">${lbl}</div><div class="week-day-num">${d.getDate()}</div><div class="week-day-bar" style="background:${planColor||'var(--border)'};opacity:${barOpacity};"></div>`;
     // tap a day to view it and open day modal
     if(!isFuture){el.onclick=()=>{renderDayGoals(dds);openDayModal(dds);};}
     stripEl.appendChild(el);
   });
-
-  // Race card
-  const raceWrap=document.getElementById('race-card-wrap');
-  if(state.race&&state.race.date){
-    const days=daysUntil(state.race.date);
-    if(days>=0){
-      const rGoalSecs=state.race.goalTime?parseTimeToSecs(state.race.goalTime):0;
-      const rGoalPace=(state.race.km&&rGoalSecs)?fmtPace(state.race.km/rGoalSecs):null;
-      const statusLines=getRaceStatusLines();
-      const statusColor=ot=>ot===true?'var(--green)':ot===false?'var(--orange)':'var(--text3)';
-      const statusHtml=statusLines?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.08);">
-        <div style="font-size:12px;font-weight:700;color:${statusColor(statusLines.volume.onTrack)};margin-bottom:3px;">${esc(statusLines.volume.text)}</div>
-        <div style="font-size:12px;font-weight:700;color:${statusColor(statusLines.pace.onTrack)};">${esc(statusLines.pace.text)}</div>
-      </div>`:'';
-      raceWrap.innerHTML=`<div class="race-card" onclick="openRaceModal()">
-        <div class="race-card-label">Race Countdown</div>
-        <div class="race-card-days">${days}<span style="font-size:18px;color:var(--text2);font-weight:700;"> days</span></div>
-        <div class="race-card-meta">${esc(state.race.name||'Race')}${state.race.km?' · '+state.race.km+'km':''}${state.race.goalTime?' · Goal '+esc(state.race.goalTime):''}${rGoalPace?' ('+rGoalPace+')':''}</div>
-        ${statusHtml}
-      </div>`;
-    }else{raceWrap.innerHTML='';}
-  }else{raceWrap.innerHTML='';}
 
   // Today's workout suggestion (only when today's plan is a Run day)
   const wsWrap=document.getElementById('workout-suggestion-wrap');
@@ -1313,51 +1294,60 @@ function renderToday(){
     </div>`:'';
   }
 
-  // Gym week overview: done vs. remaining against the Training Plan, this calendar week
-  const gwWrap=document.getElementById('gym-week-wrap');
-  if(gwWrap){
-    const gymWeek=viewingToday?getGymWeekOverview():null;
-    gwWrap.innerHTML=gymWeek?`<div class="chart-card" style="margin-bottom:10px;padding:12px 14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Gym this week</span>
-        <span style="font-size:13px;font-weight:800;color:${gymWeek.doneCount>=gymWeek.total?'var(--green)':'var(--text)'};">${gymWeek.doneCount}/${gymWeek.total} done</span>
-      </div>
-      ${gymWeek.remaining.length?`<div style="font-size:12px;color:var(--text2);font-weight:600;">Remaining: ${gymWeek.remaining.map(r=>`${esc(r.type)} (${esc(r.day)})`).join(', ')}</div>`:`<div style="font-size:12px;color:var(--green);font-weight:700;">All sessions done for the week</div>`}
-    </div>`:'';
-  }
-
-  // Today's plan is promoted into the hero cell beside the readiness dial (equal
-  // weight); the quota rings card below carries the week's summary instead of
-  // repeating the plan.
+  // "This week" card - gym as a segmented bar (one segment per scheduled session),
+  // running as a continuous km bar against the weekly target, and the race countdown
+  // (with its pace/volume status) as a footer row. Replaces what used to be three
+  // separate cards (quota rings, race countdown, gym-week overview).
   const wrap=document.getElementById('session-card-wrap');
   const planCell=document.getElementById('today-plan-cell');
+  const raceWrap=document.getElementById('race-card-wrap');
+  const gwWrap=document.getElementById('gym-week-wrap');
+  if(gwWrap)gwWrap.innerHTML='';
   if(viewingToday){
-    const quota=getWeeklyQuota();
     const todayPlan=getTodayPlanType();
-    const ringColor={gym:'#0e7c72',run:'#ff7a59'};
-    const ringTrack={gym:'#e1ece9',run:'#fbe6df'};
     const dayIdx=(now.getDay()+6)%7;
-
-    const ringsHtml=quota.map(g=>{
-      const col=ringColor[g.id]||'var(--accent2)';
-      const track=ringTrack[g.id]||'var(--border)';
-      const pct=Math.min(100,Math.round(g.done/g.target*100));
-      const label=g.id==='run'?'Run':(g.name||'Gym');
-      return`<div class="ring-item">
-        <div class="ring" style="background:conic-gradient(${col} 0% ${pct}%, ${track} ${pct}% 100%);"><span>${g.done}/${g.target}</span></div>
-        <span class="ring-lbl">${esc(label)}</span>
-      </div>`;
-    }).join('');
     const daysLeft=6-dayIdx;
-    const quotaSummary=quota.map(g=>`${esc(g.name||g.id)} ${g.done}/${g.target}`).join(' · ');
-    wrap.innerHTML=quota.length?`<div class="plan-card">
-      <div style="display:flex;gap:14px;">${ringsHtml}</div>
-      <div class="plan-info"><div class="plan-info-body">
-        <div class="plan-label">This week</div>
-        <div class="plan-title">${getWeekScore()}%</div>
-        <div class="plan-meta">${daysLeft>0?`${daysLeft} day${daysLeft===1?'':'s'} left`:'Last day'}${quotaSummary?` · ${quotaSummary}`:''}</div>
-      </div></div>
+
+    const gymWeek=getGymWeekOverview();
+    const gymRowHtml=gymWeek?`<div class="week-card-row">
+      <div class="week-card-row-head"><span class="week-card-row-label">Gym</span><span class="week-card-row-val">${gymWeek.doneCount} / ${gymWeek.total}</span></div>
+      <div class="week-seg-bar">${Array.from({length:gymWeek.total},(_,i)=>`<div class="seg${i<gymWeek.doneCount?' filled':''}"></div>`).join('')}</div>
     </div>`:'';
+
+    const runTarget=state.runTarget||0;
+    const mon=getMonday(now);
+    const weekKm=loadRunData().filter(r=>{const d=new Date(r.date+'T12:00:00');return d>=mon&&d<=now;}).reduce((s,r)=>s+(r.km||0),0);
+    const runPct=runTarget>0?Math.min(100,Math.round(weekKm/runTarget*100)):0;
+    const runRowHtml=runTarget>0?`<div class="week-card-row">
+      <div class="week-card-row-head"><span class="week-card-row-label">Running</span><span class="week-card-row-val">${weekKm.toFixed(1)} / ${runTarget} km</span></div>
+      <div class="week-bar-track"><div class="week-bar-fill" style="width:${runPct}%;"></div></div>
+    </div>`:'';
+
+    let raceRowHtml='';
+    if(state.race&&state.race.date){
+      const days=daysUntil(state.race.date);
+      if(days>=0){
+        const statusLines=getRaceStatusLines();
+        const statusColor=ot=>ot===true?'var(--green)':ot===false?'var(--orange)':'var(--text3)';
+        const statusHtml=statusLines?`<div style="margin-top:6px;">
+          <div style="font-size:11px;font-weight:700;color:${statusColor(statusLines.volume.onTrack)};">${esc(statusLines.volume.text)}</div>
+          <div style="font-size:11px;font-weight:700;color:${statusColor(statusLines.pace.onTrack)};">${esc(statusLines.pace.text)}</div>
+        </div>`:'';
+        raceRowHtml=`<div class="week-race-row" style="flex-direction:column;align-items:stretch;cursor:pointer;" onclick="openRaceModal()">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="week-race-row-name">${esc(state.race.name||'Race')}</span>
+            <span class="week-race-row-days">${days} days</span>
+          </div>
+          ${statusHtml}
+        </div>`;
+      }
+    }
+
+    wrap.innerHTML=(gymRowHtml||runRowHtml||raceRowHtml)?`<div class="week-card">
+      <div class="week-card-head"><span>This week</span><span>${daysLeft>0?`${daysLeft} day${daysLeft===1?'':'s'} left`:'Last day'}</span></div>
+      ${gymRowHtml}${runRowHtml}${raceRowHtml}
+    </div>`:'';
+    raceWrap.innerHTML='';
 
     if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
       const isGym=['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
@@ -1367,22 +1357,31 @@ function renderToday(){
       const cardClick=`showPage('train');switchTrainTab('${tab}')${gymPreselect}`;
       const lastOfType=isGym?loadGymData().filter(x=>x.type===todayPlan).slice(-1)[0]:null;
       const runType=(state.weekPlanRunType||[])[dayIdx];
+      const lastDateStr=lastOfType?new Date(lastOfType.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null;
+      // Rough estimate off total sets in the last session of this type - real timing
+      // isn't tracked, but ~4 min/set (lift + rest) rounded to the nearest 5 is close
+      // enough to be a useful "how long is this going to take" figure.
+      const estMin=lastOfType?Math.round((lastOfType.exercises||[]).reduce((s,e)=>s+(e.sets||[]).length,0)*4/5)*5:null;
       const planMeta=isGym
-        ?(lastOfType?`${(lastOfType.exercises||[]).length} exercises · last ${fmtShortDate(lastOfType.date)}`:'First one — pick your exercises')
+        ?(lastOfType?`${(lastOfType.exercises||[]).length} exercises · last done ${lastDateStr}${estMin?` · ~${estMin} min`:''}`:'First one — pick your exercises')
         :(runType?`${esc(runType)} run on the plan`:'Distance, time, effort');
+      const altAction=isGym
+        ?`<button class="today-plan-alt" onclick="showPage('train');switchTrainTab('run')">or log a run instead</button>`
+        :`<button class="today-plan-alt" onclick="openModal('train-picker-modal')">or log a gym session instead</button>`;
       planCell.innerHTML=`
-        <div class="today-plan-lbl">On the plan today</div>
+        <div class="today-plan-lbl">Today's Plan</div>
         <div class="today-plan-type">${esc(todayPlan)}</div>
         <div class="today-plan-meta">${planMeta}</div>
-        <button class="today-plan-cta${alreadyDone?' done':''}" onclick="${cardClick}">${alreadyDone?'Logged ✓':`Start ${esc(todayPlan)}`}</button>`;
+        <button class="today-plan-cta${alreadyDone?' done':''}" onclick="${cardClick}">${alreadyDone?'Logged ✓':'Start session'}</button>
+        ${alreadyDone?'':altAction}`;
     }else{
       planCell.innerHTML=`
-        <div class="today-plan-lbl">On the plan today</div>
+        <div class="today-plan-lbl">Today's Plan</div>
         <div class="today-plan-type">${todayPlan==='Off'?'Off':todayPlan==='Rest'?'Rest':'No plan'}</div>
         <div class="today-plan-meta">${todayPlan?'Nothing scheduled. Recovery counts as training.':'Set a training plan and this becomes one tap.'}</div>
         <button class="today-plan-cta" style="background:var(--surface2);color:var(--text2);box-shadow:none;border:1px solid var(--border);" onclick="${todayPlan?"openModal('train-picker-modal')":"showPage('me')"}">${todayPlan?'Log something anyway':'Set your week plan'}</button>`;
     }
-  }else{wrap.innerHTML='';}
+  }else{wrap.innerHTML='';raceWrap.innerHTML='';}
 
   // Goal chips - compact 2-col grid instead of a full-width card per goal
   const stack=document.getElementById('goal-stack');

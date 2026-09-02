@@ -17,6 +17,7 @@
   --accent:#2563eb;--accent2:#1d4ed8;
   --green:#059669;--red:#dc2626;--orange:#ea580c;
   --radius:20px;--radius-sm:14px;--radius-xs:10px;
+  --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
 }
 /* 100vh on iOS Safari is fixed to the largest possible viewport (keyboard hidden) -
    focusing a number input opens the keyboard, which shrinks the real visible area
@@ -45,20 +46,27 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 
 /* HERO: dial + today's plan side by side, equal weight - was a full-width dial
    towering over a plan card buried far down the page; now they're peers. */
-.today-hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px;align-items:stretch;}
-.dial-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 10px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(21,18,31,0.04);}
-.hero-plan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 14px 12px;display:flex;flex-direction:column;transition:all 0.2s;}
-.hero-plan-card.clickable{cursor:pointer;}
-.hero-plan-card.clickable:active{transform:scale(0.98);}
-.hero-plan-card .plan-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#0e7c72;margin-bottom:2px;}
-.hero-plan-card .plan-title{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-0.6px;}
-.hero-plan-card .plan-meta{font-size:11px;color:var(--text2);font-weight:600;margin-top:2px;line-height:1.4;}
-.hero-plan-btn{margin-top:auto;padding-top:10px;}
-.hero-plan-btn span{display:block;padding:9px;border-radius:12px;background:var(--accent);color:#fff;font-size:13px;font-weight:700;text-align:center;}
-.hero-plan-btn.done span{background:var(--surface2);color:var(--text2);box-shadow:none;}
+.today-hero-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 12px;align-items:stretch;}
+.today-dial-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+.today-plan-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 15px 14px;display:flex;flex-direction:column;text-align:left;}
+.today-plan-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);}
+.today-plan-type{font-size:30px;font-weight:800;letter-spacing:-1.2px;margin-top:3px;}
+.today-plan-meta{font-size:12px;font-weight:600;color:var(--text2);line-height:1.4;margin-top:3px;}
+.today-plan-cta{margin-top:auto;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px -6px rgba(37,99,235,0.7);}
+.today-plan-cta.done{background:var(--surface2);color:var(--green);box-shadow:none;border:1px solid rgba(8,132,91,0.3);}
+.today-mini{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+.today-mini span{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 7px;border-radius:8px;background:var(--surface2);color:var(--text2);}
+
+/* Dismissible "log your morning data" prompt, shown above the hero until logged */
+.checkin-card{background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(37,99,235,0.03));border:1px solid rgba(37,99,235,0.28);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
+.checkin-card-body{flex:1;}
+.checkin-card-title{font-size:14px;font-weight:800;letter-spacing:-0.2px;}
+.checkin-card-desc{font-size:12px;font-weight:600;color:var(--text2);margin-top:2px;}
+.checkin-card-btn{padding:10px 14px;border-radius:var(--radius-xs);background:var(--accent);color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.checkin-dismiss{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 0 2px 2px;line-height:1;}
 
 /* SCORE DIAL */
-.today-score-wrap{position:relative;width:118px;height:118px;display:flex;align-items:center;justify-content:center;}
+.today-score-wrap{position:relative;width:136px;height:136px;display:flex;align-items:center;justify-content:center;}
 /* Kept tight to the circle's own edge (no expansion, small blur) rather than a spreading
    ambient haze - the wider glow kept reaching toward the top of the page no matter how
    much it was shrunk or repositioned, and read as more jarring against a pure white
@@ -66,9 +74,9 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .score-dial-glow{position:absolute;inset:0;border-radius:50%;filter:blur(4px);transition:background 0.4s ease;animation:dialBreathe 5s ease-in-out infinite;}
 @keyframes dialBreathe{0%,100%{transform:scale(1);opacity:0.75;}50%{transform:scale(1.05);opacity:1;}}
 @media (prefers-reduced-motion: reduce){.score-dial-glow{animation:none;}}
-.score-dial-core{position:relative;width:102px;height:102px;border-radius:50%;background:var(--surface);box-shadow:0 10px 24px -12px rgba(21,18,31,0.22),0 0 0 1px var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.today-score{font-size:34px;font-weight:800;line-height:1;letter-spacing:-1px;transition:color 0.4s ease;}
-.score-dial-lbl{font-size:8.5px;font-weight:700;color:var(--text2);letter-spacing:0.03em;margin-top:4px;text-align:center;}
+.score-dial-core{position:relative;width:120px;height:120px;border-radius:50%;background:var(--surface);box-shadow:0 12px 26px -14px rgba(21,18,31,0.25),0 0 0 1px var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.today-score{font-size:44px;font-weight:800;line-height:1;letter-spacing:-2px;transition:color 0.4s ease;}
+.score-dial-lbl{font-size:9px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;text-align:center;}
 
 .today-status{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--text);background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.18);border-radius:14px;padding:11px 14px;margin-bottom:8px;text-align:left;}
 .today-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:dialBreathe 3s ease-in-out infinite;}
@@ -340,8 +348,9 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       <span id="today-date-label"></span>
       <span class="today-badge" id="today-badge"></span>
     </div>
-    <div class="today-hero-grid">
-      <div class="dial-card">
+    <div id="checkin-slot"></div>
+    <div class="today-hero-split">
+      <div class="today-dial-cell">
         <div class="today-score-wrap">
           <div class="score-dial-glow" id="score-dial-glow"></div>
           <div class="score-dial-core">
@@ -349,8 +358,9 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
             <div class="score-dial-lbl" id="score-dial-lbl">today's score</div>
           </div>
         </div>
+        <div class="today-mini" id="today-mini"></div>
       </div>
-      <div id="hero-plan-wrap"></div>
+      <div class="today-plan-cell" id="today-plan-cell"></div>
     </div>
     <div class="today-status" id="today-status">Let's get started</div>
     <div id="rest-day-nudge"></div>
@@ -1054,6 +1064,11 @@ if(window.visualViewport){
 
 // ── TODAY + WEEK NAV ──
 let weekOffset=0;
+// Dismissing the "log your morning data" check-in prompt only lasts for the current
+// page session - it comes back next time the app is opened, rather than being
+// permanently silenced, since "not right now" isn't the same as "never ask again".
+let _checkinDismissed=false;
+function dismissCheckin(){_checkinDismissed=true;renderToday();}
 let _selectedDs=null;
 function changeWeek(dir){
   const newOff=weekOffset+dir;
@@ -1112,11 +1127,32 @@ function renderToday(){
     }else{
       statusEl.innerHTML=`<span style="color:var(--text3);cursor:pointer;" onclick="openMorningModal()">Log sleep &amp; HRV for a readiness score</span>`;
     }
+    // Sleep/HRV read out under the dial, and an explicit check-in card while the
+    // morning is unlogged - dismissible, because some mornings you just don't have it.
+    const miniEl=document.getElementById('today-mini');
+    if(miniEl){
+      const mo=loadMorningData()[dk(now)];
+      miniEl.innerHTML=mo?`${mo.sleep!=null?`<span>SLP ${mo.sleep}</span>`:''}${mo.hrv!=null?`<span>HRV ${mo.hrv}ms</span>`:''}`:'';
+    }
+    const ciEl=document.getElementById('checkin-slot');
+    if(ciEl){
+      ciEl.innerHTML=(!readiness.hasMorning&&!_checkinDismissed)?`<div class="checkin-card">
+        <div class="checkin-card-body">
+          <div class="checkin-card-title">5-second check-in</div>
+          <div class="checkin-card-desc">Sleep score &amp; HRV from your Garmin — that's the readiness number.</div>
+        </div>
+        <button class="checkin-card-btn" onclick="openMorningModal()">Log</button>
+        <button class="checkin-dismiss" onclick="dismissCheckin()">×</button>
+      </div>`:'';
+    }
   }else{
     scoreEl.textContent=getWeekScore();
     scoreEl.style.color='var(--text)';
     dialLblEl.textContent='week score';
     badgeEl.textContent='';
+    const _pc=document.getElementById('today-plan-cell');if(_pc)_pc.innerHTML='';
+    const _ci=document.getElementById('checkin-slot');if(_ci)_ci.innerHTML='';
+    const _mi=document.getElementById('today-mini');if(_mi)_mi.innerHTML='';
     glowEl.style.background=`radial-gradient(circle at 42% 38%, rgba(37,99,235,0.45) 0%, rgba(37,99,235,0.16) 45%, transparent 75%)`;
   }
   const nudgeEl=document.getElementById('rest-day-nudge');
@@ -1291,14 +1327,17 @@ function renderToday(){
     </div>`:'';
   }
 
-  // Today's plan (hero, next to the dial) + weekly quota rings (own card below)
+  // Today's plan is promoted into the hero cell beside the readiness dial (equal
+  // weight); the quota rings card below carries the week's summary instead of
+  // repeating the plan.
   const wrap=document.getElementById('session-card-wrap');
-  const heroPlanWrap=document.getElementById('hero-plan-wrap');
+  const planCell=document.getElementById('today-plan-cell');
   if(viewingToday){
     const quota=getWeeklyQuota();
     const todayPlan=getTodayPlanType();
     const ringColor={gym:'#0e7c72',run:'#ff7a59'};
     const ringTrack={gym:'#e1ece9',run:'#fbe6df'};
+    const dayIdx=(now.getDay()+6)%7;
 
     const ringsHtml=quota.map(g=>{
       const col=ringColor[g.id]||'var(--accent2)';
@@ -1310,29 +1349,41 @@ function renderToday(){
         <span class="ring-lbl">${esc(label)}</span>
       </div>`;
     }).join('');
-    wrap.innerHTML=quota.length?`<div class="chart-card" style="margin-bottom:10px;padding:14px 18px;">
-      <div class="chart-card-header" style="margin-bottom:10px;"><span class="chart-card-title">This week</span></div>
+    const daysLeft=6-dayIdx;
+    const quotaSummary=quota.map(g=>`${esc(g.name||g.id)} ${g.done}/${g.target}`).join(' · ');
+    wrap.innerHTML=quota.length?`<div class="plan-card">
       <div style="display:flex;gap:14px;">${ringsHtml}</div>
+      <div class="plan-info"><div class="plan-info-body">
+        <div class="plan-label">This week</div>
+        <div class="plan-title">${getWeekScore()}%</div>
+        <div class="plan-meta">${daysLeft>0?`${daysLeft} day${daysLeft===1?'':'s'} left`:'Last day'}${quotaSummary?` · ${quotaSummary}`:''}</div>
+      </div></div>
     </div>`:'';
 
-    let planBodyHtml,cardClick='';
     if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
       const isGym=['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
       const tab=isGym?'gym':'run';
       const gymPreselect=isGym?`;setTimeout(()=>{_gymPickedType='${todayPlan}';renderGymTypeSelector();},50)`:'';
       const alreadyDone=isGym?getSessionDone(dk(now),'gym'):getSessionDone(dk(now),'run');
-      cardClick=`showPage('train');switchTrainTab('${tab}')${gymPreselect}`;
-      planBodyHtml=`<div class="plan-label">Today's Plan</div>
-        <div class="plan-title">${esc(todayPlan)}</div>
-        <div class="plan-meta">${alreadyDone?'Session logged ✓':'Tap to start'}</div>
-        <div class="hero-plan-btn${alreadyDone?' done':''}"><span>${alreadyDone?'Logged ✓':'Start session'}</span></div>`;
+      const cardClick=`showPage('train');switchTrainTab('${tab}')${gymPreselect}`;
+      const lastOfType=isGym?loadGymData().filter(x=>x.type===todayPlan).slice(-1)[0]:null;
+      const runType=(state.weekPlanRunType||[])[dayIdx];
+      const planMeta=isGym
+        ?(lastOfType?`${(lastOfType.exercises||[]).length} exercises · last ${fmtShortDate(lastOfType.date)}`:'First one — pick your exercises')
+        :(runType?`${esc(runType)} run on the plan`:'Distance, time, effort');
+      planCell.innerHTML=`
+        <div class="today-plan-lbl">On the plan today</div>
+        <div class="today-plan-type">${esc(todayPlan)}</div>
+        <div class="today-plan-meta">${planMeta}</div>
+        <button class="today-plan-cta${alreadyDone?' done':''}" onclick="${cardClick}">${alreadyDone?'Logged ✓':`Start ${esc(todayPlan)}`}</button>`;
     }else{
-      planBodyHtml=`<div class="plan-label">Today's Plan</div>
-        <div class="plan-title">Rest</div>
-        <div class="plan-meta">No session planned</div>`;
+      planCell.innerHTML=`
+        <div class="today-plan-lbl">On the plan today</div>
+        <div class="today-plan-type">${todayPlan==='Off'?'Off':todayPlan==='Rest'?'Rest':'No plan'}</div>
+        <div class="today-plan-meta">${todayPlan?'Nothing scheduled. Recovery counts as training.':'Set a training plan and this becomes one tap.'}</div>
+        <button class="today-plan-cta" style="background:var(--surface2);color:var(--text2);box-shadow:none;border:1px solid var(--border);" onclick="${todayPlan?"openModal('train-picker-modal')":"showPage('me')"}">${todayPlan?'Log something anyway':'Set your week plan'}</button>`;
     }
-    heroPlanWrap.innerHTML=`<div class="hero-plan-card${cardClick?' clickable':''}"${cardClick?` onclick="${cardClick}"`:''}>${planBodyHtml}</div>`;
-  }else{wrap.innerHTML='';heroPlanWrap.innerHTML='';}
+  }else{wrap.innerHTML='';}
 
   // Goal cards
   const stack=document.getElementById('goal-stack');

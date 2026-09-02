@@ -42,7 +42,13 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 /* TODAY */
 .today-hero{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top)) 24px 24px;position:relative;overflow:hidden;}
 .today-date{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;}
-.today-badge{font-size:12px;font-weight:800;letter-spacing:0.04em;text-transform:none;}
+.today-date-nav{display:flex;align-items:center;gap:2px;}
+.today-week-arrow{background:none;border:none;color:var(--text3);cursor:pointer;padding:3px;display:flex;}
+.today-week-arrow svg{display:block;}
+.today-week-label{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin:0 2px;white-space:nowrap;}
+.today-avatar-btn{width:26px;height:26px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text3);cursor:pointer;padding:0;margin-left:8px;overflow:hidden;flex-shrink:0;}
+.today-avatar-btn svg{width:15px;height:15px;}
+.today-avatar-btn img{width:100%;height:100%;object-fit:cover;}
 
 /* HERO: dial + today's plan side by side, equal weight - was a full-width dial
    towering over a plan card buried far down the page; now they're peers. */
@@ -130,9 +136,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .week-race-row-name{font-size:12px;font-weight:600;color:var(--text2);}
 .week-race-row-days{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--orange);}
 
-/* HABITS (secondary line under the readiness hero) */
-.today-habits{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:20px;text-align:center;}
-.today-habits b{color:var(--text);font-weight:800;}
+/* GREETING - name-aware headline under the date, replacing the old "X/Y goals" line */
+.today-greet{font-size:23px;font-weight:800;letter-spacing:-0.5px;margin:4px 0 16px;}
 
 /* GOAL CHIPS - 2-column grid of compact checkable chips, matching the redesign mockup
    (was a vertical stack of full-width cards). */
@@ -365,8 +370,15 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   <div class="today-hero">
     <div class="today-date">
       <span id="today-date-label"></span>
-      <span class="today-badge" id="today-badge"></span>
+      <div class="today-date-nav">
+        <button onclick="changeWeek(-1)" class="today-week-arrow" aria-label="Previous week"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <span id="week-label" class="today-week-label"></span>
+        <button onclick="changeWeek(1)" id="week-next-btn" class="today-week-arrow" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <button class="today-avatar-btn" id="today-avatar-btn" onclick="document.getElementById('avatar-file-input').click()" aria-label="Profile photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+        <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(this.files[0])">
+      </div>
     </div>
+    <div class="today-greet" id="today-habits"></div>
     <div id="checkin-slot"></div>
     <div class="today-hero-split">
       <div class="today-dial-cell">
@@ -383,12 +395,6 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     </div>
     <div class="today-status" id="today-status">Let's get started</div>
     <div id="rest-day-nudge"></div>
-    <div class="today-habits" id="today-habits"></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <button onclick="changeWeek(-1)" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-      <div id="week-label" style="flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;"></div>
-      <button onclick="changeWeek(1)" id="week-next-btn" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
-    </div>
     <div id="story-card"></div>
     <div class="week-strip" id="week-strip"></div>
     <div id="race-card-wrap"></div>
@@ -877,10 +883,11 @@ function loadState(){
       if(!Array.isArray(p.weekPlanRunType))p.weekPlanRunType=new Array(7).fill(null);
       if(!Array.isArray(p.dismissedAlerts))p.dismissedAlerts=[];
       if(!p.bodyCompGoal)p.bodyCompGoal=null;
+      if(!p.profilePic)p.profilePic=null;
       return p;
     }
   }catch(e){const ok=confirm('Your data could not be loaded. Reset?');if(ok)localStorage.removeItem('wt_v3');}
-  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,weekPlanRunType:new Array(7).fill(null),dismissedAlerts:[],bodyCompGoal:null};
+  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,weekPlanRunType:new Array(7).fill(null),dismissedAlerts:[],bodyCompGoal:null,profilePic:null};
 }
 let state=loadState();
 let _saveTimer=null;
@@ -1104,7 +1111,37 @@ function changeWeek(dir){
   _selectedDs=null;
   renderToday();
 }
+function renderAvatar(){
+  const btn=document.getElementById('today-avatar-btn');
+  if(!btn)return;
+  btn.innerHTML=state.profilePic
+    ?`<img src="${state.profilePic}" alt="">`
+    :`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+}
+function handleAvatarUpload(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const size=160;
+      const canvas=document.createElement('canvas');
+      canvas.width=size;canvas.height=size;
+      const ctx=canvas.getContext('2d');
+      const scale=Math.max(size/img.width,size/img.height);
+      const sw=size/scale,sh=size/scale;
+      const sx=(img.width-sw)/2,sy=(img.height-sh)/2;
+      ctx.drawImage(img,sx,sy,sw,sh,0,0,size,size);
+      state.profilePic=canvas.toDataURL('image/jpeg',0.8);
+      saveState();
+      renderAvatar();
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 function renderToday(){
+  renderAvatar();
   const now=today();
   const baseMonday=addDays(getMonday(now),weekOffset*7);
   const viewingToday=weekOffset===0;
@@ -1127,15 +1164,14 @@ function renderToday(){
   const scoreEl=document.getElementById('today-score');
   const statusEl=document.getElementById('today-status');
   const habitsEl=document.getElementById('today-habits');
-  const badgeEl=document.getElementById('today-badge');
   const glowEl=document.getElementById('score-dial-glow');
   const dialLblEl=document.getElementById('score-dial-lbl');
   function readinessTier(score){
-    if(score==null)return{col:'var(--text3)',glowA:'rgba(166,162,192,0.55)',glowB:'rgba(166,162,192,0.22)',badge:'Log data'};
-    if(score>=80)return{col:'var(--green)',glowA:'rgba(5,150,105,0.65)',glowB:'rgba(5,150,105,0.25)',badge:'On track'};
-    if(score>=60)return{col:'var(--accent2)',glowA:'rgba(29,78,216,0.6)',glowB:'rgba(29,78,216,0.22)',badge:'Moderate'};
-    if(score>=40)return{col:'var(--orange)',glowA:'rgba(234,88,12,0.6)',glowB:'rgba(234,88,12,0.22)',badge:'Easy day'};
-    return{col:'var(--red)',glowA:'rgba(220,38,38,0.55)',glowB:'rgba(220,38,38,0.2)',badge:'Rest day'};
+    if(score==null)return{col:'var(--text3)',glowA:'rgba(166,162,192,0.55)',glowB:'rgba(166,162,192,0.22)'};
+    if(score>=80)return{col:'var(--green)',glowA:'rgba(5,150,105,0.65)',glowB:'rgba(5,150,105,0.25)'};
+    if(score>=60)return{col:'var(--accent2)',glowA:'rgba(29,78,216,0.6)',glowB:'rgba(29,78,216,0.22)'};
+    if(score>=40)return{col:'var(--orange)',glowA:'rgba(234,88,12,0.6)',glowB:'rgba(234,88,12,0.22)'};
+    return{col:'var(--red)',glowA:'rgba(220,38,38,0.55)',glowB:'rgba(220,38,38,0.2)'};
   }
   if(viewingToday){
     // calcReadiness().score is a composite that still includes training load/fatigue
@@ -1146,8 +1182,6 @@ function renderToday(){
     scoreEl.textContent=readiness.hasMorning?readiness.score:'–';
     scoreEl.style.color=tier.col;
     dialLblEl.textContent="readiness";
-    badgeEl.textContent=tier.badge;
-    badgeEl.style.color=tier.col;
     glowEl.style.background=`radial-gradient(circle at 42% 38%, ${tier.glowA} 0%, ${tier.glowB} 45%, transparent 75%)`;
     if(readiness.hasMorning){
       statusEl.innerHTML=`<span style="color:${readiness.col};">${readiness.advice}</span>`;
@@ -1176,7 +1210,6 @@ function renderToday(){
     scoreEl.textContent=getWeekScore();
     scoreEl.style.color='var(--text)';
     dialLblEl.textContent='week score';
-    badgeEl.textContent='';
     const _pc=document.getElementById('today-plan-cell');if(_pc)_pc.innerHTML='';
     const _ci=document.getElementById('checkin-slot');if(_ci)_ci.innerHTML='';
     const _mi=document.getElementById('today-mini');if(_mi)_mi.innerHTML='';
@@ -1263,16 +1296,13 @@ function renderToday(){
     statusEl.innerHTML=`Week score · <span>${allGoals().filter(g=>{let d=0;for(let i=0;i<7;i++){const day=addDays(baseMonday,i);if(day<=now&&goalDone(dk(day),g))d++;}return d>0;}).length}/${allGoals().length} goals hit</span>`;
     habitsEl.innerHTML='';
   }else{
-    const gs=goalsActiveOn(ds);
-    const doneCount=gs.filter(g=>goalDone(ds,g)).length;
-    const totalCount=gs.length;
     let msg;
     if(habitScore===100)msg=pickMsg(_msgs.perfect);
     else if(habitScore>=75)msg=pickMsg(_msgs.strong);
     else if(habitScore>=50)msg=pickMsg(_msgs.halfway);
     else if(habitScore>0)msg=pickMsg(_msgs.started);
     else msg=pickMsg(_msgs.zero);
-    habitsEl.innerHTML=`<b>${doneCount}/${totalCount}</b> goals · ${msg}`;
+    habitsEl.textContent=msg;
   }
 
   // Week nav label + next button

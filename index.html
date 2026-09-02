@@ -245,6 +245,10 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 input,textarea,select{user-select:text;-webkit-user-select:text;}
 .modal-input{width:100%;box-sizing:border-box;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text);font-family:inherit;font-size:16px;font-weight:600;outline:none;margin-bottom:16px;transition:border-color 0.15s;}
 .modal-input:focus{border-color:var(--accent);}
+/* Native iOS time inputs ignore width:100%/box-sizing without this, and overflow
+   past their container instead of staying inside it (same fix already used on
+   .run-field[type="time"] elsewhere). */
+.modal-input[type="time"]{-webkit-appearance:none;appearance:none;}
 .modal-input::placeholder{color:var(--text2);font-weight:500;}
 .type-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
 .type-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;}

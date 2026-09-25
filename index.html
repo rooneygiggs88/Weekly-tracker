@@ -2451,6 +2451,11 @@ function gymKpLogSet(){
   s.weight=weight;s.reps=String(reps);
   gymSetActiveEx(i);
   gymCheckSetDone(i,si);
+  // If that was the last remaining set to fill, add a fresh blank one straight away -
+  // otherwise the pad would have nowhere to log the next rep into until you tapped
+  // "+ Set" yourself every single time, even mid-exercise.
+  const stillIncomplete=ex.sets.some(x=>!x.warmup&&!(x.weight&&x.reps));
+  if(!stillIncomplete)ex.sets.push({weight:s.weight||'',reps:'',warmup:false,technique:false});
   gymKpResetTarget();
   renderGymLogger();
   haptic('success');

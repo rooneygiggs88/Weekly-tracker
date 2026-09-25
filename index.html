@@ -2251,14 +2251,59 @@ function renderCollapsedExCard(ex,i){
 // still get "last session" carryover even with the weight field left blank. Skips
 // technique-day sets too, same as warmup, so the ghost line and target-next hint
 // compare against your last real working session, not a deliberately light day.
-function getLastExSets(name,sessions){
+function findLastExOccurrence(name,sessions){
   const nameLower=(name||'').toLowerCase();
-  const lastEx=nameLower?(sessions||[]).slice().reverse().reduce((found,s)=>{
-    if(found)return found;
-    const e=(s.exercises||[]).find(e=>e.name&&e.name.toLowerCase()===nameLower);
-    return(e&&(e.sets||[]).some(set=>!set.warmup&&!set.technique&&(parseFloat(set.weight||0)>0||parseFloat(set.reps||0)>0)))?e:null;
-  },null):null;
-  return lastEx?(lastEx.sets||[]).filter(s=>!s.warmup&&!s.technique):[];
+  if(!nameLower)return null;
+  const list=sessions||[];
+  for(let idx=list.length-1;idx>=0;idx--){
+    const s=list[idx];
+    const e=(s.exercises||[]).find(ex=>ex.name&&ex.name.toLowerCase()===nameLower);
+    if(e&&(e.sets||[]).some(set=>!set.warmup&&!set.technique&&(parseFloat(set.weight||0)>0||parseFloat(set.reps||0)>0)))return{date:s.date,ex:e};
+  }
+  return null;
+}
+function getLastExSets(name,sessions){
+  const found=findLastExOccurrence(name,sessions);
+  return found?(found.ex.sets||[]).filter(s=>!s.warmup&&!s.technique):[];
+}
+function getLastExDate(name,sessions){
+  const found=findLastExOccurrence(name,sessions);
+  return found?found.date:null;
+}
+// Same "median of last 3 sessions vs prior 3" verdict the PR Tracker page computes,
+// scoped to a single exercise so the live logging card can show it without rebuilding
+// the tracker's full exercise map just for one name.
+function getExerciseTrend(name){
+  if(!name)return null;
+  const gym=loadGymData();
+  const nameLower=name.toLowerCase();
+  const everWeighted=gym.some(s=>(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===nameLower&&(e.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0)));
+  const sessions=[];
+  gym.forEach(s=>{
+    const e=(s.exercises||[]).find(ex=>ex.name&&ex.name.toLowerCase()===nameLower);
+    if(!e)return;
+    const working=(e.sets||[]).filter(x=>!x.warmup&&!x.technique);
+    if(everWeighted){
+      const ws=working.filter(x=>parseFloat(x.weight||0)>0);
+      if(!ws.length)return;
+      let best=0;
+      ws.forEach(x=>{const w=parseFloat(x.weight);const r=parseFloat(x.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>best)best=est;});
+      sessions.push({date:s.date,val:best});
+    }else{
+      const ws=working.filter(x=>parseFloat(x.reps||0)>0);
+      if(!ws.length)return;
+      sessions.push({date:s.date,val:Math.max(...ws.map(x=>parseFloat(x.reps||0)))});
+    }
+  });
+  if(!sessions.length)return null;
+  const r3=sessions.slice(-3),p3=sessions.slice(-6,-3);
+  if(r3.length<2||!p3.length)return{label:'Building baseline',col:'var(--text3)'};
+  const median=arr=>{const v=[...arr].sort((a,b)=>a-b);const m=Math.floor(v.length/2);return v.length%2?v[m]:(v[m-1]+v[m])/2;};
+  const delta=median(r3.map(x=>x.val))-median(p3.map(x=>x.val));
+  const band=everWeighted?1:0.5;
+  if(delta>band)return{label:'↑ Progressing',col:'var(--green)'};
+  if(delta<-band)return{label:'↓ Regressing',col:'var(--red)'};
+  return{label:'→ Plateau',col:'var(--orange)'};
 }
 function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=false){
   // Collapsed summary - auto-set when you add a new exercise (see confirmNewEx) or
@@ -2287,6 +2332,9 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
   const targetWeight=lastHasWeight&&topLast&&topLast.weight?Math.round((parseFloat(topLast.weight)+2.5)*2)/2:null;
   const targetReps=(!lastHasWeight&&topLast&&topLast.reps)?parseFloat(topLast.reps)+1:null;
   const sugg=getExerciseSuggestions(ex.name,gymSessions);
+  const lastDate=focusMode?getLastExDate(ex.name,gymSessions):null;
+  const lastDateStr=lastDate?new Date(lastDate+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null;
+  const trend=focusMode?getExerciseTrend(ex.name):null;
   return`<div class="chart-card" style="margin-bottom:10px;" id="ex-block-${i}">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
       <div style="width:22px;height:22px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text3);flex-shrink:0;">${i+1}</div>
@@ -2296,8 +2344,11 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       ${focusMode?'':`<button onclick="gymToggleCollapse(${i})" title="Collapse" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0;">⌃</button>`}
       <button onclick="gymRemoveEx(${i})" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:2px;flex-shrink:0;">×</button>
     </div>
-    ${pb>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pb}KG</div>`:pbReps>0?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;margin-bottom:8px;">PB ${pbReps} REPS</div>`:''}
-    ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Session</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}</span>`).join('')}</div></div>`:''}
+    ${(pb>0||pbReps>0||trend)?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+      ${pb>0?`<div style="padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;">PB ${pb}KG</div>`:pbReps>0?`<div style="padding:3px 10px;border-radius:20px;background:rgba(194,80,0,0.15);border:1px solid rgba(194,80,0,0.4);color:var(--orange);font-size:11px;font-weight:800;">PB ${pbReps} REPS</div>`:''}
+      ${trend?`<div style="padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:${trend.col};font-size:11px;font-weight:800;">${trend.label}</div>`:''}
+    </div>`:''}
+    ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Trained${lastDateStr?` · ${lastDateStr}`:''}</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}</span>`).join('')}</div></div>`:''}
     ${focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&s.weight&&s.reps)?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
     ${targetWeight?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetWeight}kg × ${topLast.reps||'?'} reps <span style="color:var(--green);">+2.5kg</span></div>`:targetReps?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetReps} reps <span style="color:var(--green);">+1</span></div>`:`<div id="ex-hint-${i}"></div>`}
     ${focusMode?(()=>{

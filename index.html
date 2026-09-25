@@ -2567,7 +2567,10 @@ function renderGymFocusFlow(lastSame,prog,sessions){
   ex._collapsed=false; // focus mode always shows the current exercise expanded
   const dots=exs.map((e,idx)=>{
     const doneCount=(e.sets||[]).filter(s=>!s.warmup&&s.weight&&s.reps).length;
-    const isDone=doneCount>0&&doneCount>=(e.sets||[]).length;
+    // "Started" rather than "every set filled" - since a set is auto-added after each
+    // log (see gymKpLogSet), a worked-on exercise almost always has one trailing blank
+    // slot waiting for the next set, so requiring the full array to be done never fired.
+    const isDone=doneCount>0;
     const col=idx===i?'var(--accent)':isDone?'var(--green)':'var(--border)';
     return`<button onclick="gymFocusJump(${idx})" style="width:${idx===i?'20px':'8px'};height:8px;border-radius:4px;background:${col};border:none;cursor:pointer;padding:0;transition:all 0.15s;"></button>`;
   }).join('');

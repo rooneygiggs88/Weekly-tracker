@@ -2304,16 +2304,18 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       const draft=gymKpSyncDraft(i,ex);
       const activeSi=draft.si;
       const rows=(ex.sets||[]).map((s,si)=>{
-        const done=!s.warmup&&!s.technique&&!!(s.weight&&s.reps);
+        const hasData=!!(s.weight&&s.reps);
+        const isWorking=!s.warmup&&!s.technique;
+        const done=hasData&&isWorking;
         const isActive=si===activeSi;
         const ghost=lastSets[si]||null;
         const ghostW=ghost?parseFloat(ghost.weight||0):null;
         const ghostR=ghost?parseFloat(ghost.reps||0):null;
         let mainText,subText='',col;
-        if(done){
+        if(hasData){
           col=s.warmup?'var(--orange)':s.technique?'#9e3dfb':'var(--green)';
           mainText=parseFloat(s.weight||0)>0?`${s.weight}kg × ${s.reps}`:`${s.reps} reps`;
-          if(ghost&&!s.warmup&&!s.technique){
+          if(ghost&&isWorking){
             const beat=parseFloat(s.weight||0)>ghostW||(parseFloat(s.weight||0)===ghostW&&parseFloat(s.reps||0)>ghostR);
             if(beat)subText=`↑ beat ${ghostW>0?ghostW+'kg×'+ghostR:ghostR+' reps'}`;
           }
@@ -2324,13 +2326,15 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
           col='var(--text3)';
           mainText=ghost?(ghostW>0?`${ghostW}kg × ${ghostR}`:`${ghostR} reps`):'—';
         }
-        const border=isActive?'2px solid var(--accent)':done?'1px solid rgba(8,132,91,0.35)':'1px dashed var(--border)';
-        const bg=isActive?'rgba(37,99,235,0.06)':done?'rgba(8,132,91,0.05)':'transparent';
-        return`<div onclick="gymKpSelectSet(${i},${si})" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:8px;border:${border};background:${bg};margin-bottom:5px;cursor:pointer;">
-          <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-            <div style="width:22px;height:22px;border-radius:6px;background:${done?'rgba(8,132,91,0.15)':'var(--surface2)'};color:${col};font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${done?'✓':si+1}</div>
+        const flagBg=s.warmup?'rgba(194,80,0,0.15)':s.technique?'rgba(158,61,251,0.15)':done?'rgba(8,132,91,0.15)':'var(--surface2)';
+        const flagBorder=s.warmup?'rgba(194,80,0,0.5)':s.technique?'rgba(158,61,251,0.5)':done?'rgba(8,132,91,0.4)':'var(--border)';
+        const border=isActive?'2px solid var(--accent)':s.warmup?'1px solid rgba(194,80,0,0.35)':s.technique?'1px solid rgba(158,61,251,0.35)':done?'1px solid rgba(8,132,91,0.35)':'1px dashed var(--border)';
+        const bg=isActive?'rgba(37,99,235,0.06)':s.warmup?'rgba(194,80,0,0.04)':s.technique?'rgba(158,61,251,0.04)':done?'rgba(8,132,91,0.05)':'transparent';
+        return`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:8px;border:${border};background:${bg};margin-bottom:5px;">
+          <div onclick="gymKpSelectSet(${i},${si})" style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;cursor:pointer;">
+            <button onclick="event.stopPropagation();gymCycleSetFlag(${i},${si})" title="${s.warmup?'Warmup':s.technique?'Technique — still counts as training, excluded from PR trend':'Tap to mark warmup'}" style="width:22px;height:22px;border-radius:6px;border:1px solid ${flagBorder};background:${flagBg};color:${col};font-size:10px;font-weight:800;cursor:pointer;flex-shrink:0;padding:0;">${s.warmup?'W':s.technique?'T':done?'✓':si+1}</button>
             <div>
-              <div style="font-size:13px;font-weight:700;color:${done||isActive?'var(--text)':'var(--text3)'};">${mainText}</div>
+              <div style="font-size:13px;font-weight:700;color:${hasData||isActive?'var(--text)':'var(--text3)'};">${mainText}</div>
               ${subText?`<div style="font-size:10px;color:${done?'var(--green)':'var(--text3)'};font-weight:600;">${subText}</div>`:''}
             </div>
           </div>
@@ -2404,7 +2408,7 @@ function gymFillFromLast(i){
 // can't flicker the set to a premature done state along the way.
 function gymActiveSetIdx(ex){
   const sets=ex.sets||[];
-  const idx=sets.findIndex(s=>!s.warmup&&!(s.weight&&s.reps));
+  const idx=sets.findIndex(s=>!(s.weight&&s.reps));
   return idx===-1?Math.max(0,sets.length-1):idx;
 }
 let _gymKpManualTarget=null; // {i,si} - set explicitly tapped to (re-)edit, or null to auto-follow the next incomplete set
@@ -2417,7 +2421,12 @@ function gymKpSyncDraft(i,ex){
   const si=gymKpCurrentSi(i,ex);
   if(!_gymKpDraft||_gymKpDraft.i!==i||_gymKpDraft.si!==si){
     const s=ex.sets[si]||{};
-    _gymKpDraft={i,si,weight:String(s.weight||''),reps:parseInt(s.reps)||0};
+    // fresh: the weight shown is a starting point (carried over from the previous set,
+    // or whatever this set already had) that the pad hasn't been typed into yet this
+    // time around - so the first digit tap replaces it instead of appending to it.
+    // Without this, logging 80kg then moving to a set pre-filled with that same 80kg
+    // and typing "85" produced "8085".
+    _gymKpDraft={i,si,weight:String(s.weight||''),reps:parseInt(s.reps)||0,fresh:true};
   }
   return _gymKpDraft;
 }
@@ -2425,7 +2434,8 @@ function gymKpResetTarget(){_gymKpManualTarget=null;_gymKpDraft=null;}
 function gymKpSelectSet(i,si){_gymKpManualTarget={i,si};_gymKpDraft=null;renderGymLogger();}
 function gymKpDigit(d){
   if(!_gymKpDraft)return;
-  let cur=_gymKpDraft.weight;
+  let cur=_gymKpDraft.fresh?'':_gymKpDraft.weight;
+  _gymKpDraft.fresh=false;
   if(d==='.'){if(cur.includes('.'))return;cur=cur===''?'0.':cur+'.';}
   else if(cur==='0')cur=d;
   else cur+=d;
@@ -2434,7 +2444,8 @@ function gymKpDigit(d){
 }
 function gymKpBackspace(){
   if(!_gymKpDraft)return;
-  _gymKpDraft.weight=_gymKpDraft.weight.slice(0,-1);
+  _gymKpDraft.weight=_gymKpDraft.fresh?'':_gymKpDraft.weight.slice(0,-1);
+  _gymKpDraft.fresh=false;
   renderGymLogger();
 }
 function gymKpStepReps(delta){
@@ -2454,7 +2465,7 @@ function gymKpLogSet(){
   // If that was the last remaining set to fill, add a fresh blank one straight away -
   // otherwise the pad would have nowhere to log the next rep into until you tapped
   // "+ Set" yourself every single time, even mid-exercise.
-  const stillIncomplete=ex.sets.some(x=>!x.warmup&&!(x.weight&&x.reps));
+  const stillIncomplete=ex.sets.some(x=>!(x.weight&&x.reps));
   if(!stillIncomplete)ex.sets.push({weight:s.weight||'',reps:'',warmup:false,technique:false});
   gymKpResetTarget();
   renderGymLogger();

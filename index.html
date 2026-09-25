@@ -6257,7 +6257,13 @@ function getGymWeekOverview(){
     scheduled.push({day:dayLabels[i],type,ds,done:getSessionDone(ds,'gym'),isToday:ds===dk(now)});
   }
   if(!scheduled.length)return null;
-  const doneCount=scheduled.filter(s=>s.done).length;
+  // Count actual gym sessions logged anywhere this week, not just on the day they were
+  // originally scheduled for - moving Wednesday's session to Thursday (or doing it
+  // early/late) should still count toward the week's total instead of silently not
+  // counting because the date doesn't match a specific planned slot.
+  const sun=addDays(mon,6);
+  const daysWithSession=new Set(loadGymData().filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=mon&&d<=sun;}).map(s=>s.date));
+  const doneCount=daysWithSession.size;
   const remaining=scheduled.filter(s=>!s.done);
   return{total:scheduled.length,doneCount,remaining,scheduled};
 }

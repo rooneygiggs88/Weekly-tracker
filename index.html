@@ -730,6 +730,10 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
+<div class="modal-overlay" id="gym-effort-modal">
+  <div class="modal" id="gym-effort-modal-content"></div>
+</div>
+
 <div class="modal-overlay" id="gym-log-modal" onclick="if(event.target===this)closeModal('gym-log-modal')">
   <div class="modal" style="max-height:80vh;display:flex;flex-direction:column;">
     <div class="modal-handle"></div>
@@ -2765,28 +2769,61 @@ function saveGymSession(){
   if(!exercises.length){toastMsg('Add at least one exercise');return;}
   const{prs,nearMisses}=detectSessionPRs(exercises);
   const sessions=loadGymData();
+  const sessionType=gymDraft.type;
   // ts drives the Best Time of Day analysis (see getTimeOfDayPerformance/renderTimeOfDay)
   // - it needs to reflect when you actually trained, not whenever you happened to tap
   // Save, which can be a long time after a session that ran late or got interrupted.
-  sessions.push({date:dk(today()),type:gymDraft.type,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:gymDraft.startedAt||Date.now()});
+  const sessionTs=gymDraft.startedAt||Date.now();
+  sessions.push({date:dk(today()),type:sessionType,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:sessionTs});
   saveGymData(sessions);
   const prog=loadGymProg();
   exercises.forEach(e=>{if(!prog[e.name])prog[e.name]={history:[]};prog[e.name].history.push({date:dk(today()),sets:e.sets});});
   saveGymProg(prog);
   const d=dk(today());
   if(!state.data[`${d}:session:gym`])state.data[`${d}:session:gym`]=[];
-  state.data[`${d}:session:gym`].push(gymDraft.type);
+  state.data[`${d}:session:gym`].push(sessionType);
   saveState();gymDraft=null;clearGymDraftStorage();
   gymKpResetTarget();
+  // The effort modal below is itself confirmation the session saved, so a plain "Session
+  // saved" toast right before it would be redundant - and worse, still visible (toasts
+  // last 2.2s) when the modal opens, overlapping its pills. Only toast here when there's
+  // something actually worth saying (a PR or a near-miss); skip straight to the modal
+  // otherwise, and delay long enough past any toast/celebration that's still fading.
+  let effortModalDelay=500;
   if(prs.length){
     celebratePR(prs);
     toastMsg(prs.length>1?`${prs.length} new PRs!`:`New PR: ${prs[0].name}`);
+    effortModalDelay=3400;
   } else if(nearMisses.length){
     toastMsg(`So close! ${nearMisses[0].gapText} off your ${nearMisses[0].name} PR`);
-  } else {
-    toastMsg('Session saved');
+    effortModalDelay=2400;
   }
   haptic('success');renderGymSection();
+  setTimeout(()=>openGymEffortModal(sessionTs,sessionType),effortModalDelay);
+}
+let _gymEffortTs=null;
+function openGymEffortModal(ts,type){
+  _gymEffortTs=ts;
+  const pill=(label,emoji)=>`<button onclick="gymTagEffort('${label}')" style="padding:16px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-weight:800;font-size:14px;text-align:center;cursor:pointer;"><span style="display:block;font-size:20px;margin-bottom:4px;">${emoji}</span>${label}</button>`;
+  document.getElementById('gym-effort-modal-content').innerHTML=`
+    <div class="modal-handle"></div>
+    <h3>Rate this session</h3>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:22px;font-weight:600;">How did ${esc(type||'it')} feel today?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      ${pill('Easy','🌤️')}${pill('Solid','💪')}${pill('Pushed','🔥')}${pill('Max','⚡')}
+    </div>
+    <button onclick="closeModal('gym-effort-modal')" style="width:100%;text-align:center;background:none;border:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;padding:6px;cursor:pointer;">Skip</button>
+  `;
+  openModal('gym-effort-modal');
+}
+function gymTagEffort(effort){
+  if(_gymEffortTs==null)return;
+  const sessions=loadGymData();
+  const s=sessions.find(x=>x.ts===_gymEffortTs);
+  if(s){s.effort=effort;saveGymData(sessions);}
+  closeModal('gym-effort-modal');
+  _gymEffortTs=null;
+  toastMsg(`Tagged: ${effort}`);
 }
 function renderRecentGymCard(){
   const {score,advice,col,hasMorning}=calcReadiness();

@@ -2765,7 +2765,10 @@ function saveGymSession(){
   if(!exercises.length){toastMsg('Add at least one exercise');return;}
   const{prs,nearMisses}=detectSessionPRs(exercises);
   const sessions=loadGymData();
-  sessions.push({date:dk(today()),type:gymDraft.type,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:Date.now()});
+  // ts drives the Best Time of Day analysis (see getTimeOfDayPerformance/renderTimeOfDay)
+  // - it needs to reflect when you actually trained, not whenever you happened to tap
+  // Save, which can be a long time after a session that ran late or got interrupted.
+  sessions.push({date:dk(today()),type:gymDraft.type,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:gymDraft.startedAt||Date.now()});
   saveGymData(sessions);
   const prog=loadGymProg();
   exercises.forEach(e=>{if(!prog[e.name])prog[e.name]={history:[]};prog[e.name].history.push({date:dk(today()),sets:e.sets});});

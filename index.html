@@ -6193,7 +6193,10 @@ function getExercisesForMakeup(includeLegs){
   const doneThisWeek=new Set();
   thisWeek.forEach(s=>(s.exercises||[]).forEach(e=>{
     if(!e.name)return;
-    if((e.sets||[]).some(set=>!set.warmup&&set.weight&&set.reps))doneThisWeek.add(e.name.toLowerCase());
+    // gymSetFilled, not a raw weight&&reps check - a bodyweight-only exercise (chin-ups,
+    // no weight ever entered) needs to count as "done" from reps alone, same as it does
+    // everywhere else in the keypad logging flow, or it can never leave the Makeup list.
+    if((e.sets||[]).some(set=>!set.warmup&&gymSetFilled(set,e.name)))doneThisWeek.add(e.name.toLowerCase());
   }));
   const missed=[];
   (includeLegs?['Push','Pull','Legs']:['Push','Pull']).forEach(type=>{

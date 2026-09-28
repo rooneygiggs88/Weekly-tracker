@@ -2262,6 +2262,37 @@ function renderCollapsedExCard(ex,i){
     </div>
   </div>`;
 }
+// Locked read-only summary shown once "Complete Exercise" has been tapped, so you can't
+// accidentally add to a set you already decided you were finished with. "Edit completed
+// exercise?" is the only way back into the normal editable card (see gymEditCompletedExercise).
+function renderCompletedExCard(ex,i){
+  const realSets=(ex.sets||[]).filter(s=>gymSetFilled(s,ex.name));
+  const summary=realSets.map(s=>`${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}${s.warmup?' (W)':s.technique?' (T)':''}`).join(' · ')||'No sets logged';
+  return`<div class="chart-card" style="margin-bottom:10px;padding:14px 16px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.3);" id="ex-block-${i}">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <div style="width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;">✓</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(ex.name||'Exercise')}</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700;">Exercise complete</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">${summary}</div>
+    <button onclick="gymEditCompletedExercise(${i})" style="width:100%;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Edit completed exercise?</button>
+  </div>`;
+}
+function gymCompleteExercise(i){
+  const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
+  ex._completed=true;
+  gymKpResetTarget();
+  renderGymLogger();
+  haptic('success');
+}
+function gymEditCompletedExercise(i){
+  const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
+  ex._completed=false;
+  gymSetActiveEx(i);
+  renderGymLogger();
+}
 // Find most recent occurrence of this exercise across ALL session types - accepts
 // either a weighted set or a bodyweight (reps-only) set, so pull-up-style exercises
 // still get "last session" carryover even with the weight field left blank. Skips
@@ -2326,6 +2357,10 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
   // move your typing to a different exercise (see gymSetActiveEx), or toggled
   // manually via the chevron. Tap anywhere on the card to reopen it.
   if(ex._collapsed)return renderCollapsedExCard(ex,i);
+  // Explicitly marked done via "Complete Exercise" - locked to a read-only summary
+  // until "Edit completed exercise?" is tapped, so you can't accidentally add to a
+  // set you already decided you were finished with.
+  if(focusMode&&ex._completed)return renderCompletedExCard(ex,i);
   const _restSecs=getExRestSecs(ex.name||'');
   const lastSets=getLastExSets(ex.name,sessions);
   const lastHasWeight=lastSets.some(s=>parseFloat(s.weight||0)>0);
@@ -2411,7 +2446,8 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       return`${rows}
         <button onclick="gymAddSet(${i})" style="width:100%;padding:8px;margin-bottom:10px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
         ${renderGymKeypad(draft)}
-        ${renderPlateCalc(parseFloat(draft.weight)||0)}`;
+        ${renderPlateCalc(parseFloat(draft.weight)||0)}
+        <button onclick="gymCompleteExercise(${i})" style="width:100%;padding:11px;margin-top:10px;background:rgba(8,132,91,0.1);border:1px solid rgba(8,132,91,0.35);border-radius:var(--radius-xs);color:var(--green);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">✓ Complete Exercise</button>`;
     })():`
     <div style="display:grid;grid-template-columns:28px 1fr 1fr 38px;gap:6px;margin-bottom:6px;">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;">W</div>
@@ -2579,18 +2615,21 @@ function renderGymFocusFlow(lastSame,prog,sessions){
   const exs=gymDraft.exercises;
   if(!exs.length)return'<div id="gym-exercises"></div>';
   if(_gymFocusIdx==null||_gymFocusIdx>=exs.length){
-    const firstUnfinished=exs.findIndex(ex=>!(ex.sets||[]).some(s=>!s.warmup&&s.weight&&s.reps));
+    const firstUnfinished=exs.findIndex(ex=>!ex._completed&&!(ex.sets||[]).some(s=>!s.warmup&&gymSetFilled(s,ex.name)));
     _gymFocusIdx=firstUnfinished===-1?exs.length-1:firstUnfinished;
   }
   const i=_gymFocusIdx;
   const ex=exs[i];
   ex._collapsed=false; // focus mode always shows the current exercise expanded
   const dots=exs.map((e,idx)=>{
-    const doneCount=(e.sets||[]).filter(s=>!s.warmup&&s.weight&&s.reps).length;
+    const doneCount=(e.sets||[]).filter(s=>!s.warmup&&gymSetFilled(s,e.name)).length;
     // "Started" rather than "every set filled" - since a set is auto-added after each
     // log (see gymKpLogSet), a worked-on exercise almost always has one trailing blank
     // slot waiting for the next set, so requiring the full array to be done never fired.
     const isDone=doneCount>0;
+    // Explicitly completed via "Complete Exercise" gets its own filled checkmark badge,
+    // distinct from the plain green "started" dot.
+    if(e._completed)return`<button onclick="gymFocusJump(${idx})" title="Completed" style="width:${idx===i?'18px':'14px'};height:${idx===i?'18px':'14px'};border-radius:50%;background:var(--green);border:${idx===i?'2px solid var(--accent)':'none'};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:${idx===i?'10px':'8px'};font-weight:900;line-height:1;transition:all 0.15s;">✓</button>`;
     const col=idx===i?'var(--accent)':isDone?'var(--green)':'var(--border)';
     return`<button onclick="gymFocusJump(${idx})" style="width:${idx===i?'20px':'8px'};height:8px;border-radius:4px;background:${col};border:none;cursor:pointer;padding:0;transition:all 0.15s;"></button>`;
   }).join('');

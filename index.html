@@ -2109,6 +2109,11 @@ function gymRemoveSet(i,si){
   const removed=sets[si];
   const hadData=!!(removed&&!removed.warmup&&removed.weight&&removed.reps);
   sets.splice(si,1);
+  // Every exercise needs at least one set slot for the keypad to write into - removing
+  // your only set should clear it back to blank, not leave an empty array. Without this,
+  // "Log set" on a since-emptied exercise silently no-ops (ex.sets[si] is undefined)
+  // until you notice and tap "+Set" yourself to refill the slot.
+  if(!sets.length)sets.push({weight:'',reps:'',warmup:false,technique:false});
   renderGymLogger();
   if(hadData){
     _lastRemovedSet={exIdx:i,si,set:removed};

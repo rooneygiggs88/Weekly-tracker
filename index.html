@@ -4166,6 +4166,9 @@ function renderTrendsGymAnalysis(){
   // 3. Muscle group balance — donut
   const muscleChart=renderMuscleBalanceCard(gym,weekPts.length);
 
+  // 4. Effort balance — donut, gym's equivalent of the run Effort Balance chart
+  const effortChart=renderGymEffortBalance(gym);
+
   // 5. Session log
   const _gymSessionRowHtml=s=>{
     const d=new Date(s.date+'T12:00:00');
@@ -4190,7 +4193,41 @@ function renderTrendsGymAnalysis(){
   </div>`;
 
 
-  return summary+freqChart+volChart+muscleChart+sessionLog;
+  return summary+freqChart+volChart+muscleChart+effortChart+sessionLog;
+}
+// Gym's equivalent of the run Effort Balance donut - same segmented-circle layout,
+// colored on the same intensity ramp the run side already uses (green -> blue -> orange
+// -> red for its hardest category), so the two feel like one consistent system.
+function renderGymEffortBalance(gym){
+  const tagged=gym.filter(s=>s.effort);
+  if(tagged.length<2)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Effort Balance</span></div><div class="empty-state" style="padding:16px 0 0;">Tag sessions as Easy/Solid/Pushed/Max to see your effort split.</div></div>`;
+  const LEVELS=[{label:'Easy',col:'var(--green)'},{label:'Solid',col:'var(--accent2)'},{label:'Pushed',col:'var(--orange)'},{label:'Max',col:'var(--red)'}];
+  const counts={Easy:0,Solid:0,Pushed:0,Max:0};
+  tagged.forEach(s=>{if(counts[s.effort]!=null)counts[s.effort]++;});
+  const total=tagged.length;
+  const segs=LEVELS.map(l=>({...l,count:counts[l.label]})).filter(s=>s.count>0);
+  const R=52,cx=70,cy=68,stroke=18,circ=2*Math.PI*R;
+  let offset=-0.25*circ;
+  const arcs=segs.map(s=>{const dash=(s.count/total)*circ;const arc=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.col}" stroke-width="${stroke}" stroke-dasharray="${(dash-2).toFixed(1)} ${(circ-dash+2).toFixed(1)}" stroke-dashoffset="${(-offset).toFixed(1)}" opacity="0.9"/>`;offset+=dash;return arc;}).join('');
+  const legend=segs.map(s=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><div style="width:10px;height:10px;border-radius:2px;background:${s.col};flex-shrink:0;"></div><div style="font-size:11px;font-weight:700;flex:1;">${s.label}</div><div style="font-size:11px;color:var(--text3);">${s.count} (${Math.round(s.count/total*100)}%)</div></div>`).join('');
+  const hardPct=Math.round((counts.Pushed+counts.Max)/total*100);
+  const easyPct=Math.round((counts.Easy+counts.Solid)/total*100);
+  const balance=hardPct>=60?{msg:'Lots of Pushed/Max sessions — make sure recovery keeps up',col:'var(--orange)'}:easyPct>=80?{msg:'Mostly Easy/Solid — room to push harder',col:'var(--accent2)'}:{msg:'Good mix of effort levels ✓',col:'var(--green)'};
+  return`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Effort Balance</span></div>
+    <div style="display:flex;align-items:center;gap:0;padding:8px 0;">
+      <svg width="140" height="140" viewBox="0 0 140 140" style="flex-shrink:0;">
+        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--border)" stroke-width="${stroke}"/>
+        ${arcs}
+        <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="22" font-weight="800" fill="var(--text)" font-family="-apple-system,sans-serif">${total}</text>
+        <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--text3)" font-family="-apple-system,sans-serif">TAGGED</text>
+      </svg>
+      <div style="flex:1;padding-left:16px;">${legend}</div>
+    </div>
+    <div style="padding:8px 10px;border-radius:8px;background:${balance.col}18;border:1px solid ${balance.col}44;margin-top:4px;">
+      <div style="font-size:11px;font-weight:700;color:${balance.col};line-height:1.4;">${balance.msg}</div>
+    </div>
+  </div>`;
 }
 
 // ── DAY-OF-WEEK PATTERN HEATMAP ──
@@ -5681,7 +5718,10 @@ function getLoadRatio(offsetDays=0){
   const now=addDays(today(),-offsetDays);const gym=loadGymData();const runs=loadRunData();
   const effortMult={Recovery:0.6,Easy:1.0,'Long Run':1.1,Long:1.1,Tempo:1.75,Intervals:2.0,Hard:2.0,Race:2.2};
   function runLoad(r){const mult=effortMult[r.effort]||1.0;if(r.time){const secs=parseTimeToSecs(r.time);if(secs>0)return Math.round((secs/60)*mult);}if(r.km)return Math.round(r.km*6*mult);return Math.round(30*mult);}
-  function gymSessionLoad(s){const sets=(s.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);return sets>0?sets*2:30;}
+  // Gym sessions logged before the effort tag existed (or skipped it) fall back to the
+  // original flat multiplier, so nothing already in your history silently reweights itself.
+  const gymEffortMult={Easy:0.7,Solid:1.0,Pushed:1.4,Max:1.8};
+  function gymSessionLoad(s){const sets=(s.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);return sets>0?Math.round(sets*2*(gymEffortMult[s.effort]||1.0)):30;}
   function dayLoad(ds){let l=0;gym.filter(s=>s.date===ds).forEach(s=>{l+=gymSessionLoad(s);});runs.filter(r=>r.date===ds).forEach(r=>{l+=runLoad(r);});return l;}
   let load7=0,load28=0;
   for(let i=0;i<7;i++)load7+=dayLoad(dk(addDays(now,-i)));
@@ -6016,9 +6056,12 @@ function renderActivityLoad(){
     if(r.km){return Math.round(r.km*6*mult);} // fallback: assume 6 min/km
     return Math.round(30*mult);
   }
+  // Gym sessions logged before the effort tag existed (or skipped it) fall back to the
+  // original flat multiplier, so nothing already in your history silently reweights itself.
+  const gymEffortMult={Easy:0.7,Solid:1.0,Pushed:1.4,Max:1.8};
   function gymSessionLoad(s){
     const sets=(s.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);
-    return sets>0?sets*2:30;
+    return sets>0?Math.round(sets*2*(gymEffortMult[s.effort]||1.0)):30;
   }
   function dayLoad(ds){
     let l=0;

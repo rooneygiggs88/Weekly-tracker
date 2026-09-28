@@ -6816,7 +6816,7 @@ function renderVolumeTab(){
 
   el.innerHTML=`
     <div class="chart-card" style="margin-bottom:10px;">
-      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} sessions · ${totalSets} gym sets${totalRunSets>0?' · '+runsInPeriod.length+' runs':''}</span></div>
+      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} session${sessions.length!==1?'s':''} · ${totalSets} gym set${totalSets!==1?'s':''}${totalRunSets>0?' · '+runsInPeriod.length+' run'+(runsInPeriod.length!==1?'s':''):''}</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">${periodBtns}</div>
       ${legend}
       ${totalSets>0||totalRunSets>0?bars:ALL_MUSCLE_GROUPS.map(m=>{

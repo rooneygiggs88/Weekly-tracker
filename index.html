@@ -2156,11 +2156,27 @@ function gymStepReps(i,si,delta){
   const el=document.getElementById(`set-reps-${i}-${si}`);if(el)el.value=s.reps;
   gymCheckSetDone(i,si);
 }
+// Whether this exercise has ever once been logged with a real weight - some movements
+// (pull-ups, planks) are tracked by reps alone and never have one, so requiring both
+// weight and reps to count a set as "filled in" would make them impossible to log.
+function exerciseEverWeighted(name){
+  if(!name)return false;
+  const nameLower=name.toLowerCase();
+  const prog=loadGymProg();
+  const exProg=prog[name];
+  const historySets=(exProg&&exProg.history||[]).flatMap(h=>h.sets||[]);
+  const sessionSets=loadGymData().flatMap(s=>(s.exercises||[]).filter(e=>e.name&&e.name.toLowerCase()===nameLower).flatMap(e=>e.sets||[]));
+  return[...historySets,...sessionSets].some(s=>!s.warmup&&parseFloat(s.weight||0)>0);
+}
+function gymSetFilled(s,name){
+  if(!s||!s.reps)return false;
+  return!!s.weight||!exerciseEverWeighted(name);
+}
 function gymCheckSetDone(i,si){
   saveGymDraft();
   const s=gymDraft&&gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];
   if(!s||s.warmup)return;
-  const done=!!(s.weight&&s.reps);
+  const done=gymSetFilled(s,gymDraft.exercises[i].name);
   // Auto-start the rest timer the moment a set is newly completed, instead of making
   // you tap the rest button yourself every time. _restFired only flips back to false
   // if the set is cleared out again, so editing an already-done set doesn't re-trigger it.
@@ -2349,13 +2365,13 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       ${trend?`<div style="padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:${trend.col};font-size:11px;font-weight:800;">${trend.label}</div>`:''}
     </div>`:''}
     ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Trained${lastDateStr?` · ${lastDateStr}`:''}</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}</span>`).join('')}</div></div>`:''}
-    ${focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&s.weight&&s.reps)?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
+    ${focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&gymSetFilled(s,ex.name))?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
     ${targetWeight?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetWeight}kg × ${topLast.reps||'?'} reps <span style="color:var(--green);">+2.5kg</span></div>`:targetReps?`<div id="ex-hint-${i}" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:10px;padding:7px 10px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.2);border-radius:8px;border-left:3px solid var(--green);color:var(--green);">↑ <span style="color:var(--text);">Target</span> ${targetReps} reps <span style="color:var(--green);">+1</span></div>`:`<div id="ex-hint-${i}"></div>`}
     ${focusMode?(()=>{
       const draft=gymKpSyncDraft(i,ex);
       const activeSi=draft.si;
       const rows=(ex.sets||[]).map((s,si)=>{
-        const hasData=!!(s.weight&&s.reps);
+        const hasData=gymSetFilled(s,ex.name);
         const isWorking=!s.warmup&&!s.technique;
         const done=hasData&&isWorking;
         const isActive=si===activeSi;
@@ -2459,7 +2475,7 @@ function gymFillFromLast(i){
 // can't flicker the set to a premature done state along the way.
 function gymActiveSetIdx(ex){
   const sets=ex.sets||[];
-  const idx=sets.findIndex(s=>!(s.weight&&s.reps));
+  const idx=sets.findIndex(s=>!gymSetFilled(s,ex.name));
   return idx===-1?Math.max(0,sets.length-1):idx;
 }
 let _gymKpManualTarget=null; // {i,si} - set explicitly tapped to (re-)edit, or null to auto-follow the next incomplete set
@@ -2509,14 +2525,18 @@ function gymKpLogSet(){
   const{i,si,weight,reps}=_gymKpDraft;
   const ex=gymDraft.exercises[i];if(!ex)return;
   const s=ex.sets[si];if(!s)return;
-  if(!weight||!reps){toastMsg('Enter weight and reps');haptic('error');return;}
+  // Weight is only mandatory for exercises with confirmed weighted history - a brand
+  // new exercise (no history either way yet) is left to whatever the user actually
+  // types, same as a confirmed-bodyweight one, rather than guessing and discarding it.
+  const requireWeight=exerciseEverWeighted(ex.name);
+  if(!reps||(requireWeight&&!weight)){toastMsg(requireWeight?'Enter weight and reps':'Enter reps');haptic('error');return;}
   s.weight=weight;s.reps=String(reps);
   gymSetActiveEx(i);
   gymCheckSetDone(i,si);
   // If that was the last remaining set to fill, add a fresh blank one straight away -
   // otherwise the pad would have nowhere to log the next rep into until you tapped
   // "+ Set" yourself every single time, even mid-exercise.
-  const stillIncomplete=ex.sets.some(x=>!(x.weight&&x.reps));
+  const stillIncomplete=ex.sets.some(x=>!gymSetFilled(x,ex.name));
   if(!stillIncomplete)ex.sets.push({weight:s.weight||'',reps:'',warmup:false,technique:false});
   gymKpResetTarget();
   renderGymLogger();

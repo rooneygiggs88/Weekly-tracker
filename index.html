@@ -1126,6 +1126,15 @@ if(window.visualViewport){
   };
   window.visualViewport.addEventListener('resize',_syncNavToViewport);
   window.visualViewport.addEventListener('scroll',_syncNavToViewport);
+  // A field losing focus is the most direct signal the keyboard is about to close, and
+  // doesn't depend on visualViewport firing a clean matching resize/scroll afterward -
+  // reported live as the nav getting stuck mid-screen after typing in the gym keypad's
+  // session-notes field, which the resize/scroll listeners alone didn't always catch.
+  document.addEventListener('focusout',()=>setTimeout(_syncNavToViewport,50),true);
+  // Hard backstop: even if some event sequence still slips through, this makes the drift
+  // self-correct within a second on its own rather than staying stuck for the rest of
+  // the session - a no-op write when nothing's wrong, so the cost is negligible.
+  setInterval(_syncNavToViewport,800);
 }
 
 // ── TODAY + WEEK NAV ──

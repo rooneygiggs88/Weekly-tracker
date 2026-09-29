@@ -5956,9 +5956,14 @@ function renderStoryCard(){
   if(win){
     const dateLabel=new Date(win.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
     const icon=win.type==='run'?'🏃':'🏆';
-    el.innerHTML=`<div class="chart-card" style="margin-bottom:12px;border-left:3px solid var(--green);">
-      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:6px;">${icon} This week's win</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">${esc(win.name)}</strong> — ${win.detail} on ${dateLabel}</div>
+    // Same compact pill treatment as .today-status and the deload/load nudge above it
+    // (tinted background, thin full border, matching padding/radius/margin) instead of
+    // the heavier .chart-card component - the three read as one consistent "today's
+    // insights" stack now rather than two pills plus one oversized card with a stray
+    // left-border accent nothing else on the page uses.
+    el.innerHTML=`<div style="background:rgba(5,150,105,0.07);border:1px solid rgba(5,150,105,0.22);border-radius:14px;padding:11px 14px;margin-bottom:8px;text-align:left;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:4px;">${icon} This week's win</div>
+      <div style="font-size:13.5px;color:var(--text2);line-height:1.4;"><strong style="color:var(--text);">${esc(win.name)}</strong> — ${win.detail} on ${dateLabel}</div>
     </div>`;
     return;
   }

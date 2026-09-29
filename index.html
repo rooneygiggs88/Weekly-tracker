@@ -1259,12 +1259,15 @@ function renderToday(){
   const nudgeEl=document.getElementById('rest-day-nudge');
   if(nudgeEl){
     if(viewingToday){
+      // Same card treatment as .today-status just above it (tinted background, border,
+      // rounded corners, padding) - this used to be bare text floating between two
+      // properly-styled cards, which read as visually broken rather than intentional.
       const deload=getDeloadFlag();
       if(deload){
-        nudgeEl.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--red);margin-top:6px;">🔻 Load's been high for 2+ weeks running (${Math.round(deload.now.avg7)}/day vs ${Math.round(deload.now.avg28)}/day avg) — a deload week could help</div>`;
+        nudgeEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--red);background:rgba(220,38,38,0.07);border:1px solid rgba(220,38,38,0.22);border-radius:14px;padding:11px 14px;margin-bottom:8px;text-align:left;">🔻 Load's been high for 2+ weeks running (${Math.round(deload.now.avg7)}/day vs ${Math.round(deload.now.avg28)}/day avg) — a deload week could help</div>`;
       }else{
         const lr=getLoadRatio();
-        nudgeEl.innerHTML=lr.ratio>1.3?`<div style="font-size:12px;font-weight:700;color:var(--orange);margin-top:6px;">⚠️ 7-day load ${Math.round(lr.avg7)}/day vs 28-day avg ${Math.round(lr.avg28)}/day — running high, consider a lighter session or rest day</div>`:'';
+        nudgeEl.innerHTML=lr.ratio>1.3?`<div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--orange);background:rgba(234,88,12,0.07);border:1px solid rgba(234,88,12,0.22);border-radius:14px;padding:11px 14px;margin-bottom:8px;text-align:left;">⚠️ 7-day load ${Math.round(lr.avg7)}/day vs 28-day avg ${Math.round(lr.avg28)}/day — running high, consider a lighter session or rest day</div>`:'';
       }
     }else{nudgeEl.innerHTML='';}
   }
@@ -3819,7 +3822,10 @@ function renderTrendsRunAnalysis(){
     const arcs=segs.map(s=>{const dash=(s.count/total)*circ;const arc=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.col}" stroke-width="${stroke}" stroke-dasharray="${(dash-2).toFixed(1)} ${(circ-dash+2).toFixed(1)}" stroke-dashoffset="${(-offset).toFixed(1)}" opacity="0.9"/>`;offset+=dash;return arc;}).join('');
     const legend=segs.map(s=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><div style="width:10px;height:10px;border-radius:2px;background:${s.col};flex-shrink:0;"></div><div style="font-size:11px;font-weight:700;flex:1;">${s.label}</div><div style="font-size:11px;color:var(--text3);">${s.count} (${Math.round(s.count/total*100)}%)</div></div>`).join('');
     const easyPct=Math.round(counts['Easy / Long']/total*100);
-    const balance=easyPct>=70?{msg:'Great balance — mostly easy runs ✓',col:'var(--green)'}:easyPct>=50?{msg:'Slightly high intensity — add more easy runs',col:'var(--orange)'}:{msg:'Too much intensity — risk of overtraining',col:'var(--red)'};
+    // Real hex here, not var(--x) - the card below appends a hex alpha suffix (18/44)
+    // to this color for its tinted background/border, which only works on an actual
+    // hex string (var(--green)18 isn't a valid CSS color and was silently dropped).
+    const balance=easyPct>=70?{msg:'Great balance — mostly easy runs ✓',col:'#059669'}:easyPct>=50?{msg:'Slightly high intensity — add more easy runs',col:'#ea580c'}:{msg:'Too much intensity — risk of overtraining',col:'#dc2626'};
     return `<div class="chart-card">
       <div class="chart-card-header"><span class="chart-card-title">Effort Balance</span></div>
       <div style="display:flex;align-items:center;gap:0;padding:8px 0;">
@@ -4221,7 +4227,9 @@ function renderGymEffortBalance(gym){
   const legend=segs.map(s=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><div style="width:10px;height:10px;border-radius:2px;background:${s.col};flex-shrink:0;"></div><div style="font-size:11px;font-weight:700;flex:1;">${s.label}</div><div style="font-size:11px;color:var(--text3);">${s.count} (${Math.round(s.count/total*100)}%)</div></div>`).join('');
   const hardPct=Math.round((counts.Pushed+counts.Max)/total*100);
   const easyPct=Math.round((counts.Easy+counts.Solid)/total*100);
-  const balance=hardPct>=60?{msg:'Lots of Pushed/Max sessions — make sure recovery keeps up',col:'var(--orange)'}:easyPct>=80?{msg:'Mostly Easy/Solid — room to push harder',col:'var(--accent2)'}:{msg:'Good mix of effort levels ✓',col:'var(--green)'};
+  // Real hex here, not var(--x) - see the matching comment on the run Effort Balance
+  // card; the hex-alpha-suffix trick below only works on an actual hex string.
+  const balance=hardPct>=60?{msg:'Lots of Pushed/Max sessions — make sure recovery keeps up',col:'#ea580c'}:easyPct>=80?{msg:'Mostly Easy/Solid — room to push harder',col:'#1d4ed8'}:{msg:'Good mix of effort levels ✓',col:'#059669'};
   return`<div class="chart-card">
     <div class="chart-card-header"><span class="chart-card-title">Effort Balance</span></div>
     <div style="display:flex;align-items:center;gap:0;padding:8px 0;">

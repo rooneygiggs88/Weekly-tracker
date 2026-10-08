@@ -3550,6 +3550,7 @@ function renderTrends(){
     ${renderDayOfWeekHeatmap()}
     ${renderMuscleBalanceCard(gym,getGymActiveWeekCount(gym))}
     ${renderTimeOfDay()}
+    ${renderWhatMovesCard()}
   `;
 }
 
@@ -5550,8 +5551,10 @@ function goalDone_f(ds,g){return goalDone(ds,g);}
 // Performance BY time of day, not just frequency - normalises each gym session to "% of
 // that exercise's current best" so sessions aren't unfairly compared across different
 // lifts, and only draws a conclusion once a slot has 3+ qualifying samples.
-function getTimeOfDayPerformance(){
-  const gym=loadGymData();const runs=loadRunData();
+// How close each gym session got to your all-time best: the average, across its
+// weighted exercises, of that session's best e1RM / the exercise's all-time best e1RM.
+// Returns [{session,pct}] (pct as a 0-1 ratio) for sessions with at least one weighted lift.
+function getGymSessionPerf(gym){
   const curBest={};
   gym.forEach(s=>(s.exercises||[]).forEach(e=>{
     if(!e.name)return;
@@ -5561,14 +5564,8 @@ function getTimeOfDayPerformance(){
       if(!curBest[e.name]||est>curBest[e.name])curBest[e.name]=est;
     });
   }));
-  const slots=[{label:'Morning',test:h=>h>=6&&h<12},{label:'Afternoon',test:h=>h>=12&&h<17},{label:'Evening',test:h=>h>=17&&h<21},{label:'Night',test:h=>h>=21||h<6}];
-  const QUALITY=new Set(['Tempo','Fartlek','Intervals','Hard']);
-  const gymQuality=slots.map(()=>[]),runPace=slots.map(()=>[]);
+  const out=[];
   gym.forEach(s=>{
-    if(!s.ts)return;
-    const h=new Date(s.ts).getHours();
-    const slotIdx=slots.findIndex(sl=>sl.test(h));
-    if(slotIdx<0)return;
     const ratios=[];
     (s.exercises||[]).forEach(e=>{
       if(!e.name||!curBest[e.name])return;
@@ -5578,7 +5575,21 @@ function getTimeOfDayPerformance(){
       ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm)bestE1rm=est;});
       ratios.push(bestE1rm/curBest[e.name]);
     });
-    if(ratios.length)gymQuality[slotIdx].push(ratios.reduce((a,b)=>a+b,0)/ratios.length);
+    if(ratios.length)out.push({session:s,pct:ratios.reduce((a,b)=>a+b,0)/ratios.length});
+  });
+  return out;
+}
+function getTimeOfDayPerformance(){
+  const gym=loadGymData();const runs=loadRunData();
+  const slots=[{label:'Morning',test:h=>h>=6&&h<12},{label:'Afternoon',test:h=>h>=12&&h<17},{label:'Evening',test:h=>h>=17&&h<21},{label:'Night',test:h=>h>=21||h<6}];
+  const QUALITY=new Set(['Tempo','Fartlek','Intervals','Hard']);
+  const gymQuality=slots.map(()=>[]),runPace=slots.map(()=>[]);
+  getGymSessionPerf(gym).forEach(({session:s,pct})=>{
+    if(!s.ts)return;
+    const h=new Date(s.ts).getHours();
+    const slotIdx=slots.findIndex(sl=>sl.test(h));
+    if(slotIdx<0)return;
+    gymQuality[slotIdx].push(pct);
   });
   runs.forEach(r=>{
     if(!r.ts||!r.km||!r.time||!QUALITY.has(r.effort))return;
@@ -5641,6 +5652,175 @@ function renderTimeOfDay(){
       if(perf.run)lines.push(`Your fastest quality-run pace is in the <strong>${perf.run.slot.toLowerCase()}</strong> (${perf.run.pace}).`);
       return`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.6;">${lines.join('<br>')}</div>`;
     })()}
+  </div>`;
+}
+
+// ── WHAT MOVES YOUR NUMBERS ──
+// Cross-references the things you log (sleep, HRV, wake time, runs, rest days, food
+// logging, bodyweight) against how your training goes. A finding only appears once
+// both sides of the comparison have INSIGHT_MIN examples - otherwise it shows as
+// still collecting, so a handful of sessions can't produce a confident-sounding claim.
+const INSIGHT_MIN=5;
+function getWhatMovesInsights(){
+  const gym=loadGymData();const runs=loadRunData();
+  const morning=loadMorningData();
+  const health=loadHealthData().filter(h=>h.date&&parseFloat(h.weight)>0).sort((a,b)=>a.date.localeCompare(b.date));
+  const perf=getGymSessionPerf(gym);
+  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+  const median=a=>{const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+  const pct=v=>`${Math.round(v*100)}%`;
+  const out=[];
+  const need=(a,b)=>`${Math.min(a,b)} of ${INSIGHT_MIN} on the thinner side so far`;
+
+  // Splits gym sessions by a morning metric at its median and compares % of best.
+  const morningSplit=(key,icon,title,unit)=>{
+    const rows=perf.map(p=>({v:(morning[p.session.date]||{})[key],pct:p.pct})).filter(r=>r.v!=null&&r.v!=='');
+    const cut=rows.length?median(rows.map(r=>+r.v)):0;
+    const hi=rows.filter(r=>+r.v>=cut).map(r=>r.pct),lo=rows.filter(r=>+r.v<cut).map(r=>r.pct);
+    if(hi.length<INSIGHT_MIN||lo.length<INSIGHT_MIN)return{icon,title,pending:need(hi.length,lo.length)};
+    const a=avg(hi),b=avg(lo),diff=Math.round((a-b)*100);
+    return{icon,title,a:{label:`${key==='sleep'?'Score':'HRV'} ${cut}${unit}+`,val:pct(a),n:hi.length},b:{label:`Under ${cut}${unit}`,val:pct(b),n:lo.length},
+      text:Math.abs(diff)<2?`Doesn't seem to change much — within ${Math.max(Math.abs(diff),1)}% either way.`
+        :diff>0?`You tend to lift <strong>${diff}% closer to your best</strong> after a higher ${key==='sleep'?'sleep score':'HRV'}.`
+        :`Oddly, you tend to lift ${-diff}% better after a <em>lower</em> ${key==='sleep'?'sleep score':'HRV'} — probably noise, worth watching.`};
+  };
+  out.push(morningSplit('sleep','😴','Sleep → lifting',''));
+  out.push(morningSplit('hrv','💓','HRV → lifting','ms'));
+
+  // Run the day before a gym session vs not.
+  {
+    const runDays=new Set(runs.map(r=>r.date));
+    const after=[],fresh=[];
+    perf.forEach(p=>{(runDays.has(dk(addDays(new Date(p.session.date+'T12:00:00'),-1)))?after:fresh).push(p.pct);});
+    if(after.length<INSIGHT_MIN||fresh.length<INSIGHT_MIN)out.push({icon:'🏃',title:'Running → lifting',pending:need(after.length,fresh.length)});
+    else{
+      const a=avg(after),b=avg(fresh),diff=Math.round((b-a)*100);
+      out.push({icon:'🏃',title:'Running → lifting',a:{label:'Ran the day before',val:pct(a),n:after.length},b:{label:'No run',val:pct(b),n:fresh.length},
+        text:Math.abs(diff)<2?`A run the day before doesn't seem to hurt your lifting.`
+          :diff>0?`You tend to lift <strong>${diff}% weaker</strong> the day after a run.`
+          :`You actually tend to lift ${-diff}% better the day after a run.`});
+    }
+  }
+
+  // Rest days since the previous gym session (0 = trained the day before).
+  {
+    const sorted=[...perf].sort((a,b)=>a.session.date.localeCompare(b.session.date));
+    const allDates=[...new Set(gym.map(s=>s.date))].sort();
+    const buckets={0:[],1:[],2:[],3:[]};
+    sorted.forEach(p=>{
+      const prev=allDates.filter(d=>d<p.session.date).pop();
+      if(!prev)return;
+      const gap=Math.round((new Date(p.session.date+'T12:00:00')-new Date(prev+'T12:00:00'))/864e5)-1;
+      buckets[Math.min(gap,3)].push(p.pct);
+    });
+    const name=k=>k==3?'3+ rest days':k==0?'Back-to-back':`${k} rest day${k==1?'':'s'}`;
+    const ready=Object.keys(buckets).filter(k=>buckets[k].length>=INSIGHT_MIN);
+    if(!ready.length)out.push({icon:'🛌',title:'Rest days → lifting',pending:`no rest-day pattern has ${INSIGHT_MIN} sessions yet`});
+    else{
+      const best=ready.reduce((x,y)=>avg(buckets[y])>avg(buckets[x])?y:x);
+      const others=Object.keys(buckets).filter(k=>k!==best).flatMap(k=>buckets[k]);
+      if(others.length<INSIGHT_MIN)out.push({icon:'🛌',title:'Rest days → lifting',pending:need(buckets[best].length,others.length)});
+      else{
+        const a=avg(buckets[best]),b=avg(others),diff=Math.round((a-b)*100);
+        out.push({icon:'🛌',title:'Rest days → lifting',a:{label:name(best),val:pct(a),n:buckets[best].length},b:{label:'Any other gap',val:pct(b),n:others.length},
+          text:diff<2?`How long you rest between sessions doesn't seem to matter much.`:`You tend to lift best after <strong>${name(best).toLowerCase()}</strong>, ${diff}% closer to your best than other gaps.`});
+      }
+    }
+  }
+
+  // Weeks you logged food vs weekly change in average bodyweight.
+  {
+    const food=(state.customGoals||[]).find(g=>/food/i.test(g.name||''));
+    if(!food)out.push({icon:'🥗',title:'Food logging → weight',pending:'needs a "Food logged" goal'});
+    else{
+      const target=food.weeklyTarget||5;
+      const weekAvg={};
+      health.forEach(h=>{const w=dk(getMonday(new Date(h.date+'T12:00:00')));(weekAvg[w]=weekAvg[w]||[]).push(parseFloat(h.weight));});
+      const logged=[],not=[];
+      Object.keys(weekAvg).sort().forEach(w=>{
+        const prev=dk(addDays(new Date(w+'T12:00:00'),-7));
+        if(!weekAvg[prev])return;
+        let days=0;for(let i=0;i<7;i++)if(getCheck(dk(addDays(new Date(w+'T12:00:00'),i)),food.id))days++;
+        (days>=target?logged:not).push(avg(weekAvg[w])-avg(weekAvg[prev]));
+      });
+      if(logged.length<INSIGHT_MIN||not.length<INSIGHT_MIN)out.push({icon:'🥗',title:'Food logging → weight',pending:`${Math.min(logged.length,not.length)} of ${INSIGHT_MIN} weeks on the thinner side so far`});
+      else{
+        const r1=v=>Math.round(v*10)/10,a=r1(avg(logged)),b=r1(avg(not));const f=v=>`${v>0?'+':v<0?'−':''}${Math.abs(v).toFixed(1)}kg`;
+        out.push({icon:'🥗',title:'Food logging → weight',a:{label:`Logged ${target}+ days`,val:`${f(a)}/wk`,n:logged.length,unit:'weeks'},b:{label:'Logged less',val:`${f(b)}/wk`,n:not.length,unit:'weeks'},
+          text:Math.abs(a-b)<0.2?`Logging food doesn't seem to change your weekly weight trend.`
+            :a<b?`Weeks you log food, your weight tends to go <strong>${(b-a).toFixed(1)}kg/week lower</strong> than weeks you don't.`
+            :`Weeks you log food, your weight actually tends to run ${(a-b).toFixed(1)}kg/week higher.`});
+      }
+    }
+  }
+
+  // Strength vs bodyweight: last 4 weeks vs the 4 weeks starting 8 weeks before that.
+  {
+    const now=today(),r0=dk(addDays(now,-28)),e0=dk(addDays(now,-84)),e1=dk(addDays(now,-56));
+    const inR=d=>d>r0,inE=d=>d>e0&&d<=e1;
+    const wR=health.filter(h=>inR(h.date)).map(h=>+h.weight),wE=health.filter(h=>inE(h.date)).map(h=>+h.weight);
+    const best=(pred)=>{const m={};gym.filter(s=>pred(s.date)).forEach(s=>(s.exercises||[]).forEach(e=>{(e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0).forEach(st=>{const w=parseFloat(st.weight),r=parseFloat(st.reps||0);const est=r===1?w:w*(1+r/30);if(!m[e.name]||est>m[e.name])m[e.name]=est;});}));return m;};
+    const bR=best(inR),bE=best(inE);
+    const common=Object.keys(bR).filter(k=>bE[k]);
+    if(!wR.length||!wE.length||common.length<3)out.push({icon:'⚖️',title:'Strength vs bodyweight',pending:!wR.length||!wE.length?'needs weigh-ins in the last 4 weeks and 2-3 months ago':`${common.length} of 3 exercises trained in both periods`});
+    else{
+      const dw=avg(wR)-avg(wE),ds=median(common.map(k=>bR[k]/bE[k]-1));
+      const fw=`${dw>0?'+':dw<0?'−':''}${Math.abs(dw).toFixed(1)}kg`,fs=`${ds>=0?'+':'−'}${Math.abs(Math.round(ds*100))}%`;
+      out.push({icon:'⚖️',title:'Strength vs bodyweight',a:{label:'Bodyweight',val:fw},b:{label:`Strength (${common.length} lifts)`,val:fs},
+        text:dw<-0.5&&ds>=-0.02?`Weight <strong>down ${Math.abs(dw).toFixed(1)}kg</strong> and strength ${ds>=0.02?'up':'holding'} — that's fat coming off, not muscle.`
+          :dw<-0.5?`Weight down ${Math.abs(dw).toFixed(1)}kg but strength down ${Math.abs(Math.round(ds*100))}% — worth checking protein and recovery.`
+          :dw>0.5&&ds>0.02?`Weight up ${dw.toFixed(1)}kg with strength up ${Math.round(ds*100)}% — a decent lean-gain trade.`
+          :dw>0.5?`Weight up ${dw.toFixed(1)}kg without strength following yet.`
+          :`Weight steady, strength ${ds>0.02?`up ${Math.round(ds*100)}%`:ds<-0.02?`down ${Math.abs(Math.round(ds*100))}%`:'steady'}.`,
+        note:'Last 4 weeks vs the same stretch 2-3 months ago'});
+    }
+  }
+
+  // Wake time vs that morning's sleep score and HRV.
+  {
+    const toMin=t=>{const m=/^(\d{1,2}):(\d{2})$/.exec(t||'');return m?+m[1]*60+ +m[2]:null;};
+    const rows=Object.values(morning).map(v=>({w:toMin(v&&v.wake),sleep:v&&v.sleep,hrv:v&&v.hrv})).filter(r=>r.w!=null&&r.w>=240&&r.w<=780);
+    const cut=rows.length?median(rows.map(r=>r.w)):0;
+    const late=rows.filter(r=>r.w>=cut),early=rows.filter(r=>r.w<cut);
+    const fmt=m=>`${Math.floor(m/60)}:${String(Math.round(m%60)).padStart(2,'0')}`;
+    if(late.length<INSIGHT_MIN||early.length<INSIGHT_MIN)out.push({icon:'⏰',title:'Wake time → sleep & HRV',pending:need(late.length,early.length)});
+    else{
+      const sm=a=>{const v=a.filter(r=>r.sleep!=null).map(r=>+r.sleep);return v.length?avg(v):null;};
+      const hm=a=>{const v=a.filter(r=>r.hrv!=null).map(r=>+r.hrv);return v.length?avg(v):null;};
+      const sL=sm(late),sE=sm(early),hL=hm(late),hE=hm(early);
+      const ds=sL!=null&&sE!=null?Math.round(sL-sE):0,dh=hL!=null&&hE!=null?Math.round(hL-hE):0;
+      const bits=[];
+      if(Math.abs(ds)>=3)bits.push(`sleep score <strong>${ds>0?ds+' higher':-ds+' lower'}</strong>`);
+      if(Math.abs(dh)>=3)bits.push(`HRV <strong>${dh>0?dh+'ms higher':-dh+'ms lower'}</strong>`);
+      out.push({icon:'⏰',title:'Wake time → sleep & HRV',a:{label:`Up at ${fmt(cut)}+`,val:`${sL!=null?Math.round(sL):'–'} · ${hL!=null?Math.round(hL):'–'}ms`,n:late.length,unit:'mornings'},b:{label:`Before ${fmt(cut)}`,val:`${sE!=null?Math.round(sE):'–'} · ${hE!=null?Math.round(hE):'–'}ms`,n:early.length,unit:'mornings'},
+        text:bits.length?`Later mornings tend to come with ${bits.join(' and ')}.`:`Wake time doesn't seem to change your sleep score or HRV much.`,
+        note:'Values are sleep score · HRV'});
+    }
+  }
+  return out;
+}
+function renderWhatMovesCard(){
+  if(!loadGymData().length)return'';
+  const items=getWhatMovesInsights();
+  const ready=items.filter(i=>!i.pending),pending=items.filter(i=>i.pending);
+  const side=s=>`<div style="flex:1;min-width:0;padding:8px 10px;border-radius:10px;background:var(--surface2);">
+      <div style="font-size:11px;color:var(--text3);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.label}</div>
+      <div style="font-size:17px;font-weight:800;color:var(--text1);margin-top:2px;">${s.val}</div>
+      ${s.n!=null?`<div style="font-size:10px;color:var(--text3);margin-top:1px;">${s.n} ${s.unit||'sessions'}</div>`:''}
+    </div>`;
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">What Moves Your Numbers</span><span class="chart-card-val">${ready.length} of ${items.length}</span></div>
+    <div style="font-size:11px;color:var(--text3);margin:-4px 0 6px;line-height:1.5;">Lifting is shown as % of your best e1RM for each exercise. Patterns, not proof.</div>
+    ${ready.map((i,idx)=>`<div style="padding:12px 0;${idx<ready.length-1||pending.length?'border-bottom:1px solid var(--border);':''}">
+      <div style="font-size:13px;font-weight:800;color:var(--text1);margin-bottom:4px;">${i.icon} ${i.title}</div>
+      <div style="font-size:12.5px;color:var(--text2);line-height:1.5;margin-bottom:8px;">${i.text}</div>
+      <div style="display:flex;gap:8px;">${side(i.a)}${side(i.b)}</div>
+      ${i.note?`<div style="font-size:10px;color:var(--text3);margin-top:6px;">${i.note}</div>`:''}
+    </div>`).join('')}
+    ${pending.length?`<div style="padding-top:10px;">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:4px;">Still collecting</div>
+      ${pending.map(i=>`<div style="font-size:12px;color:var(--text3);padding:3px 0;">${i.icon} ${i.title} <span style="opacity:0.8;">· ${i.pending}</span></div>`).join('')}
+    </div>`:''}
   </div>`;
 }
 

@@ -3303,10 +3303,14 @@ function renderPRs(){
   Object.values(exMap).forEach(ex=>{
     const s=ex.sessions;
     if(ex.type==='weighted'){
+      // Both ranked by e1RM, not raw weight - two sessions at the same weight but
+      // different reps used to tie-break to whichever came first chronologically,
+      // so a genuinely better, more recent session (more reps at the same weight,
+      // a real e1RM improvement) could lose the "PB" headline to an older, worse one
+      // while still correctly getting tagged "PR" in the session list below it.
       let pb={weight:0,reps:0,date:''},e1rmPB={weight:0,reps:0,e1rm:0,date:''};
       s.forEach(x=>{
-        if(x.weight>pb.weight)pb={weight:x.weight,reps:x.reps,date:x.date};
-        if(x.e1rm>e1rmPB.e1rm)e1rmPB={weight:x.weight,reps:x.reps,e1rm:x.e1rm,date:x.date};
+        if(x.e1rm>e1rmPB.e1rm){e1rmPB={weight:x.weight,reps:x.reps,e1rm:x.e1rm,date:x.date};pb={weight:x.weight,reps:x.reps,date:x.date};}
       });
       ex.pb=pb;ex.e1rmPB=e1rmPB;
       ex.rank=e1rmPB.e1rm;
@@ -3417,10 +3421,11 @@ function renderPRs(){
       +r3.map((sess,i)=>sessionRow(sess,i===r3.length-1,i===r3.length-1)).join('');
 
     return`<div class="chart-card" style="margin-bottom:10px;padding:14px 16px;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
         <div style="font-size:14px;font-weight:800;color:var(--text1);">${esc(name)}</div>
         <span style="font-size:11px;font-weight:800;color:${statusColor};white-space:nowrap;padding-left:8px;">${statusLabel}</span>
       </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">PB <strong style="color:var(--text1);">${isBW?`${ex.pb.reps} reps`:`${ex.pb.weight}kg`}</strong>${isBW?'':` · ${ex.e1rmPB.e1rm}kg e1RM`} — ${fmtD(ex.pb.date)}</div>
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;">Last ${display.length} session${display.length!==1?'s':''}</div>
       ${sessionRows}
       ${suggestionHtml}
@@ -3478,9 +3483,10 @@ function renderPRs(){
 
   el.innerHTML=`
     <div style="padding:4px 0 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">${total} exercise${total!==1?'s':''} tracked</div>
-    ${overloadHtml}
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:14px 0 6px;border-top:1px solid var(--border);margin-top:4px;">Personal Records</div>
-    ${['Push','Pull','Legs','Core','Other'].map(g=>renderGroup(g,groups[g])).join('')}`;
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:4px 0 6px;">Personal Records</div>
+    ${['Push','Pull','Legs','Core','Other'].map(g=>renderGroup(g,groups[g])).join('')}
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:14px 0 6px;border-top:1px solid var(--border);margin-top:4px;">Progression Detail</div>
+    ${overloadHtml}`;
 }
 
 // ── TRENDS ──

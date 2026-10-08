@@ -3548,9 +3548,8 @@ function renderTrends(){
     ${renderActivityLoad()}
     ${renderWeeklyTrendChart()}
     ${renderDayOfWeekHeatmap()}
-    ${renderMuscleBalanceCard(gym,getGymActiveWeekCount(gym))}
     ${renderTimeOfDay()}
-    ${renderWhatMovesCard()}
+    ${renderWhatMovesCard('Body & recovery')}
   `;
 }
 
@@ -3977,7 +3976,7 @@ function renderTrendsRunAnalysis(){
     </div>`;
   })();
 
-  return summary+loadChart+paceChart+effortChart+longRunChart+hrChart+renderAerobicEfficiencyCard(runs)+renderRacePredictorCard(runs)+runLog;
+  return summary+loadChart+paceChart+effortChart+longRunChart+hrChart+renderAerobicEfficiencyCard(runs)+renderRacePredictorCard(runs)+renderWhatMovesCard('Running')+runLog;
 }
 
 // Weeks (of the last 12) that had at least one gym session, trimmed so leading
@@ -4222,7 +4221,7 @@ function renderTrendsGymAnalysis(){
   </div>`;
 
 
-  return summary+freqChart+volChart+muscleChart+effortChart+sessionLog;
+  return summary+freqChart+volChart+muscleChart+effortChart+renderWhatMovesCard('Lifting')+sessionLog;
 }
 // Gym's equivalent of the run Effort Balance donut - same segmented-circle layout,
 // colored on the same intensity ramp the run side already uses (green -> blue -> orange
@@ -5995,26 +5994,30 @@ function getWhatMovesInsights(){
   out.forEach(i=>{if(!i.group)i.group=/→ lifting/.test(i.title)?'Lifting':'Body & recovery';});
   return out;
 }
-function renderWhatMovesCard(){
-  if(!loadGymData().length)return'';
-  const items=getWhatMovesInsights();
+// One group per Trends tab: Lifting on Gym, Running on Run, Body & recovery on All.
+const WHAT_MOVES_TITLES={'Lifting':'What Moves Your Lifting','Running':'What Moves Your Running','Body & recovery':'Body & Recovery Patterns'};
+const WHAT_MOVES_NOTES={'Lifting':'Lifting is % of your best e1RM per exercise.','Running':'Running is pace vs your usual for that type of run (races left out).','Body & recovery':''};
+function renderWhatMovesCard(group){
+  if(!loadGymData().length&&!loadRunData().length)return'';
+  const items=getWhatMovesInsights().filter(i=>i.group===group);
+  if(!items.length)return'';
   const ready=items.filter(i=>!i.pending),pending=items.filter(i=>i.pending);
-  const groups=['Lifting','Running','Body & recovery'].map(g=>({g,list:ready.filter(i=>i.group===g)})).filter(x=>x.list.length);
+  const groups=[{g:group,list:ready}].filter(x=>x.list.length);
   const side=s=>`<div style="flex:1;min-width:0;padding:8px 10px;border-radius:10px;background:var(--surface2);">
       <div style="font-size:11px;color:var(--text3);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.label}</div>
       <div style="font-size:17px;font-weight:800;color:var(--text1);margin-top:2px;">${s.val}</div>
       ${s.n!=null?`<div style="font-size:10px;color:var(--text3);margin-top:1px;">${s.n} ${s.unit||'sessions'}</div>`:''}
     </div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">What Moves Your Numbers</span><span class="chart-card-val">${ready.length} of ${items.length}</span></div>
-    <div style="font-size:11px;color:var(--text3);margin:-4px 0 6px;line-height:1.5;">Lifting is % of your best e1RM per exercise. Running is pace vs your usual for that type of run. Patterns, not proof.</div>
-    ${groups.map(({g,list})=>`<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);padding:12px 0 0;">${g}</div>`+list.map((i,idx)=>`<div style="padding:10px 0 12px;${idx<list.length-1?'border-bottom:1px solid var(--border);':''}">
+    <div class="chart-card-header"><span class="chart-card-title">${WHAT_MOVES_TITLES[group]}</span><span class="chart-card-val">${ready.length} of ${items.length}</span></div>
+    <div style="font-size:11px;color:var(--text3);margin:-4px 0 6px;line-height:1.5;">${WHAT_MOVES_NOTES[group]} Patterns, not proof.</div>
+    ${groups.map(({list})=>list.map((i,idx)=>`<div style="padding:10px 0 12px;${idx<list.length-1?'border-bottom:1px solid var(--border);':''}">
       <div style="font-size:13px;font-weight:800;color:var(--text1);margin-bottom:4px;">${i.icon} ${i.title}</div>
       <div style="font-size:12.5px;color:var(--text2);line-height:1.5;margin-bottom:8px;">${i.text}</div>
       <div style="display:flex;gap:8px;">${side(i.a)}${side(i.b)}</div>
       ${i.note?`<div style="font-size:10px;color:var(--text3);margin-top:6px;">${i.note}</div>`:''}
     </div>`).join('')).join('')}
-    ${pending.length?`<div style="padding-top:10px;margin-top:4px;border-top:1px solid var(--border);">
+    ${pending.length?`<div style="padding-top:10px;margin-top:4px;${ready.length?'border-top:1px solid var(--border);':''}">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:4px;">Still collecting</div>
       ${pending.map(i=>`<div style="font-size:12px;color:var(--text3);padding:3px 0;">${i.icon} ${i.title} <span style="opacity:0.8;">· ${i.pending}</span></div>`).join('')}
     </div>`:''}

@@ -3977,7 +3977,7 @@ function renderTrendsRunAnalysis(){
     </div>`;
   })();
 
-  return summary+loadChart+paceChart+effortChart+longRunChart+hrChart+runLog;
+  return summary+loadChart+paceChart+effortChart+longRunChart+hrChart+renderAerobicEfficiencyCard(runs)+renderRacePredictorCard(runs)+runLog;
 }
 
 // Weeks (of the last 12) that had at least one gym session, trimmed so leading
@@ -4925,6 +4925,138 @@ function renderVapingChart(data){
   </div>`;
 }
 
+// ── AEROBIC EFFICIENCY ──
+// Pace for a given heart rate on Easy/Long runs: metres covered per heartbeat, shown as
+// the pace you'd hold at one fixed reference HR (your typical easy-run HR, rounded to 5)
+// so it reads as a pace rather than an abstract ratio. Faster at the same HR = fitter.
+function getAerobicEfficiency(runs){
+  const rows=runs.filter(r=>r.hr&&r.km&&r.time&&(r.effort==='Easy'||r.effort==='Long Run')&&parseTimeToSecs(r.time)>0)
+    .map(r=>({date:r.date,effort:r.effort,hr:r.hr,mpb:(r.km*1000)/(parseTimeToSecs(r.time)/60*r.hr)}))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  if(rows.length<6)return{rows,ready:false};
+  const hrs=rows.map(r=>r.hr).sort((a,b)=>a-b);
+  const refHR=Math.round(hrs[Math.floor(hrs.length/2)]/5)*5;
+  rows.forEach(r=>{r.paceSecs=60000/(r.mpb*refHR);});
+  const n=Math.min(5,Math.floor(rows.length/2));
+  const avgP=a=>a.reduce((x,r)=>x+r.paceSecs,0)/a.length;
+  return{rows,ready:true,refHR,early:avgP(rows.slice(0,n)),recent:avgP(rows.slice(-n)),n};
+}
+function renderAerobicEfficiencyCard(runs){
+  const ae=getAerobicEfficiency(runs);
+  const fmtS=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
+  if(!ae.ready)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Aerobic Efficiency</span></div><div class="empty-state" style="padding:16px 0 8px;">Log heart rate on ${6-ae.rows.length} more Easy or Long run${6-ae.rows.length===1?'':'s'} to see pace-for-heart-rate.</div></div>`;
+  const rows=ae.rows;
+  const W=320,H=160,PL=40,PR=10,PT=14,PB=24,chartW=W-PL-PR,chartH=H-PT-PB;
+  const vals=rows.map(r=>r.paceSecs);
+  const lo=Math.min(...vals)-10,hi=Math.max(...vals)+10,range=Math.max(hi-lo,1);
+  const px=i=>PL+(i/Math.max(rows.length-1,1))*chartW;
+  const py=v=>PT+((v-lo)/range)*chartH; // faster (lower secs) plots higher
+  let svg='';
+  const step=Math.max(15,Math.ceil(range/4/15)*15);
+  for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step){
+    const y=py(v);
+    svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
+    svg+=`<text x="${PL-5}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${fmtS(v)}</text>`;
+  }
+  svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+chartH}" stroke="var(--text3)" stroke-width="1.5"/><line x1="${PL}" y1="${PT+chartH}" x2="${W-PR}" y2="${PT+chartH}" stroke="var(--text3)" stroke-width="1.5"/>`;
+  // 5-run rolling average shows the trend through day-to-day noise (heat, hills, fatigue).
+  const roll=vals.map((_,i)=>{const w=vals.slice(Math.max(0,i-4),i+1);return w.reduce((a,b)=>a+b,0)/w.length;});
+  svg+=`<path d="M${roll.map((v,i)=>`${px(i).toFixed(1)},${py(v).toFixed(1)}`).join('L')}" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  rows.forEach((r,i)=>{
+    svg+=`<circle cx="${px(i).toFixed(1)}" cy="${py(r.paceSecs).toFixed(1)}" r="3.5" fill="${effortStyle(r.effort).text}" opacity="0.55"/>`;
+    const every=Math.ceil(rows.length/5);
+    if(i===0||i===rows.length-1||(rows.length>6&&i%every===0&&rows.length-1-i>=every/2)){
+      const d=new Date(r.date+'T12:00:00');
+      svg+=`<text x="${px(i).toFixed(1)}" y="${H-2}" text-anchor="middle" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
+    }
+  });
+  const delta=Math.round(ae.early-ae.recent); // +ve = faster now
+  const label=delta>=5?`↑ ${delta}s/km faster`:delta<=-5?`↓ ${-delta}s/km slower`:'→ Holding steady';
+  const color=delta>=5?'var(--green)':delta<=-5?'var(--red)':'var(--text3)';
+  return`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Aerobic Efficiency</span><span class="chart-card-val" style="color:${color};">${label}</span></div>
+    <div style="font-size:12px;color:var(--text2);margin:-2px 0 8px;line-height:1.5;">Your pace at <strong>${ae.refHR}bpm</strong>: <strong>${fmtS(ae.recent)}/km</strong> now (last ${ae.n} runs) vs ${fmtS(ae.early)}/km at the start (first ${ae.n}).</div>
+    <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
+    <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Easy').text};"></div>Easy</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Long Run').text};"></div>Long Run</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:12px;height:3px;border-radius:2px;background:var(--green);"></div>5-run average</div>
+    </div>
+    <div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.5;">
+      <strong>What this shows:</strong> how fast you run for each heartbeat, converted to the pace you'd hold at ${ae.refHR}bpm. Higher on the chart is faster for the same effort, which means fitter. Single runs bounce around with heat, hills and tiredness, so watch the green line.
+    </div>
+  </div>`;
+}
+
+// ── RACE PREDICTOR ──
+// Riegel's formula (T2 = T1 x (D2/D1)^1.06) from your best recent race - the race,
+// not a training run, since tempo runs aren't all-out and would under-predict. Ultras
+// are excluded as a source (the formula breaks down past the marathon). Falls back to
+// your best recent tempo run, flagged as conservative, when there's no recent race.
+const PREDICT_DISTS=[{label:'5K',km:5},{label:'10K',km:10},{label:'Half',km:21.0975},{label:'Marathon',km:42.195}];
+function getRacePrediction(runs){
+  const now=today();
+  const riegel=(secs,from,to)=>secs*Math.pow(to/from,1.06);
+  const pick=(list)=>list.reduce((b,r)=>{const h=riegel(parseTimeToSecs(r.time),r.km,21.0975);return!b||h<b.h?{r,h}:b;},null);
+  const ok=r=>r.km>=3&&r.km<=42.5&&r.time&&parseTimeToSecs(r.time)>0;
+  const races=runs.filter(r=>r.effort==='Race'&&ok(r)&&r.date>=dk(addDays(now,-112)));
+  let src=pick(races),fromTempo=false;
+  if(!src){
+    const tempos=runs.filter(r=>r.effort==='Tempo'&&r.km>=5&&ok(r)&&r.date>=dk(addDays(now,-56)));
+    src=pick(tempos);fromTempo=true;
+  }
+  if(!src)return null;
+  const base=src.r,bs=parseTimeToSecs(base.time);
+  return{source:base,fromTempo,preds:PREDICT_DISTS.map(d=>({...d,secs:Math.round(riegel(bs,base.km,d.km))}))};
+}
+function renderRacePredictorCard(runs){
+  const pred=getRacePrediction(runs);
+  const fmtD=ds=>{const d=new Date(ds+'T12:00:00');return`${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;};
+  if(!pred)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Race Predictor</span></div><div class="empty-state" style="padding:16px 0 8px;">Log a race (or a 5km+ tempo run) in the last few months to see predicted race times.</div></div>`;
+  const src=pred.source;
+  const r=state.race;
+  let goalHtml='';
+  if(r&&r.km&&r.goalTime&&parseTimeToSecs(r.goalTime)>0){
+    const goalSecs=parseTimeToSecs(r.goalTime);
+    // Snap to a standard distance (21.1 -> 21.0975) so this matches the tile above it.
+    const std=PREDICT_DISTS.find(d=>Math.abs(d.km-r.km)<0.2);
+    const predSecs=std?pred.preds.find(d=>d.km===std.km).secs:Math.round(parseTimeToSecs(src.time)*Math.pow(r.km/src.km,1.06));
+    const gap=predSecs-goalSecs;
+    const perKm=Math.round(gap/r.km);
+    const goalPaceS=goalSecs/r.km;
+    const tempos=runs.filter(x=>x.effort==='Tempo'&&x.km&&x.time).sort((a,b)=>a.date.localeCompare(b.date));
+    const tp=a=>a.reduce((x,t)=>x+parseTimeToSecs(t.time)/t.km,0)/a.length;
+    const fmtS=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
+    let tempoLine='';
+    if(tempos.length>=6){
+      const rec=tp(tempos.slice(-3)),prev=tp(tempos.slice(-6,-3));
+      const moved=Math.round(prev-rec);
+      tempoLine=`<div style="margin-top:6px;">Recent tempo runs average <strong>${fmtS(rec)}/km</strong> (goal pace ${fmtS(goalPaceS)}/km) — ${moved>=3?`${moved}s/km quicker than the 3 before, closing the gap`:moved<=-3?`${-moved}s/km slower than the 3 before`:'about the same as the 3 before'}.</div>`;
+    }
+    const past=daysUntil(r.date)<0;
+    const logged=past&&runs.some(x=>x.date===r.date);
+    goalHtml=`<div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.5;">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:4px;">${past?'Last goal':'Goal'} · ${esc(r.name||'Race')}</div>
+      Goal <strong>${esc(r.goalTime)}</strong> · predicted <strong>${fmtDurationFromSecs(predSecs)}</strong> —
+      ${gap<=0?`<span style="color:var(--green);font-weight:700;">on track, ${fmtDurationFromSecs(-gap)} to spare</span>`:`<strong>${fmtDurationFromSecs(gap)}</strong> to find (about ${perKm}s/km)`}.
+      ${tempoLine}
+      ${past&&!logged?`<div style="margin-top:6px;color:var(--orange);font-weight:700;">Race day was ${fmtD(r.date)} — log the result as a Race to update these predictions.</div>`:''}
+    </div>`;
+  }
+  return`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Race Predictor</span><span class="chart-card-val">from ${fmtKm(src.km)}km ${pred.fromTempo?'tempo':'race'} · ${fmtD(src.date)}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      ${pred.preds.map(d=>`<div style="padding:10px 12px;border-radius:10px;background:var(--surface2);">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);">${d.label}</div>
+        <div style="font-size:19px;font-weight:800;color:var(--text1);margin-top:2px;">${fmtDurationFromSecs(d.secs)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px;">${fmtPace(d.km/d.secs)}</div>
+      </div>`).join('')}
+    </div>
+    ${pred.fromTempo?`<div style="font-size:11px;color:var(--orange);margin-top:8px;">No race in the last 16 weeks, so this is based on a tempo run. Your real race times are probably faster.</div>`:''}
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;">Based on your fastest race in the last 16 weeks (ultras excluded). The marathon estimate assumes the endurance training to match.</div>
+    ${goalHtml}
+  </div>`;
+}
 function fmtDurationFromSecs(s){
   const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.round(s%60);
   return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
@@ -5776,6 +5908,69 @@ function getWhatMovesInsights(){
     }
   }
 
+  // ── Running: each run scored as seconds/km vs your median pace for that effort type
+  // (Easy vs Easy, Tempo vs Tempo...), so different kinds of run compare fairly. Races are
+  // left out - they're one-offs at wildly different distances.
+  {
+    const typed={};
+    runs.filter(r=>r.km&&r.time&&r.effort&&r.effort!=='Race'&&parseTimeToSecs(r.time)>0).forEach(r=>{(typed[r.effort]=typed[r.effort]||[]).push(r);});
+    const scored=[];
+    Object.values(typed).forEach(list=>{
+      if(list.length<3)return;
+      const med=median(list.map(r=>parseTimeToSecs(r.time)/r.km));
+      list.forEach(r=>scored.push({date:r.date,diff:parseTimeToSecs(r.time)/r.km-med}));
+    });
+    scored.sort((a,b)=>a.date.localeCompare(b.date));
+    const sk=v=>Math.round(v)===0?'Usual pace':`${Math.abs(Math.round(v))}s/km ${v<0?'faster':'slower'}`;
+    const side=(label,arr)=>({label,val:sk(avg(arr)),n:arr.length,unit:'runs'});
+    // diff is -ve when faster than usual, so "a better than b" = avg(a) < avg(b)
+    const compare=(icon,title,aLab,a,bLab,b,good,bad,flat)=>{
+      if(a.length<INSIGHT_MIN||b.length<INSIGHT_MIN)return{group:'Running',icon,title,pending:`${Math.min(a.length,b.length)} of ${INSIGHT_MIN} runs on the thinner side so far`};
+      const d=Math.round(avg(b)-avg(a));
+      return{group:'Running',icon,title,a:side(aLab,a),b:side(bLab,b),text:Math.abs(d)<4?flat:d>0?good(d):bad(-d)};
+    };
+    const runMorning=(key,icon,title,unit,word)=>{
+      const rows=scored.map(r=>({v:(morning[r.date]||{})[key],diff:r.diff})).filter(r=>r.v!=null&&r.v!=='');
+      const cut=rows.length?median(rows.map(r=>+r.v)):0;
+      return compare(icon,title,`${key==='sleep'?'Score':'HRV'} ${cut}${unit}+`,rows.filter(r=>+r.v>=cut).map(r=>r.diff),`Under ${cut}${unit}`,rows.filter(r=>+r.v<cut).map(r=>r.diff),
+        d=>`You tend to run <strong>${d}s/km faster</strong> after a higher ${word}.`,
+        d=>`Oddly, you tend to run ${d}s/km faster after a <em>lower</em> ${word} — probably noise, worth watching.`,
+        `Your ${word} doesn't seem to change your running pace much.`);
+    };
+    out.push(runMorning('sleep','😴','Sleep → running','','sleep score'));
+    out.push(runMorning('hrv','💓','HRV → running','ms','HRV'));
+    {
+      const gymDays=new Set(gym.map(s=>s.date));
+      const after=[],fresh=[];
+      scored.forEach(r=>(gymDays.has(dk(addDays(new Date(r.date+'T12:00:00'),-1)))?after:fresh).push(r.diff));
+      out.push(compare('🏋️','Gym → running','Gym the day before',after,'No gym',fresh,
+        d=>`You tend to run ${d}s/km faster the day after the gym.`,
+        d=>`You tend to run <strong>${d}s/km slower</strong> the day after the gym.`,
+        `The gym the day before doesn't seem to slow your running.`));
+    }
+    {
+      const allDates=[...new Set(runs.map(r=>r.date))].sort();
+      const buckets={0:[],1:[],2:[],3:[]};
+      scored.forEach(r=>{
+        const prev=allDates.filter(d=>d<r.date).pop();
+        if(!prev)return;
+        const gap=Math.round((new Date(r.date+'T12:00:00')-new Date(prev+'T12:00:00'))/864e5)-1;
+        buckets[Math.min(gap,3)].push(r.diff);
+      });
+      const name=k=>k==3?'3+ rest days':k==0?'Back-to-back':`${k} rest day${k==1?'':'s'}`;
+      const ready=Object.keys(buckets).filter(k=>buckets[k].length>=INSIGHT_MIN);
+      if(!ready.length)out.push({group:'Running',icon:'🛌',title:'Rest days → running',pending:`no rest-day pattern has ${INSIGHT_MIN} runs yet`});
+      else{
+        const best=ready.reduce((x,y)=>avg(buckets[y])<avg(buckets[x])?y:x);
+        const others=Object.keys(buckets).filter(k=>k!==best).flatMap(k=>buckets[k]);
+        out.push(compare('🛌','Rest days → running',name(best),buckets[best],'Any other gap',others,
+          d=>`You tend to run best after <strong>${name(best).toLowerCase()}</strong>, ${d}s/km faster than other gaps.`,
+          ()=>`How long you rest between runs doesn't seem to matter much.`,
+          `How long you rest between runs doesn't seem to matter much.`));
+      }
+    }
+  }
+
   // Wake time vs that morning's sleep score and HRV.
   {
     const toMin=t=>{const m=/^(\d{1,2}):(\d{2})$/.exec(t||'');return m?+m[1]*60+ +m[2]:null;};
@@ -5797,12 +5992,14 @@ function getWhatMovesInsights(){
         note:'Values are sleep score · HRV'});
     }
   }
+  out.forEach(i=>{if(!i.group)i.group=/→ lifting/.test(i.title)?'Lifting':'Body & recovery';});
   return out;
 }
 function renderWhatMovesCard(){
   if(!loadGymData().length)return'';
   const items=getWhatMovesInsights();
   const ready=items.filter(i=>!i.pending),pending=items.filter(i=>i.pending);
+  const groups=['Lifting','Running','Body & recovery'].map(g=>({g,list:ready.filter(i=>i.group===g)})).filter(x=>x.list.length);
   const side=s=>`<div style="flex:1;min-width:0;padding:8px 10px;border-radius:10px;background:var(--surface2);">
       <div style="font-size:11px;color:var(--text3);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.label}</div>
       <div style="font-size:17px;font-weight:800;color:var(--text1);margin-top:2px;">${s.val}</div>
@@ -5810,14 +6007,14 @@ function renderWhatMovesCard(){
     </div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">What Moves Your Numbers</span><span class="chart-card-val">${ready.length} of ${items.length}</span></div>
-    <div style="font-size:11px;color:var(--text3);margin:-4px 0 6px;line-height:1.5;">Lifting is shown as % of your best e1RM for each exercise. Patterns, not proof.</div>
-    ${ready.map((i,idx)=>`<div style="padding:12px 0;${idx<ready.length-1||pending.length?'border-bottom:1px solid var(--border);':''}">
+    <div style="font-size:11px;color:var(--text3);margin:-4px 0 6px;line-height:1.5;">Lifting is % of your best e1RM per exercise. Running is pace vs your usual for that type of run. Patterns, not proof.</div>
+    ${groups.map(({g,list})=>`<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);padding:12px 0 0;">${g}</div>`+list.map((i,idx)=>`<div style="padding:10px 0 12px;${idx<list.length-1?'border-bottom:1px solid var(--border);':''}">
       <div style="font-size:13px;font-weight:800;color:var(--text1);margin-bottom:4px;">${i.icon} ${i.title}</div>
       <div style="font-size:12.5px;color:var(--text2);line-height:1.5;margin-bottom:8px;">${i.text}</div>
       <div style="display:flex;gap:8px;">${side(i.a)}${side(i.b)}</div>
       ${i.note?`<div style="font-size:10px;color:var(--text3);margin-top:6px;">${i.note}</div>`:''}
-    </div>`).join('')}
-    ${pending.length?`<div style="padding-top:10px;">
+    </div>`).join('')).join('')}
+    ${pending.length?`<div style="padding-top:10px;margin-top:4px;border-top:1px solid var(--border);">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:4px;">Still collecting</div>
       ${pending.map(i=>`<div style="font-size:12px;color:var(--text3);padding:3px 0;">${i.icon} ${i.title} <span style="opacity:0.8;">· ${i.pending}</span></div>`).join('')}
     </div>`:''}

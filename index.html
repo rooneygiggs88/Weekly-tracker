@@ -2729,20 +2729,26 @@ function detectSessionPRs(exercises){
     const everWeighted=gym.some(s=>(s.exercises||[]).some(e=>e.name===ex.name&&(e.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0)))
       ||(ex.sets||[]).some(x=>!x.warmup&&parseFloat(x.weight||0)>0);
     if(everWeighted){
-      let priorBest=0;
+      // Two records: heaviest weight (more reps wins a tie) and best e1RM.
+      let priorBest=0,priorHeavyW=0,priorHeavyR=0;
       gym.forEach(s=>(s.exercises||[]).forEach(e=>{
         if(e.name!==ex.name)return;
         (e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0).forEach(st=>{
           const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);
           const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
           if(est>priorBest)priorBest=est;
+          if(w>priorHeavyW||(w===priorHeavyW&&r>priorHeavyR)){priorHeavyW=w;priorHeavyR=r;}
         });
       }));
       const newSets=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
       if(!newSets.length)return;
-      let newBest=0,newW=0,newR=0;
-      newSets.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>newBest){newBest=est;newW=w;newR=r;}});
-      if(priorBest>0&&newBest>priorBest)prs.push({name:ex.name,detail:`${newW}kg × ${newR}`});
+      let newBest=0,newW=0,newR=0,heavyW=0,heavyR=0;
+      newSets.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>newBest){newBest=est;newW=w;newR=r;}if(w>heavyW||(w===heavyW&&r>heavyR)){heavyW=w;heavyR=r;}});
+      const heavyPR=priorHeavyW>0&&(heavyW>priorHeavyW||(heavyW===priorHeavyW&&heavyR>priorHeavyR));
+      const e1rmPR=priorBest>0&&newBest>priorBest;
+      if(heavyPR&&e1rmPR&&(heavyW!==newW||heavyR!==newR))prs.push({name:ex.name,detail:`${heavyW}kg × ${heavyR} · e1RM ${newBest}kg`});
+      else if(heavyPR)prs.push({name:ex.name,detail:`${heavyW}kg × ${heavyR}`});
+      else if(e1rmPR)prs.push({name:ex.name,detail:`${newW}kg × ${newR} (e1RM ${newBest}kg)`});
       else if(priorBest>0&&newBest<priorBest&&newBest>=priorBest*0.95)nearMisses.push({name:ex.name,gapText:`${+(priorBest-newBest).toFixed(1)}kg e1RM`});
     } else {
       let priorBest=0;
@@ -3279,13 +3285,14 @@ function renderPRs(){
         const workingSets=nonWarmup.filter(s=>parseFloat(s.weight||0)>0);
         if(!workingSets.length)return;
         if(!exMap[ex.name])exMap[ex.name]={type:'weighted',sessions:[]};
-        let bestE1rm=0,bestW=0,bestR=0;
+        let bestE1rm=0,bestW=0,bestR=0,heavyW=0,heavyR=0;
         workingSets.forEach(s=>{
           const w=parseFloat(s.weight);const r=parseFloat(s.reps||0);
           const est=Math.round((r===1?w:w*(1+r/30))*10)/10;
           if(est>bestE1rm){bestE1rm=est;bestW=w;bestR=r;}
+          if(w>heavyW||(w===heavyW&&r>heavyR)){heavyW=w;heavyR=r;}
         });
-        exMap[ex.name].sessions.push({date:session.date,weight:bestW,reps:bestR,e1rm:bestE1rm});
+        exMap[ex.name].sessions.push({date:session.date,weight:bestW,reps:bestR,e1rm:bestE1rm,heavyW,heavyR});
       } else {
         const workingSets=nonWarmup.filter(s=>parseFloat(s.reps||0)>0);
         if(!workingSets.length)return;
@@ -3303,17 +3310,17 @@ function renderPRs(){
   Object.values(exMap).forEach(ex=>{
     const s=ex.sessions;
     if(ex.type==='weighted'){
-      // Both ranked by e1RM, not raw weight - two sessions at the same weight but
-      // different reps used to tie-break to whichever came first chronologically,
-      // so a genuinely better, more recent session (more reps at the same weight,
-      // a real e1RM improvement) could lose the "PB" headline to an older, worse one
-      // while still correctly getting tagged "PR" in the session list below it.
+      // Headline PB is the heaviest working weight ever lifted (more reps at that
+      // weight wins a tie, and the latest session wins a full tie). Best e1RM is
+      // tracked separately as a secondary record - it rewards rep progress at
+      // lighter weights, which "heaviest" alone can't see. Trends stay on e1RM.
       let pb={weight:0,reps:0,date:''},e1rmPB={weight:0,reps:0,e1rm:0,date:''};
       s.forEach(x=>{
-        if(x.e1rm>e1rmPB.e1rm){e1rmPB={weight:x.weight,reps:x.reps,e1rm:x.e1rm,date:x.date};pb={weight:x.weight,reps:x.reps,date:x.date};}
+        if(x.heavyW>pb.weight||(x.heavyW===pb.weight&&x.heavyR>=pb.reps))pb={weight:x.heavyW,reps:x.heavyR,date:x.date};
+        if(x.e1rm>=e1rmPB.e1rm)e1rmPB={weight:x.weight,reps:x.reps,e1rm:x.e1rm,date:x.date};
       });
       ex.pb=pb;ex.e1rmPB=e1rmPB;
-      ex.rank=e1rmPB.e1rm;
+      ex.rank=pb.weight;
       // Trend: median e1rm last 3 sessions vs prior 3
       const r3=s.slice(-3);const p3=s.slice(-6,-3);
       if(r3.length>=2&&p3.length>=1){
@@ -3408,7 +3415,7 @@ function renderPRs(){
 
     const groupLabel=(label,med)=>med==null?'':`<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);padding:8px 0 3px;">${label} · median ${fmtAvg(med)}</div>`;
     const sessionRow=(sess,isLatest,isLast)=>{
-      const isPR=isBW?sess.reps>=ex.pb.reps:sess.e1rm>=ex.e1rmPB.e1rm;
+      const isPR=isBW?sess.reps>=ex.pb.reps:(sess.e1rm>=ex.e1rmPB.e1rm||(sess.heavyW===ex.pb.weight&&sess.heavyR===ex.pb.reps));
       return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${isLast?'':'border-bottom:1px solid var(--border);'}">
         <div style="font-size:11px;color:var(--text3);width:52px;flex-shrink:0;">${fmtD(sess.date)}</div>
         <div style="flex:1;font-size:13px;font-weight:${isLatest?'700':'500'};color:${isLatest?'var(--text1)':'var(--text2)'};">${isBW?`${sess.reps} reps`:`${sess.weight}kg × ${sess.reps}`}</div>
@@ -3425,7 +3432,7 @@ function renderPRs(){
         <div style="font-size:14px;font-weight:800;color:var(--text1);">${esc(name)}</div>
         <span style="font-size:11px;font-weight:800;color:${statusColor};white-space:nowrap;padding-left:8px;">${statusLabel}</span>
       </div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">PB <strong style="color:var(--text1);">${isBW?`${ex.pb.reps} reps`:`${ex.pb.weight}kg`}</strong>${isBW?'':` · ${ex.e1rmPB.e1rm}kg e1RM`} — ${fmtD(ex.pb.date)}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">PB <strong style="color:var(--text1);">${isBW?`${ex.pb.reps} reps`:`${ex.pb.weight}kg × ${ex.pb.reps}`}</strong> — ${fmtD(ex.pb.date)}${isBW?'':` · Best e1RM ${ex.e1rmPB.e1rm}kg (${ex.e1rmPB.weight} × ${ex.e1rmPB.reps})`}</div>
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;">Last ${display.length} session${display.length!==1?'s':''}</div>
       ${sessionRows}
       ${suggestionHtml}
@@ -3456,7 +3463,7 @@ function renderPRs(){
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
-                <div style="font-size:11px;color:var(--text3);margin-top:2px;">${isBW?'Bodyweight':`e1RM ${ex.e1rmPB.e1rm}kg${latestBW?` · ${(ex.pb.weight/latestBW).toFixed(2)}x bodyweight`:''}`}</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px;">${isBW?'Bodyweight':`Best e1RM ${ex.e1rmPB.e1rm}kg (${ex.e1rmPB.weight} × ${ex.e1rmPB.reps})${latestBW?` · ${(ex.pb.weight/latestBW).toFixed(2)}x bodyweight`:''}`}</div>
               </div>
               <div style="text-align:right;flex-shrink:0;">
                 <div style="display:flex;align-items:baseline;justify-content:flex-end;">
@@ -5919,11 +5926,15 @@ function getWeeklyWin(){
       if(exHasWeight[ex.name]){
         const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight||0)>0);
         if(!ws.length)return;
-        let bestE1rm=0,bestW=0,bestR=0;
-        ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm){bestE1rm=est;bestW=w;bestR=r;}});
-        const prior=bestWeighted[ex.name]||0;
-        if(inWeek&&prior>0&&bestE1rm>prior)wins.push({type:'gym',name:ex.name,detail:`${bestW}kg × ${bestR}`,date:s.date});
-        if(bestE1rm>prior)bestWeighted[ex.name]=bestE1rm;
+        // Heaviest-weight PR (more reps wins a tie) is the headline; an e1RM-only PR
+        // still counts as a win.
+        let bestE1rm=0,bestW=0,bestR=0,heavyW=0,heavyR=0;
+        ws.forEach(st=>{const w=parseFloat(st.weight);const r=parseFloat(st.reps||0);const est=Math.round((r===1?w:w*(1+r/30))*10)/10;if(est>bestE1rm){bestE1rm=est;bestW=w;bestR=r;}if(w>heavyW||(w===heavyW&&r>heavyR)){heavyW=w;heavyR=r;}});
+        const prior=bestWeighted[ex.name]||{e1rm:0,w:0,r:0};
+        const heavyPR=prior.w>0&&(heavyW>prior.w||(heavyW===prior.w&&heavyR>prior.r));
+        const e1rmPR=prior.e1rm>0&&bestE1rm>prior.e1rm;
+        if(inWeek&&(heavyPR||e1rmPR))wins.push({type:'gym',name:ex.name,detail:heavyPR?`${heavyW}kg × ${heavyR}`:`${bestW}kg × ${bestR}`,date:s.date});
+        bestWeighted[ex.name]={e1rm:Math.max(prior.e1rm,bestE1rm),...(heavyW>prior.w||(heavyW===prior.w&&heavyR>prior.r)?{w:heavyW,r:heavyR}:{w:prior.w,r:prior.r})};
       } else {
         const ws=(ex.sets||[]).filter(x=>!x.warmup&&parseFloat(x.reps||0)>0);
         if(!ws.length)return;

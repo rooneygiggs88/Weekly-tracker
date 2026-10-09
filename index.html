@@ -5863,7 +5863,7 @@ function getYearGoalProgress(){
   const done=g.targetKm-remaining;
   const start=new Date(year,0,1),end=new Date(year+1,0,1);
   const daysInYear=Math.round((end-start)/864e5);
-  const dayOfYear=Math.min(daysInYear,Math.max(0,Math.floor((new Date(now.getFullYear(),now.getMonth(),now.getDate())-start)/864e5)+1));
+  const dayOfYear=Math.min(daysInYear,Math.max(0,Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate())-start)/864e5)+1)); // round, not floor: DST makes the gap a day +/- 1h
   const daysLeft=Math.max(0,daysInYear-dayOfYear+1); // including today
   const onPaceKm=g.targetKm*dayOfYear/daysInYear;
   const perWeekNeeded=daysLeft>0?remaining/(daysLeft/7):null;
@@ -5977,6 +5977,7 @@ function getYearGoalWeek(){
   const extra=[];
   weekRuns.forEach(r=>{const sl=slots.find(x=>!x.run&&x.type===slotType(r.effort));if(sl)sl.run=r;else extra.push(r);});
   extra.forEach(r=>{const sl=slots.find(x=>!x.run);if(sl)sl.run=r;});
+  slots.forEach(x=>{if(x.run)x.runType=slotType(x.run.effort);});
   // Re-split what's left of the week over the open slots.
   const open=slots.filter(x=>!x.run);
   const leftKm=Math.max(0,target-weekKm);
@@ -5991,7 +5992,7 @@ function renderYearGoalWeek(){
   const done=w.leftKm<=0;
   const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy'};
   const segs=w.slots.map(x=>x.run
-    ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.type]} ✓</div><div class="yg-seg-km">${f1(parseFloat(x.run.km)||0)}</div></div>`
+    ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${f1(parseFloat(x.run.km)||0)}</div></div>`
     :`<div class="yg-seg"><div class="yg-seg-type">${lbl[x.type]}</div><div class="yg-seg-km">${done?'–':Math.round(x.left)}</div></div>`).join('');
   let left='';
   if(done)left=`<strong style="color:var(--green);">Week done ✓</strong>${w.weekKm-w.target>=1?` ${f1(w.weekKm-w.target)}km over, which lowers every week's target from here.`:''}`;

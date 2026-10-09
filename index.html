@@ -133,6 +133,20 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .year-goal-stat-val{font-size:18px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
 .year-goal-stat-lbl{font-size:10px;font-weight:700;color:var(--text3);margin-top:1px;}
 .year-goal-proj{font-size:12px;color:var(--text2);margin-top:10px;line-height:1.5;}
+.yg-week{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
+.yg-week-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.yg-week-head span:first-child{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
+.yg-week-head span:last-child{font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums;}
+.yg-week-head strong{color:var(--text);font-weight:800;}
+.yg-week-bar{height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-bottom:8px;}
+.yg-week-bar>div{height:100%;background:var(--green);border-radius:4px;transition:width 0.6s;}
+.yg-segs{display:grid;gap:6px;}
+.yg-seg{border:1px dashed var(--border);border-radius:9px;padding:6px 4px;text-align:center;}
+.yg-seg.done{border:1px solid rgba(5,150,105,0.35);background:rgba(5,150,105,0.1);}
+.yg-seg-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);white-space:nowrap;}
+.yg-seg.done .yg-seg-type{color:var(--green);}
+.yg-seg-km{font-size:15px;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums;}
+.yg-week-left{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5;}
 .week-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;}
 .week-card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
 .week-card-head span:first-child{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
@@ -629,6 +643,12 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <input class="modal-input" id="year-goal-target" type="number" inputmode="decimal" step="1" placeholder="e.g. 1610" oninput="updateYearGoalPreview()">
     <label class="modal-label">Km remaining right now</label>
     <input class="modal-input" id="year-goal-remaining" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 651" oninput="updateYearGoalPreview()">
+    <label class="modal-label">Runs per week</label>
+    <div class="type-row" id="year-goal-runs-row">
+      <button class="type-btn" data-runs="4" onclick="setYearGoalRuns(4)">4</button>
+      <button class="type-btn" data-runs="5" onclick="setYearGoalRuns(5)">5</button>
+      <button class="type-btn" data-runs="6" onclick="setYearGoalRuns(6)">6</button>
+    </div>
     <div id="year-goal-preview" style="font-size:12px;color:var(--text2);margin:-8px 0 14px;min-height:16px;line-height:1.5;"></div>
     <button class="btn-primary" onclick="saveYearGoal()" style="margin-bottom:10px;">Save Goal</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('year-goal-modal')">Cancel</button>
@@ -1449,7 +1469,8 @@ function renderToday(){
     const mon=getMonday(now);
     const weekKm=loadRunData().filter(r=>{const d=new Date(r.date+'T12:00:00');return d>=mon&&d<=now;}).reduce((s,r)=>s+(r.km||0),0);
     const runPct=runTarget>0?Math.min(100,Math.round(weekKm/runTarget*100)):0;
-    const runRowHtml=runTarget>0?`<div class="week-card-row">
+    const yearGoalActive=!!(state.yearRunGoal&&state.yearRunGoal.year===now.getFullYear());
+    const runRowHtml=runTarget>0&&!yearGoalActive?`<div class="week-card-row">
       <div class="week-card-row-head"><span class="week-card-row-label">Running</span><span class="week-card-row-val">${weekKm.toFixed(1)} / ${runTarget} km</span></div>
       <div class="week-bar-track"><div class="week-bar-fill" style="width:${runPct}%;"></div></div>
     </div>`:'';
@@ -5830,7 +5851,7 @@ function getGoalRunKm(g){
 // One-time seed for 2026: 1,610km target, 651km remaining, counting down from first load.
 function ensureYearRunGoal(){
   if(state.yearRunGoal||today().getFullYear()!==2026)return;
-  state.yearRunGoal={year:2026,targetKm:1610,startRemaining:651,startedAt:Date.now()};
+  state.yearRunGoal={year:2026,targetKm:1610,startRemaining:651,startedAt:Date.now(),runsPerWeek:5};
   saveState();
 }
 function getYearGoalProgress(){
@@ -5892,12 +5913,98 @@ function renderYearGoalCard(){
       ${complete?'':`<div class="year-goal-marker" style="left:${markerPct.toFixed(1)}%;" title="Where you'd be on an even pace"></div>`}
     </div>
     <div class="year-goal-sub">${fmt1(p.done)} of ${fmt(p.g.targetKm)} km · ${Math.round(p.pct)}%${complete?'':` · <span style="color:${ahead?'var(--green)':'var(--orange)'};font-weight:800;">${fmt(Math.abs(p.vsPace))}km ${ahead?'ahead of':'behind'} even pace</span>`}</div>
+    ${complete?'':renderYearGoalWeek()}
     ${complete?'':`<div class="year-goal-stats">
       <div><div class="year-goal-stat-val">${p.daysLeft}</div><div class="year-goal-stat-lbl">days left</div></div>
       <div><div class="year-goal-stat-val">${p.perWeekNeeded!=null?p.perWeekNeeded.toFixed(1):'–'}</div><div class="year-goal-stat-lbl">km/week needed</div></div>
       <div><div class="year-goal-stat-val">${p.daysLeft?(p.remaining/p.daysLeft).toFixed(1):'–'}</div><div class="year-goal-stat-lbl">km/day needed</div></div>
     </div>`}
     ${projLine?`<div class="year-goal-proj">${projLine}</div>`:''}
+  </div>`;
+}
+let _yearGoalRuns=5;
+function setYearGoalRuns(n){
+  _yearGoalRuns=n;
+  document.querySelectorAll('#year-goal-runs-row .type-btn').forEach(b=>b.classList.toggle('active',+b.dataset.runs===n));
+}
+// Weekly split by run count, as shares of the week's km (e.g. 5 runs at 54km =
+// 16 long / 10 tempo / 10 + 9 + 9 easy). Long run stays around 30% of the week.
+const YEAR_GOAL_SPLITS={
+  4:[{type:'Long',w:18},{type:'Tempo',w:12},{type:'Easy',w:14},{type:'Easy',w:10}],
+  5:[{type:'Long',w:16},{type:'Tempo',w:10},{type:'Easy',w:10},{type:'Easy',w:9},{type:'Easy',w:9}],
+  6:[{type:'Long',w:15},{type:'Tempo',w:9},{type:'Easy',w:8},{type:'Easy',w:8},{type:'Easy',w:7},{type:'Easy',w:7}]
+};
+// Which slots to keep in a short week (goal started mid-week, or the last few days of
+// December): long run first, then an easy run, then tempo.
+const YEAR_GOAL_SLOT_PRIORITY=['Long','Easy','Tempo','Easy','Easy','Easy'];
+// This week's share of what's left, fixed for the week: km remaining at the start of the
+// week x (days this week / days left in the year). A short week gets a pro-rata target,
+// and a missed week spreads over the weeks that remain.
+function getYearGoalWeek(){
+  const g=state.yearRunGoal;
+  if(!g)return null;
+  const now=today();
+  if(now.getFullYear()!==g.year)return null;
+  const mon=getMonday(now);
+  const goalStart=new Date(g.startedAt);goalStart.setHours(0,0,0,0);
+  const weekStart=goalStart>mon?goalStart:mon;
+  const yearEnd=new Date(g.year,11,31);
+  const sun=addDays(mon,6);
+  const weekEnd=sun<yearEnd?sun:yearEnd;
+  const days=(a,b)=>Math.round((b-a)/864e5)+1;
+  const daysThisWeek=days(weekStart,weekEnd),daysLeft=days(weekStart,yearEnd);
+  const monStr=dk(mon),sunStr=dk(sun);
+  const weekRuns=loadRunData().filter(r=>r.loggedAt&&r.loggedAt>=g.startedAt&&r.date>=monStr&&r.date<=sunStr)
+    .sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
+  const weekKm=weekRuns.reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  const remainingAtStart=Math.max(0,g.startRemaining-getGoalRunKm(g))+weekKm;
+  const target=remainingAtStart*daysThisWeek/daysLeft;
+  // Slots for this week, scaled to the target.
+  const runs=g.runsPerWeek||5;
+  const full=YEAR_GOAL_SPLITS[runs]||YEAR_GOAL_SPLITS[5];
+  const n=Math.max(1,Math.min(full.length,Math.round(full.length*daysThisWeek/7)));
+  let slots=full.map(x=>({...x}));
+  if(n<full.length){
+    const keep=[];const pool=[...slots];
+    YEAR_GOAL_SLOT_PRIORITY.forEach(t=>{if(keep.length<n){const i=pool.findIndex(x=>x.type===t);if(i>=0)keep.push(pool.splice(i,1)[0]);}});
+    slots=slots.filter(x=>keep.includes(x));
+  }
+  const wSum=slots.reduce((a,x)=>a+x.w,0);
+  slots.forEach(x=>{x.km=target*x.w/wSum;x.run=null;});
+  // Match logged runs to slots by type (Long Run -> long, Tempo/Intervals/etc -> tempo,
+  // Easy -> easy), then anything left over fills the next open slot.
+  const slotType=e=>e==='Long Run'?'Long':e==='Easy'?'Easy':(e?'Tempo':'Easy');
+  const extra=[];
+  weekRuns.forEach(r=>{const sl=slots.find(x=>!x.run&&x.type===slotType(r.effort));if(sl)sl.run=r;else extra.push(r);});
+  extra.forEach(r=>{const sl=slots.find(x=>!x.run);if(sl)sl.run=r;});
+  // Re-split what's left of the week over the open slots.
+  const open=slots.filter(x=>!x.run);
+  const leftKm=Math.max(0,target-weekKm);
+  const oSum=open.reduce((a,x)=>a+x.w,0);
+  open.forEach(x=>{x.left=oSum?leftKm*x.w/oSum:0;});
+  return{target,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
+}
+function renderYearGoalWeek(){
+  const w=getYearGoalWeek();
+  if(!w||w.target<=0)return'';
+  const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
+  const done=w.leftKm<=0;
+  const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy'};
+  const segs=w.slots.map(x=>x.run
+    ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.type]} ✓</div><div class="yg-seg-km">${f1(parseFloat(x.run.km)||0)}</div></div>`
+    :`<div class="yg-seg"><div class="yg-seg-type">${lbl[x.type]}</div><div class="yg-seg-km">${done?'–':Math.round(x.left)}</div></div>`).join('');
+  let left='';
+  if(done)left=`<strong style="color:var(--green);">Week done ✓</strong>${w.weekKm-w.target>=1?` ${f1(w.weekKm-w.target)}km over, which comes off next week's target.`:''}`;
+  else{
+    const groups={};w.open.forEach(x=>{(groups[x.type]=groups[x.type]||[]).push(Math.round(x.left));});
+    const parts=['Long','Tempo','Easy'].filter(t=>groups[t]).map(t=>{const a=groups[t];const same=a.every(v=>v===a[0]);return a.length>1&&same?`${a.length} × ${a[0]} ${t.toLowerCase()}`:a.map(v=>`${v} ${t.toLowerCase()}`).join(', ');});
+    left=w.open.length?`${w.open.length} run${w.open.length===1?'':'s'} left: <strong>${parts.join(', ')}</strong>`:`<strong>${f1(w.leftKm)}km</strong> still to go this week. One more run should do it.`;
+  }
+  return`<div class="yg-week">
+    <div class="yg-week-head"><span>This week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span><span><strong>${f1(w.weekKm)}</strong> / ${f1(w.target)} km</span></div>
+    <div class="yg-week-bar"><div style="width:${Math.min(100,w.weekKm/w.target*100).toFixed(1)}%;"></div></div>
+    <div class="yg-segs" style="grid-template-columns:repeat(${w.slots.length},1fr);">${segs}</div>
+    <div class="yg-week-left">${left}</div>
   </div>`;
 }
 function openYearGoalModal(){
@@ -5908,6 +6015,7 @@ function openYearGoalModal(){
   document.getElementById('year-goal-modal-title').textContent=`${nowYear} Running Goal`;
   document.getElementById('year-goal-target').value=g?g.targetKm:'';
   document.getElementById('year-goal-remaining').value=same&&p?Math.round(p.remaining*10)/10:(g?g.targetKm:'');
+  setYearGoalRuns((g&&g.runsPerWeek)||5);
   updateYearGoalPreview();
   openModal('year-goal-modal');
 }
@@ -5924,7 +6032,10 @@ function saveYearGoal(){
   if(!(target>0)){toastMsg('Enter a target in km');return;}
   if(!(rem>=0)||rem>target){toastMsg('Remaining must be between 0 and the target');return;}
   const year=today().getFullYear();
-  state.yearRunGoal={year,targetKm:target,startRemaining:rem,startedAt:Date.now()};
+  const prev=state.yearRunGoal;
+  // Only restart the countdown if the numbers changed - changing just runs/week keeps it.
+  if(prev&&prev.year===year&&prev.targetKm===target&&Math.abs(getYearGoalProgress().remaining-rem)<0.05)prev.runsPerWeek=_yearGoalRuns;
+  else state.yearRunGoal={year,targetKm:target,startRemaining:rem,startedAt:Date.now(),runsPerWeek:_yearGoalRuns};
   saveState();closeModal('year-goal-modal');toastMsg('Goal saved');haptic('success');renderToday();
 }
 

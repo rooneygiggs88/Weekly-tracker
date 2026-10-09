@@ -119,6 +119,20 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 
 /* THIS WEEK CARD - gym as a segmented bar (one segment per scheduled session),
    running as a continuous km bar, race countdown as a footer row. */
+.year-goal-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin:4px 0 12px;box-shadow:0 1px 0 rgba(21,18,31,0.02);}
+.year-goal-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.year-goal-head span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
+.year-goal-big{font-size:44px;font-weight:800;letter-spacing:-2px;line-height:1.05;color:var(--text);font-variant-numeric:tabular-nums;}
+.year-goal-big span{font-size:16px;font-weight:700;letter-spacing:0;color:var(--text2);}
+.year-goal-track{position:relative;height:10px;border-radius:6px;background:var(--surface2);margin:12px 0 8px;}
+.year-goal-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width 0.6s;}
+.year-goal-marker{position:absolute;top:-4px;width:2px;height:18px;border-radius:1px;background:var(--text);opacity:0.55;transform:translateX(-1px);}
+.year-goal-sub{font-size:12px;color:var(--text2);line-height:1.5;}
+.year-goal-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+.year-goal-stats>div{background:var(--surface2);border-radius:10px;padding:8px 10px;}
+.year-goal-stat-val{font-size:18px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+.year-goal-stat-lbl{font-size:10px;font-weight:700;color:var(--text3);margin-top:1px;}
+.year-goal-proj{font-size:12px;color:var(--text2);margin-top:10px;line-height:1.5;}
 .week-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;}
 .week-card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
 .week-card-head span:first-child{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
@@ -396,6 +410,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
         <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(this.files[0])">
       </div>
     </div>
+    <div id="year-goal-wrap"></div>
     <div class="today-greet" id="today-habits"></div>
     <div id="checkin-slot"></div>
     <div class="today-hero-split">
@@ -602,6 +617,21 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <button class="btn-primary" onclick="saveRace()" style="margin-bottom:10px;">Save Race</button>
     <button class="btn-ghost" style="width:100%;color:var(--red);" onclick="clearRace()">Remove race target</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('race-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- YEAR RUNNING GOAL MODAL -->
+<div class="modal-overlay" id="year-goal-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="year-goal-modal-title">Running Goal</h3>
+    <label class="modal-label">Target for the year (km)</label>
+    <input class="modal-input" id="year-goal-target" type="number" inputmode="decimal" step="1" placeholder="e.g. 1610" oninput="updateYearGoalPreview()">
+    <label class="modal-label">Km remaining right now</label>
+    <input class="modal-input" id="year-goal-remaining" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 651" oninput="updateYearGoalPreview()">
+    <div id="year-goal-preview" style="font-size:12px;color:var(--text2);margin:-8px 0 14px;min-height:16px;line-height:1.5;"></div>
+    <button class="btn-primary" onclick="saveYearGoal()" style="margin-bottom:10px;">Save Goal</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('year-goal-modal')">Cancel</button>
   </div>
 </div>
 
@@ -1183,6 +1213,7 @@ function handleAvatarUpload(file){
 }
 function renderToday(){
   renderAvatar();
+  renderYearGoalCard();
   const now=today();
   const baseMonday=addDays(getMonday(now),weekOffset*7);
   const viewingToday=weekOffset===0;
@@ -3013,7 +3044,7 @@ function saveRun(){
   const d=new Date(_runLogDate||dk(today()));d.setHours(h,m,0,0);ts=d.getTime();
   const runs=loadRunData();
   const logDate=_runLogDate||dk(today());
-  runs.push({date:logDate,km,time,note,effort:selectedEffort,startTime:startTimeVal,ts,hr});
+  runs.push({date:logDate,km,time,note,effort:selectedEffort,startTime:startTimeVal,ts,hr,loggedAt:Date.now()});
   saveRunData(runs);
   if(!state.data[`${logDate}:session:run`])state.data[`${logDate}:session:run`]=[];
   state.data[`${logDate}:session:run`].push(`${km}km`);
@@ -5784,6 +5815,117 @@ function renderTimeOfDay(){
       return`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.6;">${lines.join('<br>')}</div>`;
     })()}
   </div>`;
+}
+
+// ── YEAR RUNNING GOAL ──
+// Countdown to a yearly distance target. Starts from a balance you set (km remaining)
+// and only subtracts runs logged after that point - runs carry a loggedAt stamp when
+// they're entered (ts is the run's start time, so can't be used for this). Older runs
+// are never counted, so editing or deleting history doesn't move the countdown, while
+// editing or deleting a run logged since does. Recomputed from the run log on every render.
+// state.yearRunGoal = {year, targetKm, startRemaining, startedAt}
+function getGoalRunKm(g){
+  return loadRunData().filter(r=>r.loggedAt&&r.loggedAt>=g.startedAt&&(r.date||'').startsWith(String(g.year))).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+}
+// One-time seed for 2026: 1,610km target, 651km remaining, counting down from first load.
+function ensureYearRunGoal(){
+  if(state.yearRunGoal||today().getFullYear()!==2026)return;
+  state.yearRunGoal={year:2026,targetKm:1610,startRemaining:651,startedAt:Date.now()};
+  saveState();
+}
+function getYearGoalProgress(){
+  const g=state.yearRunGoal;
+  if(!g)return null;
+  const now=today();
+  const year=g.year;
+  const remaining=Math.max(0,g.startRemaining-getGoalRunKm(g));
+  const done=g.targetKm-remaining;
+  const start=new Date(year,0,1),end=new Date(year+1,0,1);
+  const daysInYear=Math.round((end-start)/864e5);
+  const dayOfYear=Math.min(daysInYear,Math.max(0,Math.floor((new Date(now.getFullYear(),now.getMonth(),now.getDate())-start)/864e5)+1));
+  const daysLeft=Math.max(0,daysInYear-dayOfYear+1); // including today
+  const onPaceKm=g.targetKm*dayOfYear/daysInYear;
+  const perWeekNeeded=daysLeft>0?remaining/(daysLeft/7):null;
+  // Recent rate from the last 8 weeks of logged runs.
+  const cut=dk(addDays(now,-56));
+  const recentKm=loadRunData().filter(r=>r.date>cut&&r.date<=dk(now)).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  const recentWeekly=recentKm/8;
+  const projected=done+recentWeekly*(daysLeft/7);
+  let hitDate=null;
+  if(remaining>0&&recentWeekly>0){const d=addDays(now,Math.ceil(remaining/recentWeekly*7));if(d.getFullYear()===year)hitDate=d;}
+  return{g,year,done,remaining,pct:Math.min(100,done/g.targetKm*100),onPaceKm,vsPace:done-onPaceKm,daysLeft,perWeekNeeded,recentWeekly,projected,hitDate,isCurrentYear:now.getFullYear()===year};
+}
+function renderYearGoalCard(){
+  const wrap=document.getElementById('year-goal-wrap');
+  if(!wrap)return;
+  ensureYearRunGoal();
+  const nowYear=today().getFullYear();
+  const p=getYearGoalProgress();
+  if(!p||!p.isCurrentYear){
+    wrap.innerHTML=`<div class="year-goal-card" onclick="openYearGoalModal()" style="cursor:pointer;">
+      <div class="year-goal-head"><span>${nowYear} running goal</span></div>
+      <div style="font-size:14px;font-weight:700;color:var(--text2);">${p?`Your ${p.year} goal is done and dusted.`:'No yearly goal yet.'} <span style="color:var(--accent2);">Set your ${nowYear} target →</span></div>
+    </div>`;
+    return;
+  }
+  const fmt=v=>Math.round(v).toLocaleString('en-GB');
+  const fmt1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const complete=p.remaining<=0;
+  const ahead=p.vsPace>=0;
+  const markerPct=Math.min(100,p.onPaceKm/p.g.targetKm*100);
+  let projLine='';
+  if(!complete&&p.recentWeekly>0){
+    projLine=p.hitDate
+      ?`At your recent ${fmt(p.recentWeekly)}km/week you'll hit it around <strong>${p.hitDate.getDate()} ${MONTHS[p.hitDate.getMonth()]}</strong>.`
+      :`At your recent ${fmt(p.recentWeekly)}km/week you'd finish the year on about <strong>${fmt(p.projected)}km</strong>, ${fmt(p.g.targetKm-p.projected)}km short.`;
+  }else if(!complete){
+    projLine=`No runs in the last 8 weeks. The countdown is patient, but it isn't going to run itself.`;
+  }
+  wrap.innerHTML=`<div class="year-goal-card" onclick="openYearGoalModal()" style="cursor:pointer;">
+    <div class="year-goal-head"><span>${p.year} running goal</span><span>${fmt(p.g.targetKm)} km</span></div>
+    ${complete
+      ?`<div class="year-goal-big" style="color:var(--green);">Done! 🎉</div><div class="year-goal-sub">${fmt(p.done)}km run this year${p.done>p.g.targetKm?`, ${fmt(p.done-p.g.targetKm)}km over target`:''}.</div>`
+      :`<div class="year-goal-big">${fmt1(p.remaining)}<span> km to go</span></div>`}
+    <div class="year-goal-track">
+      <div class="year-goal-fill" style="width:${p.pct.toFixed(1)}%;"></div>
+      ${complete?'':`<div class="year-goal-marker" style="left:${markerPct.toFixed(1)}%;" title="Where you'd be on an even pace"></div>`}
+    </div>
+    <div class="year-goal-sub">${fmt1(p.done)} of ${fmt(p.g.targetKm)} km · ${Math.round(p.pct)}%${complete?'':` · <span style="color:${ahead?'var(--green)':'var(--orange)'};font-weight:800;">${fmt(Math.abs(p.vsPace))}km ${ahead?'ahead of':'behind'} even pace</span>`}</div>
+    ${complete?'':`<div class="year-goal-stats">
+      <div><div class="year-goal-stat-val">${p.daysLeft}</div><div class="year-goal-stat-lbl">days left</div></div>
+      <div><div class="year-goal-stat-val">${p.perWeekNeeded!=null?p.perWeekNeeded.toFixed(1):'–'}</div><div class="year-goal-stat-lbl">km/week needed</div></div>
+      <div><div class="year-goal-stat-val">${p.daysLeft?(p.remaining/p.daysLeft).toFixed(1):'–'}</div><div class="year-goal-stat-lbl">km/day needed</div></div>
+    </div>`}
+    ${projLine?`<div class="year-goal-proj">${projLine}</div>`:''}
+  </div>`;
+}
+function openYearGoalModal(){
+  const nowYear=today().getFullYear();
+  const g=state.yearRunGoal;
+  const p=getYearGoalProgress();
+  const same=g&&g.year===nowYear;
+  document.getElementById('year-goal-modal-title').textContent=`${nowYear} Running Goal`;
+  document.getElementById('year-goal-target').value=g?g.targetKm:'';
+  document.getElementById('year-goal-remaining').value=same&&p?Math.round(p.remaining*10)/10:(g?g.targetKm:'');
+  updateYearGoalPreview();
+  openModal('year-goal-modal');
+}
+function updateYearGoalPreview(){
+  const el=document.getElementById('year-goal-preview');
+  const target=parseFloat(document.getElementById('year-goal-target').value);
+  const rem=parseFloat(document.getElementById('year-goal-remaining').value);
+  if(!(target>0)||!(rem>=0)){el.textContent='';return;}
+  el.innerHTML=`Counting down from <strong>${rem}km</strong> (${Math.round(target-rem)}km done). Every run you log from now on comes off automatically.`;
+}
+function saveYearGoal(){
+  const target=parseFloat(document.getElementById('year-goal-target').value);
+  const rem=parseFloat(document.getElementById('year-goal-remaining').value);
+  if(!(target>0)){toastMsg('Enter a target in km');return;}
+  if(!(rem>=0)||rem>target){toastMsg('Remaining must be between 0 and the target');return;}
+  const year=today().getFullYear();
+  state.yearRunGoal={year,targetKm:target,startRemaining:rem,startedAt:Date.now()};
+  saveState();closeModal('year-goal-modal');toastMsg('Goal saved');haptic('success');renderToday();
 }
 
 // ── WHAT MOVES YOUR NUMBERS ──

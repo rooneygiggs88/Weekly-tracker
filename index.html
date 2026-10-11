@@ -1170,9 +1170,15 @@ function showPage(name){
 // tested against in a desktop browser.
 if(window.visualViewport){
   const _navEl=document.querySelector('.nav');
+  let _staleGap=null; // {gap, since} - see the stale-layout case below
   const _syncNavToViewport=()=>{
     if(!_navEl)return;
     const vv=window.visualViewport;
+    // gap > 0: something (the keyboard) covers the bottom of the layout viewport.
+    // gap < 0: the visible area extends *below* the layout viewport's bottom - iOS can
+    // leave the layout viewport at its keyboard-open height after the keyboard closes,
+    // so bottom:0 lands mid-screen with nothing focused (reported live over the gym
+    // keypad, which has no inputs at all, so the focus-gated branch never ran).
     // A keyboard is only ever open when a text input/textarea/contenteditable actually
     // has focus - checking viewport height alone isn't enough, since pull-to-refresh
     // rubber-band overscroll also shrinks visualViewport's reported height/offsetTop
@@ -1180,7 +1186,17 @@ if(window.visualViewport){
     const ae=document.activeElement;
     const fieldFocused=ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.isContentEditable);
     const keyboardOpen=fieldFocused&&(window.innerHeight-vv.height>100);
-    _navEl.style.bottom=keyboardOpen?(window.innerHeight-vv.height-vv.offsetTop)+'px':'0px';
+    const gap=window.innerHeight-vv.height-vv.offsetTop;
+    let bottom=0;
+    if(keyboardOpen){bottom=gap;_staleGap=null;}
+    else if(!fieldFocused&&gap<-40){
+      // Only trust it once it has held steady for half a second: rubber-band overscroll
+      // produces the same reading for a moment, and chasing that was the old jump bug.
+      const now=Date.now();
+      if(_staleGap&&Math.abs(_staleGap.gap-gap)<4){if(now-_staleGap.since>=500)bottom=gap;}
+      else _staleGap={gap,since:now};
+    }else _staleGap=null;
+    _navEl.style.bottom=bottom+'px';
   };
   window.visualViewport.addEventListener('resize',_syncNavToViewport);
   window.visualViewport.addEventListener('scroll',_syncNavToViewport);

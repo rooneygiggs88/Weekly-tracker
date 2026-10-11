@@ -147,6 +147,12 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-seg.done .yg-seg-type{color:var(--green);}
 .yg-seg-km{font-size:15px;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums;}
 .yg-next{border-top-style:dashed;}
+.yg-next-btn{all:unset;box-sizing:border-box;width:100%;display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:10px;background:var(--surface2);cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.yg-next-btn>span:first-child{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
+.yg-next-btn>span:last-child{font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums;}
+.yg-next-btn strong{color:var(--text);font-weight:800;}
+.yg-next-chev{display:inline-block;margin-left:4px;transition:transform 0.2s;}
+.yg-next-chev.open{transform:rotate(180deg);}
 .yg-seg.next{border-style:solid;background:var(--surface2);border-color:transparent;}
 .yg-week-left{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5;}
 .week-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;}
@@ -5990,19 +5996,27 @@ function getYearGoalWeek(weekOffset=0){
   open.forEach(x=>{x.left=oSum?leftKm*x.w/oSum:0;});
   return{target,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
 }
+// Next week's projection sits behind a button showing its km, so you can watch it shrink
+// as you log runs this week. Opens by default on Sundays (planning night).
+let _ygNextOpen=null; // null = default for the day
+function toggleYearGoalNext(e){
+  if(e)e.stopPropagation();
+  const isOpen=_ygNextOpen==null?today().getDay()===0:_ygNextOpen;
+  _ygNextOpen=!isOpen;renderYearGoalCard();haptic('light');
+}
 function renderYearGoalNextWeek(){
-  const now=today();
-  // Sunday only - that's planning night. Earlier in the week it would still be shifting
-  // with every run logged, so it's no use for planning yet.
-  if(now.getDay()!==0)return'';
   const w=getYearGoalWeek(1);
   if(!w||w.target<=0)return'';
+  const open=_ygNextOpen==null?today().getDay()===0:_ygNextOpen;
   const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
   const segs=w.slots.map(x=>`<div class="yg-seg next"><div class="yg-seg-type">${x.type}</div><div class="yg-seg-km">${Math.round(x.run?parseFloat(x.run.km)||0:x.left)}</div></div>`).join('');
   return`<div class="yg-week yg-next">
-    <div class="yg-week-head"><span>Next week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span><span><strong>${f1(w.target)}</strong> km</span></div>
-    <div class="yg-segs" style="grid-template-columns:repeat(${w.slots.length},1fr);">${segs}</div>
-    <div class="yg-week-left">Locks in on Monday. Any more km before then makes it smaller.</div>
+    <button class="yg-next-btn" onclick="toggleYearGoalNext(event)" aria-expanded="${open}">
+      <span>Next week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span>
+      <span><strong>${f1(w.target)}</strong> km <span class="yg-next-chev${open?' open':''}">▾</span></span>
+    </button>
+    ${open?`<div class="yg-segs" style="grid-template-columns:repeat(${w.slots.length},1fr);margin-top:8px;">${segs}</div>
+    <div class="yg-week-left">Locks in on Monday. Every km you log before then makes it smaller.</div>`:''}
   </div>`;
 }
 function renderYearGoalWeek(){

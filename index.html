@@ -146,6 +146,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-seg-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);white-space:nowrap;}
 .yg-seg.done .yg-seg-type{color:var(--green);}
 .yg-seg-km{font-size:15px;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums;}
+.yg-next{border-top-style:dashed;}
+.yg-seg.next{border-style:solid;background:var(--surface2);border-color:transparent;}
 .yg-week-left{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5;}
 .week-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;}
 .week-card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
@@ -5914,6 +5916,7 @@ function renderYearGoalCard(){
     </div>
     <div class="year-goal-sub">${fmt1(p.done)} of ${fmt(p.g.targetKm)} km · ${Math.round(p.pct)}%${complete?'':` · <span style="color:${ahead?'var(--green)':'var(--orange)'};font-weight:800;">${fmt(Math.abs(p.vsPace))}km ${ahead?'ahead of':'behind'} even pace</span>`}</div>
     ${complete?'':renderYearGoalWeek()}
+    ${complete?'':renderYearGoalNextWeek()}
     ${complete?'':`<div class="year-goal-stats">
       <div><div class="year-goal-stat-val">${p.daysLeft}</div><div class="year-goal-stat-lbl">days left</div></div>
       <div><div class="year-goal-stat-val">${p.perWeekNeeded!=null?p.perWeekNeeded.toFixed(1):'–'}</div><div class="year-goal-stat-lbl">km/week needed</div></div>
@@ -5939,16 +5942,18 @@ const YEAR_GOAL_SPLITS={
 const YEAR_GOAL_SLOT_PRIORITY=['Long','Easy','Tempo','Easy','Easy','Easy'];
 // This week's share of what's left, fixed for the week: km remaining at the start of the
 // week x (days this week / days left in the year). A short week gets a pro-rata target,
-// and a missed week spreads over the weeks that remain.
-function getYearGoalWeek(){
+// and a missed week spreads over the weeks that remain. weekOffset=1 previews next week
+// from where you stand now (so it shifts if you log more before Monday).
+function getYearGoalWeek(weekOffset=0){
   const g=state.yearRunGoal;
   if(!g)return null;
   const now=today();
   if(now.getFullYear()!==g.year)return null;
-  const mon=getMonday(now);
+  const mon=addDays(getMonday(now),weekOffset*7);
   const goalStart=new Date(g.startedAt);goalStart.setHours(0,0,0,0);
   const weekStart=goalStart>mon?goalStart:mon;
   const yearEnd=new Date(g.year,11,31);
+  if(weekStart>yearEnd)return null;
   const sun=addDays(mon,6);
   const weekEnd=sun<yearEnd?sun:yearEnd;
   const days=(a,b)=>Math.round((b-a)/864e5)+1;
@@ -5984,6 +5989,22 @@ function getYearGoalWeek(){
   const oSum=open.reduce((a,x)=>a+x.w,0);
   open.forEach(x=>{x.left=oSum?leftKm*x.w/oSum:0;});
   return{target,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
+}
+function renderYearGoalNextWeek(){
+  const now=today();
+  const cur=getYearGoalWeek();
+  // From Friday, or as soon as this week's target is done - that's when planning ahead helps.
+  const show=now.getDay()===5||now.getDay()===6||now.getDay()===0||(cur&&cur.leftKm<=0);
+  if(!show)return'';
+  const w=getYearGoalWeek(1);
+  if(!w||w.target<=0)return'';
+  const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
+  const segs=w.slots.map(x=>`<div class="yg-seg next"><div class="yg-seg-type">${x.type}</div><div class="yg-seg-km">${Math.round(x.run?parseFloat(x.run.km)||0:x.left)}</div></div>`).join('');
+  return`<div class="yg-week yg-next">
+    <div class="yg-week-head"><span>Next week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span><span><strong>${f1(w.target)}</strong> km</span></div>
+    <div class="yg-segs" style="grid-template-columns:repeat(${w.slots.length},1fr);">${segs}</div>
+    <div class="yg-week-left">Locks in on Monday. Any more km before then makes it smaller.</div>
+  </div>`;
 }
 function renderYearGoalWeek(){
   const w=getYearGoalWeek();

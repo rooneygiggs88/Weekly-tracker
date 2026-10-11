@@ -5992,10 +5992,9 @@ function getYearGoalWeek(weekOffset=0){
 }
 function renderYearGoalNextWeek(){
   const now=today();
-  const cur=getYearGoalWeek();
-  // From Friday, or as soon as this week's target is done - that's when planning ahead helps.
-  const show=now.getDay()===5||now.getDay()===6||now.getDay()===0||(cur&&cur.leftKm<=0);
-  if(!show)return'';
+  // Sunday only - that's planning night. Earlier in the week it would still be shifting
+  // with every run logged, so it's no use for planning yet.
+  if(now.getDay()!==0)return'';
   const w=getYearGoalWeek(1);
   if(!w||w.target<=0)return'';
   const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});

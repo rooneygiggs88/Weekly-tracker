@@ -670,7 +670,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <label class="modal-label">Target for the year (km)</label>
     <input class="modal-input" id="year-goal-target" type="number" inputmode="decimal" step="1" placeholder="e.g. 1610" oninput="updateYearGoalPreview()">
     <label class="modal-label">Km remaining right now</label>
-    <input class="modal-input" id="year-goal-remaining" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 651" oninput="updateYearGoalPreview()">
+    <input class="modal-input" id="year-goal-remaining" type="number" inputmode="numeric" step="1" placeholder="e.g. 651" oninput="updateYearGoalPreview()">
     <label class="modal-label">Runs per week</label>
     <div class="type-row" id="year-goal-runs-row">
       <button class="type-btn" data-runs="4" onclick="setYearGoalRuns(4)">4</button>
@@ -5891,8 +5891,12 @@ function renderTimeOfDay(){
 // are never counted, so editing or deleting history doesn't move the countdown, while
 // editing or deleting a run logged since does. Recomputed from the run log on every render.
 // state.yearRunGoal = {year, targetKm, startRemaining, startedAt}
+// The countdown works in whole km: each run counts rounded DOWN (12.7 -> 12), the way it
+// was tracked by hand. Weekly targets round to the nearest km (they're recomputed every
+// Monday, so any rounding drift gets picked up). The run log itself keeps exact km.
+function goalKm(r){return Math.floor((parseFloat(r.km)||0)+1e-9);}
 function getGoalRunKm(g){
-  return loadRunData().filter(r=>r.loggedAt&&r.loggedAt>=g.startedAt&&(r.date||'').startsWith(String(g.year))).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  return loadRunData().filter(r=>r.loggedAt&&r.loggedAt>=g.startedAt&&(r.date||'').startsWith(String(g.year))).reduce((a,r)=>a+goalKm(r),0);
 }
 // One-time seed for 2026: 1,610km target, 651km remaining, counting down from first load.
 function ensureYearRunGoal(){
@@ -5963,7 +5967,7 @@ function renderYearGoalCard(){
     ${complete?'':renderYearGoalNextWeek()}
     ${complete?'':`<div class="year-goal-stats">
       <div><div class="year-goal-stat-val">${p.daysLeft}</div><div class="year-goal-stat-lbl">days left</div></div>
-      <div><div class="year-goal-stat-val">${p.perWeekNeeded!=null?p.perWeekNeeded.toFixed(1):'–'}</div><div class="year-goal-stat-lbl">km/week needed</div></div>
+      <div><div class="year-goal-stat-val">${p.perWeekNeeded!=null?Math.round(p.perWeekNeeded):'–'}</div><div class="year-goal-stat-lbl">km/week needed</div></div>
       <div><div class="year-goal-stat-val">${p.daysLeft?(p.remaining/p.daysLeft).toFixed(1):'–'}</div><div class="year-goal-stat-lbl">km/day needed</div></div>
     </div>`}
     ${projLine?`<div class="year-goal-proj">${projLine}</div>`:''}
@@ -6005,9 +6009,9 @@ function getYearGoalWeek(weekOffset=0){
   const monStr=dk(mon),sunStr=dk(sun);
   const weekRuns=loadRunData().filter(r=>r.loggedAt&&r.loggedAt>=g.startedAt&&r.date>=monStr&&r.date<=sunStr)
     .sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
-  const weekKm=weekRuns.reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  const weekKm=weekRuns.reduce((a,r)=>a+goalKm(r),0);
   const remainingAtStart=Math.max(0,g.startRemaining-getGoalRunKm(g))+weekKm;
-  const target=remainingAtStart*daysThisWeek/daysLeft;
+  const target=Math.round(remainingAtStart*daysThisWeek/daysLeft);
   // Slots for this week, scaled to the target.
   const runs=g.runsPerWeek||5;
   const full=YEAR_GOAL_SPLITS[runs]||YEAR_GOAL_SPLITS[5];
@@ -6047,7 +6051,7 @@ function renderYearGoalNextWeek(){
   if(!w||w.target<=0)return'';
   const open=_ygNextOpen==null?today().getDay()===0:_ygNextOpen;
   const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
-  const segs=w.slots.map(x=>`<div class="yg-seg next"><div class="yg-seg-type">${x.type}</div><div class="yg-seg-km">${Math.round(x.run?parseFloat(x.run.km)||0:x.left)}</div></div>`).join('');
+  const segs=w.slots.map(x=>`<div class="yg-seg next"><div class="yg-seg-type">${x.type}</div><div class="yg-seg-km">${x.run?goalKm(x.run):Math.round(x.left)}</div></div>`).join('');
   return`<div class="yg-week yg-next">
     <button class="yg-next-btn" onclick="toggleYearGoalNext(event)" aria-expanded="${open}">
       <span>Next week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span>
@@ -6067,7 +6071,7 @@ function renderYearGoalWeek(){
   const done=w.leftKm<=0;
   const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy'};
   const segs=w.slots.map(x=>x.run
-    ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${f1(parseFloat(x.run.km)||0)}</div></div>`
+    ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${goalKm(x.run)}</div></div>`
     :`<div class="yg-seg"><div class="yg-seg-type">${lbl[x.type]}</div><div class="yg-seg-km">${done?'–':Math.round(x.left)}</div></div>`).join('');
   let left='';
   if(done)left=`<strong style="color:var(--green);">Week done ✓</strong>${w.weekKm-w.target>=1?` ${f1(w.weekKm-w.target)}km over, which lowers every week's target from here.`:''}`;
@@ -6104,7 +6108,7 @@ function updateYearGoalPreview(){
 }
 function saveYearGoal(){
   const target=parseFloat(document.getElementById('year-goal-target').value);
-  const rem=parseFloat(document.getElementById('year-goal-remaining').value);
+  const rem=Math.round(parseFloat(document.getElementById('year-goal-remaining').value));
   if(!(target>0)){toastMsg('Enter a target in km');return;}
   if(!(rem>=0)||rem>target){toastMsg('Remaining must be between 0 and the target');return;}
   const year=today().getFullYear();
@@ -6131,7 +6135,7 @@ function buildWeekReview(mon){
   const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
   // Running
   const runs=loadRunData().filter(r=>inWk(r.date||''));
-  const km=runs.reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  const km=runs.reduce((a,r)=>a+goalKm(r),0);
   const runTarget=(state.weekRunTargets||{})[monStr]||null;
   const longest=runs.reduce((a,r)=>Math.max(a,parseFloat(r.km)||0),0);
   // Gym + PBs (heaviest weight or best e1RM vs everything before this week)

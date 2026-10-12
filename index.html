@@ -155,6 +155,25 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-next-chev.open{transform:rotate(180deg);}
 .yg-seg.next{border-style:solid;background:var(--surface2);border-color:transparent;}
 .yg-week-left{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5;}
+.wr-card{background:var(--surface);border:1px solid rgba(37,99,235,0.35);border-radius:var(--radius);padding:16px 18px;margin:0 0 12px;box-shadow:0 6px 20px rgba(37,99,235,0.08);}
+.wr-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.wr-head span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);}
+.wr-head button{border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:12px;font-weight:800;padding:6px 12px;border-radius:14px;cursor:pointer;}
+.wr-verdict{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.3px;margin-bottom:4px;}
+.wr-sec{padding:10px 0;border-bottom:1px solid var(--border);}
+.wr-sec-h{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;}
+.wr-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--text2);padding:1px 0;font-variant-numeric:tabular-nums;}
+.wr-row strong,.wr-line strong{color:var(--text);font-weight:800;}
+.wr-line{font-size:13px;color:var(--text2);line-height:1.6;}
+.wr-bar{height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;margin:6px 0 4px;}
+.wr-bar>div{height:100%;border-radius:4px;}
+.wr-habits{display:flex;flex-wrap:wrap;gap:6px;}
+.wr-habit{font-size:12px;color:var(--text2);background:var(--surface2);border-radius:10px;padding:4px 9px;}
+.wr-habit.full{background:rgba(5,150,105,0.12);color:var(--green);}
+.wr-habit strong{color:inherit;font-weight:800;}
+.wr-focus{font-size:13px;color:var(--text2);line-height:1.5;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(37,99,235,0.07);}
+.wr-focus strong{color:var(--accent2);}
+.wr-hist-row{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;padding:11px 0;font-size:12.5px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .week-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;}
 .week-card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
 .week-card-head span:first-child{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
@@ -433,6 +452,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       </div>
     </div>
     <div id="year-goal-wrap"></div>
+    <div id="week-review-wrap"></div>
     <div class="today-greet" id="today-habits"></div>
     <div id="checkin-slot"></div>
     <div class="today-hero-split">
@@ -1258,6 +1278,7 @@ function handleAvatarUpload(file){
 function renderToday(){
   renderAvatar();
   renderYearGoalCard();
+  renderWeekReviewCard();
   const now=today();
   const baseMonday=addDays(getMonday(now),weekOffset*7);
   const viewingToday=weekOffset===0;
@@ -3626,6 +3647,7 @@ function renderTrends(){
     ${renderDayOfWeekHeatmap()}
     ${renderTimeOfDay()}
     ${renderWhatMovesCard('Body & recovery')}
+    ${renderWeekReviewHistory()}
   `;
 }
 
@@ -6038,6 +6060,9 @@ function renderYearGoalNextWeek(){
 function renderYearGoalWeek(){
   const w=getYearGoalWeek();
   if(!w||w.target<=0)return'';
+  const wk=dk(getMonday(today())),t=Math.round(w.target*10)/10;
+  if(!state.weekRunTargets)state.weekRunTargets={};
+  if(state.weekRunTargets[wk]!==t){state.weekRunTargets[wk]=t;saveState();}
   const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
   const done=w.leftKm<=0;
   const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy'};
@@ -6088,6 +6113,149 @@ function saveYearGoal(){
   if(prev&&prev.year===year&&prev.targetKm===target&&Math.abs(getYearGoalProgress().remaining-rem)<0.05)prev.runsPerWeek=_yearGoalRuns;
   else state.yearRunGoal={year,targetKm:target,startRemaining:rem,startedAt:Date.now(),runsPerWeek:_yearGoalRuns};
   saveState();closeModal('year-goal-modal');toastMsg('Goal saved');haptic('success');renderToday();
+}
+
+// ── WEEK IN REVIEW ──
+// Sunday-only card on the Today page summing up the week (running vs target, gym, PBs,
+// sleep/HRV vs the week before, habits) plus next week's plan and one focus line.
+// Past weeks are rebuilt live from the logs on the Trends page; the only thing stored
+// is each week's running target (state.weekRunTargets), since that can't be recomputed.
+function fmtWeekRange(mon){
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const sun=addDays(mon,6);
+  return mon.getMonth()===sun.getMonth()?`${mon.getDate()}–${sun.getDate()} ${M[sun.getMonth()]}`:`${mon.getDate()} ${M[mon.getMonth()]} – ${sun.getDate()} ${M[sun.getMonth()]}`;
+}
+function buildWeekReview(mon){
+  const monStr=dk(mon),sunStr=dk(addDays(mon,6));
+  const inWk=d=>d>=monStr&&d<=sunStr;
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  // Running
+  const runs=loadRunData().filter(r=>inWk(r.date||''));
+  const km=runs.reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  const runTarget=(state.weekRunTargets||{})[monStr]||null;
+  const longest=runs.reduce((a,r)=>Math.max(a,parseFloat(r.km)||0),0);
+  // Gym + PBs (heaviest weight or best e1RM vs everything before this week)
+  const gymAll=loadGymData();
+  const gymWk=gymAll.filter(s=>inWk(s.date||''));
+  const gymTarget=(state.builtinTargets&&state.builtinTargets.gym)||3;
+  const prior={};
+  gymAll.filter(s=>(s.date||'')<monStr).forEach(s=>(s.exercises||[]).forEach(e=>(e.sets||[]).filter(x=>!x.warmup&&!x.technique&&parseFloat(x.weight||0)>0).forEach(x=>{
+    const w=parseFloat(x.weight),r=parseFloat(x.reps||0),est=r===1?w:w*(1+r/30);
+    const p=prior[e.name]||(prior[e.name]={w:0,r:0,e1rm:0});
+    if(w>p.w||(w===p.w&&r>p.r)){p.w=w;p.r=r;}
+    if(est>p.e1rm)p.e1rm=est;
+  })));
+  const best={};
+  gymWk.forEach(s=>(s.exercises||[]).forEach(e=>(e.sets||[]).filter(x=>!x.warmup&&!x.technique&&parseFloat(x.weight||0)>0).forEach(x=>{
+    const w=parseFloat(x.weight),r=parseFloat(x.reps||0),est=r===1?w:w*(1+r/30);
+    const b=best[e.name]||(best[e.name]={w:0,r:0,e1rm:0,ew:0,er:0});
+    if(w>b.w||(w===b.w&&r>b.r)){b.w=w;b.r=r;}
+    if(est>b.e1rm){b.e1rm=est;b.ew=w;b.er=r;}
+  })));
+  const pbs=[];
+  Object.entries(best).forEach(([name,b])=>{
+    const p=prior[name];if(!p)return; // first time doing it isn't a PB
+    if(b.w>p.w||(b.w===p.w&&b.r>p.r))pbs.push({name,detail:`${b.w}kg × ${b.r}`});
+    else if(b.e1rm>p.e1rm+0.05)pbs.push({name,detail:`${b.ew}kg × ${b.er} (e1RM)`});
+  });
+  // Recovery vs the week before
+  const morning=loadMorningData();
+  const mStats=(m)=>{const a=[];for(let i=0;i<7;i++){const v=morning[dk(addDays(m,i))];if(v)a.push(v);}
+    const sl=a.filter(v=>v.sleep!=null).map(v=>+v.sleep),hv=a.filter(v=>v.hrv!=null).map(v=>+v.hrv);
+    return{sleep:avg(sl),hrv:avg(hv),days:a.length,lowSleep:sl.filter(v=>v<65).length};};
+  const rec=mStats(mon),recPrev=mStats(addDays(mon,-7));
+  // Habits: daily check goals, counted over the days each was active
+  const habits=allDailyGoals().filter(g=>g.inputStyle==='check'||!g.inputStyle).map(g=>{
+    let done=0,days=0;
+    for(let i=0;i<7;i++){const ds=dk(addDays(mon,i));if(ds>dk(today()))break;if(g.effectiveFrom&&g.effectiveFrom>ds)continue;days++;if(goalDone(ds,g))done++;}
+    return{name:g.name,done,days};
+  }).filter(h=>h.days>0);
+  // Verdict + one focus line, from the weakest area
+  const runHit=runTarget?km>=runTarget-0.05:null,gymHit=gymWk.length>=gymTarget;
+  const hits=[runHit,gymHit].filter(x=>x===true).length,checks=[runHit,gymHit].filter(x=>x!==null).length;
+  const verdict=hits===checks?(runHit&&km>runTarget*1.05?'Strong week. Running target beaten.':'Strong week. Targets hit.')
+    :hits>0?(runHit===false?'Solid week. Running came up short.':'Solid week. Gym came up short.')
+    :(km>0||gymWk.length>0)?(pbs.length?'Mixed week. Targets missed, but PBs came.':'Mixed week. Targets missed, but not idle.')
+    :'Quiet week. Next one starts fresh.';
+  let focus='';
+  const weakHabit=habits.filter(h=>h.days>=4).sort((a,b)=>a.done/a.days-b.done/b.days)[0];
+  if(rec.lowSleep>=3)focus=`Sleep was under 65 on ${rec.lowSleep} nights. Aim for earlier nights, especially before tempo and long runs.`;
+  else if(runHit===false)focus=`Running was ${(runTarget-km).toFixed(1)}km short. That's spread over the rest of the year, so next week's target is a bit higher.`;
+  else if(!gymHit)focus=`Gym was ${gymTarget-gymWk.length} session${gymTarget-gymWk.length===1?'':'s'} short. Pick the days now so they happen.`;
+  else if(weakHabit&&weakHabit.done/weakHabit.days<0.5)focus=`${weakHabit.name} was ${weakHabit.done}/${weakHabit.days}. One to tighten up.`;
+  else focus='No weak spots. Do the same again.';
+  return{mon,monStr,km,runTarget,runCount:runs.length,longest,gymCount:gymWk.length,gymTarget,pbs,rec,recPrev,habits,verdict,focus};
+}
+function renderWeekReviewBody(r,{showNext}={}){
+  const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
+  const delta=(a,b,unit)=>a==null||b==null?'<span style="color:var(--text3);">–</span>':Math.round(a-b)===0?'<span style="color:var(--text3);">→ same</span>':`<span style="color:${a>b?'var(--green)':'var(--red)'};font-weight:800;">${a>b?'↑':'↓'} ${Math.abs(Math.round(a-b))}${unit}</span>`;
+  const pct=r.runTarget?Math.min(100,r.km/r.runTarget*100):0;
+  let goalLine='';
+  const g=state.yearRunGoal;
+  if(showNext&&g&&g.year===r.mon.getFullYear()){const p=getYearGoalProgress();if(p)goalLine=` · ${f1(p.remaining)}km to go`;}
+  let nextHtml='';
+  if(showNext){
+    const w=getYearGoalWeek(1);
+    nextHtml=`<div class="wr-sec"><div class="wr-sec-h">Next week</div>
+      ${w&&w.target>0?`<div class="wr-line"><strong>${f1(w.target)}km:</strong> ${['Long','Tempo','Easy'].map(t=>{const a=w.slots.filter(x=>x.type===t).map(x=>Math.round(x.left));return a.length?`${t} ${a.join(' · ')}`:'';}).filter(Boolean).join(' &nbsp;|&nbsp; ')}</div>`:''}
+      <div class="wr-line">Gym: ${r.gymTarget} sessions</div></div>`;
+  }
+  return`<div class="wr-verdict">${r.verdict}</div>
+    <div class="wr-sec"><div class="wr-sec-h">🏃 Running</div>
+      <div class="wr-row"><span><strong>${f1(r.km)}</strong>${r.runTarget?` / ${f1(r.runTarget)}`:''} km</span>${r.runTarget?`<span style="font-weight:800;color:${r.km>=r.runTarget-0.05?'var(--green)':'var(--orange)'};">${Math.round(r.km/r.runTarget*100)}%</span>`:''}</div>
+      ${r.runTarget?`<div class="wr-bar"><div style="width:${pct.toFixed(1)}%;background:${r.km>=r.runTarget-0.05?'var(--green)':'var(--orange)'};"></div></div>`:''}
+      <div class="wr-line">${r.runCount} run${r.runCount===1?'':'s'}${r.runCount?` · longest ${f1(r.longest)}km`:''}${goalLine}</div></div>
+    <div class="wr-sec"><div class="wr-sec-h">🏋️ Gym</div>
+      <div class="wr-line"><strong>${r.gymCount} / ${r.gymTarget}</strong> sessions${r.pbs.length?` · ${r.pbs.length} new PB${r.pbs.length===1?'':'s'}`:''}</div>
+      ${r.pbs.slice(0,4).map(p=>`<div class="wr-line">🏆 ${esc(p.name)} <strong>${p.detail}</strong></div>`).join('')}</div>
+    ${r.rec.days?`<div class="wr-sec"><div class="wr-sec-h">😴 Recovery <span style="float:right;font-weight:700;letter-spacing:0;text-transform:none;">vs last week</span></div>
+      <div class="wr-row"><span>Sleep score</span><span><strong>${r.rec.sleep!=null?Math.round(r.rec.sleep):'–'}</strong> &nbsp;${delta(r.rec.sleep,r.recPrev.sleep,'')}</span></div>
+      <div class="wr-row"><span>HRV</span><span><strong>${r.rec.hrv!=null?Math.round(r.rec.hrv)+'ms':'–'}</strong> &nbsp;${delta(r.rec.hrv,r.recPrev.hrv,'ms')}</span></div></div>`:''}
+    ${r.habits.length?`<div class="wr-sec"><div class="wr-sec-h">✅ Habits</div>
+      <div class="wr-habits">${r.habits.map(h=>`<span class="wr-habit${h.done===h.days?' full':''}">${esc(h.name)} <strong>${h.done}/${h.days}</strong></span>`).join('')}</div></div>`:''}
+    ${nextHtml}
+    <div class="wr-focus"><strong>Focus:</strong> ${r.focus}</div>`;
+}
+function renderWeekReviewCard(){
+  const wrap=document.getElementById('week-review-wrap');
+  if(!wrap)return;
+  const now=today();
+  const mon=getMonday(now),monStr=dk(mon);
+  if(now.getDay()!==0||weekOffset!==0||state.weekReviewDone===monStr){wrap.innerHTML='';return;}
+  const r=buildWeekReview(mon);
+  wrap.innerHTML=`<div class="wr-card">
+    <div class="wr-head"><span>Week in review · ${fmtWeekRange(mon)}</span><button onclick="dismissWeekReview()">Done ✓</button></div>
+    ${renderWeekReviewBody(r,{showNext:true})}
+  </div>`;
+}
+function dismissWeekReview(){
+  state.weekReviewDone=dk(getMonday(today()));saveState();haptic('success');renderWeekReviewCard();
+}
+// Trends > All: past weeks, newest first, each expandable to the full review.
+let _wrOpen={};
+function toggleWeekReviewRow(k){_wrOpen[k]=!_wrOpen[k];const el=document.getElementById('trends-content');if(el)renderTrends();}
+function renderWeekReviewHistory(){
+  const runs=loadRunData(),gym=loadGymData();
+  const dates=[...runs.map(r=>r.date),...gym.map(s=>s.date)].filter(Boolean).sort();
+  if(!dates.length)return'';
+  const first=getMonday(new Date(dates[0]+'T12:00:00'));
+  const thisMon=getMonday(today());
+  // Completed weeks only (the current one is still in progress), up to 12 back.
+  const weeks=[];
+  for(let m=addDays(thisMon,-7);m>=first&&weeks.length<12;m=addDays(m,-7))weeks.push(buildWeekReview(m));
+  if(!weeks.length)return'';
+  const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Weekly Reviews</span><span class="chart-card-val">last ${weeks.length} weeks</span></div>
+    ${weeks.map((r,i)=>{const open=!!_wrOpen[r.monStr];const hit=r.runTarget?r.km>=r.runTarget-0.05:null;return`<div style="${i<weeks.length-1?'border-bottom:1px solid var(--border);':''}">
+      <button class="wr-hist-row" onclick="toggleWeekReviewRow('${r.monStr}')" aria-expanded="${open}">
+        <span style="font-weight:800;color:var(--text1);min-width:92px;text-align:left;">${fmtWeekRange(r.mon)}</span>
+        <span style="flex:1;text-align:left;color:var(--text2);">🏃 ${f1(r.km)}km${hit===null?'':hit?' ✓':''} · 🏋️ ${r.gymCount}${r.rec.sleep!=null?` · 😴 ${Math.round(r.rec.sleep)}`:''}${r.pbs.length?` · 🏆${r.pbs.length}`:''}</span>
+        <span class="yg-next-chev${open?' open':''}">▾</span>
+      </button>
+      ${open?`<div style="padding:0 0 12px;">${renderWeekReviewBody(r)}</div>`:''}
+    </div>`;}).join('')}
+  </div>`;
 }
 
 // ── WHAT MOVES YOUR NUMBERS ──

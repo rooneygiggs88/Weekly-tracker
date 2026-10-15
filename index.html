@@ -1546,6 +1546,14 @@ function renderToday(){
     </div>`:'';
     raceWrap.innerHTML='';
 
+    // What's actually been logged today, regardless of the plan - an unplanned session
+    // (or a different one from the plan) should still show as done, not "Off".
+    const todayStr=dk(now);
+    const gymToday=loadGymData().filter(x=>x.date===todayStr);
+    const runsToday=loadRunData().filter(x=>x.date===todayStr);
+    const loggedParts=[...gymToday.map(x=>x.type||'Gym'),...(runsToday.length?['Run']:[])];
+    const loggedMeta=[...gymToday.map(x=>{const n=(x.exercises||[]).length,st=(x.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(z=>!z.warmup).length,0);return`${gymToday.length>1?esc(x.type||'Gym')+' · ':''}${n} exercise${n===1?'':'s'} · ${st} set${st===1?'':'s'}`;}),
+      ...runsToday.map(r=>`${esc(r.effort||'Run')} run · ${fmtKm(parseFloat(r.km)||0)}km`)].join('<br>');
     if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
       const isGym=['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
       const tab=isGym?'gym':'run';
@@ -1569,8 +1577,15 @@ function renderToday(){
         <div class="today-plan-lbl">Today's Plan</div>
         <div class="today-plan-type">${esc(todayPlan)}</div>
         <div class="today-plan-meta">${planMeta}</div>
+        ${!alreadyDone&&loggedParts.length?`<div class="today-plan-meta" style="color:var(--green);font-weight:700;">${loggedParts.map(esc).join(' + ')} logged today ✓</div>`:''}
         <button class="today-plan-cta${alreadyDone?' done':''}" onclick="${cardClick}">${alreadyDone?'Logged ✓':'Start session'}</button>
-        ${alreadyDone?'':altAction}`;
+        ${alreadyDone||loggedParts.length?'':altAction}`;
+    }else if(loggedParts.length){
+      planCell.innerHTML=`
+        <div class="today-plan-lbl">Today${todayPlan==='Off'||todayPlan==='Rest'?` · planned ${esc(todayPlan.toLowerCase())}`:''}</div>
+        <div class="today-plan-type">${loggedParts.map(esc).join(' + ')}</div>
+        <div class="today-plan-meta">${loggedMeta}</div>
+        <button class="today-plan-cta done" onclick="showPage('train');switchTrainTab('history')">Logged ✓</button>`;
     }else{
       planCell.innerHTML=`
         <div class="today-plan-lbl">Today's Plan</div>
@@ -1853,11 +1868,6 @@ function toggleSupersetMode(){_gymSupersetMode=!_gymSupersetMode;renderGymTypeSe
 // Today's scheduled type from the Training Plan, if any - drives the "on the plan
 // today" lead card so starting your actual planned session is a single tap instead
 // of picking it back out of the full type grid every time.
-function getTodayPlanType(){
-  if(!state.weekPlan)return null;
-  const dow=(today().getDay()+6)%7;
-  return state.weekPlan[dow]||null;
-}
 function renderPlanExercisePreview(type){
   const sessions=loadGymData();
   const exList=getDefaultExercisesForType(type).slice(0,6);

@@ -614,6 +614,26 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .rd-run-hint em{font-style:normal;color:var(--text3);font-weight:600;font-size:11px;}
 .theme-seg .seg-tab{font-size:13px;}
 .csv-help{font-size:11.5px;color:var(--text3);line-height:1.45;margin:8px 4px 0;}
+
+/* Fitness, fatigue & form */
+.fff-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.fff-stats>div{background:var(--surface2);border-radius:12px;padding:9px 10px;display:flex;flex-direction:column;gap:1px;min-width:0;}
+.fff-stats span{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);}
+.fff-stats strong{font-family:var(--rounded);font-size:24px;font-weight:800;letter-spacing:-0.6px;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1;}
+.fff-stats em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--text3);}
+.fff-blurb{font-size:12.5px;color:var(--text2);margin-bottom:8px;}
+.fff-zones{margin-bottom:4px;}
+.fff-race{margin-top:14px;background:var(--surface2);border-radius:14px;padding:12px 13px;}
+.fff-race-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:8px;}
+.fff-race-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.fff-race-grid>div{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.fff-race-grid span{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);}
+.fff-race-grid strong{font-family:var(--rounded);font-size:18px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+.fff-race-grid em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--text3);}
+.fff-race p{font-size:12.5px;color:var(--text2);line-height:1.5;}
+.fff-race p strong{color:var(--text);}
+.fff-setrace{margin-top:12px;width:100%;padding:11px;border-radius:12px;border:1px dashed var(--border);background:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.week-race-phase{font-size:11px;font-weight:700;margin-top:4px;line-height:1.4;}
 </style>
 </head>
 <body>
@@ -1685,12 +1705,14 @@ function renderToday(){
           <div style="font-size:11px;font-weight:700;color:${statusColor(statusLines.volume.onTrack)};">${esc(statusLines.volume.text)}</div>
           <div style="font-size:11px;font-weight:700;color:${statusColor(statusLines.pace.onTrack)};">${esc(statusLines.pace.text)}</div>
         </div>`:'';
+        const phase=getRacePhaseLine();
         raceRowHtml=`<div class="week-race-row" style="flex-direction:column;align-items:stretch;cursor:pointer;" onclick="openRaceModal()">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <span class="week-race-row-name">${esc(state.race.name||'Race')}</span>
             <span class="week-race-row-days">${days} days</span>
           </div>
           ${statusHtml}
+          ${phase?`<div class="week-race-phase" style="color:${phase.col};">${esc(phase.text)}</div>`:''}
         </div>`;
       }
     }
@@ -3786,6 +3808,7 @@ function renderTrends(){
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week${vsAvg&&vsAvg.kmPct!=null?`<br>${vsAvgLine('weekly',vsAvg.kmPct)}`:''}</div></div>
     </div>
     ${renderRecoveryCard()}
+    ${renderFitnessFormCard()}
     ${renderActivityLoad()}
     ${streakHtml}
     ${balanceHtml}
@@ -4659,11 +4682,11 @@ let _rtSeq=0;
 const RT_W=300,RT_H=104,RT_PL=28,RT_PR=8,RT_PT=8,RT_PB=16;
 function _rtX(i,n){return RT_PL+(n<=1?0:i/(n-1))*(RT_W-RT_PL-RT_PR);}
 function _rtDateLbl(ds){const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});}
-function _rtXLabels(pts,xOf){
+function _rtXLabels(pts,xOf,h=RT_H){
   let out='';
   const at=i=>{const d=new Date(pts[i].ds+'T12:00:00');return`${d.getDate()}/${d.getMonth()+1}`;};
   const idxs=[0,Math.round((pts.length-1)/2),pts.length-1];
-  idxs.forEach((i,k)=>{out+=`<text x="${xOf(i).toFixed(1)}" y="${RT_H-3}" text-anchor="${k===0?'start':k===2?'end':'middle'}" font-size="7.5" fill="var(--text3)">${at(i)}</text>`;});
+  idxs.forEach((i,k)=>{out+=`<text x="${xOf(i).toFixed(1)}" y="${h-3}" text-anchor="${k===0?'start':k===2?'end':'middle'}" font-size="7.5" fill="var(--text3)">${at(i)}</text>`;});
   return out;
 }
 // pts: [{ds, v}] oldest→newest; band: {lo,hi} or null
@@ -4758,6 +4781,219 @@ document.addEventListener('pointerout',e=>{
   const ch=e.target.closest&&e.target.closest('.rt-chart');
   if(ch&&e.pointerType==='mouse'&&!ch.contains(e.relatedTarget))_rtHide(ch);
 });
+
+// ── FITNESS, FATIGUE & FORM ──
+// Banister's fitness-fatigue model the way TrainingPeaks and intervals.icu draw it, on
+// the same session loads readiness uses. Fitness is a 42-day exponentially weighted
+// average of daily load, Fatigue a 7-day one, and Form the gap between them as a % of
+// Fitness - a percentage so the zones don't depend on the units. Values are taken at the
+// start of each day, i.e. before that day's training.
+// The zones are practitioner convention (intervals.icu / Friel), not settled science.
+const FFF_ZONES=[
+  {key:'transition',min:20,label:'Detraining',col:'var(--st-pace)',blurb:'Very fresh, but fitness is starting to slip.'},
+  {key:'fresh',min:5,label:'Fresh',col:'var(--st-go)',blurb:'Rested and ready to race.'},
+  {key:'neutral',min:-10,label:'Neutral',col:'var(--text3)',blurb:'Maintaining.'},
+  {key:'building',min:-30,label:'Building',col:'var(--st-ready)',blurb:'Productive training load.'},
+  {key:'overload',min:-Infinity,label:'Overload',col:'var(--st-recover)',blurb:'Fatigue well ahead of fitness. Ease off soon.'},
+];
+function fffZone(formPct){return FFF_ZONES.find(z=>formPct>=z.min);}
+function _fffStep(s,L){return{fit:s.fit+(L-s.fit)/42,fat:s.fat+(L-s.fat)/7};}
+function _fffForm(s){return s.fit>0?(s.fit-s.fat)/s.fit*100:0;}
+// History up to and including yesterday, so "today" is a start-of-day value.
+function getFffHistory(){
+  const map=getDailyLoads();
+  const dates=Object.keys(map).sort();
+  if(!dates.length)return null;
+  const todayD=new Date(dk(today())+'T12:00:00');
+  let start=new Date(dates[0]+'T12:00:00');
+  const floor=addDays(todayD,-400);if(start<floor)start=floor;
+  if(start>=todayD)return null;
+  let seed=0;for(let i=0;i<42;i++)seed+=map[dk(addDays(start,i))]||0;seed/=42;
+  let s={fit:seed,fat:seed};
+  const out=[];
+  for(let d=start;d<=todayD;d=addDays(d,1)){
+    const ds=dk(d);
+    out.push({ds,fit:s.fit,fat:s.fat,form:_fffForm(s),load:map[ds]||0});
+    if(ds<dk(todayD))s=_fffStep(s,map[ds]||0); // today's training counts from tomorrow
+  }
+  return{days:out,state:s,map,history:out.length>=28&&s.fit>=15};
+}
+// A typical week from the last four, by weekday, so projections keep your rhythm.
+function _fffTypicalWeek(map){
+  const now=new Date(dk(today())+'T12:00:00');
+  const sums=[0,0,0,0,0,0,0];
+  for(let i=1;i<=28;i++){const d=addDays(now,-i);sums[(d.getDay()+6)%7]+=map[dk(d)]||0;}
+  return sums.map(v=>v/4);
+}
+// Taper windows by distance, inside the 8-14 day range that worked best in the taper
+// meta-analysis, shortened for 5-10k and lengthened for the marathon.
+function _fffTaperRange(km){return km<=10.5?[4,7]:km<=25?[7,10]:[10,21];}
+// Projects start-of-day values from today to `endDs`. During the taper, load falls away
+// exponentially from ~85% to ~40% of normal - about a 45-55% cut overall, inside the
+// 41-60% range the Bosquet et al. (2007) meta-analysis found worked best, with
+// intensity and frequency kept.
+function projectFff(hist,endDs,taperDays){
+  const week=_fffTypicalWeek(hist.map);
+  const end=new Date(endDs+'T12:00:00');
+  let s=hist.state;
+  const out=[];
+  let d=new Date(dk(today())+'T12:00:00');
+  // today's own load (if already logged) is real; the rest is projected
+  s=_fffStep(s,hist.map[dk(d)]||week[(d.getDay()+6)%7]);
+  d=addDays(d,1);
+  for(;d<=end;d=addDays(d,1)){
+    out.push({ds:dk(d),fit:s.fit,fat:s.fat,form:_fffForm(s),proj:true});
+    const daysOut=Math.round((end-d)/864e5);
+    let L=week[(d.getDay()+6)%7];
+    if(taperDays&&daysOut<=taperDays&&daysOut>0){const t=1-daysOut/taperDays;L*=0.85*Math.pow(0.4/0.85,t);}
+    s=_fffStep(s,L);
+  }
+  return out;
+}
+function getRaceTaperPlan(){
+  const r=state.race;
+  if(!r||!r.date)return null;
+  const hist=getFffHistory();
+  if(!hist||!hist.history)return null;
+  const daysToRace=Math.round((new Date(r.date+'T12:00:00')-new Date(dk(today())+'T12:00:00'))/864e5);
+  if(daysToRace<=0||daysToRace>150)return null;
+  const km=parseFloat(r.km)||21.1;
+  // Taper length is searched within the window for the distance, picking the one that lands race morning nearest the middle
+  // of the Fresh zone (~+12%) - long enough to shed fatigue, short enough to keep fitness.
+  const [minDays,maxDaysRaw]=_fffTaperRange(km);
+  const maxDays=Math.min(maxDaysRaw,Math.max(3,daysToRace-1));
+  let taperDays=Math.min(minDays,maxDays),best=Infinity;
+  for(let td=Math.min(minDays,maxDays);td<=maxDays;td++){
+    const p=projectFff(hist,r.date,td);const f=p.length?p[p.length-1].form:0;
+    const miss=Math.abs(f-12);
+    if(miss<best-0.5){best=miss;taperDays=td;}
+  }
+  const withTaper=projectFff(hist,r.date,taperDays);
+  const noTaper=projectFff(hist,r.date,0);
+  const raceMorning=withTaper[withTaper.length-1]||{fit:hist.state.fit,fat:hist.state.fat,form:_fffForm(hist.state)};
+  const raceNoTaper=noTaper[noTaper.length-1]||raceMorning;
+  const taperStart=addDays(new Date(r.date+'T12:00:00'),-taperDays);
+  return{race:r,km,daysToRace,taperDays,taperStart:dk(taperStart),daysToTaper:daysToRace-taperDays,
+    raceMorning,raceNoTaper,fitNow:hist.state.fit,proj:withTaper};
+}
+// After a race: about one easy day per mile raced - a long-standing coaching rule of
+// thumb rather than a research finding.
+function getRaceRecovery(){
+  const r=state.race;
+  if(!r||!r.date)return null;
+  const since=Math.round((new Date(dk(today())+'T12:00:00')-new Date(r.date+'T12:00:00'))/864e5);
+  const km=parseFloat(r.km)||0;
+  const days=Math.max(3,Math.round(km/1.609));
+  if(since<1||since>days)return null;
+  return{race:r,day:since,days,until:dk(addDays(new Date(r.date+'T12:00:00'),days))};
+}
+// One-line race status for Today's "This week" card.
+function getRacePhaseLine(){
+  const rec=getRaceRecovery();
+  if(rec)return{text:`Race recovery: day ${rec.day} of ${rec.days}. Easy running only until ${fmtShortDate(rec.until)}.`,col:'var(--st-ready)'};
+  const t=getRaceTaperPlan();
+  if(!t)return null;
+  if(t.daysToTaper>0)return{text:`Taper starts in ${t.daysToTaper} day${t.daysToTaper===1?'':'s'} (${fmtShortDate(t.taperStart)}). Race-morning form on track for ${t.raceMorning.form>=0?'+':''}${Math.round(t.raceMorning.form)}%.`,col:'var(--text2)'};
+  return{text:`Taper: day ${t.taperDays-t.daysToRace+1} of ${t.taperDays}. Cut volume, keep a little race pace.`,col:'var(--st-go)'};
+}
+function rtFffChart(pts,raceIdx){
+  const id='rt'+(++_rtSeq);
+  const n=pts.length,H=118,PT=10,PB=16,chartH=H-PT-PB;
+  // Lines show change, so the axis fits the data rather than starting at zero.
+  const vals=pts.flatMap(p=>[p.fit,p.fat]);
+  const vmax=Math.max(...vals),vmin=Math.min(...vals),pad=(vmax-vmin)*0.12||5;
+  const lo=Math.max(0,vmin-pad),mx=vmax+pad;
+  const x=i=>_rtX(i,n);
+  const y=v=>PT+chartH-((v-lo)/(mx-lo||1))*chartH;
+  let svg='';
+  [lo+pad,mx-pad].forEach(v=>{svg+=`<line x1="${RT_PL}" x2="${RT_W-RT_PR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--border)" stroke-width="0.6"/><text x="${RT_PL-4}" y="${(y(v)+2.5).toFixed(1)}" text-anchor="end" font-size="7.5" fill="var(--text3)">${Math.round(v)}</text>`;});
+  const firstProj=pts.findIndex(p=>p.proj);
+  if(firstProj>0)svg+=`<rect x="${x(firstProj).toFixed(1)}" y="${PT}" width="${(RT_W-RT_PR-x(firstProj)).toFixed(1)}" height="${chartH}" fill="var(--surface2)" opacity="0.6"/><text x="${(x(firstProj)+3).toFixed(1)}" y="${PT+8}" font-size="7" fill="var(--text3)">projected</text>`;
+  const path=(k,from,to)=>pts.slice(from,to).map((p,j)=>`${j?'L':'M'}${x(from+j).toFixed(1)},${y(p[k]).toFixed(1)}`).join('');
+  const split=firstProj>0?firstProj:n;
+  [['fat','var(--c-orange)'],['fit','var(--c-indigo)']].forEach(([k,col])=>{
+    svg+=`<path d="${path(k,0,split)}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if(firstProj>0)svg+=`<path d="${path(k,split-1,n)}" fill="none" stroke="${col}" stroke-width="2" stroke-dasharray="3,3" stroke-linecap="round"/>`;
+  });
+  if(raceIdx!=null){const rx=x(raceIdx);svg+=`<line x1="${rx.toFixed(1)}" x2="${rx.toFixed(1)}" y1="${PT}" y2="${H-PB}" stroke="var(--text)" stroke-width="1"/><text x="${(rx-3).toFixed(1)}" y="${PT+8}" text-anchor="end" font-size="7.5" font-weight="700" fill="var(--text)">Race</text>`;}
+  svg+=`<line class="rt-cross" x1="0" x2="0" y1="${PT}" y2="${H-PB}" stroke="var(--text2)" stroke-width="0.8" opacity="0"/>`;
+  svg+=_rtXLabels(pts,x,H);
+  const colW=(RT_W-RT_PL-RT_PR)/Math.max(1,n-1);
+  pts.forEach((p,i)=>{svg+=`<rect class="rt-hit" data-i="${i}" x="${(x(i)-colW/2).toFixed(1)}" y="0" width="${colW.toFixed(1)}" height="${H}" fill="transparent"/>`;});
+  _rtCharts[id]={kind:'line',n,x,rows:pts.map(p=>({date:_rtDateLbl(p.ds)+(p.proj?' · projected':''),lines:[
+    [`${Math.round(p.fit)}`,'Fitness','var(--c-indigo)'],[`${Math.round(p.fat)}`,'Fatigue','var(--c-orange)'],[`${p.form>=0?'+':''}${Math.round(p.form)}%`,`Form · ${fffZone(p.form).label}`,fffZone(p.form).col]]}))};
+  return`<div class="rt-chart" data-rt="${id}"><svg viewBox="0 0 ${RT_W} ${H}" width="100%" role="img" aria-label="Fitness and fatigue over time">${svg}</svg><div class="rt-tip" hidden></div></div>`;
+}
+// Form on its own axis (a %), with the zones shaded behind it.
+function rtFormChart(pts,raceIdx){
+  const id='rt'+(++_rtSeq);
+  const n=pts.length,H=84,PT=6,PB=14,chartH=H-PT-PB;
+  const lo=Math.min(-40,...pts.map(p=>p.form)),hi=Math.max(30,...pts.map(p=>p.form));
+  const x=i=>_rtX(i,n);
+  const y=v=>PT+chartH-((v-lo)/(hi-lo))*chartH;
+  let svg='';
+  [[5,20,'var(--st-go)'],[-30,-10,'var(--st-ready)'],[lo,-30,'var(--st-recover)']].forEach(([a,b,col])=>{
+    svg+=`<rect x="${RT_PL}" y="${y(b).toFixed(1)}" width="${RT_W-RT_PL-RT_PR}" height="${(y(a)-y(b)).toFixed(1)}" fill="${col}" opacity="0.1"/>`;
+  });
+  [20,5,-10,-30].forEach(v=>{svg+=`<text x="${RT_PL-4}" y="${(y(v)+2.5).toFixed(1)}" text-anchor="end" font-size="7" fill="var(--text3)">${v>0?'+':''}${v}</text>`;});
+  svg+=`<line x1="${RT_PL}" x2="${RT_W-RT_PR}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" stroke="var(--border)" stroke-width="0.8"/>`;
+  const firstProj=pts.findIndex(p=>p.proj),split=firstProj>0?firstProj:n;
+  const path=(from,to)=>pts.slice(from,to).map((p,j)=>`${j?'L':'M'}${x(from+j).toFixed(1)},${y(p.form).toFixed(1)}`).join('');
+  svg+=`<path d="${path(0,split)}" fill="none" stroke="var(--text)" stroke-width="2" stroke-linejoin="round"/>`;
+  if(firstProj>0)svg+=`<path d="${path(split-1,n)}" fill="none" stroke="var(--text)" stroke-width="2" stroke-dasharray="3,3"/>`;
+  const last=pts[n-1];svg+=`<circle cx="${x(n-1).toFixed(1)}" cy="${y(last.form).toFixed(1)}" r="4" fill="${fffZone(last.form).col}" stroke="var(--surface)" stroke-width="2"/>`;
+  if(raceIdx!=null)svg+=`<line x1="${x(raceIdx).toFixed(1)}" x2="${x(raceIdx).toFixed(1)}" y1="${PT}" y2="${H-PB}" stroke="var(--text)" stroke-width="1"/>`;
+  svg+=`<line class="rt-cross" x1="0" x2="0" y1="${PT}" y2="${H-PB}" stroke="var(--text2)" stroke-width="0.8" opacity="0"/>`;
+  svg+=_rtXLabels(pts,x,H);
+  const colW=(RT_W-RT_PL-RT_PR)/Math.max(1,n-1);
+  pts.forEach((p,i)=>{svg+=`<rect class="rt-hit" data-i="${i}" x="${(x(i)-colW/2).toFixed(1)}" y="0" width="${colW.toFixed(1)}" height="${H}" fill="transparent"/>`;});
+  _rtCharts[id]={kind:'line',n,x,rows:pts.map(p=>({date:_rtDateLbl(p.ds)+(p.proj?' · projected':''),lines:[[`${p.form>=0?'+':''}${Math.round(p.form)}%`,fffZone(p.form).label,fffZone(p.form).col]]}))};
+  return`<div class="rt-chart" data-rt="${id}"><svg viewBox="0 0 ${RT_W} ${H}" width="100%" role="img" aria-label="Form over time with zones">${svg}</svg><div class="rt-tip" hidden></div></div>`;
+}
+function renderFitnessFormCard(){
+  const hist=getFffHistory();
+  if(!hist||!hist.history)return'';
+  const now=hist.days[hist.days.length-1];
+  const ago=hist.days[Math.max(0,hist.days.length-43)];
+  const fitChange=ago&&ago.fit>0?Math.round((now.fit/ago.fit-1)*100):null;
+  const zone=fffZone(now.form);
+  const plan=getRaceTaperPlan(),rec=getRaceRecovery();
+  let pts=hist.days.slice(-90),raceIdx=null;
+  if(plan){pts=pts.concat(plan.proj);raceIdx=pts.length-1;}
+  let raceHtml='';
+  if(rec){
+    raceHtml=`<div class="fff-race"><div class="fff-race-h">Race recovery · ${esc(rec.race.name||'Race')}</div>
+      <p>Day ${rec.day} of ${rec.days}. Keep every run easy until <strong>${fmtShortDate(rec.until)}</strong>: roughly one easy day per mile raced, a long-standing coaching rule of thumb. Readiness will tell you if you're bouncing back faster.</p></div>`;
+  }else if(plan){
+    const rz=fffZone(plan.raceMorning.form),nz=fffZone(plan.raceNoTaper.form);
+    const fmtF=v=>`${v>=0?'+':''}${Math.round(v)}%`;
+    raceHtml=`<div class="fff-race"><div class="fff-race-h">${esc(plan.race.name||'Race')} · ${plan.daysToRace} days</div>
+      <div class="fff-race-grid">
+        <div><span>Start taper</span><strong>${plan.daysToTaper>0?fmtShortDate(plan.taperStart):'Now'}</strong><em>${plan.taperDays} days out</em></div>
+        <div><span>Race-morning form</span><strong style="color:${rz.col};">${fmtF(plan.raceMorning.form)}</strong><em>${rz.label}</em></div>
+        <div><span>Without a taper</span><strong style="color:${nz.col};">${fmtF(plan.raceNoTaper.form)}</strong><em>${nz.label}</em></div>
+      </div>
+      <p>Over the last ${plan.taperDays} days, cut weekly volume to roughly half while keeping your usual number of runs and a little race-pace work. That's the shape a meta-analysis of taper studies found worked best. Fitness eases from ${Math.round(plan.fitNow)} to about ${Math.round(plan.raceMorning.fit)}, a price worth paying to arrive fresh.</p></div>`;
+  }else if(!state.race||!state.race.date||daysUntil(state.race.date)<0){
+    raceHtml=`<button class="fff-setrace" onclick="openRaceModal()">Add your next race to plan the taper</button>`;
+  }
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Fitness, fatigue &amp; form</span><span class="chart-card-val">${plan?'90 days + to race':'90 days'}</span></div>
+    <div class="fff-stats">
+      <div><span>Fitness</span><strong>${Math.round(now.fit)}</strong><em>${fitChange!=null?`${fitChange>=0?'▲':'▼'}${Math.abs(fitChange)}% in 6 weeks`:'6-week load'}</em></div>
+      <div><span>Fatigue</span><strong>${Math.round(now.fat)}</strong><em>last 7 days</em></div>
+      <div><span>Form</span><strong style="color:${zone.col};">${now.form>=0?'+':''}${Math.round(now.form)}%</strong><em>${zone.label}</em></div>
+    </div>
+    <p class="fff-blurb">${zone.blurb}</p>
+    ${rtFffChart(pts,raceIdx)}
+    <div class="rt-key"><span><i class="rt-key-line" style="background:var(--c-indigo);"></i>Fitness</span><span><i class="rt-key-line" style="background:var(--c-orange);"></i>Fatigue</span>${plan?'<span><i class="rt-key-line rt-key-dash"></i>Projected with taper</span>':''}</div>
+    <div class="rt-block-head" style="margin-top:12px;"><span class="rt-title">Form</span><span class="rt-sub">Fitness minus fatigue, as a %</span></div>
+    ${rtFormChart(pts,raceIdx)}
+    <div class="rt-legend fff-zones">${FFF_ZONES.slice(0,4).concat(FFF_ZONES[4]).map(z=>`<span><i style="background:${z.col};"></i>${z.label}</span>`).join('')}</div>
+    ${raceHtml}
+    <div class="al-foot">Fitness is your 6-week training load, fatigue your last week's. The zones are coaching convention rather than settled science; use them alongside readiness.</div>
+  </div>`;
+}
 
 function renderRecoveryCard(){
   const morning=loadMorningData();

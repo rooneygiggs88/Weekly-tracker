@@ -672,6 +672,14 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .bf-date{font-size:13px;font-weight:700;color:var(--text);}
 .bf-in{width:100%;min-width:0;padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--mono);font-size:15px;font-weight:700;text-align:center;outline:none;}
 .bf-in:focus{border-color:var(--accent);}
+
+.fa-intro{font-size:13px;color:var(--text2);line-height:1.5;}
+.fa-main{display:flex;align-items:center;gap:14px;}
+.fa-age{font-family:var(--rounded);font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1;color:var(--c-teal);font-variant-numeric:tabular-nums;}
+.fa-side{font-size:13px;color:var(--text2);line-height:1.5;}
+.fa-side strong{color:var(--text);}
+.fa-side span{font-size:11.5px;color:var(--text3);}
+.fa-delta{font-size:12.5px;font-weight:600;color:var(--text2);margin-top:8px;}
 </style>
 </head>
 <body>
@@ -1006,6 +1014,25 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div class="muscle-check-grid" id="muscle-check-grid"></div>
     <button class="btn-primary" onclick="saveMuscleTag()" style="margin-bottom:8px;">Save Tags</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('muscle-tag-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- FITNESS AGE MODAL -->
+<div class="modal-overlay" id="fitness-modal" onclick="if(event.target===this)closeModal('fitness-modal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Fitness age</h3>
+    <label class="modal-label" for="fit-vo2-input">VO2max (from your watch)</label>
+    <input class="modal-input" id="fit-vo2-input" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 52">
+    <label class="modal-label" for="fit-birthyear-input">Birth year</label>
+    <input class="modal-input" id="fit-birthyear-input" type="number" inputmode="numeric" placeholder="e.g. 1990">
+    <label class="modal-label">Norms</label>
+    <div class="type-row" id="fit-sex-row">
+      <button class="type-btn" data-sex="m" onclick="setFitSex('m')">Male</button>
+      <button class="type-btn" data-sex="f" onclick="setFitSex('f')">Female</button>
+    </div>
+    <button class="btn-primary" style="margin-bottom:10px;" onclick="saveFitness()">Save</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('fitness-modal')">Cancel</button>
   </div>
 </div>
 
@@ -4761,12 +4788,13 @@ function _rtXLabels(pts,xOf,h=RT_H){
   return out;
 }
 // pts: [{ds, v}] oldest→newest; band: {lo,hi} or null
-function rtLineChart({pts,color,band,fmt,unit,name,invert}){
+function rtLineChart({pts,color,band,fmt,unit,name,invert,raw}){
   const id='rt'+(++_rtSeq);
   const have=pts.filter(p=>p.v!=null);
   if(have.length<2)return'';
   const n=pts.length;
-  const roll=pts.map((p,i)=>{const w=pts.slice(Math.max(0,i-6),i+1).filter(q=>q.v!=null).map(q=>q.v);return w.length?w.reduce((a,b)=>a+b,0)/w.length:null;});
+  // raw: occasional readings (not daily) are drawn as-is rather than as a 7-day average.
+  const roll=raw?pts.map(p=>p.v):pts.map((p,i)=>{const w=pts.slice(Math.max(0,i-6),i+1).filter(q=>q.v!=null).map(q=>q.v);return w.length?w.reduce((a,b)=>a+b,0)/w.length:null;});
   let vals=have.map(p=>p.v);if(band)vals=vals.concat([band.lo,band.hi]);
   let mn=Math.min(...vals),mx=Math.max(...vals);const pad=(mx-mn)*0.12||2;mn-=pad;mx+=pad;
   const chartH=RT_H-RT_PT-RT_PB;
@@ -4787,7 +4815,7 @@ function rtLineChart({pts,color,band,fmt,unit,name,invert}){
   // Hit layer: one full-height column per day, wider than any mark.
   const colW=(RT_W-RT_PL-RT_PR)/Math.max(1,n-1);
   pts.forEach((p,i)=>{svg+=`<rect class="rt-hit" data-i="${i}" x="${(x(i)-colW/2).toFixed(1)}" y="0" width="${colW.toFixed(1)}" height="${RT_H}" fill="transparent"/>`;});
-  _rtCharts[id]={kind:'line',n,x,rows:pts.map((p,i)=>({date:_rtDateLbl(p.ds),lines:[
+  _rtCharts[id]={kind:'line',n,x,rows:pts.map((p,i)=>({date:_rtDateLbl(p.ds),lines:raw?[[p.v!=null?`${fmt(p.v)}${unit}`:'–',name,color]]:[
     [p.v!=null?`${fmt(p.v)}${unit}`:'Not logged','that night',color],
     [roll[i]!=null?`${fmt(roll[i])}${unit}`:'–','7-day average',color]]}))};
   return`<div class="rt-chart" data-rt="${id}"><svg viewBox="0 0 ${RT_W} ${RT_H}" width="100%" role="img" aria-label="${esc(name)} over the last ${n} days">${svg}</svg><div class="rt-tip" hidden></div></div>`;
@@ -5258,6 +5286,7 @@ function renderMe(){
 
   el.innerHTML=`
     ${renderWeightSection(health)}
+    ${renderFitnessAgeCard()}
     ${renderBodyFatSection(health)}
     ${renderVapingSection()}
     <div class="chart-card me-link" onclick="showPage('trends');switchTrendsTab('overview')">
@@ -5277,6 +5306,79 @@ function renderMe(){
     </div>
     <div class="gap-md"></div>
   `;
+}
+
+// ── FITNESS AGE ──
+// The age at which your VO2max would be exactly average, from the Norwegian HUNT fitness
+// studies (NTNU): men average 54 and women 43 ml/kg/min in their twenties, about 7% lower
+// each decade after, reaching 34 and 27 over 70. Your watch's VO2max is itself an
+// estimate, so this is a trend to watch, not a verdict.
+const FITAGE_NORMS={m:[[25,54],[35,50.2],[45,46.7],[55,43.4],[65,40.4],[75,34]],f:[[25,43],[35,40],[45,37.2],[55,34.6],[65,32.2],[75,27]]};
+function fitnessAgeFor(vo2,sex){
+  const t=FITAGE_NORMS[sex==='f'?'f':'m'];
+  if(vo2>=t[0][1]){const slope=(t[0][1]-t[1][1])/10;return Math.max(20,t[0][0]-(vo2-t[0][1])/slope);}
+  for(let i=0;i<t.length-1;i++){const[a1,v1]=t[i],[a2,v2]=t[i+1];if(vo2<=v1&&vo2>=v2)return a1+(v1-vo2)/(v1-v2)*(a2-a1);}
+  const[aL,vL]=t[t.length-1],[aP,vP]=t[t.length-2];const slope=(vP-vL)/(aL-aP);
+  return Math.min(90,aL+(vL-vo2)/slope);
+}
+function getAge(){const p=state.profile;if(!p||!p.birthYear)return null;return today().getFullYear()-p.birthYear-(p.birthMonth&&today().getMonth()+1<p.birthMonth?1:0);}
+function getVo2Log(){return Array.isArray(state.vo2Log)?[...state.vo2Log].sort((a,b)=>a.date.localeCompare(b.date)):[];}
+let _fitSex=null;
+function openFitnessModal(){
+  const p=state.profile||{};
+  const log=getVo2Log();
+  document.getElementById('fit-vo2-input').value=log.length?log[log.length-1].vo2:'';
+  document.getElementById('fit-birthyear-input').value=p.birthYear||'';
+  _fitSex=p.sex||null;
+  _renderFitSex();
+  openModal('fitness-modal');
+}
+function _renderFitSex(){document.querySelectorAll('#fit-sex-row .type-btn').forEach(b=>b.classList.toggle('active',b.dataset.sex===_fitSex));}
+function setFitSex(v){_fitSex=v;_renderFitSex();}
+function saveFitness(){
+  const vo2=parseFloat(document.getElementById('fit-vo2-input').value);
+  const by=parseInt(document.getElementById('fit-birthyear-input').value);
+  const thisYear=today().getFullYear();
+  if(!(by>=thisYear-100&&by<=thisYear-12)){toastMsg('Enter your birth year');return;}
+  if(!_fitSex){toastMsg('Choose male or female for the norms');return;}
+  state.profile={...(state.profile||{}),birthYear:by,sex:_fitSex};
+  if(!isNaN(vo2)){
+    if(vo2<15||vo2>90){toastMsg('VO2max looks off - check the number');return;}
+    const log=getVo2Log().filter(x=>x.date!==dk(today()));
+    log.push({date:dk(today()),vo2:Math.round(vo2*10)/10});
+    state.vo2Log=log;
+  }
+  saveState();closeModal('fitness-modal');haptic('success');
+  renderMe();
+  const last=getVo2Log().slice(-1)[0];
+  if(last)toastMsg(`Fitness age ${Math.round(fitnessAgeFor(last.vo2,_fitSex))}`);
+}
+function renderFitnessAgeCard(){
+  const p=state.profile||{};
+  const log=getVo2Log();
+  const age=getAge();
+  const head=`<div class="chart-card-header"><span class="chart-card-title">Fitness age</span><button class="rd-info" onclick="openFitnessModal()">${log.length?'Log VO2max':'Set up'}</button></div>`;
+  if(!log.length||!p.sex||!age){
+    return`<div class="chart-card" style="margin-bottom:10px;">${head}
+      <p class="fa-intro">Your Forerunner 165 estimates VO2max (the VO2 Max widget). Log it every week or two and Tracker turns it into a fitness age: the age at which that VO2max would be exactly average, from a Norwegian study of nearly 5,000 adults.</p>
+      <button class="fff-setrace" onclick="openFitnessModal()">Add your VO2max</button></div>`;
+  }
+  const last=log[log.length-1];
+  const fa=fitnessAgeFor(last.vo2,p.sex);
+  const diff=Math.round(age-fa);
+  const first=log.find(x=>x.date>=dk(addDays(today(),-182)))||log[0];
+  const delta=first&&first!==last?Math.round((fitnessAgeFor(first.vo2,p.sex)-fa)*10)/10:null;
+  const pts=log.slice(-26).map(x=>({ds:x.date,v:x.vo2}));
+  const chart=pts.length>=2?rtLineChart({pts,color:'var(--c-teal)',band:null,fmt:v=>(Math.round(v*10)/10).toString(),unit:'',name:'VO2max',raw:true}):'';
+  return`<div class="chart-card" style="margin-bottom:10px;">${head}
+    <div class="fa-main">
+      <div class="fa-age">${fa<=20?'≤20':Math.round(fa)}</div>
+      <div class="fa-side"><strong>${diff>0?`${diff} years younger`:diff<0?`${-diff} years older`:'Right on'}</strong> than your age of ${age}<br><span>VO2max ${last.vo2} · ${fmtShortDate(last.date)}</span></div>
+    </div>
+    ${delta!=null?`<p class="fa-delta">${delta>0?`Down ${delta} years`:delta<0?`Up ${-delta} years`:'Unchanged'} since ${fmtShortDate(first.date)}.</p>`:''}
+    ${chart?`<div class="rt-block-head" style="margin-top:8px;"><span class="rt-title">VO2max</span><span class="rt-sub">ml/kg/min</span></div>${chart}`:''}
+    <div class="al-foot">Norms: NTNU HUNT fitness studies, ${p.sex==='f'?'women':'men'}. Watch VO2max is an estimate; the trend matters more than any one reading.</div>
+  </div>`;
 }
 
 function renderWeightSection(health){return renderBodyCompCard(health);}

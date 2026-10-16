@@ -634,6 +634,25 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .fff-race p strong{color:var(--text);}
 .fff-setrace{margin-top:12px;width:100%;padding:11px;border-radius:12px;border:1px dashed var(--border);background:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 .week-race-phase{font-size:11px;font-weight:700;margin-top:4px;line-height:1.4;}
+
+.checkin-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.checkin-tag{padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+.checkin-tag.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent2);}
+.imp-intro{font-size:12.5px;color:var(--text2);line-height:1.5;margin:-6px 0 10px;}
+.imp-row{padding:10px 0;border-top:1px solid var(--border);}
+.imp-head{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.imp-lbl{font-size:13.5px;font-weight:700;color:var(--text);}
+.imp-chip{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+.imp-chip.good{color:var(--st-go);background:color-mix(in srgb,var(--st-go) 12%,transparent);}
+.imp-chip.bad{color:var(--st-recover);background:color-mix(in srgb,var(--st-recover) 12%,transparent);}
+.imp-chip.none{color:var(--text3);background:var(--surface2);}
+.imp-metrics{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin-top:5px;font-variant-numeric:tabular-nums;}
+.imp-metrics b{color:var(--text);font-weight:800;}
+.imp-n{font-size:10.5px;color:var(--text3);margin-top:3px;}
+.imp-empty{font-size:12.5px;color:var(--text3);padding:6px 0;}
+.imp-pending{border-top:1px solid var(--border);padding-top:10px;margin-top:2px;}
+.imp-pending p{font-size:12px;color:var(--text2);line-height:1.7;margin-top:3px;}
+.imp-pending p span{color:var(--text3);font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -1004,6 +1023,9 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 
     <div class="checkin-row-head checkin-gap"><span>How do you feel?</span><span class="checkin-val checkin-val-word" id="checkin-feel-val">–</span></div>
     <div class="checkin-feel" id="checkin-feel"></div>
+
+    <div class="checkin-row-head checkin-gap"><span>Anything last night? <em>optional</em></span></div>
+    <div class="checkin-tags" id="checkin-tags"></div>
 
     <label class="modal-label checkin-gap">Wake time <em class="checkin-opt">optional</em></label>
     <input class="modal-input" id="morning-wake" type="time">
@@ -3808,6 +3830,7 @@ function renderTrends(){
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week${vsAvg&&vsAvg.kmPct!=null?`<br>${vsAvgLine('weekly',vsAvg.kmPct)}`:''}</div></div>
     </div>
     ${renderRecoveryCard()}
+    ${renderHabitImpactsCard()}
     ${renderFitnessFormCard()}
     ${renderActivityLoad()}
     ${streakHtml}
@@ -4781,6 +4804,83 @@ document.addEventListener('pointerout',e=>{
   const ch=e.target.closest&&e.target.closest('.rt-chart');
   if(ch&&e.pointerType==='mouse'&&!ch.contains(e.relatedTarget))_rtHide(ch);
 });
+
+// ── HABIT IMPACTS ──
+// Whoop-Journal-style: for each thing you can say yes or no to, compare the next
+// morning's HRV, resting HR and readiness on yes days against no days. Correlation, not
+// proof - so verdicts are graded by effect size (Cohen's d on the readiness score) and
+// nothing is said until there are at least IMPACT_MIN mornings on each side.
+const CHECKIN_TAGS=[
+  {key:'alcohol',label:'Alcohol'},{key:'caffeine',label:'Late caffeine'},{key:'meal',label:'Late meal'},
+  {key:'stress',label:'Stressful day'},{key:'ill',label:'Feeling ill'},{key:'travel',label:'Travel'}];
+const IMPACT_MIN=5;
+function _impStats(a){const n=a.length;if(!n)return{n,m:null,sd:null};const m=a.reduce((x,y)=>x+y,0)/n;const sd=n>1?Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/(n-1)):0;return{n,m,sd};}
+function getHabitImpacts(){
+  const morning=loadMorningData();
+  const cut=dk(addDays(today(),-180));
+  const todayStr=dk(today());
+  const gym=loadGymData(),runs=loadRunData();
+  // Next-morning outcomes
+  const rows=Object.keys(morning).filter(ds=>ds>=cut&&ds<=todayStr&&morning[ds]).sort().map(ds=>{
+    const m=morning[ds],r=computeReadiness(ds);
+    return{ds,prev:dk(addDays(new Date(ds+'T12:00:00'),-1)),m,hrv:_rdNum(m.hrv)>0?+m.hrv:null,rhr:_rdNum(m.rhr)>0?+m.rhr:null,score:r.score};
+  }).filter(r=>r.hrv!=null||r.rhr!=null||r.score!=null);
+  const factors=[];
+  // Tags logged in the check-in describe the night before that morning.
+  CHECKIN_TAGS.filter(t=>t.key!=='ill').forEach(t=>factors.push({key:'tag-'+t.key,label:t.label,kind:'Tag',
+    test:r=>Array.isArray(r.m.tags)?r.m.tags.includes(t.key):undefined}));
+  // Daily habits done the day before.
+  allDailyGoals().forEach(g=>factors.push({key:'goal-'+g.id,label:g.name,kind:'Habit',
+    test:r=>(r.prev>=todayStr||(g.effectiveFrom&&g.effectiveFrom>r.prev))?undefined:goalDone(r.prev,g)}));
+  // Training after 7pm vs earlier training (rest days excluded, so it's about timing).
+  const lateDay={},trainDay={};
+  runs.forEach(x=>{trainDay[x.date]=true;if(x.startTime&&x.startTime>='19:00')lateDay[x.date]=true;});
+  gym.forEach(x=>{trainDay[x.date]=true;if(x.ts&&new Date(x.ts).getHours()>=19)lateDay[x.date]=true;});
+  factors.push({key:'late-training',label:'Training after 7pm',kind:'Training',test:r=>trainDay[r.prev]?!!lateDay[r.prev]:undefined});
+  return factors.map(f=>{
+    const yes=[],no=[];
+    rows.forEach(r=>{const v=f.test(r);if(v===true)yes.push(r);else if(v===false)no.push(r);});
+    const out={...f,nYes:yes.length,nNo:no.length};
+    if(yes.length<IMPACT_MIN||no.length<IMPACT_MIN){out.pending=true;return out;}
+    const metric=k=>{
+      const a=_impStats(yes.map(r=>r[k]).filter(v=>v!=null)),b=_impStats(no.map(r=>r[k]).filter(v=>v!=null));
+      if(a.n<3||b.n<3)return null;
+      const pooled=Math.sqrt(((a.n-1)*a.sd**2+(b.n-1)*b.sd**2)/Math.max(1,a.n+b.n-2))||1;
+      const d=(a.m-b.m)/pooled;
+      return{diff:a.m-b.m,base:b.m,d,z:Math.abs(d)/Math.sqrt(1/a.n+1/b.n)};
+    };
+    out.hrv=metric('hrv');out.rhr=metric('rhr');out.score=metric('score');
+    // The verdict comes from whichever of HRV or readiness shows the stronger evidence
+    // (higher is better for both). An effect has to be large relative to its own
+    // sampling noise as well as in absolute terms, with the bar raised a little for
+    // checking two measures - so random habits don't get credited with effects by chance.
+    const lead=[out.hrv,out.score].filter(Boolean).sort((a,b)=>b.z-a.z)[0];
+    const d=lead?lead.d:0,z=lead?lead.z:0;
+    out.size=Math.abs(d)>=0.5&&z>=2.8?'clear':Math.abs(d)>=0.3&&z>=2.2?'possible':'none';
+    out.better=d>0;
+    return out;
+  });
+}
+function renderHabitImpactsCard(){
+  const all=getHabitImpacts();
+  if(!all.length)return'';
+  const done=all.filter(f=>!f.pending).sort((a,b)=>{const r={clear:0,possible:1,none:2};return r[a.size]-r[b.size]||Math.abs((b.score||b.hrv||{d:0}).d)-Math.abs((a.score||a.hrv||{d:0}).d);});
+  const pending=all.filter(f=>f.pending);
+  const chip=f=>f.size==='none'?`<span class="imp-chip none">No clear effect</span>`:`<span class="imp-chip ${f.better?'good':'bad'}">${f.size==='clear'?(f.better?'Better':'Worse'):(f.better?'Possibly better':'Possibly worse')}</span>`;
+  const fmt=(m,unit,pct)=>{if(!m)return'–';const v=pct?(m.diff/m.base*100):m.diff;const r=Math.round(v);return`${r>0?'+':''}${r}${unit}`;};
+  const row=f=>`<div class="imp-row">
+    <div class="imp-head"><span class="imp-lbl">${esc(f.label)}</span>${chip(f)}</div>
+    <div class="imp-metrics"><span>Readiness <b>${fmt(f.score,'',false)}</b></span><span>HRV <b>${fmt(f.hrv,'%',true)}</b></span><span>Resting HR <b>${fmt(f.rhr,' bpm',false)}</b></span></div>
+    <div class="imp-n">${f.nYes} yes · ${f.nNo} no mornings</div>
+  </div>`;
+  const pend=pending.length?`<div class="imp-pending"><span class="rt-title">Still collecting</span><p>${pending.map(f=>`${esc(f.label)} <span>${Math.min(f.nYes,f.nNo)}/${IMPACT_MIN}</span>`).join(' · ')}</p></div>`:'';
+  return`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Habit impacts</span><span class="chart-card-val">next morning</span></div>
+    <p class="imp-intro">How your mornings compare after days you did each thing versus days you didn't. It shows patterns, not proof: plenty of things travel together.</p>
+    ${done.length?done.map(row).join(''):`<div class="imp-empty">Nothing has enough history yet. Tags you add in the morning check-in, and the habits you tick, build this up.</div>`}
+    ${pend}
+  </div>`;
+}
 
 // ── FITNESS, FATIGUE & FORM ──
 // Banister's fitness-fatigue model the way TrainingPeaks and intervals.icu draw it, on
@@ -7098,13 +7198,14 @@ function getRecentMorningPicks(key){
   for(const[,v]of entries){const n=+v[key];if(!seen.includes(n))seen.push(n);if(seen.length>=3)break;}
   return seen;
 }
-const _checkin={sleep:null,hrv:null,rhr:null,feel:null};
+const _checkin={sleep:null,hrv:null,rhr:null,feel:null,tags:[]};
 function openMorningModal(){
   const saved=loadMorningData()[dk(today())]||{};
   _checkin.sleep=saved.sleep!=null?+saved.sleep:70;
   _checkin.hrv=_rdNum(saved.hrv);
   _checkin.rhr=_rdNum(saved.rhr);
   _checkin.feel=_rdNum(saved.feel);
+  _checkin.tags=Array.isArray(saved.tags)?[...saved.tags]:[];
   document.getElementById('morning-wake').value=saved.wake||'';
   ['hrv','rhr'].forEach(k=>{
     const t=document.getElementById(`checkin-${k}-type`);t.style.display='none';t.value='';
@@ -7112,6 +7213,7 @@ function openMorningModal(){
     document.getElementById(`checkin-${k}-picks`).innerHTML=picks.map(v=>`<button type="button" class="checkin-hrv-pick" data-val="${v}" onclick="_pickCheckin('${k}',${v})">${v}</button>`).join('')
       +`<button type="button" class="checkin-hrv-pick type" onclick="_showCheckinType('${k}')">${picks.length?'Other':'Type it'}</button>`;
   });
+  document.getElementById('checkin-tags').innerHTML=CHECKIN_TAGS.map(t=>`<button type="button" class="checkin-tag" data-tag="${t.key}" onclick="_toggleCheckinTag('${t.key}')">${t.label}</button>`).join('');
   document.getElementById('checkin-feel').innerHTML=[1,2,3,4,5].map(v=>`<button type="button" class="checkin-feel-btn" data-val="${v}" onclick="_pickCheckin('feel',${v})"><b>${v}</b>${FEEL_LABELS[v]}</button>`).join('');
   _renderCheckinSleep();
   _renderCheckinAll();
@@ -7137,7 +7239,13 @@ function _renderCheckinAll(){
   });
   document.getElementById('checkin-feel-val').textContent=_checkin.feel!=null?FEEL_LABELS[_checkin.feel]:'–';
   document.querySelectorAll('#checkin-feel .checkin-feel-btn').forEach(el=>el.classList.toggle('active',+el.dataset.val===_checkin.feel));
+  document.querySelectorAll('#checkin-tags .checkin-tag').forEach(el=>el.classList.toggle('active',_checkin.tags.includes(el.dataset.tag)));
   _updateCheckinSavePreview();
+}
+function _toggleCheckinTag(k){
+  const i=_checkin.tags.indexOf(k);
+  if(i>=0)_checkin.tags.splice(i,1);else _checkin.tags.push(k);
+  _renderCheckinAll();
 }
 // Tapping the selected pick again clears it - resting HR and feel are optional, and a
 // mis-tap shouldn't be stuck there.
@@ -7156,7 +7264,7 @@ function _showCheckinType(k){
 function _updateCheckinSavePreview(){
   const btn=document.getElementById('checkin-save-btn');
   if(!btn)return;
-  const p=computeReadiness(dk(today()),{sleep:_checkin.sleep,hrv:_checkin.hrv,rhr:_checkin.rhr,feel:_checkin.feel});
+  const p=computeReadiness(dk(today()),{sleep:_checkin.sleep,hrv:_checkin.hrv,rhr:_checkin.rhr,feel:_checkin.feel,tags:_checkin.tags});
   btn.textContent=p.state?`Save · ${p.state.label} ${p.score}`:'Save';
 }
 // Drag-to-set slider - pointer events cover mouse and touch in one listener, attached
@@ -7177,13 +7285,13 @@ function _updateCheckinSavePreview(){
 
 function saveMorningCheckin(){
   const wake=document.getElementById('morning-wake').value||null;
-  const {sleep,hrv,rhr,feel}=_checkin;
+  const {sleep,hrv,rhr,feel}=_checkin;const tags=[..._checkin.tags];
   if(sleep==null&&hrv==null&&rhr==null&&feel==null&&!wake){toastMsg('Enter at least one value');return;}
   const d=loadMorningData();
   const ds=dk(today());
   // Merge rather than replace, so anything else already stored for today (an imported
   // value, say) survives an edit here.
-  d[ds]={...(d[ds]||{}),sleep,hrv,rhr,feel,wake};
+  d[ds]={...(d[ds]||{}),sleep,hrv,rhr,feel,wake,tags};
   saveMorningData(d);
   closeModal('morning-modal');
   const r=computeReadiness(ds);
@@ -7475,12 +7583,16 @@ function _computeReadiness(ds,override){
   if(flags.length>=3){score=Math.min(score,35);}
   else if(flags.length>=2){score=Math.min(score,49);}
   if(sleep!=null&&sleep<45)score=Math.min(score,55);
+  // Feeling ill overrides a good-looking set of numbers: rest is the fastest way back.
+  const ill=m&&Array.isArray(m.tags)&&m.tags.includes('ill');
+  if(ill)score=Math.min(score,35);
   if(flags.length>=2)res.flagNote=`${flags.length} signals are off at once. Illness, alcohol and built-up fatigue all look like this in the data, so it's worth taking seriously.`;
   res.score=score;res.g=gTot;res.state=rdState(score);
   const inRange=scored.filter(c=>c.status==='good'||c.status==='ok').length;
   res.summary=`${inRange} of ${scored.length} signal${scored.length===1?'':'s'} in your normal range`;
   const worst=[...scored].sort((a,b)=>a.g-b.g)[0];
-  if(worst&&worst.g<-0.5&&worst.driver)res.driver=worst.driver;
+  if(ill)res.driver='You logged feeling ill. Rest is the quickest way back, whatever the numbers say';
+  else if(worst&&worst.g<-0.5&&worst.driver)res.driver=worst.driver;
   else{
     const goods=[...scored].filter(c=>c.goodDriver).sort((a,b)=>b.g-a.g).map(c=>c.goodDriver);
     res.driver=goods.length&&res.state.key==='go'?`${goods.slice(0,2).join(' and ').replace(/^./,ch=>ch.toUpperCase())}`:'Everything is within your normal range';

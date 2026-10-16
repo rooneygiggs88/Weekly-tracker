@@ -697,6 +697,14 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .yr-st{display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12.5px;font-weight:600;}
 .yr-st i{width:9px;height:9px;border-radius:3px;}
 .yr-foot{font-size:12px;color:var(--text3);padding-top:12px;border-top:1px solid var(--border);}
+
+.checkin-paste{display:block;margin:-6px 0 16px;padding:8px 12px;border-radius:10px;border:1px dashed var(--border);background:none;color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+.sc-steps{padding-left:1.2rem;display:grid;gap:10px;margin:4px 0 14px;font-size:13.5px;color:var(--text);line-height:1.5;}
+.sc-steps code,.checkin-intro code{font-family:var(--mono);font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:5px;}
+.sc-url{display:flex;align-items:center;gap:8px;margin-top:6px;background:var(--surface2);border-radius:10px;padding:8px 10px;}
+.sc-url code{flex:1;min-width:0;overflow-wrap:anywhere;font-size:11.5px;background:none;padding:0;user-select:text;-webkit-user-select:text;}
+.sc-url button{border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;}
+.ask-card{margin-bottom:10px;}
 </style>
 </head>
 <body>
@@ -950,7 +958,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     </div>
     <div class="chart-card" style="padding:0 0;">
       <div class="settings-row" style="padding:16px 20px;" onclick="exportData()">
-        <div><div class="settings-row-label">Export data</div><div class="settings-row-meta">Download JSON backup</div></div>
+        <div><div class="settings-row-label">Back up now</div><div class="settings-row-meta">Save to Files or iCloud Drive</div></div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </div>
       <div class="settings-row" style="padding:16px 20px;" onclick="document.getElementById('import-file').click()">
@@ -965,6 +973,12 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
       </div>
     </div>
     <div class="csv-help">Needs a date column plus any of HRV, resting HR or sleep score, one row per day. Days you've already logged keep their values.</div>
+    <div class="chart-card" style="padding:0 0;margin-top:12px;">
+      <div class="settings-row" style="padding:16px 20px;" onclick="closeModal('settings-modal');openShortcutGuide()">
+        <div><div class="settings-row-label">Morning Shortcut</div><div class="settings-row-meta">Resting HR from Apple Health when your alarm stops</div></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
     <input type="file" id="import-morning-file" accept=".csv,.txt,text/csv" style="display:none;" onchange="importMorningCsv(event)">
     <div class="gap-sm"></div>
@@ -1062,6 +1076,37 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
+<!-- SHORTCUT GUIDE -->
+<div class="modal-overlay" id="shortcut-modal" onclick="if(event.target===this)closeModal('shortcut-modal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="checkin-modal-label">One-time setup · about 5 minutes</div>
+    <h3 style="margin:2px 0 6px;">Morning Shortcut</h3>
+    <p class="checkin-intro">When your iPhone alarm stops, a Shortcut reads last night's resting heart rate from Apple Health (your Garmin syncs it there) and hands it to Tracker's check-in. HRV doesn't sync from Garmin, so that one stays a tap.</p>
+    <ol class="sc-steps">
+      <li>Open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Alarm</b> → <b>Is Stopped</b> → <b>Run Immediately</b>.</li>
+      <li>Add <b>Find Health Samples</b>: Type <b>Resting Heart Rate</b>, sort by <b>Start Date</b>, <b>Latest First</b>, limit <b>1</b>.</li>
+      <li>Add <b>Get Details of Health Samples</b> → <b>Value</b>.</li>
+      <li>Add <b>Text</b> containing <code>tracker:rhr=</code> followed by the Value from step 3, then <b>Copy to Clipboard</b>.</li>
+      <li>Add <b>Open URLs</b> with this link, with the Value from step 3 on the end:
+        <div class="sc-url"><code id="shortcut-url"></code><button type="button" onclick="copyShortcutUrl()">Copy</button></div></li>
+    </ol>
+    <p class="checkin-intro"><b>If the link opens in Safari instead of Tracker</b>, delete step 5 and add <b>Show Notification</b> ("Time to check in") instead. Open Tracker from your Home Screen and tap <b>Paste from Shortcut</b> in the check-in. Safari keeps separate data from the Home Screen app, so a check-in started there won't save.</p>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('shortcut-modal')">Done</button>
+  </div>
+</div>
+
+<!-- SUMMARY FALLBACK -->
+<div class="modal-overlay" id="summary-modal" onclick="if(event.target===this)closeModal('summary-modal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Your training summary</h3>
+    <p class="checkin-intro">Copying didn't work here, so select all of this and copy it.</p>
+    <textarea id="summary-text" class="modal-input" rows="12" readonly style="font-size:12px;font-family:var(--mono);"></textarea>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('summary-modal')">Done</button>
+  </div>
+</div>
+
 <!-- BACKFILL MODAL -->
 <div class="modal-overlay" id="backfill-modal" onclick="if(event.target===this)closeModal('backfill-modal')">
   <div class="modal">
@@ -1091,6 +1136,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div class="checkin-modal-label">Morning check-in</div>
     <h3 style="margin:2px 0 6px;">How are you this morning?</h3>
     <p class="checkin-intro">Sleep and HRV are on your Garmin Morning Report. Resting HR is on the heart rate glance.</p>
+    <button type="button" class="checkin-paste" onclick="pasteFromShortcut()">Paste from Shortcut</button>
 
     <div class="checkin-row-head"><span>Sleep score</span><span class="checkin-val" id="checkin-sleep-val">–</span></div>
     <div class="checkin-slider-track" id="checkin-slider-track">
@@ -3943,6 +3989,7 @@ function renderTrends(){
     ${renderWhatMovesCard('Body & recovery')}
     ${renderWeekReviewHistory()}
     ${_yrIsReview()?'':renderYearCard()}
+    ${renderAskClaudeCard()}
   `;
 }
 
@@ -4909,6 +4956,134 @@ document.addEventListener('pointerout',e=>{
   if(ch&&e.pointerType==='mouse'&&!ch.contains(e.relatedTarget))_rtHide(ch);
 });
 
+// ── BACKUP ──
+// On iPhone the share sheet is the way to put a file in iCloud Drive ("Save to Files"),
+// so that comes first; a plain download is the fallback elsewhere. A backup only counts
+// once it has actually been saved or shared.
+function _backupFile(){
+  const data={state,gym:loadGymData(),run:loadRunData(),health:loadHealthData(),prog:loadGymProg(),vaping:loadVapingData(),morning:loadMorningData()};
+  const name=`${dk(today()).split('-').reverse().join('-')}-tracker-backup.json`;
+  return{blob:new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),name};
+}
+function _markBackedUp(msg){
+  state.lastBackupAt=dk(today());saveState();
+  const banner=document.getElementById(`anomaly-backup_${dk(today())}`);if(banner)banner.remove();
+  toastMsg(msg);
+}
+function exportData(){
+  const {blob,name}=_backupFile();
+  let file=null;
+  try{file=new File([blob],name,{type:'application/json'});}catch(e){}
+  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:'Tracker backup'})
+      .then(()=>_markBackedUp('Backup saved'))
+      .catch(err=>{if(err&&err.name!=='AbortError')_downloadBackup(blob,name);});
+    return;
+  }
+  _downloadBackup(blob,name);
+}
+function _downloadBackup(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  _markBackedUp('Data exported');
+}
+
+// ── ASK CLAUDE ──
+// A compact, numbers-first digest of the last four weeks to paste into the Claude app for
+// a proper conversation. Nothing leaves the phone unless you paste it somewhere.
+function buildCoachSummary(){
+  const now=today(),todayStr=dk(now),from=dk(addDays(now,-27));
+  const L=[];
+  const name=state.userName?` (${state.userName})`:'';
+  L.push(`My training data from Tracker${name}, last 4 weeks to ${todayStr}. I run and lift. Please act as my coach: what's going well, what worries you, and what should I change in the next two weeks?`);
+  const r=computeReadiness();
+  if(r.state)L.push(`\nToday's readiness: ${r.score}/100 (${r.state.label}). ${r.summary}. ${r.driver||''}`.trim());
+  const morning=loadMorningData();
+  const days=Object.keys(morning).filter(ds=>ds>=from&&ds<=todayStr).sort();
+  const avg=(k)=>{const v=days.map(ds=>_rdNum(morning[ds][k])).filter(x=>x!=null&&x>0);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null;};
+  const B=getMorningBaselines(dk(addDays(now,1)));
+  L.push(`\nRecovery (4-week averages): HRV ${avg('hrv')??'–'} ms (60-day normal ${B.hrv.n?Math.round(Math.exp(B.hrv.mean)):'–'}), resting HR ${avg('rhr')??'–'} bpm, Garmin sleep score ${avg('sleep')??'–'}. ${days.length} morning check-ins.`);
+  const scores=[];for(let i=27;i>=0;i--){const x=computeReadiness(dk(addDays(now,-i)));scores.push(x.score==null?'-':x.score);}
+  L.push(`Readiness each morning, oldest first: ${scores.join(', ')}`);
+  const runs=loadRunData().filter(x=>x.date>=from&&x.date<=todayStr);
+  const gym=loadGymData().filter(x=>x.date>=from&&x.date<=todayStr);
+  L.push(`\nRuns: ${runs.length}, ${runs.reduce((a,x)=>a+(parseFloat(x.km)||0),0).toFixed(1)} km.`);
+  runs.slice(-12).forEach(x=>L.push(`- ${x.date} ${x.effort||'Run'} ${x.km||'?'} km${x.time?` in ${x.time}`:''}${x.hr?`, avg HR ${x.hr}`:''}`));
+  L.push(`Gym: ${gym.length} sessions.`);
+  gym.slice(-8).forEach(s=>{const top=(s.exercises||[]).map(e=>{const w=Math.max(0,...(e.sets||[]).filter(z=>!z.warmup).map(z=>parseFloat(z.weight)||0));return w?`${e.name} ${w}kg`:e.name;}).slice(0,4).join(', ');L.push(`- ${s.date} ${s.type||'Gym'}${s.effort?` (${s.effort})`:''}: ${top}`);});
+  const ld=getLoadState(todayStr);
+  if(ld.ratio!=null)L.push(`\nTraining load: last 7 days ${Math.round(ld.acute)}/day vs 4-week normal ${Math.round(ld.chronic)}/day (${ld.ratio.toFixed(2)}x). Load = minutes x effort.`);
+  const h=getFffHistory();
+  if(h&&h.history){const n=h.days[h.days.length-1];L.push(`Fitness ${Math.round(n.fit)}, fatigue ${Math.round(n.fat)}, form ${Math.round(n.form)}% (${fffZone(n.form).label}).`);}
+  if(state.race&&state.race.date&&daysUntil(state.race.date)>=0){
+    const t=getRaceTaperPlan();
+    L.push(`\nNext race: ${state.race.name||'Race'}, ${state.race.km||'?'} km on ${state.race.date}${state.race.goalTime?`, goal ${state.race.goalTime}`:''} (${daysUntil(state.race.date)} days).${t?` Planned taper from ${t.taperStart}, projected race-morning form ${Math.round(t.raceMorning.form)}%.`:''}`);
+  }
+  const yg=getYearGoalProgress();
+  if(yg&&yg.isCurrentYear)L.push(`Year running goal: ${Math.round(yg.done)} of ${yg.g.targetKm} km, ${Math.round(yg.remaining)} to go.`);
+  const imp=getHabitImpacts().filter(f=>!f.pending&&f.size!=='none');
+  if(imp.length)L.push(`\nHabit patterns (next-morning readiness): ${imp.map(f=>`${f.label} ${f.better?'better':'worse'}${f.size==='possible'?' (possible)':''}`).join('; ')}.`);
+  if(Array.isArray(state.weekPlan))L.push(`\nWeekly plan Mon-Sun: ${state.weekPlan.map((t,i)=>t==='Run'?`Run (${getWeekPlanRunType(i)})`:(t||'Rest')).join(', ')}.`);
+  return L.join('\n');
+}
+function copyCoachSummary(){
+  const text=buildCoachSummary();
+  const done=()=>{toastMsg('Copied. Paste it into Claude');haptic('success');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>_showSummaryText(text));
+  }else _showSummaryText(text);
+}
+function _showSummaryText(text){
+  const el=document.getElementById('summary-text');el.value=text;
+  openModal('summary-modal');setTimeout(()=>{el.focus();el.select();},350);
+}
+function renderAskClaudeCard(){
+  return`<div class="chart-card ask-card">
+    <div class="chart-card-header"><span class="chart-card-title">Ask Claude</span></div>
+    <p class="fa-intro">Copies a summary of your last four weeks: readiness, recovery, every run and lift, load, race and habits. Paste it into the Claude app for a proper coaching conversation.</p>
+    <button class="rd-cta-2" onclick="copyCoachSummary()">Copy my training summary</button>
+  </div>`;
+}
+
+// ── MORNING SHORTCUT ──
+// An iPhone Shortcut can read resting HR from Apple Health (Garmin syncs it there; HRV
+// it doesn't) and hand it to the check-in two ways: as a link (?checkin=1&rhr=52), or
+// via the clipboard as "tracker:rhr=52" for the "Paste from Shortcut" button. The link
+// is the smoother path where iOS opens it in the home-screen app; the clipboard always works.
+function _parseShortcutValues(text){
+  const out={};const re=/(rhr|hrv|sleep|feel)\s*[=:]\s*(\d+(?:\.\d+)?)/gi;let m;
+  while((m=re.exec(String(text||''))))out[m[1].toLowerCase()]=Math.round(parseFloat(m[2]));
+  return out;
+}
+function _applyShortcutValues(v){
+  const ok={rhr:[25,120],hrv:[5,250],sleep:[0,100],feel:[1,5]};
+  let n=0;Object.keys(v).forEach(k=>{if(ok[k]&&v[k]>=ok[k][0]&&v[k]<=ok[k][1]){_checkin[k]=v[k];n++;}});
+  if(n){_renderCheckinSleep();_renderCheckinAll();}
+  return n;
+}
+function pasteFromShortcut(){
+  if(!navigator.clipboard||!navigator.clipboard.readText){toastMsg('Pasting isn’t available here');return;}
+  navigator.clipboard.readText().then(t=>{
+    const n=_applyShortcutValues(_parseShortcutValues(t));
+    toastMsg(n?`Filled in ${n} value${n===1?'':'s'} from your Shortcut`:'No Shortcut values on the clipboard');
+  }).catch(()=>toastMsg('Couldn’t read the clipboard'));
+}
+function handleShortcutLink(){
+  let params;try{params=new URLSearchParams(location.search);}catch(e){return;}
+  if(!params.has('checkin'))return;
+  const v=_parseShortcutValues([...params.entries()].map(([k,val])=>`${k}=${val}`).join(' '));
+  try{history.replaceState(null,'',location.pathname);}catch(e){}
+  setTimeout(()=>{openMorningModal();const n=_applyShortcutValues(v);if(n)toastMsg(`Resting HR filled in from your Shortcut`);},300);
+}
+function openShortcutGuide(){
+  const url=location.origin+location.pathname;
+  document.getElementById('shortcut-url').textContent=`${url}?checkin=1&rhr=`;
+  openModal('shortcut-modal');
+}
+function copyShortcutUrl(){
+  const t=document.getElementById('shortcut-url').textContent;
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toastMsg('Link copied')).catch(()=>toastMsg('Select the link and copy it'));
+}
+
 // ── YEAR IN REVIEW ──
 // "2026 so far" all year round; in December it becomes "2026 in review" and moves to the
 // top of Trends. Everything is computed from what's already logged.
@@ -5016,8 +5191,11 @@ function getHabitImpacts(){
   // Next-morning outcomes
   const rows=Object.keys(morning).filter(ds=>ds>=cut&&ds<=todayStr&&morning[ds]).sort().map(ds=>{
     const m=morning[ds],r=computeReadiness(ds);
-    return{ds,prev:dk(addDays(new Date(ds+'T12:00:00'),-1)),m,hrv:_rdNum(m.hrv)>0?+m.hrv:null,rhr:_rdNum(m.rhr)>0?+m.rhr:null,score:r.score};
-  }).filter(r=>r.hrv!=null||r.rhr!=null||r.score!=null);
+    // Ill or run-down mornings (3+ signals off) are left out: they drag habits and numbers
+    // down together, which makes habits look as if they mattered when they didn't.
+    const offDay=r.flags.length>=3||(Array.isArray(m.tags)&&m.tags.includes('ill'));
+    return{ds,prev:dk(addDays(new Date(ds+'T12:00:00'),-1)),m,offDay,hrv:_rdNum(m.hrv)>0?+m.hrv:null,rhr:_rdNum(m.rhr)>0?+m.rhr:null,score:r.score};
+  }).filter(r=>!r.offDay&&(r.hrv!=null||r.rhr!=null||r.score!=null));
   const factors=[];
   // Tags logged in the check-in describe the night before that morning.
   CHECKIN_TAGS.filter(t=>t.key!=='ill').forEach(t=>factors.push({key:'tag-'+t.key,label:t.label,kind:'Tag',
@@ -5069,7 +5247,7 @@ function renderHabitImpactsCard(){
   const pend=pending.length?`<div class="imp-pending"><span class="rt-title">Still collecting</span><p>${pending.map(f=>`${esc(f.label)} <span>${Math.min(f.nYes,f.nNo)}/${IMPACT_MIN}</span>`).join(' · ')}</p></div>`:'';
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">Habit impacts</span><span class="chart-card-val">next morning</span></div>
-    <p class="imp-intro">How your mornings compare after days you did each thing versus days you didn't. It shows patterns, not proof: plenty of things travel together.</p>
+    <p class="imp-intro">How your mornings compare after days you did each thing versus days you didn't. It shows patterns, not proof: plenty of things travel together. Mornings when you were ill or run down are left out, because they skew everything at once.</p>
     ${done.length?done.map(row).join(''):`<div class="imp-empty">Nothing has enough history yet. Tags you add in the morning check-in, and the habits you tick, build this up.</div>`}
     ${pend}
   </div>`;
@@ -6491,14 +6669,6 @@ function saveName(){
   const n=(document.getElementById('settings-name-input').value||'').trim();
   state.userName=n;saveState();toastMsg('Name saved');
   document.getElementById('me-name-heading').textContent=n||'Me';
-}
-function exportData(){
-  const data={state,gym:loadGymData(),run:loadRunData(),health:loadHealthData(),prog:loadGymProg(),vaping:loadVapingData(),morning:loadMorningData()};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${dk(today()).split('-').reverse().join('-')}-tracker-backup.json`;a.click();
-  state.lastBackupAt=dk(today());saveState();
-  const banner=document.getElementById(`anomaly-backup_${dk(today())}`);if(banner)banner.remove();
-  toastMsg('Data exported');
 }
 function importData(evt){
   const file=evt.target.files[0];if(!file)return;
@@ -9388,6 +9558,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
 
 // ── INIT ──
 renderToday();
+handleShortcutLink();
 </script>
 </body>
 </html>

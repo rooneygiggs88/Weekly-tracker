@@ -663,6 +663,15 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .lift-target{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:12.5px;font-weight:700;margin-bottom:10px;padding:7px 10px;border-radius:8px;color:var(--text);background:color-mix(in srgb,var(--lt) 9%,transparent);border:1px solid color-mix(in srgb,var(--lt) 25%,transparent);border-left:3px solid var(--lt);}
 .lift-target b{color:var(--lt);}
 .lift-target span{font-size:11.5px;font-weight:600;color:var(--text2);}
+
+.rd-cta-2{width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--accent2);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;}
+.bf-head,.bf-row{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:8px;align-items:center;}
+.bf-head{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:6px;}
+.bf-head span{text-align:center;}
+.bf-row{padding:6px 0;border-top:1px solid var(--border);}
+.bf-date{font-size:13px;font-weight:700;color:var(--text);}
+.bf-in{width:100%;min-width:0;padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--mono);font-size:15px;font-weight:700;text-align:center;outline:none;}
+.bf-in:focus{border-color:var(--accent);}
 </style>
 </head>
 <body>
@@ -1000,6 +1009,19 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
+<!-- BACKFILL MODAL -->
+<div class="modal-overlay" id="backfill-modal" onclick="if(event.target===this)closeModal('backfill-modal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="checkin-modal-label">Welcome back</div>
+    <h3 style="margin:2px 0 6px;">Fill in missed mornings</h3>
+    <p class="checkin-intro">Garmin Connect keeps each day's sleep score and HRV. Leave anything you don't have blank.</p>
+    <div id="backfill-rows"></div>
+    <button class="btn-primary" style="margin:14px 0 6px;" onclick="saveBackfill()">Save</button>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('backfill-modal')">Cancel</button>
+  </div>
+</div>
+
 <!-- READINESS EXPLAINER MODAL -->
 <div class="modal-overlay" id="readiness-info-modal" onclick="if(event.target===this)closeModal('readiness-info-modal')">
   <div class="modal">
@@ -1321,14 +1343,23 @@ function goalsActiveOn(ds){return allDailyGoals().filter(g=>!g.effectiveFrom||g.
 // Current consecutive-day streak for a daily goal, counted back from today. If today isn't
 // logged yet the streak still counts from yesterday - the day isn't over, so an unfinished
 // today shouldn't read as a broken streak.
+// Forgiving streak: one missed day per Monday-Sunday week doesn't break it (it just isn't
+// counted). Two misses in a row, or a second miss in the same week, still end it. A rigid
+// streak makes one bad day feel like losing everything, which is when people give up.
 function getGoalStreak(g){
   const now=today();
   let d=goalDone(dk(now),g)?now:addDays(now,-1);
   let streak=0;
+  const skipped={};
   while(streak<3650){
     const ds=dk(d);
     if(g.effectiveFrom&&g.effectiveFrom>ds)break;
-    if(!goalDone(ds,g))break;
+    if(!goalDone(ds,g)){
+      const wk=dk(getMonday(d)),prev=addDays(d,-1);
+      if(streak===0&&ds!==dk(addDays(now,-1)))break;
+      if(skipped[wk]||!goalDone(dk(prev),g)||(g.effectiveFrom&&g.effectiveFrom>dk(prev)))break;
+      skipped[wk]=true;d=prev;continue;
+    }
     streak++;
     d=addDays(d,-1);
   }
@@ -7721,7 +7752,13 @@ function renderReadinessHero(r,baseMonday){
   const info=`<button class="rd-info" onclick="openReadinessInfo()" aria-label="How readiness works">How it works</button>`;
   if(!r.hasMorning||!r.state){
     const load=r.contributors.find(c=>c.key==='load');
-    el.innerHTML=`<div class="rd-card rd-empty" style="--st:var(--accent);">
+    const missed=getMissedMornings();
+    el.innerHTML=missed.length>=2?`<div class="rd-card rd-empty" style="--st:var(--accent);">
+      <div class="rd-head"><span class="rd-eyebrow">Readiness</span>${info}</div>
+      <div class="rd-empty-title">Welcome back</div>
+      <div class="rd-empty-desc">${missed.length} mornings missed. That happens. Garmin Connect keeps your past sleep scores and HRV, so you can fill the gap in one go, or just start from today.</div>
+      <button class="rd-cta" onclick="openMorningModal()">Check in for today</button>
+      <button class="rd-cta-2" onclick="openBackfillModal()">Fill in ${missed.length} missed morning${missed.length===1?'':'s'}</button>`:`<div class="rd-card rd-empty" style="--st:var(--accent);">
       <div class="rd-head"><span class="rd-eyebrow">Readiness</span>${info}</div>
       <div class="rd-empty-title">Morning check-in</div>
       <div class="rd-empty-desc">Sleep score and HRV from your Garmin Morning Report, resting HR if you have it, and how you feel. About 15 seconds.</div>
@@ -7752,6 +7789,41 @@ function renderReadinessHero(r,baseMonday){
       <button class="rd-toggle" id="rd-signals-btn" onclick="toggleRdSignals()">${_rdShowSignals?'Hide signals':'Show signals'}</button>
     </div>
   </div>`;
+}
+// Mornings missed since the last check-in (up to a week back), once there's a habit to
+// come back to - fewer than 7 check-ins ever and there's nothing to "return" to yet.
+function getMissedMornings(){
+  const morning=loadMorningData();
+  const logged=Object.keys(morning).filter(ds=>{const m=morning[ds];return m&&(_rdNum(m.sleep)!=null||_rdNum(m.hrv)!=null);}).sort();
+  if(logged.length<7)return[];
+  const last=logged[logged.length-1],todayStr=dk(today());
+  const out=[];
+  for(let i=1;i<=7;i++){const ds=dk(addDays(today(),-i));if(ds<=last)break;out.push(ds);}
+  return last>=todayStr?[]:out.reverse();
+}
+function openBackfillModal(){
+  const days=getMissedMornings();
+  if(!days.length){toastMsg('Nothing to fill in');return;}
+  document.getElementById('backfill-rows').innerHTML=`<div class="bf-head"><span></span><span>Sleep</span><span>HRV</span><span>Rest HR</span></div>`+days.map(ds=>{
+    const d=new Date(ds+'T12:00:00');
+    return`<div class="bf-row" data-ds="${ds}"><span class="bf-date">${d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</span>
+      <input class="bf-in" id="bf-sleep-${ds}" type="number" inputmode="numeric" placeholder="–" aria-label="Sleep score ${ds}">
+      <input class="bf-in" id="bf-hrv-${ds}" type="number" inputmode="numeric" placeholder="–" aria-label="HRV ${ds}">
+      <input class="bf-in" id="bf-rhr-${ds}" type="number" inputmode="numeric" placeholder="–" aria-label="Resting HR ${ds}"></div>`;
+  }).join('');
+  openModal('backfill-modal');
+}
+function saveBackfill(){
+  const d=loadMorningData();let n=0;
+  const range={sleep:[0,100],hrv:[5,250],rhr:[25,120]};
+  document.querySelectorAll('#backfill-rows .bf-row').forEach(row=>{
+    const ds=row.dataset.ds;const e={...(d[ds]||{})};let touched=false;
+    ['sleep','hrv','rhr'].forEach(k=>{const v=parseInt(document.getElementById(`bf-${k}-${ds}`).value);if(!isNaN(v)&&v>=range[k][0]&&v<=range[k][1]){e[k]=v;touched=true;}});
+    if(touched){d[ds]=e;n++;}
+  });
+  if(!n){toastMsg('Nothing entered');return;}
+  saveMorningData(d);closeModal('backfill-modal');
+  toastMsg(`${n} morning${n===1?'':'s'} filled in`);haptic('success');renderToday();
 }
 // "How it works" - the score explained with your own current numbers, since a readiness
 // score nobody can check is just a vibe.

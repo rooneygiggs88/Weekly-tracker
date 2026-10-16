@@ -680,6 +680,23 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .fa-side strong{color:var(--text);}
 .fa-side span{font-size:11.5px;color:var(--text3);}
 .fa-delta{font-size:12.5px;font-weight:600;color:var(--text2);margin-top:8px;}
+
+.yr-card{cursor:pointer;background:linear-gradient(135deg,color-mix(in srgb,var(--c-indigo) 10%,var(--surface)),var(--surface) 60%);}
+.yr-open{color:var(--accent2);}
+.yr-teaser{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.yr-teaser>div{display:flex;flex-direction:column;}
+.yr-teaser strong{font-family:var(--rounded);font-size:26px;font-weight:800;letter-spacing:-0.8px;color:var(--text);font-variant-numeric:tabular-nums;}
+.yr-teaser span{font-size:11px;font-weight:600;color:var(--text3);}
+.yr-title{font-family:var(--rounded);font-size:34px!important;letter-spacing:-1px!important;margin:2px 0 8px!important;}
+.yr-sec{padding:16px 0;border-top:1px solid var(--border);}
+.yr-eyebrow{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);}
+.yr-big{font-family:var(--rounded);font-size:46px;font-weight:800;letter-spacing:-1.8px;line-height:1.05;color:var(--text);font-variant-numeric:tabular-nums;margin:2px 0 6px;}
+.yr-big small{font-family:-apple-system,system-ui,sans-serif;font-size:15px;font-weight:700;letter-spacing:0;color:var(--text2);}
+.yr-sec p{font-size:13.5px;color:var(--text2);line-height:1.55;margin-top:3px;}
+.yr-sec p strong{color:var(--text);}
+.yr-st{display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12.5px;font-weight:600;}
+.yr-st i{width:9px;height:9px;border-radius:3px;}
+.yr-foot{font-size:12px;color:var(--text3);padding-top:12px;border-top:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -1033,6 +1050,15 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     </div>
     <button class="btn-primary" style="margin-bottom:10px;" onclick="saveFitness()">Save</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('fitness-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- YEAR REVIEW MODAL -->
+<div class="modal-overlay" id="year-review-modal" onclick="if(event.target===this)closeModal('year-review-modal')">
+  <div class="modal yr-modal">
+    <div class="modal-handle"></div>
+    <div id="year-review-content"></div>
+    <button class="btn-ghost" style="width:100%;margin-top:4px;" onclick="closeModal('year-review-modal')">Close</button>
   </div>
 </div>
 
@@ -3896,6 +3922,7 @@ function renderTrends(){
   const vsAvg=getWeekVsAverage();
   const vsAvgLine=(field,pct)=>pct==null?'':`<span style="color:${pct>=0?'var(--green)':'var(--red)'};">${pct>=0?'+':''}${pct}% vs your ${field} avg</span>`;
   el.innerHTML=`
+    ${_yrIsReview()?renderYearCard():''}
     <div class="metric-row">
       <div class="metric-card accent"><div class="m-label">This Week</div><div class="m-val">${weekScore}</div><div class="m-unit">% complete</div></div>
       <div class="metric-card"><div class="m-label">Consistency</div><div style="font-size:42px;font-weight:800;color:${gradeColor};letter-spacing:-2px;line-height:1;">${gradeNow.grade}</div><div class="m-unit">last 28 days · ${gradeTrend}</div></div>
@@ -3915,6 +3942,7 @@ function renderTrends(){
     ${renderTimeOfDay()}
     ${renderWhatMovesCard('Body & recovery')}
     ${renderWeekReviewHistory()}
+    ${_yrIsReview()?'':renderYearCard()}
   `;
 }
 
@@ -4880,6 +4908,95 @@ document.addEventListener('pointerout',e=>{
   const ch=e.target.closest&&e.target.closest('.rt-chart');
   if(ch&&e.pointerType==='mouse'&&!ch.contains(e.relatedTarget))_rtHide(ch);
 });
+
+// ── YEAR IN REVIEW ──
+// "2026 so far" all year round; in December it becomes "2026 in review" and moves to the
+// top of Trends. Everything is computed from what's already logged.
+function getYearReview(year){
+  year=year||today().getFullYear();
+  const from=`${year}-01-01`,to=`${year}-12-31`,inYear=ds=>ds>=from&&ds<=to;
+  const runs=loadRunData().filter(r=>r.date&&inYear(r.date));
+  const gymAll=[...loadGymData()].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const gym=gymAll.filter(s=>s.date&&inYear(s.date));
+  const km=runs.reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  const secs=runs.reduce((a,r)=>a+(r.time?parseTimeToSecs(r.time):0),0);
+  const longest=runs.reduce((b,r)=>(parseFloat(r.km)||0)>(parseFloat(b&&b.km)||0)?r:b,null);
+  const paced=runs.filter(r=>parseFloat(r.km)>=5&&r.time&&parseTimeToSecs(r.time)>0);
+  const fastest=paced.reduce((b,r)=>{const p=parseTimeToSecs(r.time)/parseFloat(r.km);return!b||p<b.p?{r,p}:b;},null);
+  // PRs: a new heaviest weight for an exercise, set this year, beating an earlier best.
+  const best={};let prs=0;const topLifts={};
+  gymAll.forEach(s=>(s.exercises||[]).forEach(e=>{
+    if(!e.name)return;
+    const w=Math.max(0,...(e.sets||[]).filter(x=>!x.warmup).map(x=>parseFloat(x.weight||0)||0));
+    if(w<=0)return;
+    if(inYear(s.date)){
+      if(best[e.name]!=null&&w>best[e.name])prs++;
+      if(!topLifts[e.name]||w>topLifts[e.name])topLifts[e.name]=w;
+    }
+    best[e.name]=Math.max(best[e.name]||0,w);
+  }));
+  const sets=gym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  const volume=gym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).reduce((c,x)=>c+(parseFloat(x.weight)||0)*(parseFloat(x.reps)||0),0),0),0);
+  const days=new Set([...runs.map(r=>r.date),...gym.map(s=>s.date)]);
+  // Busiest month by training days.
+  const byMonth={};days.forEach(ds=>{const m=+ds.slice(5,7);byMonth[m]=(byMonth[m]||0)+1;});
+  const topMonth=Object.entries(byMonth).sort((a,b)=>b[1]-a[1])[0];
+  // Longest run of weeks with at least 3 training days.
+  let bestWeeks=0,cur=0;
+  const jan1=new Date(year,0,1,12);let mon=getMonday(jan1);
+  const endD=new Date(Math.min(new Date(year,11,31,12),today()));
+  while(mon<=endD){let n=0;for(let i=0;i<7;i++)if(days.has(dk(addDays(mon,i))))n++;cur=n>=3?cur+1:0;bestWeeks=Math.max(bestWeeks,cur);mon=addDays(mon,7);}
+  // Readiness
+  const morning=loadMorningData();
+  const scored=Object.keys(morning).filter(inYear).map(ds=>computeReadiness(ds)).filter(r=>r.score!=null);
+  const states={};scored.forEach(r=>{states[r.state.key]=(states[r.state.key]||0)+1;});
+  const avgRd=scored.length?Math.round(scored.reduce((a,r)=>a+r.score,0)/scored.length):null;
+  // Body
+  const health=loadHealthData().filter(h=>h.date&&inYear(h.date)&&parseFloat(h.weight)>0).sort((a,b)=>a.date.localeCompare(b.date));
+  const wChange=health.length>=2?Math.round((health[health.length-1].weight-health[0].weight)*10)/10:null;
+  const vo2=getVo2Log().filter(x=>inYear(x.date));
+  const p=state.profile||{};
+  const faChange=vo2.length>=2&&p.sex?Math.round((fitnessAgeFor(vo2[0].vo2,p.sex)-fitnessAgeFor(vo2[vo2.length-1].vo2,p.sex))*10)/10:null;
+  const impacts=getHabitImpacts().filter(f=>!f.pending&&f.size==='clear');
+  return{year,runs:runs.length,km,secs,longest,fastest,gym:gym.length,sets,volume,prs,
+    topLifts:Object.entries(topLifts).sort((a,b)=>b[1]-a[1]).slice(0,3),days:days.size,topMonth,bestWeeks,
+    mornings:scored.length,avgRd,states,wChange,vo2,faChange,impacts,goal:getYearGoalProgress()};
+}
+function _yrIsReview(){return today().getMonth()===11;}
+function renderYearCard(){
+  const y=getYearReview();
+  if(!y.runs&&!y.gym)return'';
+  const title=_yrIsReview()?`${y.year} in review`:`${y.year} so far`;
+  return`<div class="chart-card yr-card" onclick="openYearReview()" role="button" tabindex="0">
+    <div class="chart-card-header"><span class="chart-card-title">${title}</span><span class="chart-card-val yr-open">Open →</span></div>
+    <div class="yr-teaser">
+      <div><strong>${Math.round(y.km).toLocaleString('en-GB')}</strong><span>km run</span></div>
+      <div><strong>${y.gym}</strong><span>gym sessions</span></div>
+      <div><strong>${y.prs}</strong><span>new PRs</span></div>
+    </div>
+  </div>`;
+}
+function openYearReview(){
+  const y=getYearReview();
+  const sec=(eyebrow,big,unit,lines)=>`<section class="yr-sec"><div class="yr-eyebrow">${eyebrow}</div><div class="yr-big">${big}<small>${unit}</small></div>${lines.filter(Boolean).map(l=>`<p>${l}</p>`).join('')}</section>`;
+  const hrs=Math.round(y.secs/3600);
+  const fmtLongest=y.longest?`Longest: <strong>${fmtKm(parseFloat(y.longest.km))} km</strong> on ${fmtShortDate(y.longest.date)}.`:'';
+  const fmtFast=y.fastest?`Quickest 5k+ pace: <strong>${fmtPace(1/y.fastest.p)}</strong> over ${fmtKm(parseFloat(y.fastest.r.km))} km.`:'';
+  const goal=y.goal&&y.goal.isCurrentYear?`Year goal: <strong>${Math.round(y.goal.done).toLocaleString('en-GB')} of ${y.goal.g.targetKm.toLocaleString('en-GB')} km</strong>${y.goal.remaining>0?`, ${Math.round(y.goal.remaining)} to go.`:'. Done.'}`:'';
+  const months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  const rdLine=y.mornings?`${[...RD_STATES].map(s=>y.states[s.key]?`<span class="yr-st"><i style="background:${s.col};"></i>${s.label} ${y.states[s.key]}</span>`:'').join('')}`:'';
+  const imp=y.impacts.slice(0,2).map(f=>`<strong>${esc(f.label)}</strong>: ${f.better?'better':'worse'} mornings after`).join(' · ');
+  document.getElementById('year-review-content').innerHTML=`
+    <div class="checkin-modal-label">Your year in Tracker</div>
+    <h3 class="yr-title">${y.year}${_yrIsReview()?' in review':' so far'}</h3>
+    ${sec('Running',Math.round(y.km).toLocaleString('en-GB'),' km',[`${y.runs} runs${hrs?`, about ${hrs} hours on your feet`:''}.`,fmtLongest,fmtFast,goal])}
+    ${sec('Lifting',y.gym,' sessions',[`${y.sets.toLocaleString('en-GB')} working sets, ${Math.round(y.volume/1000).toLocaleString('en-GB')} tonnes moved.`,y.prs?`<strong>${y.prs}</strong> new personal bests.`:'',y.topLifts.length?`Heaviest: ${y.topLifts.map(([n,w])=>`${esc(n)} ${w}kg`).join(' · ')}.`:''])}
+    ${sec('Consistency',y.days,' training days',[y.bestWeeks?`Longest run of 3+ training days a week: <strong>${y.bestWeeks} weeks</strong>.`:'',y.topMonth?`Busiest month: <strong>${months[+y.topMonth[0]]}</strong>, ${y.topMonth[1]} training days.`:''])}
+    ${y.mornings?sec('Readiness',y.avgRd,' average',[`${y.mornings} morning check-ins.`,rdLine,imp?`Clearest habit effects: ${imp}.`:''] ):''}
+    ${(y.wChange!=null||y.faChange!=null)?sec('Body',y.faChange!=null?(y.faChange>0?`−${y.faChange}`:`+${-y.faChange}`):(y.wChange>0?`+${y.wChange}`:`−${Math.abs(y.wChange)}`),y.faChange!=null?' years fitness age':' kg',[y.faChange!=null&&y.wChange!=null?`Bodyweight ${y.wChange>0?'up':'down'} ${Math.abs(y.wChange)} kg.`:'',y.vo2.length>=2?`VO2max ${y.vo2[0].vo2} → ${y.vo2[y.vo2.length-1].vo2}.`:'']):''}
+    <p class="yr-foot">${_yrIsReview()?'Here\'s to next year.':'This becomes your full year in review in December.'}</p>`;
+  openModal('year-review-modal');
+}
 
 // ── HABIT IMPACTS ──
 // Whoop-Journal-style: for each thing you can say yes or no to, compare the next

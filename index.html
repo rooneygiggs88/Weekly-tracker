@@ -21,7 +21,8 @@
    applied either by the OS setting (no data-theme on <html>, i.e. "System") or by an
    explicit choice in Settings (data-theme="dark"). An explicit "light" wins over a dark
    OS setting. Readiness state colours (--st-*) are deliberately separate from the brand
-   blue, which only ever means "tap this". The --c-* palette is the set of category hues
+   blue, which only ever means "tap this", and were checked with the dataviz palette
+   validator in both themes (separation, colour-blind safety, contrast). The --c-* palette is the set of category hues
    used across charts, plan types and effort tags, each with a brighter dark variant. */
 :root{
   color-scheme:light;
@@ -31,8 +32,8 @@
   --green:#059669;--red:#dc2626;--orange:#ea580c;--amber:#d29922;
   --on-text:#ffffff;--nav-bg:rgba(255,255,255,0.88);--overlay-bg:rgba(255,255,255,0.96);
   --card-shadow:0 1px 2px rgba(21,18,31,0.04),0 8px 24px -18px rgba(21,18,31,0.18);
-  --st-go:#0c9466;--st-ready:#0e8796;--st-pace:#c98207;--st-recover:#dc3f35;
-  --band:rgba(14,135,150,0.14);
+  --st-go:#18a15c;--st-ready:#0b88b5;--st-pace:#c48004;--st-recover:#d6304a;
+  --band:rgba(11,136,181,0.14);
   --c-green:#08845b;--c-teal:#017d92;--c-red:#e80e0e;--c-indigo:#5261fa;--c-orange:#c25000;
   --c-violet:#834efa;--c-pink:#e01278;--c-gold:#906d01;--c-purple:#9e3dfb;--c-easy:#1a9d6c;
   --c-long:#3d6fe0;--c-tempo:#c96c1a;--c-int:#e0393f;--c-race:#a23fb0;--c-iris:#6366f1;
@@ -50,8 +51,8 @@
   --green:#34d399;--red:#f87171;--orange:#fb923c;--amber:#fbbf24;
   --on-text:#0b0b11;--nav-bg:rgba(17,16,24,0.86);--overlay-bg:rgba(11,11,17,0.96);
   --card-shadow:0 1px 0 rgba(255,255,255,0.03);
-  --st-go:#34d399;--st-ready:#2ccfc2;--st-pace:#fbbf24;--st-recover:#ff7a6e;
-  --band:rgba(44,207,194,0.16);
+  --st-go:#20a068;--st-ready:#1d8fc4;--st-pace:#bd840c;--st-recover:#db4560;
+  --band:rgba(29,143,196,0.22);
   --c-green:#3ccf91;--c-teal:#3ac3d6;--c-red:#ff5a5a;--c-indigo:#8b96ff;--c-orange:#ff8a3d;
   --c-violet:#a98bff;--c-pink:#ff5fa8;--c-gold:#e0b43a;--c-purple:#c084fc;--c-easy:#45d39a;
   --c-long:#7fa2ff;--c-tempo:#f0a050;--c-int:#ff6b70;--c-race:#d77be6;--c-iris:#9a9cff;
@@ -66,8 +67,8 @@
   --green:#34d399;--red:#f87171;--orange:#fb923c;--amber:#fbbf24;
   --on-text:#0b0b11;--nav-bg:rgba(17,16,24,0.86);--overlay-bg:rgba(11,11,17,0.96);
   --card-shadow:0 1px 0 rgba(255,255,255,0.03);
-  --st-go:#34d399;--st-ready:#2ccfc2;--st-pace:#fbbf24;--st-recover:#ff7a6e;
-  --band:rgba(44,207,194,0.16);
+  --st-go:#20a068;--st-ready:#1d8fc4;--st-pace:#bd840c;--st-recover:#db4560;
+  --band:rgba(29,143,196,0.22);
   --c-green:#3ccf91;--c-teal:#3ac3d6;--c-red:#ff5a5a;--c-indigo:#8b96ff;--c-orange:#ff8a3d;
   --c-violet:#a98bff;--c-pink:#ff5fa8;--c-gold:#e0b43a;--c-purple:#c084fc;--c-easy:#45d39a;
   --c-long:#7fa2ff;--c-tempo:#f0a050;--c-int:#ff6b70;--c-race:#d77be6;--c-iris:#9a9cff;
@@ -105,10 +106,6 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .today-avatar-btn svg{width:15px;height:15px;}
 .today-avatar-btn img{width:100%;height:100%;object-fit:cover;}
 
-/* HERO: dial + today's plan side by side, equal weight - was a full-width dial
-   towering over a plan card buried far down the page; now they're peers. */
-.today-hero-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 12px;align-items:stretch;}
-.today-dial-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
 .today-plan-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 15px 14px;display:flex;flex-direction:column;text-align:left;}
 .today-plan-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);}
 .today-plan-type{font-size:30px;font-weight:800;letter-spacing:-1.2px;margin-top:3px;}
@@ -116,33 +113,9 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .today-plan-cta{margin-top:auto;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px -6px rgba(37,99,235,0.7);}
 .today-plan-cta.done{background:var(--surface2);color:var(--green);box-shadow:none;border:1px solid rgba(8,132,91,0.3);}
 .today-plan-alt{background:none;border:none;color:var(--text3);font-family:inherit;font-size:11px;font-weight:600;text-align:center;margin-top:8px;cursor:pointer;padding:2px;}
-.today-mini{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
-.today-mini span{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 7px;border-radius:8px;background:var(--surface2);color:var(--text2);}
 
-/* Dismissible "log your morning data" prompt, shown above the hero until logged */
-.checkin-card{background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(37,99,235,0.03));border:1px solid rgba(37,99,235,0.28);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
-.checkin-card-body{flex:1;}
-.checkin-card-title{font-size:14px;font-weight:800;letter-spacing:-0.2px;}
-.checkin-card-desc{font-size:12px;font-weight:600;color:var(--text2);margin-top:2px;}
-.checkin-card-btn{padding:10px 14px;border-radius:var(--radius-xs);background:var(--accent);color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
-.checkin-dismiss{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 0 2px 2px;line-height:1;}
 
-/* SCORE DIAL */
-.today-score-wrap{position:relative;width:136px;height:136px;display:flex;align-items:center;justify-content:center;}
-/* Kept tight to the circle's own edge (no expansion, small blur) rather than a spreading
-   ambient haze - the wider glow kept reaching toward the top of the page no matter how
-   much it was shrunk or repositioned, and read as more jarring against a pure white
-   background than it did against the old off-white tint. */
-.score-dial-glow{position:absolute;inset:0;border-radius:50%;filter:blur(4px);transition:background 0.4s ease;animation:dialBreathe 5s ease-in-out infinite;}
-@keyframes dialBreathe{0%,100%{transform:scale(1);opacity:0.75;}50%{transform:scale(1.05);opacity:1;}}
-@media (prefers-reduced-motion: reduce){.score-dial-glow{animation:none;}}
-.score-dial-core{position:relative;width:120px;height:120px;border-radius:50%;background:var(--surface);box-shadow:0 12px 26px -14px rgba(21,18,31,0.25),0 0 0 1px var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.today-score{font-size:44px;font-weight:800;line-height:1;letter-spacing:-2px;transition:color 0.4s ease;}
-.score-dial-lbl{font-size:9px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;text-align:center;}
 
-.today-status{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--text);background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.18);border-radius:14px;padding:11px 14px;margin-bottom:8px;text-align:left;}
-.today-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:dialBreathe 3s ease-in-out infinite;}
-.today-status span{color:var(--accent2);font-weight:700;}
 
 /* WEEK STRIP - a colored bar per day (plan's activity type) instead of a plain
    done/not-done dot; today is a solid dark pill instead of a light accent border. */
@@ -268,7 +241,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
    readiness preview on the Save button, instead of two plain number inputs. */
 .checkin-modal-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);}
 .checkin-row-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
-.checkin-row-head span:first-child{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
+.checkin-row-head>span:first-child{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);}
 .checkin-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent2);}
 .checkin-slider-track{height:40px;border-radius:12px;background:linear-gradient(90deg,var(--st-recover) 0%,var(--st-pace) 38%,var(--st-ready) 68%,var(--st-go) 100%);position:relative;margin-bottom:6px;opacity:0.85;cursor:pointer;touch-action:none;}
 .checkin-slider-handle{position:absolute;top:-4px;bottom:-4px;width:6px;border-radius:4px;background:var(--text);box-shadow:0 2px 8px rgba(0,0,0,0.35);left:0%;transform:translateX(-50%);pointer-events:none;}
@@ -411,7 +384,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .plate{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
 
 /* TOAST */
-.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:24px;font-size:14px;font-weight:700;z-index:300;opacity:0;pointer-events:none;transition:all 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.5);white-space:nowrap;}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:24px;font-size:14px;font-weight:700;z-index:300;opacity:0;pointer-events:none;transition:all 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.25);white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 /* PR CELEBRATION */
 .pr-celebration{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding-top:80px;z-index:500;pointer-events:none;opacity:0;transition:opacity 0.3s;}
@@ -565,7 +538,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 /* Morning check-in additions */
 .checkin-intro{font-size:13px;color:var(--text2);line-height:1.45;margin-bottom:18px;}
 .checkin-gap{margin-top:18px;}
-.checkin-row-head span:first-child em,.checkin-opt{font-style:normal;font-weight:600;text-transform:none;letter-spacing:0;color:var(--text3);margin-left:4px;font-size:11px;}
+.checkin-row-head>span:first-child em,.checkin-opt{font-style:normal;font-weight:600;text-transform:none;letter-spacing:0;color:var(--text3);margin-left:4px;font-size:11px;}
 .checkin-unit{font-size:12px;color:var(--text3);margin-left:3px;}
 .checkin-val-word{font-family:inherit;font-size:18px;}
 .checkin-type{display:none;margin:8px 0 0;}
@@ -588,6 +561,59 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .rdi-state{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;font-size:13px;padding:6px 0;}
 .rdi-state i{width:10px;height:10px;border-radius:50%;}
 .rdi-state span{color:var(--text3);font-variant-numeric:tabular-nums;}
+
+/* Readiness & recovery trends */
+.rt-card{padding-bottom:16px;}
+.rt-block{margin-bottom:14px;}
+.rt-block-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+.rt-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);}
+.rt-sub{font-size:11px;font-weight:600;color:var(--text3);font-variant-numeric:tabular-nums;}
+.rt-chart{position:relative;}
+.rt-chart svg{display:block;overflow:visible;font-family:-apple-system,system-ui,sans-serif;}
+.rt-hit{cursor:pointer;}
+.rt-hit.on{fill:color-mix(in srgb,var(--text) 6%,transparent);}
+.rt-tip{position:absolute;top:-4px;z-index:5;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:7px 9px;box-shadow:0 8px 24px -8px rgba(0,0,0,0.3);pointer-events:none;}
+.rt-tip-date{font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px;}
+.rt-tip-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);white-space:nowrap;}
+.rt-tip-row i{width:10px;height:2px;border-radius:1px;flex-shrink:0;}
+.rt-tip-row strong{color:var(--text);font-weight:800;font-variant-numeric:tabular-nums;}
+.rt-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px;font-size:11px;font-weight:600;color:var(--text2);}
+.rt-legend span{display:flex;align-items:center;gap:5px;}
+.rt-legend i{width:9px;height:9px;border-radius:3px;}
+.rt-legend b{color:var(--text);font-weight:800;}
+.rt-key{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:10.5px;font-weight:600;color:var(--text3);margin-top:2px;}
+.rt-key span{display:flex;align-items:center;gap:5px;}
+.rt-key-line{width:12px;height:2px;border-radius:1px;background:var(--text2);}
+.rt-key-dash{background:repeating-linear-gradient(90deg,var(--text2) 0 3px,transparent 3px 6px);}
+.rt-key-dot{width:5px;height:5px;border-radius:50%;background:var(--text3);opacity:0.6;}
+.rt-key-band{width:12px;height:8px;border-radius:2px;background:var(--band);}
+.rt-key-bar{width:4px;height:9px;border-radius:1px;background:var(--text3);opacity:0.45;}
+.rt-notes{margin-top:12px;display:grid;gap:8px;}
+.rt-notes p{font-size:12.5px;color:var(--text2);line-height:1.5;background:var(--surface2);border-radius:10px;padding:9px 11px;}
+.rt-notes strong{color:var(--text);}
+.al-zones{display:grid;grid-template-columns:repeat(4,1fr);font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:6px;}
+.al-zones span:nth-child(2),.al-zones span:nth-child(3){text-align:center;}
+.al-zones span:last-child{text-align:right;}
+.al-track{position:relative;height:8px;border-radius:4px;background:var(--surface2);margin-bottom:8px;}
+.al-band{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--band);}
+.al-dot{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid var(--surface);box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.al-nums{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;font-variant-numeric:tabular-nums;}
+.al-nums strong{color:var(--text);}
+.al-advice{font-size:13px;font-weight:600;color:var(--text);line-height:1.45;margin-top:10px;}
+.al-foot{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.45;}
+.me-link{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;padding:16px 20px;}
+
+.rd-mini{position:relative;overflow:hidden;}
+.rd-mini-head{display:flex;justify-content:space-between;align-items:center;}
+.rd-mini-score{font-family:var(--rounded);font-size:15px;font-weight:800;color:var(--st);font-variant-numeric:tabular-nums;}
+.rd-mini-state{font-family:var(--rounded);font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--st);margin-top:2px;}
+.rd-mini-text{font-size:13px;color:var(--text2);line-height:1.45;margin-top:4px;}
+.rd-run-hint{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:12.5px;line-height:1.4;margin-bottom:8px;padding:8px 11px;border-radius:10px;background:color-mix(in srgb,var(--st) 9%,transparent);border:1px solid color-mix(in srgb,var(--st) 25%,transparent);}
+.rd-run-hint b{color:var(--st);font-weight:800;}
+.rd-run-hint span{color:var(--text);font-weight:600;}
+.rd-run-hint em{font-style:normal;color:var(--text3);font-weight:600;font-size:11px;}
+.theme-seg .seg-tab{font-size:13px;}
+.csv-help{font-size:11.5px;color:var(--text3);line-height:1.45;margin:8px 4px 0;}
 </style>
 </head>
 <body>
@@ -833,6 +859,12 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <label class="modal-label">Your name</label>
     <input class="modal-input" id="settings-name-input" placeholder="Your name">
     <button class="btn-primary" onclick="saveName()" style="margin-bottom:20px;">Save name</button>
+    <label class="modal-label">Appearance</label>
+    <div class="seg-track theme-seg" id="theme-seg" style="margin-bottom:20px;">
+      <button class="seg-tab" data-theme-pref="system" onclick="setThemePref('system')">System</button>
+      <button class="seg-tab" data-theme-pref="light" onclick="setThemePref('light')">Light</button>
+      <button class="seg-tab" data-theme-pref="dark" onclick="setThemePref('dark')">Dark</button>
+    </div>
     <div class="chart-card" style="padding:0 0;">
       <div class="settings-row" style="padding:16px 20px;" onclick="exportData()">
         <div><div class="settings-row-label">Export data</div><div class="settings-row-meta">Download JSON backup</div></div>
@@ -843,7 +875,15 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </div>
     </div>
+    <div class="chart-card" style="padding:0 0;">
+      <div class="settings-row" style="padding:16px 20px;" onclick="document.getElementById('import-morning-file').click()">
+        <div><div class="settings-row-label">Import morning data</div><div class="settings-row-meta">Backfill HRV, resting HR and sleep from a CSV</div></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+    </div>
+    <div class="csv-help">Needs a date column plus any of HRV, resting HR or sleep score, one row per day. Days you've already logged keep their values.</div>
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
+    <input type="file" id="import-morning-file" accept=".csv,.txt,text/csv" style="display:none;" onchange="importMorningCsv(event)">
     <div class="gap-sm"></div>
     <button class="btn-danger" onclick="clearAllData()">Clear all data</button>
     <div class="gap-sm"></div>
@@ -1711,7 +1751,7 @@ function renderToday(){
         ${planAdvice(false)}
         <button class="today-plan-cta" style="background:var(--surface2);color:var(--text2);box-shadow:none;border:1px solid var(--border);" onclick="${todayPlan?"openModal('train-picker-modal')":"showPage('me')"}">${todayPlan?'Log something anyway':'Set your week plan'}</button>`;
     }
-  }else{wrap.innerHTML='';raceWrap.innerHTML='';}
+  }else{wrap.innerHTML='';raceWrap.innerHTML='';planCell.innerHTML='';}
 
   // Goal chips - compact 2-col grid instead of a full-width card per goal
   const stack=document.getElementById('goal-stack');
@@ -3006,7 +3046,7 @@ function saveGymSession(){
   // - it needs to reflect when you actually trained, not whenever you happened to tap
   // Save, which can be a long time after a session that ran late or got interrupted.
   const sessionTs=gymDraft.startedAt||Date.now();
-  sessions.push({date:dk(today()),type:sessionType,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:sessionTs});
+  sessions.push({date:dk(today()),type:sessionType,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:sessionTs,endTs:Date.now()});
   saveGymData(sessions);
   const prog=loadGymProg();
   exercises.forEach(e=>{if(!prog[e.name])prog[e.name]={history:[]};prog[e.name].history.push({date:dk(today()),sets:e.sets});});
@@ -3058,24 +3098,19 @@ function gymTagEffort(effort){
   toastMsg(`Tagged: ${effort}`);
 }
 function renderRecentGymCard(){
-  const {score,advice,col,hasMorning}=calcReadiness();
-  const pct=score!=null?score:0;
-  const logBtn=`<button onclick="openMorningModal()" style="padding:4px 10px;border-radius:12px;border:1px solid ${hasMorning?'var(--border)':'var(--accent)'};background:${hasMorning?'transparent':'rgba(37,99,235,0.1)'};color:${hasMorning?'var(--text3)':'var(--accent2)'};font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;">${hasMorning?'Edit':'Log morning'}</button>`;
-  const body=hasMorning
-    ?`<div style="display:flex;align-items:center;gap:12px;">
-        <div style="font-size:32px;font-weight:800;letter-spacing:-1px;color:${col};">${score}</div>
-        <div style="flex:1;">
-          <div style="height:6px;background:var(--surface2);border-radius:3px;margin-bottom:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${col};border-radius:3px;"></div></div>
-          <div style="font-size:12px;font-weight:700;color:${col};">${advice}</div>
-        </div>
-      </div>`
-    :`<div style="font-size:12px;color:var(--text3);padding:2px 0;">Log sleep & HRV for a readiness score.</div>`;
-  return`<div class="chart-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Readiness</span>
-      ${logBtn}
-    </div>
-    ${body}
+  const r=computeReadiness();
+  if(!r.state){
+    return`<div class="chart-card rd-mini">
+      <div class="rd-mini-head"><span class="rd-eyebrow">Readiness</span><button class="rd-info" onclick="openMorningModal()">Check in</button></div>
+      <div class="rd-mini-text">Log this morning's check-in and this session gets a readiness call.</div>
+    </div>`;
+  }
+  const plan=getTodayPlanType();
+  const ctx={type:GYM_PLAN_TYPES.has(plan)?plan:'This session',runType:null,done:false,isGym:true};
+  return`<div class="chart-card rd-mini" style="--st:${r.state.col};">
+    <div class="rd-mini-head"><span class="rd-eyebrow">Readiness</span><span class="rd-mini-score">${r.score}</span></div>
+    <div class="rd-mini-state">${r.state.label}</div>
+    <div class="rd-mini-text">${esc(getReadinessPlanAdvice(r,ctx))}</div>
   </div>`;
 }
 
@@ -3084,17 +3119,10 @@ let selectedEffort='';
 // Suggests today's run intensity from the same readiness score already shown on the
 // Today page - purely advisory, doesn't touch the effort buttons below it.
 function renderRunEffortSuggestion(){
-  const {score,hasMorning}=calcReadiness();
-  if(score==null)return'';
-  let suggestion;
-  if(score>=80)suggestion='Ready to push — good day for Tempo or Intervals';
-  else if(score>=60)suggestion='Good for a steady effort — Easy or Long Run';
-  else if(score>=40)suggestion='Dial it back today — Easy or Recovery';
-  else suggestion='Low readiness — Recovery or rest';
-  // Without today's sleep/HRV logged, this is load-only - don't dress it up as a
-  // precise composite score the way the Today page's readiness dial does.
-  const basisLabel=hasMorning?`readiness ${score}`:'based on training load only';
-  return`<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:8px;padding:7px 10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:8px;border-left:3px solid var(--accent2);color:var(--accent2);">💡 <span style="color:var(--text);">${esc(suggestion)}</span> <span style="color:var(--text3);font-weight:600;">(${basisLabel})</span></div>`;
+  const r=computeReadiness();
+  if(!r.state)return'';
+  const txt={go:'Primed. A good day for Tempo or Intervals.',ready:'Good for the run you had planned.',pace:'Keep it easy today: Easy or Recovery.',recover:'A short recovery jog at most, or rest.'}[r.state.key];
+  return`<div class="rd-run-hint" style="--st:${r.state.col};"><b>${r.state.label}</b><span>${txt}</span><em>readiness ${r.score}</em></div>`;
 }
 function renderRunSection(){
   const el=document.getElementById('run-content');
@@ -3757,9 +3785,10 @@ function renderTrends(){
       <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekSets}</div><div class="m-unit">sets this week${vsAvg&&vsAvg.setsPct!=null?`<br>${vsAvgLine('weekly',vsAvg.setsPct)}`:''}</div></div>
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week${vsAvg&&vsAvg.kmPct!=null?`<br>${vsAvgLine('weekly',vsAvg.kmPct)}`:''}</div></div>
     </div>
+    ${renderRecoveryCard()}
+    ${renderActivityLoad()}
     ${streakHtml}
     ${balanceHtml}
-    ${renderActivityLoad()}
     ${renderWeeklyTrendChart()}
     ${renderDayOfWeekHeatmap()}
     ${renderTimeOfDay()}
@@ -4620,117 +4649,216 @@ function renderWeeklyTrendChart(){
 }
 function setWeekTrendFilter(id){_weekTrendFilter=id;renderTrends();}
 
-// ── SLEEP & HRV TREND CARD ──
-// One y-axis per metric (never two scales on one plot - see below). Each mini
-// chart draws the raw daily values as a faint dotted line and the 7-day
-// rolling average as a bold line in the same hue, so "what's the trend"
-// reads directly instead of requiring two axes to be mentally reconciled.
-function sleepHrvMiniChart(pts,field,color,domain){
-  const DAYS=pts.length;
-  const have=pts.filter(p=>p[field]!=null);
-  if(!have.length)return{svg:'',avg7:null};
-  const W=300,H=100,PL=30,PR=10,PT=10,PB=18;
-  const chartW=W-PL-PR,chartH=H-PT-PB;
-  const px=i=>(PL+i/(DAYS-1)*chartW).toFixed(1);
-  let axMin,axMax;
-  if(domain){[axMin,axMax]=domain;}
-  else{
-    const vals=have.map(p=>p[field]);
-    const mn=Math.min(...vals),mx=Math.max(...vals);
-    const pad=(mx-mn)*0.15||3;
-    axMin=Math.floor(mn-pad);axMax=Math.ceil(mx+pad);
-  }
-  const py=v=>(PT+chartH-((v-axMin)/(axMax-axMin||1))*chartH).toFixed(1);
-  // 7-day rolling average per day (only counts days actually logged in that trailing window)
-  const rolling=pts.map((p,i)=>{
-    const win=pts.slice(Math.max(0,i-6),i+1).filter(q=>q[field]!=null).map(q=>q[field]);
-    return win.length?win.reduce((a,b)=>a+b,0)/win.length:null;
-  });
-  let svg='';
-  for(let t=0;t<=2;t++){
-    const v=axMin+(axMax-axMin)*(t/2);
-    const y=py(v);
-    svg+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/><text x="${PL-4}" y="${parseFloat(y)+3}" text-anchor="end" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif">${Math.round(v)}</text>`;
-  }
-  const xLabelled=new Set();
-  for(let i=0;i<DAYS;i+=7){const p=pts[i];const anch=i===0?'start':'middle';svg+=`<text x="${px(i)}" y="${H-2}" text-anchor="${anch}" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif">${p.day}/${p.mon}</text>`;xLabelled.add(i);}
-  if(!xLabelled.has(DAYS-1)){const p=pts[DAYS-1];svg+=`<text x="${px(DAYS-1)}" y="${H-2}" text-anchor="end" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif">${p.day}/${p.mon}</text>`;}
-  function segPath(arr,valOf,yFn,stroke,width,opacity,dash){
-    const segs=[];let s=[];
-    arr.forEach(p=>{const v=valOf(p);if(v!=null)s.push({idx:p.idx,v});else{if(s.length)segs.push([...s]);s=[];}});
-    if(s.length)segs.push(s);
-    segs.filter(seg=>seg.length>1).forEach(seg=>{
-      const d=seg.map((p,i)=>`${i===0?'M':'L'}${px(p.idx)},${yFn(p.v)}`).join(' ');
-      svg+=`<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
-    });
-  }
-  segPath(pts,p=>p[field],py,color,1.5,0.35);
-  have.forEach(p=>svg+=`<circle cx="${px(p.idx)}" cy="${py(p[field])}" r="2" fill="${color}" opacity="0.4"/>`);
-  segPath(pts.map((p,i)=>({idx:i})),(p)=>rolling[p.idx],py,color,2.5,1);
-  const lastIdx=[...rolling.keys()].reverse().find(i=>rolling[i]!=null);
-  let avg7=null;
-  if(lastIdx!=null){
-    avg7=rolling[lastIdx];
-    const x=px(lastIdx),y=py(avg7);
-    svg+=`<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`;
-  }
-  return{svg:`<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible;">${svg}</svg>`,avg7};
+// ── READINESS & RECOVERY TRENDS ──
+// One series per chart, one axis each (never two scales on one plot). Line charts show
+// each night as a faint dot and the 7-day average as the line, over a shaded band for
+// your personal normal range. Every chart has a tap/hover layer: a snapping crosshair
+// on lines, the bar itself on bars. Tooltip text is set with textContent.
+const _rtCharts={};
+let _rtSeq=0;
+const RT_W=300,RT_H=104,RT_PL=28,RT_PR=8,RT_PT=8,RT_PB=16;
+function _rtX(i,n){return RT_PL+(n<=1?0:i/(n-1))*(RT_W-RT_PL-RT_PR);}
+function _rtDateLbl(ds){const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});}
+function _rtXLabels(pts,xOf){
+  let out='';
+  const at=i=>{const d=new Date(pts[i].ds+'T12:00:00');return`${d.getDate()}/${d.getMonth()+1}`;};
+  const idxs=[0,Math.round((pts.length-1)/2),pts.length-1];
+  idxs.forEach((i,k)=>{out+=`<text x="${xOf(i).toFixed(1)}" y="${RT_H-3}" text-anchor="${k===0?'start':k===2?'end':'middle'}" font-size="7.5" fill="var(--text3)">${at(i)}</text>`;});
+  return out;
 }
-function renderSleepTrendCard(){
+// pts: [{ds, v}] oldest→newest; band: {lo,hi} or null
+function rtLineChart({pts,color,band,fmt,unit,name,invert}){
+  const id='rt'+(++_rtSeq);
+  const have=pts.filter(p=>p.v!=null);
+  if(have.length<2)return'';
+  const n=pts.length;
+  const roll=pts.map((p,i)=>{const w=pts.slice(Math.max(0,i-6),i+1).filter(q=>q.v!=null).map(q=>q.v);return w.length?w.reduce((a,b)=>a+b,0)/w.length:null;});
+  let vals=have.map(p=>p.v);if(band)vals=vals.concat([band.lo,band.hi]);
+  let mn=Math.min(...vals),mx=Math.max(...vals);const pad=(mx-mn)*0.12||2;mn-=pad;mx+=pad;
+  const chartH=RT_H-RT_PT-RT_PB;
+  const y=v=>RT_PT+chartH-((v-mn)/(mx-mn||1))*chartH;
+  const x=i=>_rtX(i,n);
+  let svg='';
+  if(band)svg+=`<rect x="${RT_PL}" y="${y(band.hi).toFixed(1)}" width="${RT_W-RT_PL-RT_PR}" height="${Math.max(1,y(band.lo)-y(band.hi)).toFixed(1)}" fill="var(--band)" rx="2"/>`;
+  [mn+pad,mx-pad].forEach(v=>{svg+=`<line x1="${RT_PL}" x2="${RT_W-RT_PR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--border)" stroke-width="0.6"/><text x="${RT_PL-4}" y="${(y(v)+2.5).toFixed(1)}" text-anchor="end" font-size="7.5" fill="var(--text3)">${fmt(v)}</text>`;});
+  svg+=_rtXLabels(pts,x);
+  have.forEach(p=>{const i=pts.indexOf(p);svg+=`<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="2.2" fill="${color}" opacity="0.35"/>`;});
+  // 7-day line, broken over gaps of missing averages
+  let d='',pen=false;
+  roll.forEach((v,i)=>{if(v==null){pen=false;return;}d+=`${pen?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`;pen=true;});
+  svg+=`<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const li=roll.map((v,i)=>v!=null?i:-1).filter(i=>i>=0).pop();
+  if(li!=null)svg+=`<circle cx="${x(li).toFixed(1)}" cy="${y(roll[li]).toFixed(1)}" r="4" fill="${color}" stroke="var(--surface)" stroke-width="2"/>`;
+  svg+=`<line class="rt-cross" x1="0" x2="0" y1="${RT_PT}" y2="${RT_H-RT_PB}" stroke="var(--text2)" stroke-width="0.8" opacity="0"/>`;
+  // Hit layer: one full-height column per day, wider than any mark.
+  const colW=(RT_W-RT_PL-RT_PR)/Math.max(1,n-1);
+  pts.forEach((p,i)=>{svg+=`<rect class="rt-hit" data-i="${i}" x="${(x(i)-colW/2).toFixed(1)}" y="0" width="${colW.toFixed(1)}" height="${RT_H}" fill="transparent"/>`;});
+  _rtCharts[id]={kind:'line',n,x,rows:pts.map((p,i)=>({date:_rtDateLbl(p.ds),lines:[
+    [p.v!=null?`${fmt(p.v)}${unit}`:'Not logged','that night',color],
+    [roll[i]!=null?`${fmt(roll[i])}${unit}`:'–','7-day average',color]]}))};
+  return`<div class="rt-chart" data-rt="${id}"><svg viewBox="0 0 ${RT_W} ${RT_H}" width="100%" role="img" aria-label="${esc(name)} over the last ${n} days">${svg}</svg><div class="rt-tip" hidden></div></div>`;
+}
+// Readiness: one bar per morning, coloured by state (always shown with the state's name).
+function rtReadinessBars(days){
+  const id='rt'+(++_rtSeq);
+  const n=days.length,H=86,PT=6,PB=14;
+  const chartH=H-PT-PB;
+  const slot=(RT_W-RT_PL-RT_PR)/n,bw=Math.min(24,slot-2);
+  let svg='';
+  [40,60,80].forEach(v=>{const yy=PT+chartH-(v/100)*chartH;svg+=`<line x1="${RT_PL}" x2="${RT_W-RT_PR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" stroke="var(--border)" stroke-width="0.6" stroke-dasharray="${v===60?'0':'2,2'}"/><text x="${RT_PL-4}" y="${(yy+2.5).toFixed(1)}" text-anchor="end" font-size="7.5" fill="var(--text3)">${v}</text>`;});
+  days.forEach((r,i)=>{
+    const cx=RT_PL+slot*i+slot/2;
+    if(r.score!=null){
+      const h=Math.max(3,(r.score/100)*chartH),top=PT+chartH-h,rad=Math.min(3,bw/2);
+      // Rounded data end, square at the baseline.
+      svg+=`<path d="M${(cx-bw/2).toFixed(1)},${PT+chartH} V${(top+rad).toFixed(1)} Q${(cx-bw/2).toFixed(1)},${top.toFixed(1)} ${(cx-bw/2+rad).toFixed(1)},${top.toFixed(1)} H${(cx+bw/2-rad).toFixed(1)} Q${(cx+bw/2).toFixed(1)},${top.toFixed(1)} ${(cx+bw/2).toFixed(1)},${(top+rad).toFixed(1)} V${PT+chartH} Z" fill="${r.state.col}"/>`;
+    }
+    svg+=`<rect class="rt-hit" data-i="${i}" x="${(cx-slot/2).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}" fill="transparent"/>`;
+  });
+  const lab=i=>{const d=new Date(days[i].ds+'T12:00:00');return`${d.getDate()}/${d.getMonth()+1}`;};
+  [0,Math.round((n-1)/2),n-1].forEach((i,k)=>{svg+=`<text x="${(RT_PL+slot*i+slot/2).toFixed(1)}" y="${H-3}" text-anchor="${k===0?'start':k===2?'end':'middle'}" font-size="7.5" fill="var(--text3)">${lab(i)}</text>`;});
+  _rtCharts[id]={kind:'bar',n,x:i=>RT_PL+slot*i+slot/2,rows:days.map(r=>({date:_rtDateLbl(r.ds),lines:r.score!=null?[[`${r.score}`,r.state.label,r.state.col]]:[['–','No check-in','var(--text3)']]}))};
+  return`<div class="rt-chart" data-rt="${id}"><svg viewBox="0 0 ${RT_W} ${H}" width="100%" role="img" aria-label="Readiness each morning for the last ${n} days">${svg}</svg><div class="rt-tip" hidden></div></div>`;
+}
+function _rtShow(chartEl,i){
+  const c=_rtCharts[chartEl.dataset.rt];if(!c||!c.rows[i])return;
+  const tip=chartEl.querySelector('.rt-tip');
+  const row=c.rows[i];
+  tip.textContent='';
+  const h=document.createElement('div');h.className='rt-tip-date';h.textContent=row.date;tip.appendChild(h);
+  row.lines.forEach(([val,lbl,col])=>{
+    const l=document.createElement('div');l.className='rt-tip-row';
+    const k=document.createElement('i');k.style.background=col;l.appendChild(k);
+    const b=document.createElement('strong');b.textContent=val;l.appendChild(b);
+    const sp=document.createElement('span');sp.textContent=lbl;l.appendChild(sp);
+    tip.appendChild(l);
+  });
+  tip.hidden=false;
+  const svg=chartEl.querySelector('svg');const w=svg.getBoundingClientRect().width;
+  const px=c.x(i)/RT_W*w;
+  tip.style.left=px>w/2?'':`${Math.min(px+10,w-10)}px`;
+  tip.style.right=px>w/2?`${Math.max(10,w-px+10)}px`:'';
+  const cross=chartEl.querySelector('.rt-cross');
+  if(cross){cross.setAttribute('x1',c.x(i));cross.setAttribute('x2',c.x(i));cross.setAttribute('opacity','0.6');}
+  chartEl.querySelectorAll('.rt-hit.on').forEach(e=>e.classList.remove('on'));
+  const hit=chartEl.querySelector(`.rt-hit[data-i="${i}"]`);if(hit)hit.classList.add('on');
+}
+function _rtHide(chartEl){
+  const tip=chartEl.querySelector('.rt-tip');if(tip)tip.hidden=true;
+  const cross=chartEl.querySelector('.rt-cross');if(cross)cross.setAttribute('opacity','0');
+  chartEl.querySelectorAll('.rt-hit.on').forEach(e=>e.classList.remove('on'));
+}
+document.addEventListener('pointerover',e=>{const h=e.target.closest&&e.target.closest('.rt-hit');if(h)_rtShow(h.closest('.rt-chart'),+h.dataset.i);});
+document.addEventListener('pointerdown',e=>{
+  const h=e.target.closest&&e.target.closest('.rt-hit');
+  if(h){_rtShow(h.closest('.rt-chart'),+h.dataset.i);return;}
+  document.querySelectorAll('.rt-tip:not([hidden])').forEach(t=>_rtHide(t.closest('.rt-chart')));
+});
+document.addEventListener('pointerout',e=>{
+  const ch=e.target.closest&&e.target.closest('.rt-chart');
+  if(ch&&e.pointerType==='mouse'&&!ch.contains(e.relatedTarget))_rtHide(ch);
+});
+
+function renderRecoveryCard(){
   const morning=loadMorningData();
   const now=today();
   const DAYS=28;
-  const pts=[];
-  for(let i=DAYS-1;i>=0;i--){
-    const d=addDays(now,-i);const ds=dk(d);const m=morning[ds]||null;
-    pts.push({ds,idx:DAYS-1-i,day:d.getDate(),mon:d.getMonth()+1,sleep:m?.sleep??null,hrv:m?.hrv??null,wake:m?.wake??null});
-  }
-  const sleepPts=pts.filter(p=>p.sleep!==null);
-  const hrvPts=pts.filter(p=>p.hrv!==null);
-  if(!sleepPts.length&&!hrvPts.length)return'';
-  const sleepChart=sleepHrvMiniChart(pts,'sleep','var(--green)',[0,100]);
-  const hrvChart=sleepHrvMiniChart(pts,'hrv','var(--c-purple)');
-  // ── Insights ──
-  const last7=pts.slice(-7);
-  const avg7Sleep=last7.filter(p=>p.sleep!==null).length?Math.round(last7.filter(p=>p.sleep!==null).reduce((a,p)=>a+p.sleep,0)/last7.filter(p=>p.sleep!==null).length):null;
-  const avg7HRV=last7.filter(p=>p.hrv!==null).length?Math.round(last7.filter(p=>p.hrv!==null).reduce((a,p)=>a+p.hrv,0)/last7.filter(p=>p.hrv!==null).length):null;
-  // Correlation: day-after-training vs day-after-rest
-  const gym=loadGymData();const runs=loadRunData();
+  const dsList=[];for(let i=DAYS-1;i>=0;i--)dsList.push(dk(addDays(now,-i)));
+  const logged=dsList.filter(ds=>morning[ds]);
+  if(!logged.length)return'';
+  const B=getMorningBaselines(dk(addDays(now,1))); // baseline including today
+  const days=dsList.map(ds=>computeReadiness(ds));
+  const scored=days.filter(r=>r.score!=null);
+  const counts={};scored.forEach(r=>{counts[r.state.key]=(counts[r.state.key]||0)+1;});
+  const avgScore=scored.length?Math.round(scored.reduce((a,r)=>a+r.score,0)/scored.length):null;
+  const legend=`<div class="rt-legend">${[...RD_STATES].reverse().map(s=>`<span><i style="background:${s.col};"></i>${s.label}${counts[s.key]?` <b>${counts[s.key]}</b>`:''}</span>`).join('')}</div>`;
+  const pts=k=>dsList.map(ds=>({ds,v:morning[ds]&&_rdNum(morning[ds][k])!=null&&+morning[ds][k]>0?+morning[ds][k]:null}));
+  const r0=v=>String(Math.round(v));
+  const hrvBand=B.hrv.n>=RD_MIN_BASE.hrv?{lo:Math.exp(B.hrv.mean-0.5*B.hrv.sd),hi:Math.exp(B.hrv.mean+0.5*B.hrv.sd)}:null;
+  const rhrBand=B.rhr.n>=RD_MIN_BASE.rhr?{lo:B.rhr.mean-B.rhr.sd,hi:B.rhr.mean+B.rhr.sd}:null;
+  const slBand=B.sleep.n>=RD_MIN_BASE.sleep?{lo:B.sleep.mean-B.sleep.sd,hi:B.sleep.mean+B.sleep.sd}:null;
+  const block=(title,sub,chart)=>chart?`<div class="rt-block"><div class="rt-block-head"><span class="rt-title">${title}</span><span class="rt-sub">${sub}</span></div>${chart}</div>`:'';
+  const hrvPts=pts('hrv'),rhrPts=pts('rhr'),slPts=pts('sleep');
+  const last7=(arr)=>{const v=arr.slice(-7).map(p=>p.v).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null;};
+  const hrvSub=hrvBand?`7-day ${last7(hrvPts)??'–'} ms · normal ${Math.round(hrvBand.lo)}–${Math.round(hrvBand.hi)}`:`Learning your normal · ${B.hrv.n}/${RD_MIN_BASE.hrv}`;
+  const rhrSub=rhrBand?`7-day ${last7(rhrPts)??'–'} bpm · usual ${Math.round(B.rhr.mean)}`:`Learning your normal · ${B.rhr.n}/${RD_MIN_BASE.rhr}`;
+  const slSub=slBand?`7-day ${last7(slPts)??'–'} · usual ${Math.round(B.sleep.mean)}`:'Garmin sleep score';
+  // Insights carried over from the old Sleep & HRV card.
+  const gym=loadGymData(),runs=loadRunData();
   const trainDates=new Set([...gym.map(s=>s.date),...runs.map(r=>r.date)]);
-  const ptH=[],prH=[],ptS=[],prS=[];
-  pts.forEach(p=>{
-    const prev=dk(addDays(new Date(p.ds+'T12:00:00'),-1));
-    const wasTrain=trainDates.has(prev);
-    if(p.hrv!==null)(wasTrain?ptH:prH).push(p.hrv);
-    if(p.sleep!==null)(wasTrain?ptS:prS).push(p.sleep);
-  });
-  const avg=arr=>arr.length?Math.round(arr.reduce((a,b)=>a+b,0)/arr.length):null;
-  const avgHT=avg(ptH),avgHR=avg(prH),avgST=avg(ptS),avgSR=avg(prS);
-  // Wake time
-  const wakeMin=pts.filter(p=>p.wake).map(p=>{const[h,m]=p.wake.split(':').map(Number);return h*60+m;});
-  const avgWk=wakeMin.length?Math.round(wakeMin.reduce((a,b)=>a+b,0)/wakeMin.length):null;
-  const wkStd=wakeMin.length>1?Math.round(Math.sqrt(wakeMin.reduce((a,b)=>a+(b-avgWk)**2,0)/wakeMin.length)):null;
-  const fmtWk=m=>`${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
-  const pill=(msg,col)=>`<div style="padding:7px 10px;border-radius:8px;background:${tint(col,9)};border:1px solid ${tint(col,27)};"><span style="font-size:11px;font-weight:700;color:${col};">${msg}</span></div>`;
-  const pills=[];
-  if(avg7Sleep!==null)pills.push(pill(`7d avg sleep score: ${avg7Sleep}`,'var(--green)'));
-  if(avg7HRV!==null)pills.push(pill(`7d avg HRV: ${avg7HRV}ms`,'var(--c-purple)'));
-  if(avgHT!==null&&avgHR!==null&&ptH.length>=3&&prH.length>=2){const diff=avgHR-avgHT;if(Math.abs(diff)>=3)pills.push(pill(`HRV ${Math.abs(diff)}ms ${diff>0?'lower':'higher'} morning after training (${avgHT}ms vs ${avgHR}ms rest)`,'var(--accent2)'));}
-  if(avgST!==null&&avgSR!==null&&ptS.length>=3&&prS.length>=2){const diff=avgSR-avgST;if(Math.abs(diff)>=4)pills.push(pill(`Sleep ${Math.abs(diff)}pts ${diff>0?'lower':'higher'} after training days (${avgST} vs ${avgSR})`,'var(--accent2)'));}
-  if(avgWk!==null)pills.push(pill(`Avg wake: ${fmtWk(avgWk)}${wkStd!==null?(wkStd>15?` · Varies ±${wkStd}min`:(wakeMin.length>2?' · Consistent ✓':'')):''}`,wkStd!==null&&wkStd>20?'var(--orange)':'var(--text3)'));
-  const legend=(color)=>`<div style="display:flex;align-items:center;gap:10px;font-size:10px;font-weight:700;color:var(--text3);"><span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:2px;background:${color};opacity:0.4;border-radius:1px;"></span>Daily</span><span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:2px;background:${color};border-radius:1px;"></span>7-day avg</span></div>`;
-  const metricBlock=(title,chart,color)=>chart.svg?`<div style="margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
-        <span style="font-size:10px;font-weight:800;color:${color};text-transform:uppercase;letter-spacing:0.06em;">${title}</span>
-        ${legend(color)}
-      </div>
-      ${chart.svg}
-    </div>`:'';
+  const after=[],rest=[];
+  dsList.forEach(ds=>{const m=morning[ds];if(!m||!(+m.hrv>0))return;(trainDates.has(dk(addDays(new Date(ds+'T12:00:00'),-1)))?after:rest).push(+m.hrv);});
+  const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null;
+  const notes=[];
+  if(after.length>=3&&rest.length>=2){const d=avg(rest)-avg(after);if(Math.abs(d)>=3)notes.push(`HRV runs <strong>${Math.abs(d)} ms ${d>0?'lower':'higher'}</strong> the morning after training (${avg(after)} vs ${avg(rest)} after rest days).`);}
+  const wakeMin=dsList.map(ds=>morning[ds]&&morning[ds].wake).filter(Boolean).map(w=>{const[h,m]=w.split(':').map(Number);return h*60+m;});
+  if(wakeMin.length>=4){const a=Math.round(wakeMin.reduce((x,y)=>x+y,0)/wakeMin.length);const sd=Math.round(Math.sqrt(wakeMin.reduce((x,y)=>x+(y-a)**2,0)/wakeMin.length));
+    notes.push(`Average wake time <strong>${Math.floor(a/60)}:${String(a%60).padStart(2,'0')}</strong>, ${sd<=20?`steady within about ${sd} minutes. Consistent timing helps sleep quality.`:`varying by about ${sd} minutes. A steadier wake time tends to improve sleep.`}`);}
+  return`<div class="chart-card rt-card">
+    <div class="chart-card-header"><span class="chart-card-title">Readiness &amp; recovery</span><span class="chart-card-val">28 days</span></div>
+    ${scored.length?`<div class="rt-block"><div class="rt-block-head"><span class="rt-title">Readiness</span><span class="rt-sub">${avgScore!=null?`Average ${avgScore} · `:''}${scored.length} mornings</span></div>${rtReadinessBars(days)}${legend}</div>`:''}
+    ${block('HRV',hrvSub,rtLineChart({pts:hrvPts,color:'var(--c-purple)',band:hrvBand,fmt:r0,unit:' ms',name:'HRV'}))}
+    ${block('Resting HR',rhrSub,rtLineChart({pts:rhrPts,color:'var(--c-red)',band:rhrBand,fmt:r0,unit:' bpm',name:'Resting heart rate'}))}
+    ${block('Sleep score',slSub,rtLineChart({pts:slPts,color:'var(--c-green)',band:slBand,fmt:r0,unit:'',name:'Sleep score'}))}
+    <div class="rt-key"><span><i class="rt-key-line"></i>7-day average</span><span><i class="rt-key-dot"></i>Each night</span><span><i class="rt-key-band"></i>Your normal range</span></div>
+    ${notes.length?`<div class="rt-notes">${notes.map(n=>`<p>${n}</p>`).join('')}</div>`:''}
+  </div>`;
+}
+
+// ── ACTIVITY LOAD ──
+// Same model readiness uses (getLoadState). Daily load as bars, with the 7-day and
+// 4-week averages as lines on the same scale - one unit, one axis.
+function rtLoadChart(daily){
+  const id='rt'+(++_rtSeq);
+  const n=daily.length,H=104,PT=8,PB=16,chartH=H-PT-PB;
+  const mx=Math.max(...daily.map(d=>Math.max(d.load,d.acute,d.chronic)),1)*1.08;
+  const y=v=>PT+chartH-(v/mx)*chartH;
+  const slot=(RT_W-RT_PL-RT_PR)/n,bw=Math.max(1.5,Math.min(24,slot-2));
+  const cx=i=>RT_PL+slot*i+slot/2;
+  let svg='';
+  [0,mx/2].forEach(v=>{svg+=`<line x1="${RT_PL}" x2="${RT_W-RT_PR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--border)" stroke-width="0.6"/><text x="${RT_PL-4}" y="${(y(v)+2.5).toFixed(1)}" text-anchor="end" font-size="7.5" fill="var(--text3)">${Math.round(v)}</text>`;});
+  daily.forEach((d,i)=>{if(d.load>0)svg+=`<rect x="${(cx(i)-bw/2).toFixed(1)}" y="${y(d.load).toFixed(1)}" width="${bw.toFixed(1)}" height="${(PT+chartH-y(d.load)).toFixed(1)}" rx="1" fill="var(--text3)" opacity="0.35"/>`;});
+  const line=(k,col,dash)=>`<path d="${daily.map((d,i)=>`${i?'L':'M'}${cx(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join('')}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${dash?` stroke-dasharray="${dash}"`:''}/>`;
+  svg+=line('chronic','var(--text2)','3,3')+line('acute','var(--c-orange)');
+  svg+=`<line class="rt-cross" x1="0" x2="0" y1="${PT}" y2="${H-PB}" stroke="var(--text2)" stroke-width="0.8" opacity="0"/>`;
+  const lab=i=>{const d=new Date(daily[i].ds+'T12:00:00');return`${d.getDate()}/${d.getMonth()+1}`;};
+  [0,Math.round((n-1)/2),n-1].forEach((i,k)=>{svg+=`<text x="${cx(i).toFixed(1)}" y="${H-3}" text-anchor="${k===0?'start':k===2?'end':'middle'}" font-size="7.5" fill="var(--text3)">${lab(i)}</text>`;});
+  daily.forEach((d,i)=>{svg+=`<rect class="rt-hit" data-i="${i}" x="${(cx(i)-slot/2).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}" fill="transparent"/>`;});
+  _rtCharts[id]={kind:'line',n,x:cx,rows:daily.map(d=>({date:_rtDateLbl(d.ds),lines:[
+    [`${Math.round(d.acute)}`,'7-day average','var(--c-orange)'],[`${Math.round(d.chronic)}`,'4-week average','var(--text2)'],[d.load>0?`${Math.round(d.load)}`:'Rest','that day','var(--text3)']]}))};
+  return`<div class="rt-chart" data-rt="${id}"><svg viewBox="0 0 ${RT_W} ${H}" width="100%" role="img" aria-label="Daily training load with 7-day and 4-week averages">${svg}</svg><div class="rt-tip" hidden></div></div>`;
+}
+function renderActivityLoad(){
+  const now=today();
+  const st=getLoadState(dk(now));
+  if(!st.daily.length)return'';
+  const ratio=st.ratio;
+  const gym=loadGymData(),runs=loadRunData();
+  const wk=addDays(now,-6),inWk=x=>{const d=new Date(x.date+'T12:00:00');return d>=wk&&d<=now;};
+  const recentGym=gym.filter(inWk),runCount=runs.filter(inWk).length;
+  const gymSets=recentGym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  const sessionDesc=[recentGym.length?`${recentGym.length} gym session${recentGym.length>1?'s':''} (${gymSets} sets)`:'',runCount?`${runCount} run${runCount>1?'s':''}`:''].filter(Boolean).join(' · ');
+  let gauge='',advice='';
+  if(ratio!=null){
+    const isHigh=ratio>1.3,isRest=ratio<0.8;
+    const col=isHigh?'var(--st-pace)':isRest?'var(--st-ready)':'var(--st-go)';
+    const pos=Math.min(100,Math.max(0,(ratio-0.4)/1.4*100));
+    gauge=`<div class="al-zones"><span>Fresh</span><span>Steady</span><span>Building</span><span>Heavy</span></div>
+      <div class="al-track"><span class="al-band" style="left:${((0.8-0.4)/1.4*100).toFixed(1)}%;width:${((1.3-0.8)/1.4*100).toFixed(1)}%;"></span><span class="al-dot" style="left:${pos.toFixed(1)}%;background:${col};"></span></div>
+      <div class="al-nums"><span>Last 7 days <strong>${Math.round(st.acute)}</strong>/day</span><span>4-week normal <strong>${Math.round(st.chronic)}</strong>/day</span></div>`;
+    advice=isHigh?`Running ${Math.round((ratio-1)*100)}% above your normal. Readiness is already counting it; an easier few days would bring it back.`
+      :isRest?'A lighter stretch than usual. Good time to absorb training, or to push if readiness agrees.'
+      :'In your normal range. Steady, sustainable training.';
+  }else{
+    advice='Building history. Load joins readiness after about three weeks of logged training.';
+  }
   return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Sleep &amp; HRV</span><span class="chart-card-val">28 days</span></div>
-    ${metricBlock('Sleep score',sleepChart,'var(--green)')}
-    ${metricBlock('HRV (ms)',hrvChart,'var(--c-purple)')}
-    ${pills.length?`<div style="display:flex;flex-direction:column;gap:5px;">${pills.join('')}</div>`:''}
+    <div class="chart-card-header"><span class="chart-card-title">Training load</span><span class="chart-card-val">${ratio!=null?`${ratio.toFixed(2)}× normal`:'6 weeks'}</span></div>
+    ${gauge}
+    ${rtLoadChart(st.daily.slice(-42))}
+    <div class="rt-key"><span><i class="rt-key-line" style="background:var(--c-orange);"></i>7-day average</span><span><i class="rt-key-line rt-key-dash"></i>4-week normal</span><span><i class="rt-key-bar"></i>Each day</span></div>
+    <div class="al-advice">${advice}</div>
+    <div class="al-foot">${sessionDesc?`${sessionDesc} this week. `:''}Session load is minutes × effort, from your run types and gym effort tags.</div>
   </div>`;
 }
 
@@ -4748,7 +4876,10 @@ function renderMe(){
     ${renderWeightSection(health)}
     ${renderBodyFatSection(health)}
     ${renderVapingSection()}
-    ${renderSleepTrendCard()}
+    <div class="chart-card me-link" onclick="showPage('trends');switchTrendsTab('overview')">
+      <div><div class="settings-row-label">Readiness &amp; recovery</div><div class="settings-row-meta">HRV, resting HR, sleep and readiness trends are on Trends</div></div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
     ${renderRaceSection()}
     ${renderWeekPlanSection()}
     ${renderCustomGoalsList()}
@@ -5656,8 +5787,101 @@ function clearRace(){
   renderToday();if(document.getElementById('page-me').classList.contains('active'))renderMe();
 }
 
+// ── APPEARANCE ──
+// "system" removes data-theme so the OS setting decides; light/dark pin it.
+function getThemePref(){try{const t=localStorage.getItem('theme_pref');return t==='light'||t==='dark'?t:'system';}catch(e){return'system';}}
+function setThemePref(t){
+  try{if(t==='system')localStorage.removeItem('theme_pref');else localStorage.setItem('theme_pref',t);}catch(e){}
+  const root=document.documentElement;
+  if(t==='system')root.removeAttribute('data-theme');else root.setAttribute('data-theme',t);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{
+    const isDarkMeta=(m.getAttribute('media')||'').includes('dark');
+    m.setAttribute('content',t==='system'?(isDarkMeta?'#0b0b11':'#f4f4f8'):(t==='dark'?'#0b0b11':'#f4f4f8'));
+  });
+  document.querySelectorAll('#theme-seg .seg-tab').forEach(b=>b.classList.toggle('active',b.dataset.themePref===t));
+  haptic('light');
+}
+
+// ── MORNING DATA CSV IMPORT ──
+// Backfills HRV, resting HR and sleep score from any CSV with a date column - a Garmin
+// Connect export, intervals.icu wellness, or a spreadsheet you've kept. Columns are found
+// by name; values outside sane ranges are skipped; days already logged keep their values.
+function _csvRows(text){
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cell+='"';i++;}else q=false;}else cell+=ch;}
+    else if(ch==='"')q=true;
+    else if(ch===','||ch===';'||ch==='\t'){row.push(cell);cell='';}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell='';}
+    else cell+=ch;
+  }
+  if(cell!==''||row.length){row.push(cell);rows.push(row);}
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+function _csvDate(v){
+  v=String(v||'').trim().replace(/^"|"$/g,'');
+  let m=v.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m)return`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m=v.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/);
+  if(m){ // day-first (UK), unless that's impossible
+    let d=+m[1],mo=+m[2],y=+m[3];if(y<100)y+=2000;
+    if(mo>12&&d<=12){const t=d;d=mo;mo=t;}
+    if(mo>=1&&mo<=12&&d>=1&&d<=31)return`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  const t=Date.parse(v);
+  if(!isNaN(t)){const d=new Date(t);return dk(d);}
+  return null;
+}
+function importMorningCsv(evt){
+  const file=evt.target.files&&evt.target.files[0];
+  evt.target.value='';
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const rows=_csvRows(String(e.target.result||''));
+    const hi=rows.findIndex(r=>r.some(c=>/date|day/i.test(c)));
+    if(hi<0){toastMsg('No date column found');return;}
+    const head=rows[hi].map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
+    const skip=h=>/7d|7day|week|baseline|status|avg7|seven|max|min/.test(h);
+    const find=test=>head.findIndex(h=>test(h)&&!skip(h));
+    const col={date:head.findIndex(h=>/date|day/.test(h)),
+      hrv:find(h=>/hrv/.test(h)),
+      rhr:find(h=>/resting|rhr/.test(h)),
+      sleep:find(h=>/sleepscore/.test(h)||(h==='score'))};
+    if(col.sleep<0)col.sleep=find(h=>/sleep/.test(h)&&/score/.test(h));
+    if(col.hrv<0&&col.rhr<0&&col.sleep<0){toastMsg('No HRV, resting HR or sleep column found');return;}
+    const range={hrv:[5,250],rhr:[25,120],sleep:[0,100]};
+    const d=loadMorningData();
+    const added={hrv:0,rhr:0,sleep:0};let days=0;
+    const todayStr=dk(today());
+    rows.slice(hi+1).forEach(r=>{
+      const ds=_csvDate(r[col.date]);
+      if(!ds||ds>todayStr)return;
+      let touched=false;
+      ['hrv','rhr','sleep'].forEach(k=>{
+        if(col[k]<0)return;
+        const n=parseFloat(String(r[col[k]]||'').replace(/[^0-9.]/g,''));
+        if(isNaN(n)||n<range[k][0]||n>range[k][1])return;
+        const e=d[ds]||{};
+        if(_rdNum(e[k])!=null)return; // never overwrite what you logged
+        d[ds]={...e,[k]:Math.round(n)};added[k]++;touched=true;
+      });
+      if(touched)days++;
+    });
+    if(!days){toastMsg('Nothing new to import');return;}
+    saveMorningData(d);
+    const parts=[added.hrv?`HRV ${added.hrv}`:'',added.rhr?`resting HR ${added.rhr}`:'',added.sleep?`sleep ${added.sleep}`:''].filter(Boolean).join(' · ');
+    toastMsg(`Imported ${days} days: ${parts}`);haptic('success');
+    renderToday();
+  };
+  reader.readAsText(file);
+}
+
 function openSettings(){
   document.getElementById('settings-name-input').value=state.userName||'';
+  const tp=getThemePref();
+  document.querySelectorAll('#theme-seg .seg-tab').forEach(b=>b.classList.toggle('active',b.dataset.themePref===tp));
   openModal('settings-modal');
 }
 function saveName(){
@@ -6388,6 +6612,12 @@ const INSIGHT_MIN=5;
 function getWhatMovesInsights(){
   const gym=loadGymData();const runs=loadRunData();
   const morning=loadMorningData();
+  // Each morning's readiness score rides along as a pseudo-field, so readiness gets the
+  // same "does it actually predict your sessions?" test as sleep and HRV - checked
+  // against your own history rather than taken on trust.
+  const _rdCut=dk(addDays(today(),-365));
+  const _sessionDays=new Set([...gym.map(x=>x.date),...runs.map(x=>x.date)]);
+  Object.keys(morning).forEach(ds=>{if(ds>=_rdCut&&morning[ds]&&_sessionDays.has(ds)){const r=computeReadiness(ds);if(r.score!=null)morning[ds].rd=r.score;}});
   const health=loadHealthData().filter(h=>h.date&&parseFloat(h.weight)>0).sort((a,b)=>a.date.localeCompare(b.date));
   const perf=getGymSessionPerf(gym);
   const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
@@ -6403,13 +6633,14 @@ function getWhatMovesInsights(){
     const hi=rows.filter(r=>+r.v>=cut).map(r=>r.pct),lo=rows.filter(r=>+r.v<cut).map(r=>r.pct);
     if(hi.length<INSIGHT_MIN||lo.length<INSIGHT_MIN)return{icon,title,pending:need(hi.length,lo.length)};
     const a=avg(hi),b=avg(lo),diff=Math.round((a-b)*100);
-    return{icon,title,a:{label:`${key==='sleep'?'Score':'HRV'} ${cut}${unit}+`,val:pct(a),n:hi.length},b:{label:`Under ${cut}${unit}`,val:pct(b),n:lo.length},
+    return{icon,title,a:{label:`${{sleep:'Score',hrv:'HRV',rd:'Readiness'}[key]} ${cut}${unit}+`,val:pct(a),n:hi.length},b:{label:`Under ${cut}${unit}`,val:pct(b),n:lo.length},
       text:Math.abs(diff)<2?`Doesn't seem to change much — within ${Math.max(Math.abs(diff),1)}% either way.`
-        :diff>0?`You tend to lift <strong>${diff}% closer to your best</strong> after a higher ${key==='sleep'?'sleep score':'HRV'}.`
-        :`Oddly, you tend to lift ${-diff}% better after a <em>lower</em> ${key==='sleep'?'sleep score':'HRV'} — probably noise, worth watching.`};
+        :diff>0?`You tend to lift <strong>${diff}% closer to your best</strong> after a higher ${{sleep:'sleep score',hrv:'HRV',rd:'readiness'}[key]}.`
+        :`Oddly, you tend to lift ${-diff}% better after a <em>lower</em> ${{sleep:'sleep score',hrv:'HRV',rd:'readiness'}[key]} — probably noise, worth watching.`};
   };
   out.push(morningSplit('sleep','😴','Sleep → lifting',''));
   out.push(morningSplit('hrv','💓','HRV → lifting','ms'));
+  out.push(morningSplit('rd','🎯','Readiness → lifting',''));
 
   // Run the day before a gym session vs not.
   {
@@ -6524,13 +6755,14 @@ function getWhatMovesInsights(){
     const runMorning=(key,icon,title,unit,word)=>{
       const rows=scored.map(r=>({v:(morning[r.date]||{})[key],diff:r.diff})).filter(r=>r.v!=null&&r.v!=='');
       const cut=rows.length?median(rows.map(r=>+r.v)):0;
-      return compare(icon,title,`${key==='sleep'?'Score':'HRV'} ${cut}${unit}+`,rows.filter(r=>+r.v>=cut).map(r=>r.diff),`Under ${cut}${unit}`,rows.filter(r=>+r.v<cut).map(r=>r.diff),
+      return compare(icon,title,`${{sleep:'Score',hrv:'HRV',rd:'Readiness'}[key]} ${cut}${unit}+`,rows.filter(r=>+r.v>=cut).map(r=>r.diff),`Under ${cut}${unit}`,rows.filter(r=>+r.v<cut).map(r=>r.diff),
         d=>`You tend to run <strong>${d}s/km faster</strong> after a higher ${word}.`,
         d=>`Oddly, you tend to run ${d}s/km faster after a <em>lower</em> ${word} — probably noise, worth watching.`,
         `Your ${word} doesn't seem to change your running pace much.`);
     };
     out.push(runMorning('sleep','😴','Sleep → running','','sleep score'));
     out.push(runMorning('hrv','💓','HRV → running','ms','HRV'));
+    out.push(runMorning('rd','🎯','Readiness → running','','readiness score'));
     {
       const gymDays=new Set(gym.map(s=>s.date));
       const after=[],fresh=[];
@@ -6630,7 +6862,6 @@ function getRecentMorningPicks(key){
   for(const[,v]of entries){const n=+v[key];if(!seen.includes(n))seen.push(n);if(seen.length>=3)break;}
   return seen;
 }
-function getRecentHrvPicks(){return getRecentMorningPicks('hrv');}
 const _checkin={sleep:null,hrv:null,rhr:null,feel:null};
 function openMorningModal(){
   const saved=loadMorningData()[dk(today())]||{};
@@ -6826,8 +7057,8 @@ function _rdStats(arr,floor){
   return{n:arr.length,mean:m,sd:Math.max(floor,Math.sqrt(v))};
 }
 function _rdNum(v){return v!=null&&v!==''&&!isNaN(+v)?+v:null;}
-function getMorningBaselines(ds){
-  const morning=loadMorningData();const end=new Date(ds+'T12:00:00');
+function getMorningBaselines(ds,morning){
+  morning=morning||loadMorningData();const end=new Date(ds+'T12:00:00');
   const h=[],r=[],sl=[],f=[];
   for(let i=1;i<=60;i++){
     const e=morning[dk(addDays(end,-i))];if(!e)continue;
@@ -6854,13 +7085,29 @@ function _recentHeavyLift(end){
   }
   return null;
 }
+// A day's readiness only depends on the stored data, so results are cached per date and
+// the cache is dropped whenever morning, gym or run data changes.
+let _rdCache={m:null,g:null,r:null,map:{}};
+function _rdCacheMap(){
+  let m='',g='',r='';
+  try{m=localStorage.getItem('morning_data_v1')||'';g=localStorage.getItem('gym_data_v1')||'';r=localStorage.getItem('run_data_v2')||'';}catch(e){}
+  if(m!==_rdCache.m||g!==_rdCache.g||r!==_rdCache.r)_rdCache={m,g,r,map:{}};
+  return _rdCache.map;
+}
 function computeReadiness(ds,override){
   ds=ds||dk(today());
+  const cache=override===undefined?_rdCacheMap():null;
+  if(cache&&cache[ds])return cache[ds];
+  const res=_computeReadiness(ds,override);
+  if(cache)cache[ds]=res;
+  return res;
+}
+function _computeReadiness(ds,override){
   const morning=loadMorningData();
   const m=override!==undefined?override:(morning[ds]||null);
   const hrv=m?_rdNum(m.hrv):null,rhr=m?_rdNum(m.rhr):null,sleep=m?_rdNum(m.sleep):null,feel=m?_rdNum(m.feel):null;
   const hasMorning=hrv!=null||sleep!=null||rhr!=null||feel!=null;
-  const B=getMorningBaselines(ds);
+  const B=getMorningBaselines(ds,morning);
   const end=new Date(ds+'T12:00:00');
   const C=[],flags=[];
 
@@ -7003,11 +7250,6 @@ function computeReadiness(ds,override){
     res.driver=goods.length&&res.state.key==='go'?`${goods.slice(0,2).join(' and ').replace(/^./,ch=>ch.toUpperCase())}`:'Everything is within your normal range';
   }
   return res;
-}
-// Older call sites (check-in preview, gym/run cards) - same engine, old shape.
-function calcReadiness(morningOverride){
-  const r=computeReadiness(dk(today()),morningOverride);
-  return{score:r.score,state:r.state,advice:r.state?r.state.label:'Morning check-in needed',col:r.state?r.state.col:'var(--text3)',hasMorning:r.hasMorning,r};
 }
 
 // Today's call: the readiness state applied to whatever is actually on the plan.
@@ -7176,37 +7418,6 @@ function openReadinessInfo(){
   openModal('readiness-info-modal');
 }
 
-// Rolling sleep-score deficit vs your own trailing baseline (not hours - the logged
-// value is a 0-100 Garmin-style score, so "debt" is framed as points, not hours).
-// Needs 7+ logged days total before it'll say anything, to avoid a baseline built off
-// a handful of entries.
-function getSleepDeficit(){
-  const morning=loadMorningData();
-  const now=today();
-  const all=Object.entries(morning).filter(([,v])=>v&&v.sleep!=null).map(([ds,v])=>({ds,sleep:v.sleep}));
-  if(all.length<7)return null;
-  const baseline=all.reduce((a,e)=>a+e.sleep,0)/all.length;
-  const last7=all.filter(e=>{const d=new Date(e.ds+'T12:00:00');return d>=addDays(now,-6)&&d<=now;});
-  if(!last7.length)return null;
-  const deficit=Math.round(last7.reduce((a,e)=>a+(baseline-e.sleep),0));
-  return{baseline:Math.round(baseline),deficit,daysLogged:last7.length};
-}
-// Ties your most recent gym session to the very next morning's HRV, compared against your
-// trailing baseline - a direct, dated example instead of an abstract correlation.
-function getRecoveryFeedback(){
-  const gym=[...loadGymData()].sort((a,b)=>b.date.localeCompare(a.date));
-  if(!gym.length)return null;
-  const last=gym[0];
-  const morning=loadMorningData();
-  const baseDate=new Date(last.date+'T12:00:00');
-  const nextEntry=morning[dk(addDays(baseDate,1))];
-  if(!nextEntry||nextEntry.hrv==null)return null;
-  const baseVals=[];
-  for(let i=1;i<=14;i++){const e=morning[dk(addDays(baseDate,-i))];if(e&&e.hrv!=null)baseVals.push(e.hrv);}
-  if(baseVals.length<3)return null;
-  const baseline=baseVals.reduce((a,b)=>a+b,0)/baseVals.length;
-  return{type:last.type,date:last.date,hrv:nextEntry.hrv,baseline:Math.round(baseline),diff:Math.round(nextEntry.hrv-baseline)};
-}
 // Best PR set in the last 7 days, across gym (weighted or bodyweight-reps) and runs
 // (longest distance, fastest pace). Scans chronologically and tracks a running best so
 // each session is judged against what was actually the record at the time it happened.
@@ -7381,72 +7592,6 @@ function deleteRunEntry(){
 }
 
 // ── ACTIVITY LOAD ──
-function renderActivityLoad(){
-  const now=today();const gym=loadGymData();const runs=loadRunData();
-  // Intensity multipliers per effort zone (simplified TRIMP)
-  const effortMult={Recovery:0.6,Easy:1.0,'Long Run':1.1,Long:1.1,Tempo:1.75,Intervals:2.0,Hard:2.0,Race:2.2};
-  function runLoad(r){
-    const mult=effortMult[r.effort]||1.0;
-    if(r.time){
-      const secs=parseTimeToSecs(r.time);
-      if(secs>0)return Math.round((secs/60)*mult); // minutes × intensity
-    }
-    if(r.km){return Math.round(r.km*6*mult);} // fallback: assume 6 min/km
-    return Math.round(30*mult);
-  }
-  // Gym sessions logged before the effort tag existed (or skipped it) fall back to the
-  // original flat multiplier, so nothing already in your history silently reweights itself.
-  const gymEffortMult={Easy:0.7,Solid:1.0,Pushed:1.4,Max:1.8};
-  function gymSessionLoad(s){
-    const sets=(s.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);
-    return sets>0?Math.round(sets*2*(gymEffortMult[s.effort]||1.0)):30;
-  }
-  function dayLoad(ds){
-    let l=0;
-    gym.filter(s=>s.date===ds).forEach(s=>{l+=gymSessionLoad(s);});
-    runs.filter(r=>r.date===ds).forEach(r=>{l+=runLoad(r);});
-    return l;
-  }
-  // 7-day and 28-day average daily load
-  let load7=0,load28=0;
-  for(let i=0;i<7;i++)load7+=dayLoad(dk(addDays(now,-i)));
-  for(let i=0;i<28;i++)load28+=dayLoad(dk(addDays(now,-i)));
-  const avg7=load7/7,avg28=load28/28;
-  // Gauge: ratio of 7d avg to 28d avg
-  const ratio=avg28>0?avg7/avg28:1;
-  // Zones: REST <0.7, BASELINE 0.7–1.3, HIGH >1.3
-  const isHigh=ratio>1.3,isRest=ratio<0.7;
-  const gaugeColor=isHigh?'var(--orange)':isRest?'var(--accent2)':'var(--green)';
-  const gaugePct=Math.min(100,Math.max(0,(ratio/2)*100)); // 0=0x, 100=2x
-  const baselineLeft=35,baselineRight=65; // baseline zone 0.7–1.3 maps to ~35–65%
-  // Count session types in last 7 days
-  const recentGym=gym.filter(s=>{const d=new Date(s.date);return d>=addDays(now,-6)&&d<=now;});
-  const gymCount=recentGym.length;
-  const gymSets=recentGym.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
-  const runCount=runs.filter(r=>{const d=new Date(r.date);return d>=addDays(now,-6)&&d<=now;}).length;
-  const sessionDesc=[gymCount?`${gymCount} gym session${gymCount>1?'s':''} (${gymSets} sets)`:'',runCount?`${runCount} run${runCount>1?'s':''}`:''].filter(Boolean).join(' · ');
-  const advice=isHigh?'High load — consider an easier day soon.':isRest?'Low load over the last 7 days — good time to push harder.':'Load is balanced — keep it up.';
-  const adviceColor=isHigh?'var(--orange)':isRest?'var(--accent2)':'var(--green)';
-  return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Activity Load</span><span class="chart-card-val">7d vs 28d avg</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px;">
-      <span>Rest</span><span>Baseline</span><span>High</span>
-    </div>
-    <div style="position:relative;height:10px;background:var(--surface2);border-radius:5px;margin-bottom:6px;overflow:hidden;">
-      <div style="position:absolute;left:${baselineLeft}%;right:${100-baselineRight}%;top:0;bottom:0;background:rgba(8,132,91,0.15);"></div>
-      <div style="position:absolute;left:0;width:${gaugePct}%;height:100%;background:${gaugeColor};border-radius:5px;transition:width 0.6s;"></div>
-      <div style="position:absolute;left:${baselineLeft}%;top:0;bottom:0;width:1px;background:var(--green);opacity:0.5;"></div>
-      <div style="position:absolute;left:${baselineRight}%;top:0;bottom:0;width:1px;background:var(--orange);opacity:0.5;"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;">
-      <span>7-day load: <span style="color:var(--text);">${avg7.toFixed(1)}/day</span></span>
-      <span>28-day avg: <span style="color:var(--text);">${avg28.toFixed(1)}/day</span></span>
-    </div>
-    ${sessionDesc?`<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">${sessionDesc} · Gym: 2pts/set · Runs: mins × intensity (TRIMP)</div>`:''}
-    <div style="padding:10px 14px;border-radius:var(--radius-xs);border:1px solid ${adviceColor};background:${isHigh?'rgba(194,80,0,0.08)':isRest?'rgba(37,99,235,0.08)':'rgba(8,132,91,0.08)'};font-size:13px;font-weight:700;color:${adviceColor};">${advice}</div>
-  </div>`;
-}
-
 // ── SESSION COMPARE ──
 function openCompareModal(){
   const gym=loadGymData();

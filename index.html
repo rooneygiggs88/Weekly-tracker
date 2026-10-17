@@ -705,6 +705,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .sc-url code{flex:1;min-width:0;overflow-wrap:anywhere;font-size:11.5px;background:none;padding:0;user-select:text;-webkit-user-select:text;}
 .sc-url button{border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;}
 .ask-card{margin-bottom:10px;}
+.app-build{text-align:center;font-size:11px;color:var(--text3);margin-top:6px;font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -985,6 +986,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <button class="btn-danger" onclick="clearAllData()">Clear all data</button>
     <div class="gap-sm"></div>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('settings-modal')">Close</button>
+    <div class="app-build">Version <span id="app-build"></span></div>
   </div>
 </div>
 
@@ -6674,7 +6676,10 @@ function importMorningCsv(evt){
   reader.readAsText(file);
 }
 
+// Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
+const APP_BUILD='17 Oct · backup fix 2';
 function openSettings(){
+  const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';
   const tp=getThemePref();
   document.querySelectorAll('#theme-seg .seg-tab').forEach(b=>b.classList.toggle('active',b.dataset.themePref===tp));

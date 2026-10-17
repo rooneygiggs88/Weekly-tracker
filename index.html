@@ -708,6 +708,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .race-done{font-family:var(--rounded);font-size:36px;font-weight:800;letter-spacing:-1.2px;color:var(--st-go);line-height:1.1;}
 .race-done span{display:block;font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;letter-spacing:0;color:var(--text3);margin-top:4px;}
 .race-done-rec{font-size:12.5px;font-weight:600;color:var(--text2);margin-top:8px;}
+.imp-toggle{display:block;width:100%;margin-top:6px;padding:10px;border:none;border-top:1px solid var(--border);background:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -3993,9 +3994,8 @@ function renderTrends(){
       <div class="metric-card green"><div class="m-label">Gym</div><div class="m-val">${weekSets}</div><div class="m-unit">sets this week${vsAvg&&vsAvg.setsPct!=null?`<br>${vsAvgLine('weekly',vsAvg.setsPct)}`:''}</div></div>
       <div class="metric-card"><div class="m-label">Running</div><div class="m-val">${weekKm.toFixed(1)}</div><div class="m-unit">km this week${vsAvg&&vsAvg.kmPct!=null?`<br>${vsAvgLine('weekly',vsAvg.kmPct)}`:''}</div></div>
     </div>
-    ${renderRecoveryCard()}
-    ${renderHabitImpactsCard()}
     ${renderFitnessFormCard()}
+    ${renderRecoveryCard()}
     ${renderActivityLoad()}
     ${streakHtml}
     ${balanceHtml}
@@ -4003,6 +4003,7 @@ function renderTrends(){
     ${renderDayOfWeekHeatmap()}
     ${renderTimeOfDay()}
     ${renderWhatMovesCard('Body & recovery')}
+    ${renderHabitImpactsCard()}
     ${renderWeekReviewHistory()}
     ${_yrIsReview()?'':renderYearCard()}
     ${renderAskClaudeCard()}
@@ -5253,6 +5254,13 @@ function getHabitImpacts(){
     return out;
   });
 }
+let _impOpen=false;
+try{_impOpen=localStorage.getItem('impacts_open')==='1';}catch(e){}
+function toggleImpacts(){
+  _impOpen=!_impOpen;
+  try{localStorage.setItem('impacts_open',_impOpen?'1':'0');}catch(e){}
+  const y=window.scrollY;renderTrends();window.scrollTo(0,y);
+}
 function renderHabitImpactsCard(){
   const all=getHabitImpacts();
   if(!all.length)return'';
@@ -5266,11 +5274,17 @@ function renderHabitImpactsCard(){
     <div class="imp-n">${f.nYes} yes · ${f.nNo} no mornings</div>
   </div>`;
   const pend=pending.length?`<div class="imp-pending"><span class="rt-title">Still collecting</span><p>${pending.map(f=>`${esc(f.label)} <span>${Math.min(f.nYes,f.nNo)}/${IMPACT_MIN}</span>`).join(' · ')}</p></div>`:'';
+  // Closed, it shows only habits with a finding; open, everything plus the explanation.
+  const found=done.filter(f=>f.size!=='none');
+  const open=_impOpen;
+  const total=all.length;
+  const closedBody=found.length?found.map(row).join(''):`<div class="imp-empty">${done.length?`No clear effects yet across ${done.length} habit${done.length===1?'':'s'}.`:'Not enough history yet. Tags in the morning check-in and the habits you tick build this up.'}</div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">Habit impacts</span><span class="chart-card-val">next morning</span></div>
-    <p class="imp-intro">How your mornings compare after days you did each thing versus days you didn't. It shows patterns, not proof: plenty of things travel together. Mornings when you were ill or run down are left out, because they skew everything at once.</p>
+    ${open?`<p class="imp-intro">How your mornings compare after days you did each thing versus days you didn't. It shows patterns, not proof: plenty of things travel together. Mornings when you were ill or run down are left out, because they skew everything at once.</p>
     ${done.length?done.map(row).join(''):`<div class="imp-empty">Nothing has enough history yet. Tags you add in the morning check-in, and the habits you tick, build this up.</div>`}
-    ${pend}
+    ${pend}`:closedBody}
+    <button class="imp-toggle" onclick="toggleImpacts()">${open?'Show less':`Show all ${total}`}</button>
   </div>`;
 }
 
@@ -6688,7 +6702,7 @@ function importMorningCsv(evt){
 }
 
 // Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
-const APP_BUILD='17 Oct · Me tidy';
+const APP_BUILD='17 Oct · Trends order';
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';

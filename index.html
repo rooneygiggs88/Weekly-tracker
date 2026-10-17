@@ -601,7 +601,6 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .al-nums strong{color:var(--text);}
 .al-advice{font-size:13px;font-weight:600;color:var(--text);line-height:1.45;margin-top:10px;}
 .al-foot{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.45;}
-.me-link{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;padding:16px 20px;}
 
 .rd-mini{position:relative;overflow:hidden;}
 .rd-mini-head{display:flex;justify-content:space-between;align-items:center;}
@@ -706,6 +705,9 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .sc-url button{border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;}
 .ask-card{margin-bottom:10px;}
 .app-build{text-align:center;font-size:11px;color:var(--text3);margin-top:6px;font-variant-numeric:tabular-nums;}
+.race-done{font-family:var(--rounded);font-size:36px;font-weight:800;letter-spacing:-1.2px;color:var(--st-go);line-height:1.1;}
+.race-done span{display:block;font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;letter-spacing:0;color:var(--text3);margin-top:4px;}
+.race-done-rec{font-size:12.5px;font-weight:600;color:var(--text2);margin-top:8px;}
 </style>
 </head>
 <body>
@@ -5603,10 +5605,6 @@ function renderMe(){
     ${renderFitnessAgeCard()}
     ${renderBodyFatSection(health)}
     ${renderVapingSection()}
-    <div class="chart-card me-link" onclick="showPage('trends');switchTrendsTab('overview')">
-      <div><div class="settings-row-label">Readiness &amp; recovery</div><div class="settings-row-meta">HRV, resting HR, sleep and readiness trends are on Trends</div></div>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>
     ${renderRaceSection()}
     ${renderWeekPlanSection()}
     ${renderCustomGoalsList()}
@@ -6361,6 +6359,17 @@ function renderRaceSection(){
     return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Race Target</span></div><div class="empty-state" style="padding:16px 0;"><strong>No race set</strong>Add a target race to see your countdown.</div><button class="btn-secondary" onclick="openRaceModal()" style="margin-top:8px;">Set Race Target</button></div>`;
   }
   const days=daysUntil(r.date);
+  if(days<0){
+    // Whole calendar days, the same count the recovery block uses.
+    const ago=Math.round((new Date(dk(today())+'T12:00:00')-new Date(r.date+'T12:00:00'))/864e5),rec=getRaceRecovery();
+    return`<div class="chart-card" style="margin-bottom:10px;">
+      <div class="chart-card-header"><span class="chart-card-title">Race Target</span></div>
+      <div style="font-size:14px;font-weight:800;margin-bottom:4px;">${esc(r.name||'Race')}</div>
+      <div class="race-done">Done<span>raced ${ago} day${ago===1?'':'s'} ago · ${fmtShortDate(r.date)}${r.km?` · ${fmtKm(r.km)}km`:''}</span></div>
+      ${rec?`<div class="race-done-rec">Recovery: day ${rec.day} of ${rec.days}. Easy running until ${fmtShortDate(rec.until)}.</div>`:''}
+      <button class="rd-cta" style="margin-top:12px;" onclick="openRaceModal()">Set your next race</button>
+    </div>`;
+  }
   const goalSecs=r.goalTime?parseTimeToSecs(r.goalTime):0;
   const goalPace=(r.km&&goalSecs)?fmtPace(r.km/goalSecs):null;
   const proj=getRaceProjection();
@@ -6679,7 +6688,7 @@ function importMorningCsv(evt){
 }
 
 // Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
-const APP_BUILD='17 Oct · shortcut paste';
+const APP_BUILD='17 Oct · Me tidy';
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';

@@ -5069,6 +5069,8 @@ function renderAskClaudeCard(){
 function _parseShortcutValues(text){
   const out={};const re=/(rhr|hrv|sleep|feel)\s*[=:]\s*(\d+(?:\.\d+)?)/gi;let m;
   while((m=re.exec(String(text||''))))out[m[1].toLowerCase()]=Math.round(parseFloat(m[2]));
+  // A bare number on its own (a Shortcut that copies just the Value) is resting HR.
+  if(!Object.keys(out).length){const n=String(text||'').trim().match(/^(\d{2,3}(?:\.\d+)?)$/);if(n)out.rhr=Math.round(parseFloat(n[1]));}
   return out;
 }
 function _applyShortcutValues(v){
@@ -6677,7 +6679,7 @@ function importMorningCsv(evt){
 }
 
 // Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
-const APP_BUILD='17 Oct · backup fix 2';
+const APP_BUILD='17 Oct · shortcut paste';
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';

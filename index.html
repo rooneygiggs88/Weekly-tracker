@@ -5634,8 +5634,8 @@ function renderMe(){
   const latestW=health.length?health[health.length-1].weight:null;
 
   el.innerHTML=`
-    ${renderWeightSection(health)}
     ${renderFitnessAgeCard()}
+    ${renderWeightSection(health)}
     ${renderBodyFatSection(health)}
     ${renderVapingSection()}
     ${renderRaceSection()}
@@ -6721,7 +6721,7 @@ function importMorningCsv(evt){
 }
 
 // Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
-const APP_BUILD='17 Oct · streaks + run plan';
+const APP_BUILD='17 Oct · fitness age first';
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';

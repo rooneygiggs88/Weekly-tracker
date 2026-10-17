@@ -1421,10 +1421,22 @@ function allGoals(){return[...allDailyGoals(),...allSessionGoals()];}
 // ── CHECKS ──
 function getCheck(ds,id){return!!state.data[`${ds}:check:${id}`];}
 function toggleCheck(ds,id){state.data[`${ds}:check:${id}`]=!state.data[`${ds}:check:${id}`];saveState();haptic('light');if(weekOffset===0)renderToday();else{renderDayGoals(ds);}}
+// Dates with a logged session, cached against the raw stored data - this is called for
+// every day x goal in the Trends charts, and re-parsing all history each time was the
+// main cost of rendering Trends.
+let _sessDates={g:null,r:null,gym:null,run:null};
+function _sessionDates(){
+  const g=localStorage.getItem('gym_data_v1')||'[]',r=localStorage.getItem('run_data_v2')||'[]';
+  if(g!==_sessDates.g||r!==_sessDates.r){
+    let gd=[],rd=[];try{gd=JSON.parse(g);}catch(e){}try{rd=JSON.parse(r);}catch(e){}
+    _sessDates={g,r,gym:new Set(gd.map(x=>x.date)),run:new Set(rd.map(x=>x.date))};
+  }
+  return _sessDates;
+}
 function getSessionDone(ds,id){
   if((state.data[`${ds}:session:${id}`]||[]).length>0)return true;
-  if(id==='gym')return loadGymData().some(s=>s.date===ds);
-  if(id==='run')return loadRunData().some(s=>s.date===ds);
+  if(id==='gym')return _sessionDates().gym.has(ds);
+  if(id==='run')return _sessionDates().run.has(ds);
   return false;
 }
 function getTextEntry(ds,id){return state.data[`${ds}:text:${id}`]||'';}

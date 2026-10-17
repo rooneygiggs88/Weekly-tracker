@@ -4986,10 +4986,13 @@ function exportData(){
   const {blob,name}=_backupFile();
   let file=null;
   try{file=new File([blob],name,{type:'application/json'});}catch(e){}
+  // Share the file on its own: on iPhone, a title or text alongside it gets saved as a
+  // second file by "Save to Files". And no download fallback once the share sheet has
+  // been used - if it reports an error after saving, a fallback would make a duplicate.
   if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
-    navigator.share({files:[file],title:'Tracker backup'})
+    navigator.share({files:[file]})
       .then(()=>_markBackedUp('Backup saved'))
-      .catch(err=>{if(err&&err.name!=='AbortError')_downloadBackup(blob,name);});
+      .catch(err=>{if(err&&err.name!=='AbortError')toastMsg('Backup didn’t finish. Try again');});
     return;
   }
   _downloadBackup(blob,name);

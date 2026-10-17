@@ -709,6 +709,8 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .race-done span{display:block;font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;letter-spacing:0;color:var(--text3);margin-top:4px;}
 .race-done-rec{font-size:12.5px;font-weight:600;color:var(--text2);margin-top:8px;}
 .imp-toggle{display:block;width:100%;margin-top:6px;padding:10px;border:none;border-top:1px solid var(--border);background:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.goal-streak.at-risk{color:var(--st-pace);}
+.goal-streak-note{color:var(--text3);font-weight:700;}
 </style>
 </head>
 <body>
@@ -1462,9 +1464,14 @@ function goalsActiveOn(ds){return allDailyGoals().filter(g=>!g.effectiveFrom||g.
 // Forgiving streak: one missed day per Monday-Sunday week doesn't break it (it just isn't
 // counted). Two misses in a row, or a second miss in the same week, still end it. A rigid
 // streak makes one bad day feel like losing everything, which is when people give up.
-function getGoalStreak(g){
+function getGoalStreak(g){return getGoalStreakInfo(g).streak;}
+// The streak plus whether it's on the line: atRisk when today isn't ticked yet and
+// missing it would end the streak (yesterday was already missed, or this week's skip is
+// gone); skipUsed when this week's skip has been spent but today is safely done.
+function getGoalStreakInfo(g){
   const now=today();
-  let d=goalDone(dk(now),g)?now:addDays(now,-1);
+  const doneToday=goalDone(dk(now),g);
+  let d=doneToday?now:addDays(now,-1);
   let streak=0;
   const skipped={};
   while(streak<3650){
@@ -1479,7 +1486,18 @@ function getGoalStreak(g){
     streak++;
     d=addDays(d,-1);
   }
-  return streak;
+  const skipThisWeek=!!skipped[dk(getMonday(now))];
+  const yesterdayMissed=!goalDone(dk(addDays(now,-1)),g);
+  const atRisk=streak>0&&!doneToday&&(skipThisWeek||yesterdayMissed);
+  return{streak,atRisk,skipUsed:streak>0&&skipThisWeek&&!atRisk};
+}
+function streakChipHtml(g,ds){
+  const info=getGoalStreakInfo(g);
+  if(!info.streak)return'';
+  const isToday=ds===dk(today());
+  if(isToday&&info.atRisk)return`<div class="goal-streak at-risk">🔥 ${info.streak} · last chance today</div>`;
+  if(isToday&&info.skipUsed)return`<div class="goal-streak">🔥 ${info.streak} <span class="goal-streak-note">· skip used</span></div>`;
+  return`<div class="goal-streak">🔥 ${info.streak}</div>`;
 }
 function getTodayScore(){const d=dk(today());const gs=goalsActiveOn(d);if(!gs.length)return 0;return Math.round(gs.filter(g=>goalDone(d,g)).length/gs.length*100);}
 function getDayScore(ds){const gs=goalsActiveOn(ds);if(!gs.length)return 0;return Math.round(gs.filter(g=>goalDone(ds,g)).length/gs.length*100);}
@@ -1827,7 +1845,7 @@ function renderToday(){
   // Today's workout suggestion (only when today's plan is a Run day)
   const wsWrap=document.getElementById('workout-suggestion-wrap');
   if(wsWrap){
-    const suggestion=viewingToday?getTodayWorkoutSuggestion():null;
+    const suggestion=null; // now shown inside Today's Plan
     wsWrap.innerHTML=suggestion?`<div class="chart-card" style="margin-bottom:10px;padding:12px 14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);">Today's run · ${esc(suggestion.runType)}</span>
@@ -1928,9 +1946,12 @@ function renderToday(){
       // isn't tracked, but ~4 min/set (lift + rest) rounded to the nearest 5 is close
       // enough to be a useful "how long is this going to take" figure.
       const estMin=lastOfType?Math.round((lastOfType.exercises||[]).reduce((s,e)=>s+(e.sets||[]).length,0)*4/5)*5:null;
+      // On run days the plan card carries the actual prescription (distance and pace from
+      // your race goal) rather than a separate "Today's run" card underneath.
+      const runSuggestion=!isGym?getTodayWorkoutSuggestion():null;
       const planMeta=isGym
         ?(lastOfType?`${(lastOfType.exercises||[]).length} exercises · last done ${lastDateStr}${estMin?` · ~${estMin} min`:''}`:'First one — pick your exercises')
-        :(runType?`${esc(runType)} run on the plan`:'Distance, time, effort');
+        :(runSuggestion&&runSuggestion.structure?esc(runSuggestion.structure.charAt(0).toUpperCase()+runSuggestion.structure.slice(1)):runType?`${esc(runType)} run on the plan`:'Distance, time, effort');
       const altAction=isGym
         ?`<button class="today-plan-alt" onclick="showPage('train');switchTrainTab('run')">or log a run instead</button>`
         :`<button class="today-plan-alt" onclick="openModal('train-picker-modal')">or log a gym session instead</button>`;
@@ -1966,8 +1987,7 @@ function renderToday(){
   grid.className='goal-grid';
   goalsActiveOn(ds).forEach(g=>{
     const done=goalDone(ds,g);
-    const streak=getGoalStreak(g);
-    const streakHtml=streak>0?`<div class="goal-streak">🔥 ${streak}</div>`:'';
+    const streakHtml=streakChipHtml(g,ds);
     const checkHtml=done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>':'';
     const chip=document.createElement('div');
     chip.className='goal-chip'+(done?' done':'');
@@ -2017,8 +2037,7 @@ function renderDayGoals(ds){
   grid.className='goal-grid';
   goalsActiveOn(ds).forEach(g=>{
     const done=goalDone(ds,g);
-    const streak=getGoalStreak(g);
-    const streakHtml=streak>0?`<div class="goal-streak">🔥 ${streak}</div>`:'';
+    const streakHtml=streakChipHtml(g,ds);
     const checkHtml=done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>':'';
     const chip=document.createElement('div');
     chip.className='goal-chip'+(done?' done':'');
@@ -6702,7 +6721,7 @@ function importMorningCsv(evt){
 }
 
 // Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
-const APP_BUILD='17 Oct · Trends order';
+const APP_BUILD='17 Oct · streaks + run plan';
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';

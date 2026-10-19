@@ -659,6 +659,25 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .plan-checks.ok{background:var(--surface2);border-color:transparent;font-size:12px;font-weight:600;color:var(--text3);}
 .plan-checks-h{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--st-pace);margin-bottom:4px;}
 .plan-checks p{font-size:12.5px;color:var(--text);line-height:1.45;margin-top:4px;}
+/* GYM COACH */
+.gc-brief .rd-mini-state{margin-bottom:2px;}
+.gc-guard{--gcg:var(--st-ready);margin:8px 0 2px;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.45;font-weight:600;color:var(--text);background:color-mix(in srgb,var(--gcg) 10%,transparent);border:1px solid color-mix(in srgb,var(--gcg) 28%,transparent);border-left:3px solid var(--gcg);}
+.gc-guard.gc-warn{--gcg:var(--st-pace);}
+.gc-guard button{margin-top:8px;padding:7px 12px;border-radius:8px;border:1px solid var(--gcg);background:transparent;color:var(--gcg);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;}
+.gc-lines{list-style:none;margin:8px 0 0;padding:0;}
+.gc-lines li{position:relative;padding:7px 0 7px 16px;font-size:13px;line-height:1.45;color:var(--text2);border-top:1px solid var(--border);}
+.gc-lines li:first-child{border-top:none;}
+.gc-lines li::before{content:'';position:absolute;left:2px;top:13px;width:6px;height:6px;border-radius:50%;background:var(--c);}
+.gc-build{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.gc-build span{font-size:11px;font-weight:600;color:var(--text3);}
+.gc-score{display:flex;gap:6px;margin-bottom:10px;}
+.gc-score>div{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 10px;}
+.gc-score b{display:block;font-family:var(--rounded);font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+.gc-score span{display:block;font-size:9.5px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;}
+.gc-callit{display:flex;align-items:center;gap:10px;padding:9px 10px;margin:4px 0 8px;border-radius:8px;font-size:12px;font-weight:600;color:var(--text2);line-height:1.4;background:var(--surface2);border:1px solid var(--border);}
+.gc-callit.strong{color:var(--text);background:color-mix(in srgb,var(--st-pace) 10%,transparent);border-color:color-mix(in srgb,var(--st-pace) 30%,transparent);}
+.gc-callit button{flex-shrink:0;padding:7px 10px;border-radius:8px;border:1px solid color-mix(in srgb,var(--green) 40%,transparent);background:color-mix(in srgb,var(--green) 10%,transparent);color:var(--green);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;}
+.gc-why{font-size:11.5px;font-weight:700;color:var(--st-pace);margin:-2px 0 8px;}
 .lift-target{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:12.5px;font-weight:700;margin-bottom:10px;padding:7px 10px;border-radius:8px;color:var(--text);background:color-mix(in srgb,var(--lt) 9%,transparent);border:1px solid color-mix(in srgb,var(--lt) 25%,transparent);border-left:3px solid var(--lt);}
 .lift-target b{color:var(--lt);}
 .lift-target span{font-size:11.5px;font-weight:600;color:var(--text2);}
@@ -2076,8 +2095,9 @@ function _setRestDoneState(){
   document.getElementById('rest-overlay-actions-done').style.display='flex';
 }
 
-function startRestTimer(secs){
+function startRestTimer(secs,label){
   restStop();
+  document.getElementById('rest-overlay-label').textContent=label||'Rest Timer';
   restTotal=secs;
   restEndsAt=Date.now()+secs*1000;
   document.getElementById('rest-ring-time').textContent='';
@@ -2229,8 +2249,8 @@ function renderGymSection(){
         return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:14px;font-weight:700;">${esc(e.name)}</span><span style="font-size:13px;color:var(--text2);font-weight:600;">${ws.length} sets${top&&top.weight?` · ${top.weight}kg×${top.reps||'?'}`:top&&top.reps?` · ${top.reps} reps`:''}</span></div>`;
       }).join('')}
     </div>
-    <button class="btn-secondary" style="margin-bottom:10px;" onclick="_gymPickedType=null;renderGymTypeSelector();">+ Add another session</button>
-    ${renderRecentGymCard()}`;
+    ${renderGymVerdictCard(last)}
+    <button class="btn-secondary" style="margin-bottom:10px;" onclick="_gymPickedType=null;renderGymTypeSelector();">+ Add another session</button>`;
   }else{
     renderGymTypeSelector();
   }
@@ -2289,6 +2309,7 @@ function renderGymTypeSelector(){
         <button onclick="gymPlanSuperset()" title="Superset mode" style="padding:0 16px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;">⚡</button>
       </div>
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair</div>`:''}
+      ${!_gymSupersetMode&&canBuildGymSession(planType)?`<button class="btn-secondary gc-build" style="width:100%;margin-top:8px;" onclick="buildGymSession('${planType}')">Build today's ${esc(planType)}<span>last session's lifts, with today's targets</span></button>`:''}
     </div>
     <button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="gymShowOtherTypes()">Or something else</button>`:'';
   const gridCardHtml=showPlanCard?'':`<div class="chart-card" style="margin-bottom:10px;">
@@ -2300,10 +2321,11 @@ function renderGymTypeSelector(){
       ${isMakeup?`<div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.5;padding:8px 12px;background:rgba(210,153,34,0.08);border-radius:var(--radius-xs);border:1px solid rgba(210,153,34,0.2);">Loads Push, Pull${state.makeupIncludeLegs?' &amp; Legs':''} exercises not yet done this week</div>
       <button onclick="gymToggleMakeupLegs()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${state.makeupIncludeLegs?'var(--amber)':'var(--border)'};background:${state.makeupIncludeLegs?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${state.makeupIncludeLegs?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;transition:all 0.15s;">Include legs? ${state.makeupIncludeLegs?'— ON':'— OFF'}</button>`:`<button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">⚡ Superset mode${_gymSupersetMode?' — ON':''}</button>
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair · Push, Pull &amp; Legs only</div>`:''}`}
+      ${!_gymSupersetMode&&canBuildGymSession(_gymPickedType)?`<button class="btn-secondary gc-build" style="width:100%;margin-bottom:10px;" onclick="buildGymSession()">Build today's ${esc(_gymPickedType)}<span>last session's lifts, with today's targets</span></button>`:''}
       ${hasPrev&&!isMakeup?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
       <button class="btn-primary" style="width:100%;${isMakeup?'background:var(--amber);border-color:var(--amber);':''}" onclick="confirmGymSession()">${isMakeup?'Build Makeup session →':_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`⚡ Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>
     </div>`;
-  el.innerHTML=`${planCardHtml}${gridCardHtml}${renderRecentGymCard()}`;
+  el.innerHTML=`${planCardHtml}${gridCardHtml}${renderGymBriefCard(_gymPickedType)}`;
 }
 function gymPickType(t){
   _gymPickedType=t;
@@ -2433,6 +2455,7 @@ function renderGymLogger(){
       <button onclick="gymHideTypeEdit()" style="width:100%;padding:8px;border-radius:var(--radius-xs);border:1px solid var(--border);background:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
     </div>
   </div>
+  ${renderGymScoreboard()}
   ${lastSame?`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px;">
     <div style="font-size:12px;color:var(--text3);font-weight:600;">Last ${esc(gymDraft.type)}: ${lastSame.date} · ${(lastSame.exercises||[]).length} ex</div>
     <button onclick="copyLastSameSession()" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.12);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Copy this</button>
@@ -2685,7 +2708,7 @@ function gymSetFilled(s,name){
   if(!s||!s.reps)return false;
   return!!s.weight||!exerciseEverWeighted(name);
 }
-function gymCheckSetDone(i,si){
+function gymCheckSetDone(i,si,fromKeypad){
   saveGymDraft();
   const s=gymDraft&&gymDraft.exercises[i]&&gymDraft.exercises[i].sets[si];
   if(!s||s.warmup)return;
@@ -2695,10 +2718,16 @@ function gymCheckSetDone(i,si){
   // if the set is cleared out again, so editing an already-done set doesn't re-trigger it.
   if(done&&!s._restFired){
     s._restFired=true;
-    startRestTimer(getExRestSecs(gymDraft.exercises[i].name||''));
+    // Live PRs only from the keypad: typed inputs count as done mid-typing ("1" on the way
+    // to "10"), which would cheer a PR that isn't one. Those still get celebrated on save.
+    if(fromKeypad)checkLivePR(i,si);
+    const rest=getSmartRest(gymDraft.exercises[i],s);
+    startRestTimer(rest.secs,rest.label);
+    saveGymDraft();
   }else if(!done){
     s._restFired=false;
   }
+  updateGymScoreboard();
   const btn=document.getElementById(`set-num-${i}-${si}`);
   const row=document.getElementById(`set-row-${i}-${si}`);
   const kgEl=document.getElementById(`set-kg-${i}-${si}`);
@@ -2916,10 +2945,13 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
     </div>`:''}
     ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Trained${lastDateStr?` · ${lastDateStr}`:''}</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}</span>`).join('')}</div></div>`:''}
     ${focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&gymSetFilled(s,ex.name))?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
-    ${liftT?`<div id="ex-hint-${i}" class="lift-target" style="--lt:${liftT.col};"><b>${liftT.tag}</b> ${targetWeight!=null?`${targetWeight}kg × ${liftT.reps} reps`:`${targetReps} reps`} <span>${liftT.note}</span></div>`:`<div id="ex-hint-${i}"></div>`}
+    ${ex._why?`<div class="gc-why">Added to the plan: ${esc(ex._why)}</div>`:''}
+    ${liftT?`<div id="ex-hint-${i}" class="lift-target" style="--lt:${liftT.col};"><b>${liftT.tag}</b> ${targetWeight!=null?`${targetWeight}kg × ${liftT.reps} reps`:`${targetReps} reps`}${ex._planSets?` · ${ex._planSets} set${ex._planSets===1?'':'s'}`:''} <span>${liftT.note}</span></div>`:ex._planSets?`<div id="ex-hint-${i}" class="lift-target" style="--lt:var(--green);"><b>Plan</b> ${ex._planSets} set${ex._planSets===1?'':'s'}</div>`:`<div id="ex-hint-${i}"></div>`}
     ${focusMode?(()=>{
-      const draft=gymKpSyncDraft(i,ex);
+      const setTgt=getSetTarget(ex,gymKpCurrentSi(i,ex),lastSets,pb);
+      const draft=gymKpSyncDraft(i,ex,setTgt);
       const activeSi=draft.si;
+      const callIt=getCallIt(ex,lastSets);
       const rows=(ex.sets||[]).map((s,si)=>{
         const hasData=gymSetFilled(s,ex.name);
         const isWorking=!s.warmup&&!s.technique;
@@ -2938,7 +2970,9 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
           }
         }else if(isActive){
           col='var(--accent2)';mainText='Entering…';
-          if(ghost)subText=`vs last time: ${ghostW>0?ghostW+'kg×'+ghostR:ghostR+' reps'}`;
+          const tgtTxt=setTgt&&setTgt.reps?`Target ${setTgt.weight!=null?setTgt.weight+'kg × ':''}${setTgt.reps}${setTgt.weight!=null?'':' reps'}`:'';
+          const lastTxt=ghost?`last time ${ghostW>0?ghostW+'kg×'+ghostR:ghostR+' reps'}`:'';
+          subText=[tgtTxt,setTgt&&setTgt.why?setTgt.why:lastTxt].filter(Boolean).join(' · ');
         }else{
           col='var(--text3)';
           mainText=ghost?(ghostW>0?`${ghostW}kg × ${ghostR}`:`${ghostR} reps`):'—';
@@ -2959,6 +2993,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
         </div>`;
       }).join('');
       return`${rows}
+        ${callIt?`<div class="gc-callit${callIt.strong?' strong':''}"><span>${esc(callIt.text)}</span><button onclick="gymCompleteExercise(${i})">Done with it</button></div>`:''}
         <button onclick="gymAddSet(${i})" style="width:100%;padding:8px;margin-bottom:10px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
         ${renderGymKeypad(draft)}
         ${renderPlateCalc(parseFloat(draft.weight)||0)}
@@ -3035,16 +3070,19 @@ function gymKpCurrentSi(i,ex){
   if(_gymKpManualTarget&&_gymKpManualTarget.i===i&&_gymKpManualTarget.si<ex.sets.length)return _gymKpManualTarget.si;
   return gymActiveSetIdx(ex);
 }
-function gymKpSyncDraft(i,ex){
+function gymKpSyncDraft(i,ex,tgt){
   const si=gymKpCurrentSi(i,ex);
   if(!_gymKpDraft||_gymKpDraft.i!==i||_gymKpDraft.si!==si){
     const s=ex.sets[si]||{};
+    // A blank set opens on its target (see getSetTarget), else the previous set's weight.
+    const prevW=(ex.sets.slice(0,si).filter(x=>!x.warmup&&x.weight).pop()||{}).weight||'';
+    const startW=s.weight||(tgt&&tgt.weight!=null?tgt.weight:prevW);
     // fresh: the weight shown is a starting point (carried over from the previous set,
     // or whatever this set already had) that the pad hasn't been typed into yet this
     // time around - so the first digit tap replaces it instead of appending to it.
     // Without this, logging 80kg then moving to a set pre-filled with that same 80kg
     // and typing "85" produced "8085".
-    _gymKpDraft={i,si,weight:String(s.weight||''),reps:parseInt(s.reps)||0,fresh:true};
+    _gymKpDraft={i,si,weight:String(startW||''),reps:parseInt(s.reps)||(tgt&&tgt.reps)||0,fresh:true,tgt:tgt||null};
   }
   return _gymKpDraft;
 }
@@ -3082,13 +3120,15 @@ function gymKpLogSet(){
   const requireWeight=exerciseEverWeighted(ex.name);
   if(!reps||(requireWeight&&!weight)){toastMsg(requireWeight?'Enter weight and reps':'Enter reps');haptic('error');return;}
   s.weight=weight;s.reps=String(reps);
+  const tgt=_gymKpDraft.tgt;
+  if(tgt&&tgt.reps){s._tgtR=tgt.reps;s._tgtW=tgt.weight;}
   gymSetActiveEx(i);
-  gymCheckSetDone(i,si);
+  gymCheckSetDone(i,si,true);
   // If that was the last remaining set to fill, add a fresh blank one straight away -
   // otherwise the pad would have nowhere to log the next rep into until you tapped
   // "+ Set" yourself every single time, even mid-exercise.
   const stillIncomplete=ex.sets.some(x=>!gymSetFilled(x,ex.name));
-  if(!stillIncomplete)ex.sets.push({weight:s.weight||'',reps:'',warmup:false,technique:false});
+  if(!stillIncomplete)ex.sets.push({weight:'',reps:'',warmup:false,technique:false});
   gymKpResetTarget();
   renderGymLogger();
   haptic('success');
@@ -3351,9 +3391,11 @@ let selectedEffort='';
 // Today page - purely advisory, doesn't touch the effort buttons below it.
 function renderRunEffortSuggestion(){
   const r=computeReadiness();
-  if(!r.state)return'';
+  const legs=getLegsBeforeRunNote();
+  const legsHtml=legs?`<div class="gc-guard gc-info" style="margin:0 0 10px;">${esc(legs)}</div>`:'';
+  if(!r.state)return legsHtml;
   const txt={go:'Primed. A good day for Tempo or Intervals.',ready:'Good for the run you had planned.',pace:'Keep it easy today: Easy or Recovery.',recover:'A short recovery jog at most, or rest.'}[r.state.key];
-  return`<div class="rd-run-hint" style="--st:${r.state.col};"><b>${r.state.label}</b><span>${txt}</span><em>readiness ${r.score}</em></div>`;
+  return`<div class="rd-run-hint" style="--st:${r.state.col};"><b>${r.state.label}</b><span>${txt}</span><em>readiness ${r.score}</em></div>${legsHtml}`;
 }
 function renderRunSection(){
   const el=document.getElementById('run-content');
@@ -5408,19 +5450,27 @@ function getRaceTaperPlan(){
   const km=parseFloat(r.km)||21.1;
   // Taper length is searched within the window for the distance, picking the one that lands race morning nearest the middle
   // of the Fresh zone (~+12%) - long enough to shed fatigue, short enough to keep fitness.
+  // Once the taper has started it stays started (re-searching daily would keep sliding the start
+  // to "tomorrow" as the race nears), and inside the shortest sensible taper it has started.
   const [minDays,maxDaysRaw]=_fffTaperRange(km);
-  const maxDays=Math.min(maxDaysRaw,Math.max(3,daysToRace-1));
-  let taperDays=Math.min(minDays,maxDays),best=Infinity;
-  for(let td=Math.min(minDays,maxDays);td<=maxDays;td++){
-    const p=projectFff(hist,r.date,td);const f=p.length?p[p.length-1].form:0;
-    const miss=Math.abs(f-12);
-    if(miss<best-0.5){best=miss;taperDays=td;}
+  let taperDays;
+  if(r.taperFor===r.date&&r.taperFrom&&r.taperFrom<=dk(today()))taperDays=Math.round((new Date(r.date+'T12:00:00')-new Date(r.taperFrom+'T12:00:00'))/864e5);
+  else if(daysToRace<=minDays)taperDays=minDays;
+  else{
+    const maxDays=Math.min(maxDaysRaw,daysToRace);
+    let best=Infinity;taperDays=minDays;
+    for(let td=minDays;td<=maxDays;td++){
+      const p=projectFff(hist,r.date,td);const f=p.length?p[p.length-1].form:0;
+      const miss=Math.abs(f-12);
+      if(miss<best-0.5){best=miss;taperDays=td;}
+    }
   }
   const withTaper=projectFff(hist,r.date,taperDays);
   const noTaper=projectFff(hist,r.date,0);
   const raceMorning=withTaper[withTaper.length-1]||{fit:hist.state.fit,fat:hist.state.fat,form:_fffForm(hist.state)};
   const raceNoTaper=noTaper[noTaper.length-1]||raceMorning;
   const taperStart=addDays(new Date(r.date+'T12:00:00'),-taperDays);
+  if(daysToRace<=taperDays&&r.taperFor!==r.date){r.taperFor=r.date;r.taperFrom=dk(taperStart);saveState();}
   return{race:r,km,daysToRace,taperDays,taperStart:dk(taperStart),daysToTaper:daysToRace-taperDays,
     raceMorning,raceNoTaper,fitNow:hist.state.fit,proj:withTaper};
 }
@@ -6760,7 +6810,7 @@ function importMorningCsv(evt){
 }
 
 // Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
-const APP_BUILD='17 Oct · Trends layout';
+const APP_BUILD='19 Oct · Gym coach';
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';
@@ -8968,6 +9018,355 @@ function getLiftTarget(topLast,lastHasWeight,pb){
   return null;
 }
 
+// ── GYM COACH ──
+// Guidance before, during and after a gym session, built from what the app already holds:
+// readiness, this week's plan, the race phase, weekly sets per muscle and each lift's own
+// history. Nothing new is stored; it's all recomputed from the logs.
+const GC_LEG_MUSCLES=new Set(['Quads','Hamstrings','Glutes','Calves']);
+const GC_TYPE_MUSCLES={Push:['Chest','Shoulders','Triceps'],Pull:['Back','Biceps'],Legs:['Quads','Hamstrings','Glutes','Calves'],Core:['Core']};
+const GC_GAP_FALLBACK={Chest:'dumbbell press or flyes',Back:'rows or pulldowns',Shoulders:'lateral raises',Biceps:'curls',Triceps:'pushdowns',Quads:'leg extensions or split squats',Hamstrings:'Romanian deadlifts or leg curls',Glutes:'hip thrusts',Calves:'calf raises',Core:'planks or ab work'};
+const GC_READY_LINE={
+  go:'Readiness is high: a good day for a top set or a PR attempt.',
+  ready:'Normal working weights, with +2.5kg targets where last time earned them.',
+  pace:'Leave 2–3 reps in the tank on every set and skip PR attempts.',
+  recover:'Low readiness: technique work at about 90% of usual weights, or swap for mobility.'};
+function _gcE1rm(w,r){return r===1?w:w*(1+r/30);}
+function _gcRound(w){return Math.round(w/2.5)*2.5;}
+function _gcDaysUntil(ds){return Math.round((new Date(ds+'T12:00:00')-new Date(dk(today())+'T12:00:00'))/864e5);}
+function _gcRunName(rt){return rt==='Long'?'long run':(rt||'run').toLowerCase();}
+function _gcReadyKey(){const r=computeReadiness();return r&&r.state?r.state.key:null;}
+function _gcWorking(ex){return(ex.sets||[]).filter(s=>!s.warmup&&!s.technique&&gymSetFilled(s,ex.name));}
+function _gcIsLegEx(name){return getExerciseMuscles(name).some(m=>GC_LEG_MUSCLES.has(m));}
+function _gcIsLegType(type){return type==='Legs'||(type==='Makeup'&&!!state.makeupIncludeLegs);}
+function _gcLegSets(session){return(session.exercises||[]).filter(e=>_gcIsLegEx(e.name)).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);}
+function _gcTopLast(lastSets){
+  if(!lastSets.length)return null;
+  const hasW=lastSets.some(s=>parseFloat(s.weight||0)>0);
+  return hasW?lastSets.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,lastSets[0])
+    :lastSets.reduce((b,s)=>parseFloat(s.reps||0)>parseFloat(b.reps||0)?s:b,lastSets[0]);
+}
+// The plan n days from today; days past Sunday read next week's template.
+function _gcPlanDay(n){
+  const j=(today().getDay()+6)%7+n;
+  if(j>=0&&j<7)return{type:planTypeThisWeek(j),runType:runTypeThisWeek(j),day:DAY_NAMES[j]};
+  const k=((j%7)+7)%7;
+  return{type:Array.isArray(state.weekPlan)?state.weekPlan[k]||null:null,runType:getWeekPlanRunType(k),day:DAY_NAMES[k]};
+}
+// The upper-body day that's waited longest - offered when legs would clash with running.
+function _gcUpperAlt(){
+  const gym=loadGymData();
+  const last=t=>{const s=gym.filter(x=>x.type===t).slice(-1)[0];return s?s.date:'';};
+  return last('Push')<=last('Pull')?'Push':'Pull';
+}
+// Exercise names you've used, most recently used first.
+function _gcLibrary(){
+  const seen=new Map();
+  loadGymData().forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)seen.set(e.name,s.date);}));
+  Object.keys(loadGymProg()).forEach(n=>{if(!seen.has(n))seen.set(n,'');});
+  return[...seen.entries()].sort((a,b)=>b[1].localeCompare(a[1])).map(x=>x[0]);
+}
+
+// Race phase for the gym: in a taper keep the weights and roughly halve the sets (intensity
+// holds strength, volume is what costs fatigue); after a race, leave legs alone for a while.
+function getGymRacePhase(){
+  const rec=getRaceRecovery();
+  if(rec)return{key:'recovery',text:`Race recovery, day ${rec.day} of ${rec.days}: upper body as normal, nothing heavy for legs until ${fmtShortDate(rec.until)}.`};
+  const t=getRaceTaperPlan();
+  if(t&&t.daysToTaper<=0)return{key:'taper',text:'Taper: keep your working weights but do about half the sets. Strength holds while fatigue drops for race day.'};
+  return null;
+}
+// Heavy legs and quality running interfere for roughly a day either way, so a leg session is
+// checked against today's run, tomorrow's run and the race.
+function getGymRunClash(type){
+  if(!_gcIsLegType(type))return null;
+  const race=state.race;
+  if(race&&race.date){
+    const d=_gcDaysUntil(race.date);
+    if(d>=0&&d<=3)return{level:'warn',race:true,alt:true,text:d===0?'Race day. Legs can wait.':`Race in ${d} day${d===1?'':'s'}. No heavy legs now: upper body or rest.`};
+  }
+  const rec=getRaceRecovery();
+  if(rec)return{level:'warn',race:true,alt:true,text:`Race recovery, day ${rec.day} of ${rec.days}. Your legs are still repairing: upper body until ${fmtShortDate(rec.until)}.`};
+  const t0=_gcPlanDay(0);
+  if(t0.type==='Run'&&!getSessionDone(dk(today()),'run')){
+    if(KEY_RUNS.has(t0.runType))return{level:'warn',text:`Today's ${_gcRunName(t0.runType)} is still to do. Run first and lift later, ideally 6+ hours apart; legs first would take the edge off it.`};
+    return{level:'info',text:'Your easy run is still to do. Run first if you can; an easy run after legs is fine too, just keep it genuinely easy.'};
+  }
+  const t1=_gcPlanDay(1);
+  if(t1.type==='Run'&&KEY_RUNS.has(t1.runType))return{level:'warn',alt:true,text:`${t1.day}'s ${_gcRunName(t1.runType)} is tomorrow. Heavy legs today will blunt it: switch to upper body, or keep every set 2–3 reps short of failure and drop a set.`};
+  return null;
+}
+// The run side of the same guard: legs yesterday (or earlier today) before a key run.
+function getLegsBeforeRunNote(){
+  const t0=_gcPlanDay(0);
+  if(t0.type!=='Run'||!KEY_RUNS.has(t0.runType)||getSessionDone(dk(today()),'run'))return null;
+  const y=dk(addDays(today(),-1)),d=dk(today());
+  const s=loadGymData().filter(x=>(x.date===y||x.date===d)&&_gcLegSets(x)>=6).pop();
+  if(!s)return null;
+  return`Legs ${s.date===d?'earlier today':'yesterday'}: the ${_gcRunName(t0.runType)} may feel heavy early. Take a longer warm-up and judge the first few km by effort, not pace.`;
+}
+// Sets per muscle so far this week, counting runs the same way the Volume tab does.
+function getMuscleWeekSets(){
+  const from=dk(getMonday(today()));
+  const c={};ALL_MUSCLE_GROUPS.forEach(m=>c[m]=0);
+  loadGymData().filter(s=>s.date>=from).forEach(s=>(s.exercises||[]).forEach(e=>{
+    const n=(e.sets||[]).filter(x=>!x.warmup).length;
+    getExerciseMuscles(e.name).forEach(m=>{if(c[m]!=null)c[m]+=n;});
+  }));
+  loadRunData().filter(r=>r.date>=from).forEach(r=>{
+    Object.entries(VOL_RUN_CONTRIB[volEffortKey(r.effort)]||VOL_RUN_CONTRIB.easy).forEach(([m,v])=>{if(c[m]!=null)c[m]+=v;});
+  });
+  return c;
+}
+// The muscles a session type owns that would still end the week under target even after a
+// usual session today (plus any repeat planned later this week), each with an exercise to add.
+function getGymMuscleGaps(type,exNames){
+  const sessions=loadGymData();
+  const lastSame=sessions.filter(s=>s.type===type).slice(-1)[0];
+  if(!lastSame)return[];
+  const usual={};
+  (lastSame.exercises||[]).forEach(e=>{const n=(e.sets||[]).filter(x=>!x.warmup).length;getExerciseMuscles(e.name).forEach(m=>{usual[m]=(usual[m]||0)+n;});});
+  const muscles=GC_TYPE_MUSCLES[type]||[];
+  const dow=(today().getDay()+6)%7;
+  let repeats=0;for(let j=dow+1;j<7;j++)if(planTypeThisWeek(j)===type)repeats++;
+  const week=getMuscleWeekSets();
+  const have=new Set((exNames||[]).map(n=>(n||'').toLowerCase()));
+  const lib=_gcLibrary();
+  const out=[];
+  muscles.forEach(m=>{
+    const tgt=VOL_MUSCLE_TARGETS[m];if(!tgt)return;
+    const projected=(week[m]||0)+(usual[m]||0)*(1+repeats);
+    if(projected>=tgt.min)return;
+    const ex=lib.find(n=>!have.has(n.toLowerCase())&&getExerciseMuscles(n).includes(m));
+    out.push({muscle:m,projected,min:tgt.min,max:tgt.max,short:tgt.min-projected,ex:ex||null});
+  });
+  return out.sort((a,b)=>b.short-a.short).slice(0,2);
+}
+
+// 1. Session brief: replaces the generic readiness card under the type picker.
+function renderGymBriefCard(type){
+  const r=computeReadiness();
+  const st=r&&r.state;
+  const sessions=loadGymData();
+  const lastSame=sessions.filter(s=>s.type===type).slice(-1)[0];
+  const clash=getGymRunClash(type);
+  const phase=getGymRacePhase();
+  const exNames=lastSame?(lastSame.exercises||[]).map(e=>e.name):getDefaultExercisesForType(type).map(e=>e.name);
+  // No "add sets" advice on a day that's asking for less.
+  const holdBack=(st&&st.key==='recover')||(phase&&phase.key==='taper');
+  const gaps=GC_TYPE_MUSCLES[type]&&!holdBack?getGymMuscleGaps(type,exNames):[];
+  const lines=[];
+  if(st)lines.push({col:st.col,text:GC_READY_LINE[st.key]});
+  else lines.push({col:'var(--text3)',text:'Log this morning\'s check-in and the targets get scaled to readiness.'});
+  if(lastSame){
+    const ago=-_gcDaysUntil(lastSame.date);
+    const sets=(lastSame.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);
+    lines.push({col:'var(--text3)',text:`Last ${type}: ${ago<=0?'earlier today':ago===1?'yesterday':ago+' days ago'}, ${(lastSame.exercises||[]).length} exercises and ${sets} sets.`});
+  }
+  if(phase&&!(clash&&clash.race))lines.push({col:'var(--st-go)',text:phase.text});
+  gaps.forEach(g=>lines.push({col:'var(--st-pace)',text:`${g.muscle}: heading for ${g.projected} of ${g.min}–${g.max} sets this week, even after today. Add ${Math.min(3,Math.max(2,g.short))} sets of ${g.ex||GC_GAP_FALLBACK[g.muscle]}.`}));
+  const alt=clash&&clash.alt?_gcUpperAlt():null;
+  return`<div class="chart-card rd-mini gc-brief" style="--st:${st?st.col:'var(--text)'};">
+    <div class="rd-mini-head"><span class="rd-eyebrow">Session brief</span>${st?`<span class="rd-mini-score">${r.score}</span>`:`<button class="rd-info" onclick="openMorningModal()">Check in</button>`}</div>
+    <div class="rd-mini-state">${st?st.label:esc(type)}</div>
+    ${clash?`<div class="gc-guard gc-${clash.level}"><div>${esc(clash.text)}</div>${alt?`<button onclick="gymPickType('${alt}')">Switch to ${alt}</button>`:''}</div>`:''}
+    <ul class="gc-lines">${lines.map(l=>`<li style="--c:${l.col};">${esc(l.text)}</li>`).join('')}</ul>
+  </div>`;
+}
+
+// 3 + 4. Build today's session: last session of this type, with set counts adjusted for the
+// race phase, readiness and tomorrow's run, plus an exercise for any muscle running short.
+function canBuildGymSession(type){return['Push','Pull','Legs','Core','Custom'].includes(type)&&loadGymData().some(s=>s.type===type);}
+function buildGymSession(type){
+  type=type||_gymPickedType;
+  const sessions=loadGymData();
+  const lastSame=sessions.filter(s=>s.type===type).slice(-1)[0];
+  if(!lastSame){confirmGymSession();return;}
+  const k=_gcReadyKey();
+  const phase=getGymRacePhase();
+  const clash=getGymRunClash(type);
+  const taper=phase&&phase.key==='taper';
+  const trimLegs=!!(clash&&clash.level==='warn');
+  const seen=new Set();
+  const exercises=(lastSame.exercises||[]).filter(e=>{const n=(e.name||'').toLowerCase();if(!n||seen.has(n))return false;seen.add(n);return true;}).map(e=>{
+    let n=(e.sets||[]).filter(x=>!x.warmup&&!x.technique).length||3;
+    if(taper)n=Math.max(1,Math.round(n/2));
+    else if(k==='recover')n=Math.max(1,n-1);
+    else if(trimLegs&&_gcIsLegEx(e.name))n=Math.max(1,n-1);
+    return{name:_resolveExName(e.name)||e.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:n};
+  });
+  if(!taper&&k!=='recover')getGymMuscleGaps(type,exercises.map(e=>e.name)).forEach(g=>{
+    if(g.ex)exercises.push({name:g.ex,sets:[{weight:'',reps:'',warmup:false}],_planSets:Math.min(3,Math.max(2,g.short)),_why:`${g.muscle} is short this week`});
+  });
+  _gymFocusIdx=null;_gymShowAllEx=false;gymKpResetTarget();
+  gymDraft={type,exercises,startedAt:Date.now()};
+  renderGymLogger();
+  const adj=taper?'taper: half the sets':k==='recover'?'one set fewer per lift':trimLegs?'leg sets trimmed':'';
+  toastMsg(`Built ${exercises.length} exercises with targets${adj?' · '+adj:''}`,3000);haptic('light');
+}
+
+// 5. Next-set target. The first working set aims at today's top-set target; after that it
+// reacts to the set just done: 2+ reps over and the weight goes up, 2+ short and it comes
+// down so the reps stay honest, otherwise same again.
+function getSetTarget(ex,si,lastSets,pb){
+  const sets=ex.sets||[];
+  const s=sets[si];if(!s||s.warmup||s.technique)return null;
+  const topLast=_gcTopLast(lastSets);
+  const base=getLiftTarget(topLast,lastSets.some(x=>parseFloat(x.weight||0)>0),pb||0);
+  const prev=sets.slice(0,si).filter(x=>!x.warmup&&!x.technique&&gymSetFilled(x,ex.name)).pop();
+  if(!prev){
+    if(!base)return null;
+    return{weight:base.weight!=null?base.weight:null,reps:parseInt(base.reps)||null,why:''};
+  }
+  const k=_gcReadyKey();
+  const pw=parseFloat(prev.weight||0),pr=parseInt(prev.reps)||0;
+  const tr=prev._tgtR||(base&&parseInt(base.reps))||pr;
+  if(pw>0){
+    if(pr>=tr+2&&k!=='pace'&&k!=='recover')return{weight:pw+2.5,reps:tr,why:`${pr} reps last set, so add 2.5kg`};
+    if(pr<=tr-2){const w=Math.min(pw-2.5,_gcRound(pw*0.925));return{weight:Math.max(2.5,w),reps:tr,why:`${tr-pr} short last set: drop the weight, keep the reps`};}
+    if(pr===tr-1)return{weight:pw,reps:pr,why:'one short last set: same weight, match it'};
+    return{weight:pw,reps:tr,why:'on target: same again'};
+  }
+  if(pr<=tr-2)return{weight:null,reps:pr,why:'match the last set'};
+  return{weight:null,reps:tr,why:''};
+}
+
+// 6. Live scoreboard and PRs.
+function checkLivePR(i,si){
+  const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
+  const s=ex.sets[si];if(!s)return;
+  const w=parseFloat(s.weight||0),r=parseInt(s.reps)||0;
+  s._pr=false;if(!r||s.technique)return;
+  let bestE=0,bestW=0,bestWr=0,bestR=0,hist=false;
+  const scan=st=>{const sw=parseFloat(st.weight||0),sr=parseInt(st.reps)||0;if(!sr)return;hist=true;
+    if(sw>0){const e=_gcE1rm(sw,sr);if(e>bestE)bestE=e;if(sw>bestW||(sw===bestW&&sr>bestWr)){bestW=sw;bestWr=sr;}}
+    if(sr>bestR)bestR=sr;};
+  const nl=(ex.name||'').toLowerCase();
+  loadGymData().forEach(x=>(x.exercises||[]).forEach(e=>{if(e.name&&e.name.toLowerCase()===nl)(e.sets||[]).filter(st=>!st.warmup).forEach(scan);}));
+  if(!hist)return; // first time on a lift isn't a PR, it's a baseline
+  ex.sets.forEach((st,j)=>{if(j!==si&&!st.warmup&&gymSetFilled(st,ex.name))scan(st);});
+  let msg=null;
+  if(w>0&&bestW>0){
+    if(w>bestW||(w===bestW&&r>bestWr))msg=`${w}kg × ${r}`;
+    else if(_gcE1rm(w,r)>bestE+0.05)msg=`${w}kg × ${r}, e1RM ${Math.round(_gcE1rm(w,r)*10)/10}kg`;
+  }else if(w===0&&bestW===0&&r>bestR)msg=`${r} reps`;
+  if(msg){s._pr=true;toastMsg(`🏆 New PR · ${ex.name} ${msg}`,3000);haptic('success');}
+}
+function renderGymScoreboard(){
+  if(!gymDraft)return'<div id="gym-scoreboard"></div>';
+  const gym=loadGymData();
+  let sets=0,vol=0,prs=0,nowW=0,lastW=0,nowR=0,lastR=0;
+  gymDraft.exercises.forEach(ex=>{
+    const ws=_gcWorking(ex);if(!ws.length)return;
+    sets+=ws.length;
+    ws.forEach(s=>{vol+=parseFloat(s.weight||0)*(parseInt(s.reps)||0);if(s._pr)prs++;});
+    // Same point as last time: only as many sets as you've done so far, on lifts done both times.
+    const last=getLastExSets(ex.name,gym);if(!last.length)return;
+    const n=Math.min(ws.length,last.length);
+    ws.slice(0,n).forEach(s=>{nowW+=parseFloat(s.weight||0)*(parseInt(s.reps)||0);nowR+=parseInt(s.reps)||0;});
+    last.slice(0,n).forEach(s=>{lastW+=parseFloat(s.weight||0)*(parseInt(s.reps)||0);lastR+=parseInt(s.reps)||0;});
+  });
+  if(!sets)return'<div id="gym-scoreboard"></div>';
+  const pct=lastW>0?Math.round((nowW-lastW)/lastW*100):lastR>0?Math.round((nowR-lastR)/lastR*100):null;
+  const pctCol=pct==null?'var(--text3)':pct>0?'var(--st-go)':pct<-5?'var(--st-pace)':'var(--text)';
+  return`<div class="gc-score" id="gym-scoreboard">
+    <div><b>${sets}</b><span>sets</span></div>
+    <div><b>${vol>0?Math.round(vol).toLocaleString('en-GB'):'—'}</b><span>kg lifted</span></div>
+    <div><b style="color:${pctCol};">${pct==null?'—':(pct>0?'+':'')+pct+'%'}</b><span>vs last time</span></div>
+    ${prs?`<div><b style="color:var(--orange);">${prs}</b><span>PR${prs===1?'':'s'}</span></div>`:''}
+  </div>`;
+}
+function updateGymScoreboard(){const el=document.getElementById('gym-scoreboard');if(el)el.outerHTML=renderGymScoreboard();}
+
+// 7. "Call it": a big rep drop at the same weight means the useful work is done.
+function getCallIt(ex,lastSets){
+  if(ex._completed)return null;
+  const ws=_gcWorking(ex);if(!ws.length)return null;
+  const f=ws[0],l=ws[ws.length-1];
+  const fr=parseInt(f.reps)||0,lr=parseInt(l.reps)||0;
+  if(ws.length>=3&&fr>=5&&parseFloat(l.weight||0)<=parseFloat(f.weight||0)&&lr<=fr*0.65)
+    return{strong:true,text:`Reps have dropped from ${fr} to ${lr}. That's the useful work done; more sets now are mostly fatigue.`};
+  if(ex._planSets&&ws.length>=ex._planSets)return{text:`That's the ${ex._planSets} set${ex._planSets===1?'':'s'} planned.`};
+  const k=_gcReadyKey();
+  if((k==='pace'||k==='recover')&&lastSets.length&&ws.length>=lastSets.length)return{text:`Matched last time's ${lastSets.length} sets. On a low-readiness day, that's enough.`};
+  return null;
+}
+
+// 8. Rest that fits the set: compounds get longer than isolation work (getExRestSecs), and a
+// set that fell short of target, or a low-readiness day, adds a little more.
+function getSmartRest(ex,s){
+  const base=getExRestSecs(ex.name||'');
+  const compound=base>=120;
+  const k=_gcReadyKey();
+  let add=0;const why=[];
+  if(s._tgtR&&(parseInt(s.reps)||0)<s._tgtR){add+=compound?30:15;why.push('tough set');}
+  if(compound&&(k==='pace'||k==='recover')){add+=30;why.push('low readiness');}
+  return{secs:base+add,label:add?`Rest · +${add}s, ${why.join(' and ')}`:compound?'Rest · heavy lift':'Rest'};
+}
+
+// 9. Session verdict, shown once the session is saved.
+function getSessionVerdict(session){
+  if(!session)return null;
+  const all=loadGymData();
+  const prior=all.filter(s=>s!==session&&s.ts!==session.ts&&(s.date<session.date||(s.date===session.date&&(s.ts||0)<(session.ts||0))));
+  let up=0,down=0,compared=0,prs=0;
+  (session.exercises||[]).forEach(e=>{
+    if(!e.name)return;
+    const ws=(e.sets||[]).filter(x=>!x.warmup&&!x.technique&&(parseInt(x.reps)||0)>0);if(!ws.length)return;
+    const weighted=ws.some(x=>parseFloat(x.weight||0)>0);
+    const val=sets=>Math.max(0,...sets.filter(x=>!x.warmup&&!x.technique).map(x=>{const w=parseFloat(x.weight||0),r=parseInt(x.reps)||0;return weighted?(w>0&&r?_gcE1rm(w,r):0):r;}));
+    const nl=e.name.toLowerCase();
+    const occ=prior.flatMap(s=>(s.exercises||[]).filter(x=>x.name&&x.name.toLowerCase()===nl));
+    if(!occ.length)return;
+    const now=val(ws),lastV=val(occ[occ.length-1].sets||[]),best=Math.max(...occ.map(o=>val(o.sets||[])));
+    compared++;
+    const band=weighted?Math.max(0.5,lastV*0.01):0.5;
+    if(now>lastV+band)up++;else if(now<lastV-band)down++;
+    if(best>0&&now>best+0.05)prs++;
+  });
+  // Volume on the lifts both sessions share, so a short session isn't scored against a full one.
+  const lastSame=prior.filter(s=>s.type===session.type).slice(-1)[0];
+  const shared=new Set();
+  if(lastSame){const a=new Set((lastSame.exercises||[]).map(e=>(e.name||'').toLowerCase()));(session.exercises||[]).forEach(e=>{const n=(e.name||'').toLowerCase();if(a.has(n))shared.add(n);});}
+  const volOf=s=>(s.exercises||[]).filter(e=>shared.has((e.name||'').toLowerCase())).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).reduce((b,x)=>b+parseFloat(x.weight||0)*(parseInt(x.reps)||0),0),0);
+  const v0=lastSame?volOf(lastSame):0,v1=volOf(session);
+  const volPct=v0>0&&v1>0?Math.round((v1-v0)/v0*100):null;
+  // Tomorrow, from the plan.
+  let tomorrow=null;
+  if(session.date===dk(today())){
+    const t1=_gcPlanDay(1);
+    if(_gcLegSets(session)>=6&&t1.type==='Run'&&KEY_RUNS.has(t1.runType))tomorrow=`Tomorrow's ${_gcRunName(t1.runType)}: legs may feel heavy early. Take a longer warm-up and judge the first few km by effort, not pace.`;
+    else if(volPct!=null&&volPct>=15)tomorrow='A bigger session than last time: expect readiness to dip a little tomorrow. Sleep is the lever tonight.';
+    else if(t1.type==='Run'&&!KEY_RUNS.has(t1.runType))tomorrow='Tomorrow\'s easy run will help recovery, not hurt it. Keep it genuinely easy.';
+    else if(t1.type==='Rest'||t1.type==='Off')tomorrow='Rest day tomorrow: good timing.';
+  }
+  // Lifts that have stopped moving get a specific next step.
+  const tips=[];
+  (session.exercises||[]).forEach(e=>{
+    if(tips.length>=2||!e.name)return;
+    const t=getExerciseTrend(e.name);if(!t)return;
+    if(t.label.includes('Plateau'))tips.push(`${e.name} has stalled. Next time drop about 10% and build back over three weeks, or swap to a variation for a four-week block.`);
+    else if(t.label.includes('Regressing'))tips.push(`${e.name} is trending down. Check sleep and running load before adding weight.`);
+  });
+  return{compared,up,down,prs,volPct,lastSame,tomorrow,tips};
+}
+function renderGymVerdictCard(session){
+  const v=getSessionVerdict(session);
+  if(!v)return renderRecentGymCard();
+  const head=v.compared?`${v.up} of ${v.compared} lift${v.compared===1?'':'s'} up${v.prs?` · ${v.prs} PR${v.prs===1?'':'s'}`:''}`:'Baseline set';
+  const col=!v.compared?'var(--st-ready)':v.up*2>=v.compared?'var(--st-go)':v.down>v.up?'var(--st-pace)':'var(--st-ready)';
+  const lines=[];
+  if(v.compared&&v.down)lines.push({col:'var(--text3)',text:`${v.down} down on last time${v.compared-v.up-v.down?`, ${v.compared-v.up-v.down} held`:''}.`});
+  if(!v.compared)lines.push({col:'var(--text3)',text:'First time on these lifts, so next session has something to beat.'});
+  if(v.volPct!=null)lines.push({col:v.volPct>=0?'var(--st-go)':'var(--text3)',text:`Volume ${v.volPct>=0?'+':''}${v.volPct}% on the same lifts as your last ${session.type} (${fmtShortDate(v.lastSame.date)}).`});
+  if(v.tomorrow)lines.push({col:'var(--st-ready)',text:v.tomorrow});
+  v.tips.forEach(t=>lines.push({col:'var(--st-pace)',text:t}));
+  return`<div class="chart-card rd-mini gc-brief" style="--st:${col};">
+    <div class="rd-mini-head"><span class="rd-eyebrow">Session verdict</span></div>
+    <div class="rd-mini-state">${esc(head)}</div>
+    <ul class="gc-lines">${lines.map(l=>`<li style="--c:${l.col};">${esc(l.text)}</li>`).join('')}</ul>
+  </div>`;
+}
+
 // Weekly gym overview vs. the Training Plan - just done vs. remaining against what's
 // actually scheduled, no baseline/volume comparators. Mirrors the race card's "where do
 // I stand this week" framing, scoped to the calendar week (Monday-Sunday).
@@ -9198,6 +9597,23 @@ function saveExRestSecs(name,secs){
 }
 
 let _volPeriod='week';
+// Per-muscle weekly targets (min, max) — realistic for 1 session/muscle/week
+const VOL_MUSCLE_TARGETS={
+  Chest:{min:8,max:12},Back:{min:8,max:12},Shoulders:{min:6,max:10},
+  Biceps:{min:6,max:10},Triceps:{min:6,max:10},Quads:{min:6,max:10},
+  Hamstrings:{min:4,max:8},Glutes:{min:4,max:8},Calves:{min:3,max:6},Core:{min:3,max:6}
+};
+// Run contribution: equivalent sets per muscle by effort type
+const VOL_RUN_CONTRIB={
+  easy:    {Quads:1,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+  long:    {Quads:1,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+  tempo:   {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+  fartlek: {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+  parkrun: {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
+  intervals:{Quads:2,Hamstrings:2,Glutes:1,Calves:2,Core:2},
+  race:    {Quads:2,Hamstrings:2,Glutes:1,Calves:2,Core:2},
+};
+function volEffortKey(e){const el=(e||'').toLowerCase();if(el.includes('race'))return'race';if(el.includes('interval')||el.includes('hard'))return'intervals';if(el.includes('tempo'))return'tempo';if(el.includes('fartlek'))return'fartlek';if(el.includes('parkrun'))return'parkrun';if(el.includes('long'))return'long';return'easy';}
 function renderVolumeTab(){
   const el=document.getElementById('train-volume-content');
   if(!el)return;
@@ -9222,23 +9638,7 @@ function renderVolumeTab(){
     if(pid==='8weeks')return{from:addDays(mon,-55),to:now,days:56};
     return{from:new Date('2000-01-01'),to:now,days:null};
   }
-  // Per-muscle weekly targets (min, max) — realistic for 1 session/muscle/week
-  const MUSCLE_TARGETS={
-    Chest:{min:8,max:12},Back:{min:8,max:12},Shoulders:{min:6,max:10},
-    Biceps:{min:6,max:10},Triceps:{min:6,max:10},Quads:{min:6,max:10},
-    Hamstrings:{min:4,max:8},Glutes:{min:4,max:8},Calves:{min:3,max:6},Core:{min:3,max:6}
-  };
-  // Run contribution: equivalent sets per muscle by effort type
-  const RUN_CONTRIB={
-    easy:    {Quads:1,Hamstrings:1,Glutes:1,Calves:2,Core:1},
-    long:    {Quads:1,Hamstrings:1,Glutes:1,Calves:2,Core:1},
-    tempo:   {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
-    fartlek: {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
-    parkrun: {Quads:2,Hamstrings:1,Glutes:1,Calves:2,Core:1},
-    intervals:{Quads:2,Hamstrings:2,Glutes:1,Calves:2,Core:2},
-    race:    {Quads:2,Hamstrings:2,Glutes:1,Calves:2,Core:2},
-  };
-  function effortKey(e){const el=(e||'').toLowerCase();if(el.includes('race'))return'race';if(el.includes('interval')||el.includes('hard'))return'intervals';if(el.includes('tempo'))return'tempo';if(el.includes('fartlek'))return'fartlek';if(el.includes('parkrun'))return'parkrun';if(el.includes('long'))return'long';return'easy';}
+  const MUSCLE_TARGETS=VOL_MUSCLE_TARGETS,RUN_CONTRIB=VOL_RUN_CONTRIB,effortKey=volEffortKey;
 
   function countMuscles(sessList){
     const c={};ALL_MUSCLE_GROUPS.forEach(m=>{c[m]=0;});

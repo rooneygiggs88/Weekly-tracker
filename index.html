@@ -527,6 +527,12 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .today-plan-cell{margin-bottom:10px;padding:15px 16px 14px;box-shadow:var(--card-shadow);}
 .today-plan-cell:empty{display:none;}
 .today-plan-type{font-size:26px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.today-debrief{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surface2);cursor:pointer;}
+.today-debrief-row{position:relative;padding:3px 0 3px 14px;font-size:13px;line-height:1.45;color:var(--text2);}
+.today-debrief-row::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--st,var(--text3));}
+.today-debrief-row b{color:var(--st,var(--text));}
+.today-debrief-next{color:var(--text3);}
+.today-debrief-next::before{background:var(--st-ready);}
 .today-dbl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--border);}
 .today-dbl-row:first-of-type{margin-top:6px;}
 .today-dbl-name{font-size:14px;font-weight:800;color:var(--text);}
@@ -1987,7 +1993,7 @@ function renderToday(){
             :gymDone&&!runDone&&gym2==='Legs'&&KEY_RUNS.has(rt)?`Legs came first today, so run the ${rt==='Long'?'long run':rt.toLowerCase()} by effort rather than pace, or swap it for an easy one.`:'';
           return t?`<div class="today-plan-meta today-dbl-order">${esc(t)}</div>`:'';
         })()}
-        ${planAdvice(runDone&&gymDone)}${gymDone?'':clashHtml}`;
+        ${runDone||gymDone?renderTodayDebrief():''}${runDone&&gymDone?'':planAdvice(false)}${gymDone?'':clashHtml}`;
     }else if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
       const isGym=['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
       const tab=isGym?'gym':'run';
@@ -2014,8 +2020,8 @@ function renderToday(){
         <div class="today-plan-lbl">Today's Plan</div>
         <div class="today-plan-type">${esc(todayPlan)}${todayPlan==='Run'?`<span class="today-plan-sub">${esc(runTypeThisWeek(dayIdx)==='Long'?'Long run':runTypeThisWeek(dayIdx))}</span>`:''}</div>
         <div class="today-plan-meta">${planMeta}</div>
-        ${planAdvice(false)}${alreadyDone?'':clashHtml}
-        ${!alreadyDone&&loggedParts.length?`<div class="today-plan-meta" style="color:var(--green);font-weight:700;">${loggedParts.map(esc).join(' + ')} logged today ✓</div>`:''}
+        ${alreadyDone?(renderTodayDebrief()||planAdvice(false)):planAdvice(false)}${alreadyDone?'':clashHtml}
+        ${!alreadyDone&&loggedParts.length?`<div class="today-plan-meta" style="color:var(--green);font-weight:700;">${loggedParts.map(esc).join(' + ')} logged today ✓</div>${renderTodayDebrief()}`:''}
         <button class="today-plan-cta${alreadyDone?' done':''}" onclick="${cardClick}">${alreadyDone?'Logged ✓':'Start session'}</button>
         ${alreadyDone||loggedParts.length?'':altAction}`;
     }else if(loggedParts.length){
@@ -2023,7 +2029,7 @@ function renderToday(){
         <div class="today-plan-lbl">Today${todayPlan==='Off'||todayPlan==='Rest'?` · planned ${esc(todayPlan.toLowerCase())}`:''}</div>
         <div class="today-plan-type">${loggedParts.map(esc).join(' + ')}</div>
         <div class="today-plan-meta">${loggedMeta}</div>
-        ${planAdvice(true)}
+        ${renderTodayDebrief()||planAdvice(true)}
         <button class="today-plan-cta done" onclick="showPage('train');switchTrainTab('history')">Logged ✓</button>`;
     }else{
       planCell.innerHTML=`
@@ -3472,6 +3478,7 @@ function renderRunSection(){
     }).join('')}
   </div>`:'';
   el.innerHTML=`
+  ${dayRuns.length?renderRunDebriefCard(dayRuns[dayRuns.length-1]):''}
   <div class="run-input-card">
     ${weekNavHtml}
     <div style="display:flex;gap:4px;margin-bottom:16px;">${dayBtns}</div>
@@ -3564,8 +3571,9 @@ function saveRun(){
   saveRunData(runs);
   if(!state.data[`${logDate}:session:run`])state.data[`${logDate}:session:run`]=[];
   state.data[`${logDate}:session:run`].push(`${km}km`);
-  _runLogDate=dk(today());
+  _runLogDate=logDate; // stay on the day just logged so its debrief shows
   saveState();selectedEffort='';toastMsg('Run saved');haptic('success');renderRunSection();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 let _runHistoryExpanded=false;
 function renderRunHistory(runs){
@@ -6844,7 +6852,7 @@ function importMorningCsv(evt){
 }
 
 // Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
-const APP_BUILD='19 Oct · Runner plan';
+const APP_BUILD='19 Oct · Run debrief';
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';
@@ -9401,10 +9409,13 @@ function getSessionVerdict(session){
     const occ=prior.flatMap(s=>(s.exercises||[]).filter(x=>x.name&&x.name.toLowerCase()===nl));
     if(!occ.length)return;
     const now=val(ws),lastV=val(occ[occ.length-1].sets||[]),best=Math.max(...occ.map(o=>val(o.sets||[])));
+    // A heavier top set counts as progress too, the same two records the PR tracker keeps.
+    const topW=sets=>Math.max(0,...sets.filter(x=>!x.warmup&&!x.technique&&(parseInt(x.reps)||0)>0).map(x=>parseFloat(x.weight||0)));
+    const wNow=weighted?topW(ws):0,wLast=weighted?topW(occ[occ.length-1].sets||[]):0,wBest=weighted?Math.max(...occ.map(o=>topW(o.sets||[]))):0;
     compared++;
     const band=weighted?Math.max(0.5,lastV*0.01):0.5;
-    if(now>lastV+band)up++;else if(now<lastV-band)down++;
-    if(best>0&&now>best+0.05)prs++;
+    if(now>lastV+band||(weighted&&wNow>wLast))up++;else if(now<lastV-band)down++;
+    if((best>0&&now>best+0.05)||(weighted&&wBest>0&&wNow>wBest))prs++;
   });
   // Volume on the lifts both sessions share, so a short session isn't scored against a full one.
   const lastSame=prior.filter(s=>s.type===session.type).slice(-1)[0];
@@ -9447,6 +9458,143 @@ function renderGymVerdictCard(session){
     <div class="rd-mini-head"><span class="rd-eyebrow">Session verdict</span></div>
     <div class="rd-mini-state">${esc(head)}</div>
     <ul class="gc-lines">${lines.map(l=>`<li style="--c:${l.col};">${esc(l.text)}</li>`).join('')}</ul>
+  </div>`;
+}
+
+// ── RUN DEBRIEF ──
+// What a logged run means, from data already held: pace against the target your race goal
+// sets for that kind of run, heart rate against pace compared with your recent similar
+// runs, records, the week's km, the morning's readiness and what's next on the plan.
+const RUN_DEBRIEF_TYPE={Easy:'Easy','Long Run':'Long',Long:'Long',Recovery:'Recovery',Tempo:'Tempo',Intervals:'Intervals',Race:'Race'};
+const RUN_HARD=new Set(['Tempo','Intervals','Race']);
+function _runSpk(r){const s=parseTimeToSecs(r.time);return r.km>0&&s>0?s/r.km:null;}
+function _fmtSpk(spk){return fmtPace(1/spk);}
+// Metres covered per heartbeat: the same pace for fewer beats is aerobic fitness improving.
+function _runEff(r){const spk=_runSpk(r);return spk&&r.hr>0?60000/(spk*r.hr):null;}
+function _median(a){const v=[...a].sort((x,y)=>x-y),m=Math.floor(v.length/2);return v.length%2?v[m]:(v[m-1]+v[m])/2;}
+// Expected average pace for the run type off your goal pace. Tempo and intervals are logged
+// as one average including warm-up and cool-down, so their target is the blended average
+// of the 10 / 20 / 10 minute session the plan prescribes.
+function getRunTargetSpk(type){
+  const r=state.race;
+  const goal=r&&r.km&&r.goalTime?parseTimeToSecs(r.goalTime)/r.km:null;
+  if(!goal)return null;
+  const easy=goal+50;
+  if(type==='Easy')return easy;
+  if(type==='Recovery')return goal+70;
+  if(type==='Long')return goal+35;
+  if(type==='Tempo'||type==='Intervals'){
+    const work=goal+(type==='Tempo'?-10:-25);
+    return 2400/(600/easy+1200/work+600/easy);
+  }
+  return null;
+}
+function getRunDebrief(run){
+  if(!run||!run.km)return null;
+  const runs=loadRunData();
+  const type=RUN_DEBRIEF_TYPE[run.effort]||'Easy';
+  const spk=_runSpk(run);
+  const lines=[];
+  let head='Logged',col='var(--st-ready)';
+  // Goal race: finish time against the goal.
+  const race=state.race;
+  const isGoalRace=race&&race.date===run.date&&type==='Race';
+  if(isGoalRace&&race.goalTime){
+    const diff=parseTimeToSecs(run.time)-parseTimeToSecs(race.goalTime);
+    const m=Math.floor(Math.abs(diff)/60),sec=Math.abs(diff)%60;
+    const gap=m?`${m}:${String(sec).padStart(2,'0')}`:`${sec}s`;
+    head=diff<=0?'Goal beaten':'Race done';col=diff<=0?'var(--st-go)':'var(--st-ready)';
+    lines.push({col,text:diff<=0?`${run.time} against a ${race.goalTime} goal: ${gap} inside it.`:`${run.time} against a ${race.goalTime} goal, ${gap} outside it. Finishing a ${fmtKm(run.km)}km race is the work; the goal moves with you.`});
+    const days=Math.max(3,Math.round(run.km/1.609));
+    lines.push({col:'var(--st-ready)',text:`Recovery: easy running only for about ${days} days, roughly one per mile raced.`});
+  }else if(spk){
+    const tgt=getRunTargetSpk(type);
+    if(tgt){
+      const d=Math.round(spk-tgt); // + slower, - faster
+      const blended=type==='Tempo'||type==='Intervals';
+      const label={Easy:'easy-run',Recovery:'recovery-run',Long:'long-run',Tempo:'tempo-session',Intervals:'interval-session'}[type];
+      const tTxt=`${_fmtSpk(spk)} against ~${_fmtSpk(tgt)}, your ${label} target${blended?' with warm-up and cool-down included':''}`;
+      if(type==='Easy'||type==='Recovery'||type==='Long'){
+        if(d<-20){head='Ran a bit hot';col='var(--st-pace)';lines.push({col,text:`${tTxt}. Easy running does its job when it stays easy; save the speed for tempo days.`});}
+        else if(d>30){head=type==='Long'?'Long and steady':'Properly easy';col='var(--st-go)';lines.push({col,text:`${tTxt}. Slower than target is no bad thing here: ${type==='Long'?'time on your feet is the point':'easy days are for recovering'}.`});}
+        else{head=type==='Long'?'Long run, well judged':'Nicely controlled';col='var(--st-go)';lines.push({col,text:`${tTxt}. Right where it should be.`});}
+      }else{
+        if(Math.abs(d)<=8){head='On target';col='var(--st-go)';lines.push({col,text:`${tTxt}. Spot on.`});}
+        else if(d<-8){head='Quicker than target';col='var(--st-go)';lines.push({col:'var(--st-ready)',text:`${tTxt}. Strong, but a ${type.toLowerCase()} should feel controlled rather than raced. If it felt easy, your goal may be conservative.`});}
+        else{head='Short of target pace';col='var(--st-pace)';lines.push({col,text:`${tTxt}. One run isn't a trend; check sleep and load before reading much into it.`});}
+      }
+    }
+  }
+  // Heart rate for pace against recent runs of the same type.
+  const eff=_runEff(run);
+  if(eff&&run.km>=3){
+    const from=dk(addDays(new Date(run.date+'T12:00:00'),-42));
+    const peers=runs.filter(r=>r!==run&&r.date>=from&&r.date<=run.date&&!(r.date===run.date&&(r.ts||0)>=(run.ts||0))&&(RUN_DEBRIEF_TYPE[r.effort]||'Easy')===type&&r.km>=3).map(_runEff).filter(Boolean);
+    if(peers.length>=3){
+      const pct=Math.round((eff/_median(peers)-1)*100);
+      const what={Long:'long runs',Recovery:'recovery runs'}[type]||`${type.toLowerCase()} runs`;
+      if(pct>=2)lines.push({col:'var(--st-go)',text:`Heart rate ${run.hr} at ${_fmtSpk(_runSpk(run))}: ${pct}% more distance per heartbeat than your recent ${what}. Aerobic fitness moving the right way.`});
+      else if(pct<=-3)lines.push({col:'var(--text3)',text:`Heart rate ran ${-pct}% high for the pace against your recent ${what}. Heat, fatigue or a short night all do this; one run isn't a trend.`});
+      else lines.push({col:'var(--text3)',text:`Heart rate for pace in line with your recent ${what}.`});
+      if(head==='Logged')head=pct>=2?'Efficient run':'Steady run';
+    }
+  }
+  // Records.
+  const before=runs.filter(r=>r!==run&&(r.date<run.date||(r.date===run.date&&(r.ts||0)<(run.ts||0))));
+  const eightWk=dk(addDays(new Date(run.date+'T12:00:00'),-56));
+  const recentMax=Math.max(0,...before.filter(r=>r.date>=eightWk).map(r=>r.km||0));
+  if(run.km>=10&&before.length>=5&&run.km>recentMax)lines.push({col:'var(--st-go)',text:`Longest run in eight weeks (${fmtKm(run.km)}km).`});
+  if(spk&&run.km>=3){
+    const similar=before.filter(r=>r.km>=run.km*0.85&&r.km<=run.km*1.15).map(_runSpk).filter(Boolean);
+    if(similar.length>=3&&spk<Math.min(...similar))lines.push({col:'var(--st-go)',text:`Your fastest run at around this distance.`});
+  }
+  if(head==='Logged'&&lines.length)head='Run logged';
+  // Readiness that morning.
+  const rd=computeReadiness(run.date);
+  if(rd&&rd.state&&RUN_HARD.has(type)&&!isGoalRace&&(rd.state.key==='pace'||rd.state.key==='recover'))
+    lines.push({col:'var(--st-pace)',text:`A hard session on a ${rd.state.label} morning (readiness ${rd.score}). Make the next day genuinely easy.`});
+  // The week, and what's next.
+  if(run.date>=dk(getMonday(today()))){
+    const plan=getRaceBuildPlan();
+    const target=plan&&plan.targetKm?plan.targetKm:state.runTarget||0;
+    const wk=runs.filter(r=>r.date>=dk(getMonday(today()))&&r.date<=dk(today())).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+    if(target)lines.push({col:'var(--text3)',text:wk>=target?`Week target reached: ${fmtKm(wk)} of ${target}km.`:`${fmtKm(wk)} of ${target}km this week, ${fmtKm(Math.round((target-wk)*10)/10)} to go.`});
+  }
+  let tomorrow=null;
+  if(run.date===dk(today())&&!isGoalRace){
+    const t1=_gcPlanDay(1);
+    const hardToday=RUN_HARD.has(type)||type==='Long';
+    if(hardToday&&t1.type==='Run'&&KEY_RUNS.has(t1.runType))tomorrow=`Tomorrow's ${_gcRunName(t1.runType)} comes straight after this. Consider swapping it with an easy day.`;
+    else if(hardToday&&t1.gym==='Legs')tomorrow='Legs tomorrow after a hard run: fine, but keep it moderate.';
+    else if(hardToday)tomorrow='Easy or rest tomorrow, and expect readiness to dip a little.';
+    else if(t1.type==='Run'&&KEY_RUNS.has(t1.runType))tomorrow=`Set up for tomorrow's ${_gcRunName(t1.runType)}.`;
+    if(type==='Long'&&parseTimeToSecs(run.time)>=5400)lines.push({col:'var(--st-ready)',text:'Over 90 minutes: carbs and some protein within the hour help the next few days.'});
+  }
+  if(tomorrow)lines.push({col:'var(--st-ready)',text:tomorrow});
+  return{head,col,lines,tomorrow,type};
+}
+function renderRunDebriefCard(run){
+  const d=getRunDebrief(run);
+  if(!d||!d.lines.length)return'';
+  return`<div class="chart-card rd-mini gc-brief" style="--st:${d.col};margin-bottom:10px;">
+    <div class="rd-mini-head"><span class="rd-eyebrow">Run debrief · ${fmtKm(run.km)}km ${esc(run.effort||'')}</span></div>
+    <div class="rd-mini-state">${esc(d.head)}</div>
+    <ul class="gc-lines">${d.lines.map(l=>`<li style="--c:${l.col};">${esc(l.text)}</li>`).join('')}</ul>
+  </div>`;
+}
+// Compact version for the Today card, in place of "Session logged. Nice work.": the
+// headline and key line for today's run and gym session, and one line on tomorrow.
+function renderTodayDebrief(){
+  const ds=dk(today());
+  const out=[];let tomorrow=null;
+  const run=loadRunData().filter(r=>r.date===ds).pop();
+  if(run){const d=getRunDebrief(run);if(d){out.push({col:d.col,head:d.head,text:(d.lines.find(l=>l.text!==d.tomorrow)||{}).text||''});tomorrow=d.tomorrow;}}
+  const gym=loadGymData().filter(s=>s.date===ds).pop();
+  if(gym){const v=getSessionVerdict(gym);if(v){out.push({col:!v.compared?'var(--st-ready)':v.up*2>=v.compared?'var(--st-go)':'var(--st-ready)',head:`${esc(gym.type||'Gym')}: ${v.compared?`${v.up} of ${v.compared} lifts up${v.prs?`, ${v.prs} PR${v.prs===1?'':'s'}`:''}`:'baseline set'}`,text:''});tomorrow=tomorrow||v.tomorrow;}}
+  if(!out.length)return'';
+  return`<div class="today-debrief" onclick="showPage('train');switchTrainTab('${run?'run':'gym'}')">
+    ${out.map(o=>`<div class="today-debrief-row" style="--st:${o.col};"><b>${o.head}.</b> ${esc(o.text)}</div>`).join('')}
+    ${tomorrow?`<div class="today-debrief-row today-debrief-next">${esc(tomorrow)}</div>`:''}
   </div>`;
 }
 

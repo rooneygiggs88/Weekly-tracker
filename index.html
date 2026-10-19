@@ -527,6 +527,14 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .today-plan-cell{margin-bottom:10px;padding:15px 16px 14px;box-shadow:var(--card-shadow);}
 .today-plan-cell:empty{display:none;}
 .today-plan-type{font-size:26px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.today-dbl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--border);}
+.today-dbl-row:first-of-type{margin-top:6px;}
+.today-dbl-name{font-size:14px;font-weight:800;color:var(--text);}
+.today-dbl-meta{font-size:12px;color:var(--text3);font-weight:600;line-height:1.4;margin-top:1px;}
+.today-dbl-row button{flex-shrink:0;padding:8px 14px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;}
+.today-dbl-row.done button{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green);}
+.today-dbl-row.done .today-dbl-name{color:var(--text3);}
+.today-dbl-order{margin-top:6px;}
 .today-plan-sub{font-size:13px;font-weight:700;letter-spacing:0;color:var(--text2);}
 .today-plan-cta{margin-top:12px;}
 .today-plan-advice{margin-top:10px;font-size:13px;font-weight:500;line-height:1.45;color:var(--text);background:color-mix(in srgb,var(--st) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--st) 24%,transparent);border-radius:12px;padding:10px 12px;}
@@ -1393,13 +1401,14 @@ function loadState(){
       if(!p.runTarget)p.runTarget=0;
       if(!p.weekPlan)p.weekPlan=null;
       if(!Array.isArray(p.weekPlanRunType))p.weekPlanRunType=new Array(7).fill(null);
+      if(!Array.isArray(p.weekPlanGym))p.weekPlanGym=new Array(7).fill(null);
       if(!Array.isArray(p.dismissedAlerts))p.dismissedAlerts=[];
       if(!p.bodyCompGoal)p.bodyCompGoal=null;
       if(!p.profilePic)p.profilePic=null;
       return p;
     }
   }catch(e){const ok=confirm('Your data could not be loaded. Reset?');if(ok)localStorage.removeItem('wt_v3');}
-  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,weekPlanRunType:new Array(7).fill(null),dismissedAlerts:[],bodyCompGoal:null,profilePic:null};
+  return{customGoals:[],data:{},builtinTargets:{},archivedWeeks:{},race:null,userName:'',runTarget:0,weekPlan:null,weekPlanRunType:new Array(7).fill(null),weekPlanGym:new Array(7).fill(null),dismissedAlerts:[],bodyCompGoal:null,profilePic:null};
 }
 let state=loadState();
 let _saveTimer=null;
@@ -1558,7 +1567,7 @@ function getWeeklyStreak(){
 function getPPLBalance(){
   const now=today();const mon=getMonday(now);
   const gym=loadGymData().filter(s=>{const d=new Date(s.date+'T12:00:00');return d>=mon&&d<=now;});
-  const counts={Push:0,Pull:0,Legs:0};
+  const counts=legsByRunning()?{Push:0,Pull:0}:{Push:0,Pull:0,Legs:0};
   gym.forEach(s=>{if(counts[s.type]!==undefined)counts[s.type]++;});
   const vals=Object.entries(counts);
   const max=Math.max(...vals.map(v=>v[1])),min=Math.min(...vals.map(v=>v[1]));
@@ -1848,7 +1857,8 @@ function renderToday(){
     const isFuture=d>now;
     const dayScore=!isFuture?getDayScore(dds):0;
     const planType=state.weekPlan?(weekOffset===0?planTypeThisWeek(i):state.weekPlan[i]):null;
-    const planColor=planType?planTypeColor[planType]||'var(--accent)':'';
+    const planGym=planType==='Run'?(weekOffset===0?gymTypeThisWeek(i):getWeekPlanGym(i)):null;
+    const planColor=planType?(planGym?`linear-gradient(90deg,${planTypeColor.Run} 50%,${planTypeColor[planGym]||'var(--accent)'} 50%)`:planTypeColor[planType]||'var(--accent)'):'';
     // Bar is colored by the day's planned activity type, not done/not-done - but faded
     // for a past day that wasn't actually logged, so there's still a passive done signal.
     const barOpacity=(!isFuture&&!isActive&&dayScore<80)?'0.35':'1';
@@ -1900,7 +1910,8 @@ function renderToday(){
     };
     // Heads-up when today's session sets up a clash with tomorrow's.
     const thisWeekTypes=[0,1,2,3,4,5,6].map(i=>planTypeThisWeek(i)||'Rest'),thisWeekRuns=[0,1,2,3,4,5,6].map(runTypeThisWeek);
-    const clash=state.weekPlan?getPlanConflicts(thisWeekTypes,thisWeekRuns).find(c=>c.day===dayIdx&&thisWeekTypes[dayIdx]==='Legs'):null;
+    const thisWeekGyms=[0,1,2,3,4,5,6].map(i=>thisWeekTypes[i]==='Run'?gymTypeThisWeek(i):null);
+    const clash=state.weekPlan?getPlanConflicts(thisWeekTypes,thisWeekRuns,thisWeekGyms).find(c=>c.day===dayIdx&&!c.same&&gymTypeThisWeek(dayIdx)==='Legs'):null;
     const clashHtml=clash?`<div class="today-plan-clash">Tomorrow is a key run, so keep today's leg work moderate.</div>`:'';
     const daysLeft=6-dayIdx;
 
@@ -1956,7 +1967,28 @@ function renderToday(){
     const loggedParts=[...gymToday.map(x=>x.type||'Gym'),...(runsToday.length?['Run']:[])];
     const loggedMeta=[...gymToday.map(x=>{const n=(x.exercises||[]).length,st=(x.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(z=>!z.warmup).length,0);return`${gymToday.length>1?esc(x.type||'Gym')+' · ':''}${n} exercise${n===1?'':'s'} · ${st} set${st===1?'':'s'}`;}),
       ...runsToday.map(r=>`${esc(r.effort||'Run')} run · ${fmtKm(parseFloat(r.km)||0)}km`)].join('<br>');
-    if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
+    const gym2=todayPlan==='Run'?gymTypeThisWeek(dayIdx):null;
+    if(gym2){
+      const runDone=getSessionDone(todayStr,'run'),gymDone=getSessionDone(todayStr,'gym');
+      const rt=runTypeThisWeek(dayIdx);
+      const runSuggestion=getTodayWorkoutSuggestion();
+      const lastOfType=loadGymData().filter(x=>x.type===gym2).slice(-1)[0];
+      const estMin=lastOfType?Math.round((lastOfType.exercises||[]).reduce((a,e)=>a+(e.sets||[]).length,0)*4/5)*5:null;
+      const runMeta=runDone?runsToday.map(r=>`${fmtKm(parseFloat(r.km)||0)}km logged`).join(' · '):runSuggestion&&runSuggestion.structure?esc(runSuggestion.structure.charAt(0).toUpperCase()+runSuggestion.structure.slice(1)):'Distance, time, effort';
+      const gymMeta=gymDone?'Logged':lastOfType?`${(lastOfType.exercises||[]).length} exercises${estMin?` · ~${estMin} min`:''}`:'First one: pick your exercises';
+      const row=(name,meta,done,click)=>`<div class="today-dbl-row${done?' done':''}"><div><div class="today-dbl-name">${name}</div><div class="today-dbl-meta">${meta}</div></div><button onclick="${click}">${done?'✓':'Start'}</button></div>`;
+      planCell.innerHTML=`
+        <div class="today-plan-lbl">Today's Plan · double day</div>
+        <div class="today-plan-type">Run + ${esc(gym2)}</div>
+        ${row(`1 · ${esc(rt==='Long'?'Long run':rt+' run')}`,runMeta,runDone,"showPage('train');switchTrainTab('run')")}
+        ${row(`2 · ${esc(gym2)}`,esc(gymMeta),gymDone,`showPage('train');switchTrainTab('gym');setTimeout(()=>{_gymPickedType='${gym2}';renderGymTypeSelector();},50)`)}
+        ${(()=>{
+          const t=!runDone&&!gymDone?getDoubleDayOrder(rt,gym2)
+            :gymDone&&!runDone&&gym2==='Legs'&&KEY_RUNS.has(rt)?`Legs came first today, so run the ${rt==='Long'?'long run':rt.toLowerCase()} by effort rather than pace, or swap it for an easy one.`:'';
+          return t?`<div class="today-plan-meta today-dbl-order">${esc(t)}</div>`:'';
+        })()}
+        ${planAdvice(runDone&&gymDone)}${gymDone?'':clashHtml}`;
+    }else if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
       const isGym=['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
       const tab=isGym?'gym':'run';
       const gymPreselect=isGym?`;setTimeout(()=>{_gymPickedType='${todayPlan}';renderGymTypeSelector();},50)`:'';
@@ -2286,15 +2318,15 @@ function renderGymTypeSelector(){
   const el=document.getElementById('gym-content');
   const sessions=loadGymData();
   const types=['Push','Pull','Legs','Core','Custom','Makeup'];
-  const planType=getTodayPlanType();
-  const isPlannedGymDay=planType&&['Push','Pull','Legs','Core','Custom'].includes(planType);
+  const planType=getTodayGymType();
+  const isPlannedGymDay=!!planType;
   const showPlanCard=isPlannedGymDay&&!_gymShowOtherTypes;
   // Suggest next in PPL rotation
   if(!_gymPickedType){
     if(showPlanCard)_gymPickedType=planType;
     else{
-      const ppl=['Push','Pull','Legs'];
-      if(sessions.length){const idx=ppl.indexOf(sessions[sessions.length-1].type);_gymPickedType=idx>=0?ppl[(idx+1)%3]:'Push';}
+      const ppl=legsByRunning()?['Push','Pull']:['Push','Pull','Legs'];
+      if(sessions.length){const idx=ppl.indexOf(sessions[sessions.length-1].type);_gymPickedType=idx>=0?ppl[(idx+1)%ppl.length]:'Push';}
       else _gymPickedType='Push';
     }
   }
@@ -3376,8 +3408,8 @@ function renderRecentGymCard(){
       <div class="rd-mini-text">Log this morning's check-in and this session gets a readiness call.</div>
     </div>`;
   }
-  const plan=getTodayPlanType();
-  const ctx={type:GYM_PLAN_TYPES.has(plan)?plan:'This session',runType:null,done:false,isGym:true};
+  const plan=getTodayGymType();
+  const ctx={type:plan||'This session',runType:null,done:false,isGym:true};
   return`<div class="chart-card rd-mini" style="--st:${r.state.col};">
     <div class="rd-mini-head"><span class="rd-eyebrow">Readiness</span><span class="rd-mini-score">${r.score}</span></div>
     <div class="rd-mini-state">${r.state.label}</div>
@@ -4570,7 +4602,9 @@ function renderMuscleBalanceCard(gym,weekCount){
   const lowerSets=(muscleTotals.Legs||0)+(muscleTotals.Hamstrings||0);
   const lowerPct=totalMuscleSets>0?Math.round(lowerSets/totalMuscleSets*100):0;
   const upperPct=totalMuscleSets>0?Math.round(upperSets/totalMuscleSets*100):0;
-  const ulMsg=lowerSets===0
+  const ulMsg=legsByRunning()
+    ?{msg:`Legs are trained by running in your plan: ${Math.round(loadRunData().filter(r=>r.date>=dk(getMonday(today()))).reduce((a,r)=>a+(parseFloat(r.km)||0),0))} km this week`,col:'var(--c-teal)'}
+    :lowerSets===0
     ?{msg:'No lower body work this week — add squats, leg press or RDLs',col:'var(--red)'}
     :lowerPct<15
       ?{msg:`Upper:lower split ${upperPct}%:${lowerPct}% — leg volume very low. Aim for 25–30% lower`,col:'var(--orange)'}
@@ -5126,7 +5160,7 @@ function buildCoachSummary(){
   if(yg&&yg.isCurrentYear)L.push(`Year running goal: ${Math.round(yg.done)} of ${yg.g.targetKm} km, ${Math.round(yg.remaining)} to go.`);
   const imp=getHabitImpacts().filter(f=>!f.pending&&f.size!=='none');
   if(imp.length)L.push(`\nHabit patterns (next-morning readiness): ${imp.map(f=>`${f.label} ${f.better?'better':'worse'}${f.size==='possible'?' (possible)':''}`).join('; ')}.`);
-  if(Array.isArray(state.weekPlan))L.push(`\nWeekly plan Mon-Sun: ${state.weekPlan.map((t,i)=>t==='Run'?`Run (${getWeekPlanRunType(i)})`:(t||'Rest')).join(', ')}.`);
+  if(Array.isArray(state.weekPlan))L.push(`\nWeekly plan Mon-Sun: ${state.weekPlan.map((t,i)=>t==='Run'?`Run (${getWeekPlanRunType(i)})${getWeekPlanGym(i)?' + '+getWeekPlanGym(i):''}`:(t||'Rest')).join(', ')}.`);
   return L.join('\n');
 }
 function copyCoachSummary(){
@@ -6810,7 +6844,7 @@ function importMorningCsv(evt){
 }
 
 // Shown at the bottom of Settings, so it's easy to tell which build the phone is running.
-const APP_BUILD='19 Oct · Gym coach';
+const APP_BUILD='19 Oct · Runner plan';
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
   document.getElementById('settings-name-input').value=state.userName||'';
@@ -8196,6 +8230,13 @@ function getTodayPlanContext(){
   const dow=(today().getDay()+6)%7;
   const runType=type==='Run'?runTypeThisWeek(dow):null;
   const ds=dk(today());
+  // Double day: advise on whichever half is still to do, and mention the gym half alongside the run.
+  const gym2=type==='Run'?gymTypeThisWeek(dow):null;
+  if(gym2){
+    const runDone=getSessionDone(ds,'run'),gymDone=getSessionDone(ds,'gym');
+    if(runDone&&!gymDone)return{type:gym2,runType:null,done:false,isGym:true};
+    return{type,runType,done:runDone&&gymDone,isGym:false,gym2:gymDone?null:gym2};
+  }
   const isGym=GYM_PLAN_TYPES.has(type);
   const done=type==='Run'?getSessionDone(ds,'run'):isGym?getSessionDone(ds,'gym'):false;
   return{type,runType,done,isGym};
@@ -8233,7 +8274,21 @@ function getReadinessPlanAdvice(r,ctx){
       rest:`Rest day planned. Exactly what you need.`,
       none:`Rest is the training today.`},
   };
-  return T[k][cat];
+  let out=T[k][cat];
+  if(ctx.gym2&&cat!=='gym'){
+    if(k==='pace')out+=` Keep the ${ctx.gym2} light, 2–3 reps in reserve, or drop it: one session is plenty today.`;
+    else if(k==='recover')out+=` Skip the ${ctx.gym2} as well.`;
+  }
+  return out;
+}
+// Order for a run + gym day. Doing the priority session first and leaving ~6 hours before
+// heavy legs keeps the interference between them small; upper body barely affects running.
+function getDoubleDayOrder(rt,g){
+  const key=KEY_RUNS.has(rt),legs=g==='Legs';
+  if(key&&legs)return`Run first while you're fresh, then ${g} at least 6 hours later. Legs first would take the edge off the run.`;
+  if(key)return`Run first while you're fresh. ${g} afterwards is fine, even straight after: upper body barely touches your running.`;
+  if(legs)return`Easy run first, then ${g}. If you lift first, keep the run genuinely easy.`;
+  return`Either order works. Splitting them, run in the morning and ${g} later, helps both a little.`;
 }
 
 // ── READINESS HERO ──
@@ -8939,6 +8994,27 @@ const DAY_NAMES=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','
 const KEY_RUNS=new Set(['Tempo','Intervals','Race','Long']);
 function _planWeekKey(){return dk(getMonday(today()));}
 function getPlanOverride(){return(state.planOverrides&&state.planOverrides[_planWeekKey()])||null;}
+// Double days: a Run day can also carry a gym session (state.weekPlanGym[i]), so the plan
+// can say "Tempo + Push". gymTypeThisWeek is the gym session planned that day either way.
+function getWeekPlanGym(i){const t=state.weekPlanGym&&state.weekPlanGym[i];return GYM_PLAN_TYPES.has(t)?t:null;}
+function gymTypeThisWeek(i){
+  const t=planTypeThisWeek(i);
+  if(GYM_PLAN_TYPES.has(t))return t;
+  if(t!=='Run')return null;
+  const o=getPlanOverride();
+  if(o&&o.gyms&&i in o.gyms)return o.gyms[i]||null;
+  return getWeekPlanGym(i);
+}
+function getTodayGymType(){return Array.isArray(state.weekPlan)?gymTypeThisWeek((today().getDay()+6)%7):null;}
+// Plan label for a day: "Run", "Push" or "Run + Push".
+function planLabelThisWeek(i){const t=planTypeThisWeek(i),g=gymTypeThisWeek(i);return t==='Run'&&g?`Run + ${g}`:t;}
+// A plan with runs and no Legs day anywhere means legs are trained by running: the gym
+// rotation becomes Push/Pull and leg muscles stop being graded against lifting targets.
+function legsByRunning(){
+  const p=state.weekPlan;
+  if(!Array.isArray(p)||!p.includes('Run'))return false;
+  return!p.includes('Legs')&&![0,1,2,3,4,5,6].some(i=>getWeekPlanGym(i)==='Legs');
+}
 function planTypeThisWeek(i){const o=getPlanOverride();if(o&&o.types&&o.types[i]!=null)return o.types[i];return Array.isArray(state.weekPlan)?state.weekPlan[i]||null:null;}
 function runTypeThisWeek(i){const o=getPlanOverride();if(o&&o.runTypes&&o.runTypes[i]!=null)return o.runTypes[i];return getWeekPlanRunType(i);}
 let _planUndo=null;
@@ -8949,8 +9025,10 @@ function swapPlanDaysThisWeek(i,j){
   Object.keys(state.planOverrides).forEach(k=>{if(k<oldest)delete state.planOverrides[k];});
   _planUndo={key,prev:state.planOverrides[key]?JSON.parse(JSON.stringify(state.planOverrides[key])):null};
   const ti=planTypeThisWeek(i),tj=planTypeThisWeek(j),ri=runTypeThisWeek(i),rj=runTypeThisWeek(j);
+  const gi=planTypeThisWeek(i)==='Run'?gymTypeThisWeek(i):null,gj=planTypeThisWeek(j)==='Run'?gymTypeThisWeek(j):null;
   const o=state.planOverrides[key]||{types:{},runTypes:{}};
-  o.types[i]=tj;o.types[j]=ti;o.runTypes[i]=rj;o.runTypes[j]=ri;
+  if(!o.gyms)o.gyms={};
+  o.types[i]=tj;o.types[j]=ti;o.runTypes[i]=rj;o.runTypes[j]=ri;o.gyms[i]=gj;o.gyms[j]=gi;
   state.planOverrides[key]=o;
   saveState();haptic('success');
   renderToday();
@@ -8980,13 +9058,16 @@ function getReadinessSwap(r){
 }
 // Plan checks: heavy legs the day before a key run (it blunts the run), key runs back to
 // back, and a week with no rest at all. Works on any week's types/run types.
-function getPlanConflicts(types,runTypes){
+function getPlanConflicts(types,runTypes,gyms){
   const out=[];
+  gyms=gyms||[];
   const isKey=i=>types[i]==='Run'&&KEY_RUNS.has(runTypes[i]);
+  const isLegs=i=>types[i]==='Legs'||(types[i]==='Run'&&gyms[i]==='Legs');
   const name=i=>types[i]==='Run'?(runTypes[i]==='Long'?'long run':runTypes[i].toLowerCase()):types[i];
   for(let i=0;i<7;i++){
     const n=(i+1)%7;
-    if(types[i]==='Legs'&&isKey(n))out.push({day:i,text:`Legs on ${DAY_NAMES[i]}, then ${DAY_NAMES[n]}'s ${name(n)}. Heavy legs blunt a quality run; put Legs after it, or at least two days before.`});
+    if(isLegs(i)&&isKey(n))out.push({day:i,text:`Legs on ${DAY_NAMES[i]}, then ${DAY_NAMES[n]}'s ${name(n)}. Heavy legs blunt a quality run; put Legs after it, or at least two days before.`});
+    if(isKey(i)&&gyms[i]==='Legs')out.push({day:i,same:true,text:`Legs and the ${name(i)} on ${DAY_NAMES[i]}. Run first, then legs at least 6 hours later, or move Legs to after an easy day.`});
     if(isKey(i)&&isKey(n))out.push({day:i,text:`${DAY_NAMES[i]}'s ${name(i)} and ${DAY_NAMES[n]}'s ${name(n)} are back to back. Two hard runs in a row make the second one worse; slot an easy day between.`});
   }
   if(types.every(t=>t&&t!=='Rest'&&t!=='Off'))out.push({day:null,text:'No rest day in the week. One full day off helps everything else land.'});
@@ -8994,7 +9075,7 @@ function getPlanConflicts(types,runTypes){
 }
 function getTemplateConflicts(){
   if(!Array.isArray(state.weekPlan))return[];
-  return getPlanConflicts(state.weekPlan.map(t=>t||'Rest'),[0,1,2,3,4,5,6].map(i=>getWeekPlanRunType(i)));
+  return getPlanConflicts(state.weekPlan.map(t=>t||'Rest'),[0,1,2,3,4,5,6].map(i=>getWeekPlanRunType(i)),[0,1,2,3,4,5,6].map(i=>state.weekPlan[i]==='Run'?getWeekPlanGym(i):null));
 }
 // Readiness-scaled top-set target for the gym logger.
 function getLiftTarget(topLast,lastHasWeight,pb){
@@ -9048,9 +9129,10 @@ function _gcTopLast(lastSets){
 // The plan n days from today; days past Sunday read next week's template.
 function _gcPlanDay(n){
   const j=(today().getDay()+6)%7+n;
-  if(j>=0&&j<7)return{type:planTypeThisWeek(j),runType:runTypeThisWeek(j),day:DAY_NAMES[j]};
+  if(j>=0&&j<7)return{type:planTypeThisWeek(j),runType:runTypeThisWeek(j),gym:gymTypeThisWeek(j),day:DAY_NAMES[j]};
   const k=((j%7)+7)%7;
-  return{type:Array.isArray(state.weekPlan)?state.weekPlan[k]||null:null,runType:getWeekPlanRunType(k),day:DAY_NAMES[k]};
+  const t=Array.isArray(state.weekPlan)?state.weekPlan[k]||null:null;
+  return{type:t,runType:getWeekPlanRunType(k),gym:GYM_PLAN_TYPES.has(t)?t:t==='Run'?getWeekPlanGym(k):null,day:DAY_NAMES[k]};
 }
 // The upper-body day that's waited longest - offered when legs would clash with running.
 function _gcUpperAlt(){
@@ -9113,7 +9195,8 @@ function getMuscleWeekSets(){
     getExerciseMuscles(e.name).forEach(m=>{if(c[m]!=null)c[m]+=n;});
   }));
   loadRunData().filter(r=>r.date>=from).forEach(r=>{
-    Object.entries(VOL_RUN_CONTRIB[volEffortKey(r.effort)]||VOL_RUN_CONTRIB.easy).forEach(([m,v])=>{if(c[m]!=null)c[m]+=v;});
+    const per10=(parseFloat(r.km)||0)/10;
+    Object.entries(VOL_RUN_CONTRIB[volEffortKey(r.effort)]||VOL_RUN_CONTRIB.easy).forEach(([m,v])=>{if(c[m]!=null)c[m]+=v*per10;});
   });
   return c;
 }
@@ -9127,14 +9210,14 @@ function getGymMuscleGaps(type,exNames){
   (lastSame.exercises||[]).forEach(e=>{const n=(e.sets||[]).filter(x=>!x.warmup).length;getExerciseMuscles(e.name).forEach(m=>{usual[m]=(usual[m]||0)+n;});});
   const muscles=GC_TYPE_MUSCLES[type]||[];
   const dow=(today().getDay()+6)%7;
-  let repeats=0;for(let j=dow+1;j<7;j++)if(planTypeThisWeek(j)===type)repeats++;
+  let repeats=0;for(let j=dow+1;j<7;j++)if(gymTypeThisWeek(j)===type)repeats++;
   const week=getMuscleWeekSets();
   const have=new Set((exNames||[]).map(n=>(n||'').toLowerCase()));
   const lib=_gcLibrary();
   const out=[];
   muscles.forEach(m=>{
     const tgt=VOL_MUSCLE_TARGETS[m];if(!tgt)return;
-    const projected=(week[m]||0)+(usual[m]||0)*(1+repeats);
+    const projected=Math.round((week[m]||0)+(usual[m]||0)*(1+repeats));
     if(projected>=tgt.min)return;
     const ex=lib.find(n=>!have.has(n.toLowerCase())&&getExerciseMuscles(n).includes(m));
     out.push({muscle:m,projected,min:tgt.min,max:tgt.max,short:tgt.min-projected,ex:ex||null});
@@ -9378,8 +9461,8 @@ function getGymWeekOverview(){
   const dayLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const scheduled=[];
   for(let i=0;i<7;i++){
-    const type=planTypeThisWeek(i);
-    if(!GYM_PLAN_TYPES.has(type))continue;
+    const type=gymTypeThisWeek(i);
+    if(!type)continue;
     const d=addDays(mon,i);
     const ds=dk(d);
     scheduled.push({day:dayLabels[i],type,ds,done:getSessionDone(ds,'gym'),isToday:ds===dk(now)});
@@ -9405,7 +9488,8 @@ function renderWeekPlanSection(){
   const summary=plan?days.map((d,i)=>{
     const t=plan[i]||'Rest';const c=planColor[t]||'var(--text3)';
     const s=t==='Run'?(runTypeShort[getWeekPlanRunType(i)]||'RUN'):(planShort[t]||'—');
-    return`<div style="text-align:center;"><div style="font-size:8px;font-weight:800;color:var(--text3);margin-bottom:3px;">${d.slice(0,1)}</div><div style="font-size:10px;font-weight:800;color:${c};">${s}</div></div>`;
+    const g=t==='Run'?getWeekPlanGym(i):null;
+    return`<div style="text-align:center;"><div style="font-size:8px;font-weight:800;color:var(--text3);margin-bottom:3px;">${d.slice(0,1)}</div><div style="font-size:10px;font-weight:800;color:${c};">${s}</div>${g?`<div style="font-size:9px;font-weight:800;color:${planColor[g]};margin-top:1px;">+${planShort[g]}</div>`:''}</div>`;
   }).join(''):'';
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header">
@@ -9413,7 +9497,7 @@ function renderWeekPlanSection(){
       <button onclick="toggleWeekPlanEditor()" id="wplan-edit-btn" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">${plan?'Edit':'Set Plan'}</button>
     </div>
     ${plan?`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">${summary}</div>`:`<div style="font-size:13px;color:var(--text3);padding:4px 0 8px;">No plan set. Tap Set Plan to assign workout types to each day.</div>`}
-    ${(()=>{const c=getTemplateConflicts();return c.length?`<div class="plan-checks"><div class="plan-checks-h">Plan check</div>${c.map(x=>`<p>${esc(x.text)}</p>`).join('')}</div>`:(plan?'<div class="plan-checks ok">Plan check: no clashes between runs and leg days.</div>':'');})()}
+    ${(()=>{const c=getTemplateConflicts();return c.length?`<div class="plan-checks"><div class="plan-checks-h">Plan check</div>${c.map(x=>`<p>${esc(x.text)}</p>`).join('')}</div>`:(plan?`<div class="plan-checks ok">Plan check: no clashes between runs and leg days.${legsByRunning()?' Legs are covered by running, so the gym rotation is Push/Pull.':''}</div>`:'');})()}
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">${renderRunTarget()}</div>
     <div id="wplan-editor" style="display:none;margin-top:10px;">
       <div class="week-plan-grid" id="week-plan-grid">
@@ -9428,6 +9512,10 @@ function renderWeekPlanSection(){
             </select>
             <select class="week-plan-pill" id="wplan-run-${i}" onchange="updateWeekPlanRunType(${i},this.value)" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
               ${RUN_TYPES.map(t=>`<option value="${t}"${t===curRunType?' selected':''}>${t}</option>`).join('')}
+            </select>
+            <select class="week-plan-pill ${getWeekPlanGym(i)?typeColorClass[getWeekPlanGym(i)]:''}" id="wplan-gym-${i}" title="Add a gym session to this run day" onchange="this.className='week-plan-pill '+({Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom'}[this.value]||'')" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
+              <option value="">+ Gym</option>
+              ${['Push','Pull','Legs','Core','Custom'].map(t=>`<option value="${t}"${t===getWeekPlanGym(i)?' selected':''}>+ ${t}</option>`).join('')}
             </select>
           </div>`;
         }).join('')}
@@ -9455,21 +9543,25 @@ function updateWeekPlanPill(idx,val){
   el.className=`week-plan-pill ${typeColorClass[val]||'active-rest'}`;
   const runSel=document.getElementById(`wplan-run-${idx}`);
   if(runSel)runSel.style.display=val==='Run'?'':'none';
+  const gymSel=document.getElementById(`wplan-gym-${idx}`);
+  if(gymSel)gymSel.style.display=val==='Run'?'':'none';
 }
 function updateWeekPlanRunType(idx,val){
   if(!state.weekPlanRunType||!Array.isArray(state.weekPlanRunType))state.weekPlanRunType=new Array(7).fill(null);
   state.weekPlanRunType[idx]=val;
 }
 function saveWeekPlan(){
-  const plan=[];
+  const plan=[],gyms=[];
   const runTypes=[...(state.weekPlanRunType||new Array(7).fill(null))];
   for(let i=0;i<7;i++){
     const el=document.getElementById(`wplan-${i}`);
     plan.push(el?el.value:'Rest');
     const runEl=document.getElementById(`wplan-run-${i}`);
     if(runEl&&plan[i]==='Run')runTypes[i]=runEl.value;
+    const gymEl=document.getElementById(`wplan-gym-${i}`);
+    gyms.push(plan[i]==='Run'&&gymEl&&gymEl.value?gymEl.value:null);
   }
-  state.weekPlan=plan;state.weekPlanRunType=runTypes;_weekPlanDraft=null;saveState();toastMsg('Plan saved');haptic('success');
+  state.weekPlan=plan;state.weekPlanRunType=runTypes;state.weekPlanGym=gyms;_weekPlanDraft=null;saveState();toastMsg('Plan saved');haptic('success');
   if(document.getElementById('page-me').classList.contains('active'))renderMe();
   if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
@@ -9603,7 +9695,7 @@ const VOL_MUSCLE_TARGETS={
   Biceps:{min:6,max:10},Triceps:{min:6,max:10},Quads:{min:6,max:10},
   Hamstrings:{min:4,max:8},Glutes:{min:4,max:8},Calves:{min:3,max:6},Core:{min:3,max:6}
 };
-// Run contribution: equivalent sets per muscle by effort type
+// Run contribution: equivalent sets per muscle per 10 km, by effort type
 const VOL_RUN_CONTRIB={
   easy:    {Quads:1,Hamstrings:1,Glutes:1,Calves:2,Core:1},
   long:    {Quads:1,Hamstrings:1,Glutes:1,Calves:2,Core:1},
@@ -9653,10 +9745,13 @@ function renderVolumeTab(){
     const c={};ALL_MUSCLE_GROUPS.forEach(m=>{c[m]=0;});
     runList.forEach(r=>{
       const contrib=RUN_CONTRIB[effortKey(r.effort)]||RUN_CONTRIB.easy;
-      Object.entries(contrib).forEach(([m,v])=>{if(c[m]!==undefined)c[m]+=v;});
+      const per10=(parseFloat(r.km)||0)/10;
+      Object.entries(contrib).forEach(([m,v])=>{if(c[m]!==undefined)c[m]+=v*per10;});
     });
     return c;
   }
+  const legsRun=legsByRunning();
+  const runKm=list=>list.reduce((a,r)=>a+(parseFloat(r.km)||0),0);
 
   const {from,to,days}=getRange(_volPeriod);
   const fromStr=dk(from),toStr=dk(to);
@@ -9664,11 +9759,15 @@ function renderVolumeTab(){
   const runsInPeriod=run.filter(r=>r.date>=fromStr&&r.date<=toStr);
   const prevFromStr=days?dk(addDays(from,-days)):null;
   const prevSessions=days?gym.filter(s=>s.date>=prevFromStr&&s.date<fromStr):[];
-  const prevCounts=countMuscles(prevSessions);
+  const prevRuns=days?run.filter(r=>r.date>=prevFromStr&&r.date<fromStr):[];
+  const prevGym=countMuscles(prevSessions),prevRun=countRunMuscles(prevRuns);
+  const prevCounts={};ALL_MUSCLE_GROUPS.forEach(m=>{prevCounts[m]=Math.round((prevGym[m]||0)+(prevRun[m]||0));});
+  const periodKm=Math.round(runKm(runsInPeriod));
 
   const gymCounts=countMuscles(sessions);
   const runCounts=countRunMuscles(runsInPeriod);
   const counts={};ALL_MUSCLE_GROUPS.forEach(m=>{counts[m]=(gymCounts[m]||0)+(runCounts[m]||0);});
+  ALL_MUSCLE_GROUPS.forEach(m=>{runCounts[m]=Math.round(runCounts[m]*10)/10;});
 
   const totalSets=Object.values(gymCounts).reduce((a,b)=>a+b,0);
   const totalRunSets=Object.values(runCounts).reduce((a,b)=>a+b,0);
@@ -9680,8 +9779,11 @@ function renderVolumeTab(){
   const periodBtns=periods.map(p=>`<button onclick="_volPeriod='${p.id}';renderVolumeTab();" style="padding:7px 14px;border-radius:20px;border:none;background:${_volPeriod===p.id?'var(--accent)':'var(--surface2)'};color:${_volPeriod===p.id?'#fff':'var(--text2)'};font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${p.label}</button>`).join('');
 
   const bars=ALL_MUSCLE_GROUPS.map(m=>{
-    const gv=gymCounts[m]||0,rv=runCounts[m]||0,v=gv+rv;
+    const gv=gymCounts[m]||0,rv=runCounts[m]||0,v=Math.round(gv+rv);
     const pv=prevCounts[m]||0;
+    // Legs trained by running aren't graded against lifting targets: the bar still shows the
+    // work, but the badge says Running and the figure is km.
+    const byRun=legsRun&&GC_LEG_MUSCLES.has(m);
     const tgt=MUSCLE_TARGETS[m]||{min:6,max:10};
     const minT=tgt.min*wks,maxT=tgt.max*wks;
     const gymPct=Math.round(gv/barMax*100);
@@ -9691,6 +9793,7 @@ function renderVolumeTab(){
     const gymCol='var(--accent2)';
     const runCol='var(--c-teal)';
     const badge=v===0?''
+      :byRun?`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--c-teal);color:var(--c-teal);font-size:10px;font-weight:800;">RUN</span>`
       :isLow?`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--orange);color:var(--orange);font-size:10px;font-weight:800;">LOW</span>`
       :isHigh?`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--accent2);color:var(--accent2);font-size:10px;font-weight:800;">HIGH</span>`
       :`<span style="padding:2px 7px;border-radius:8px;border:1px solid var(--green);color:var(--green);font-size:10px;font-weight:800;">GOOD</span>`;
@@ -9701,9 +9804,9 @@ function renderVolumeTab(){
       <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;position:relative;overflow:hidden;">
         <div style="position:absolute;left:0;top:0;height:100%;width:${gymPct}%;background:${gymCol};border-radius:5px 0 0 5px;"></div>
         <div style="position:absolute;left:${gymPct}%;top:0;height:100%;width:${runPct}%;background:${runCol};${gymPct===0?'border-radius:5px 0 0 5px;':''}"></div>
-        <div style="position:absolute;top:-2px;left:${minPctM}%;width:2px;height:14px;background:color-mix(in srgb,var(--text) 35%,transparent);border-radius:1px;"></div>
+        ${byRun?'':`<div style="position:absolute;top:-2px;left:${minPctM}%;width:2px;height:14px;background:color-mix(in srgb,var(--text) 35%,transparent);border-radius:1px;"></div>`}
       </div>
-      <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:${v>0?(isGood?'var(--green)':isLow?'var(--orange)':'var(--accent2)'):'var(--text3)'};">${v} sets</div>
+      <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:${byRun?'var(--c-teal)':v>0?(isGood?'var(--green)':isLow?'var(--orange)':'var(--accent2)'):'var(--text3)'};">${byRun?periodKm+' km':v+' sets'}</div>
       <div style="width:40px;text-align:center;">${v>0?badge:''}</div>
       <div style="width:14px;text-align:center;font-size:13px;font-weight:800;color:${trendCol};">${trendArrow}</div>
     </div>`;
@@ -9717,23 +9820,24 @@ function renderVolumeTab(){
 
   el.innerHTML=`
     <div class="chart-card" style="margin-bottom:10px;">
-      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} session${sessions.length!==1?'s':''} · ${totalSets} gym set${totalSets!==1?'s':''}${totalRunSets>0?' · '+runsInPeriod.length+' run'+(runsInPeriod.length!==1?'s':''):''}</span></div>
+      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} session${sessions.length!==1?'s':''} · ${totalSets} gym set${totalSets!==1?'s':''}${totalRunSets>0?' · '+periodKm+' km run':''}</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">${periodBtns}</div>
       ${legend}
       ${totalSets>0||totalRunSets>0?bars:ALL_MUSCLE_GROUPS.map(m=>{
         const tgt=MUSCLE_TARGETS[m]||{min:6,max:10};
         const minPctM=Math.round(tgt.min/Math.max(16,1)*100);
+        const byRun=legsRun&&GC_LEG_MUSCLES.has(m);
         return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);">
           <div style="width:82px;flex-shrink:0;font-size:13px;font-weight:700;color:var(--text3);">${m}</div>
           <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;position:relative;">
-            <div style="position:absolute;top:-2px;left:${minPctM}%;width:2px;height:14px;background:color-mix(in srgb,var(--text) 30%,transparent);border-radius:1px;"></div>
+            ${byRun?'':`<div style="position:absolute;top:-2px;left:${minPctM}%;width:2px;height:14px;background:color-mix(in srgb,var(--text) 30%,transparent);border-radius:1px;"></div>`}
           </div>
-          <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:var(--text3);">0 sets</div>
+          <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:var(--text3);">${byRun?'0 km':'0 sets'}</div>
           <div style="width:40px;"></div>
-          <div style="width:14px;text-align:center;color:var(--orange);font-size:13px;font-weight:800;">↓</div>
+          <div style="width:14px;text-align:center;color:var(--orange);font-size:13px;font-weight:800;">${byRun?'':'↓'}</div>
         </div>`;
       }).join('')}
-      <div style="font-size:10px;color:var(--text3);margin-top:8px;">Work sets only — warmup sets excluded</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5;">Work sets only — warmup sets excluded. Running counts per 10 km (an easy 10k ≈ one session's worth; harder runs count more for quads and hamstrings).${legsRun?' Your plan has no Legs day, so leg muscles are trained by running and not graded against lifting targets.':''}</div>
     </div>`;
 }
 
@@ -9992,7 +10096,7 @@ function updateTrainSubhead(){
   const planType=getTodayPlanType();
   const subhead=document.getElementById('train-subhead');
   if(subhead){
-    if(planType&&planType!=='Rest'&&planType!=='Off')subhead.textContent=`Today: ${planType}`;
+    if(planType&&planType!=='Rest'&&planType!=='Off')subhead.textContent=`Today: ${planLabelThisWeek((today().getDay()+6)%7)}`;
     else subhead.textContent='Log your workout';
   }
 }

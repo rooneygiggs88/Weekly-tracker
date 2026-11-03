@@ -9661,8 +9661,8 @@ function renderWeekPlanSection(){
             <select class="week-plan-pill" id="wplan-run-${i}" onchange="updateWeekPlanRunType(${i},this.value)" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
               ${RUN_TYPES.map(t=>`<option value="${t}"${t===curRunType?' selected':''}>${t}</option>`).join('')}
             </select>
-            <select class="week-plan-pill ${getWeekPlanGym(i)?typeColorClass[getWeekPlanGym(i)]:''}" id="wplan-gym-${i}" title="Add a gym session to this run day" onchange="this.className='week-plan-pill '+({Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom'}[this.value]||'')" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
-              <option value="">+ Gym</option>
+            <select class="week-plan-pill ${getWeekPlanGym(i)?typeColorClass[getWeekPlanGym(i)]:''}" id="wplan-gym-${i}" title="Add a gym session to this run day" onchange="this.className='week-plan-pill '+({Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom'}[this.value]||'');this.options[0].text=this.value?'No gym':'+ Gym'" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
+              <option value="">${getWeekPlanGym(i)?'No gym':'+ Gym'}</option>
               ${['Push','Pull','Legs','Core','Custom'].map(t=>`<option value="${t}"${t===getWeekPlanGym(i)?' selected':''}>+ ${t}</option>`).join('')}
             </select>
           </div>`;

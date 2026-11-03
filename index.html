@@ -182,6 +182,14 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-next-chev{display:inline-block;margin-left:4px;transition:transform 0.2s;}
 .yg-next-chev.open{transform:rotate(180deg);}
 .yg-seg.next{border-style:solid;background:var(--surface2);border-color:transparent;}
+.yg-seg.tap{cursor:pointer;border-color:var(--accent2);border-style:solid;-webkit-tap-highlight-color:transparent;}
+.yg-seg.tap .yg-seg-type{color:var(--accent2);}
+.yg-long-edit{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--surface2);font-size:12px;font-weight:700;color:var(--text2);}
+.yg-long-edit .yg-step{display:flex;align-items:center;gap:10px;}
+.yg-long-edit button{all:unset;cursor:pointer;width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--text);-webkit-tap-highlight-color:transparent;}
+.yg-long-edit button:disabled{opacity:0.35;cursor:default;}
+.yg-long-edit strong{font-size:16px;color:var(--text);min-width:44px;text-align:center;font-variant-numeric:tabular-nums;}
+.yg-long-edit .yg-reset{all:unset;cursor:pointer;color:var(--accent2);font-size:12px;font-weight:700;}
 .yg-week-left{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5;}
 .wr-card{background:var(--surface);border:1px solid rgba(37,99,235,0.35);border-radius:var(--radius);padding:16px 18px;margin:0 0 12px;box-shadow:0 6px 20px rgba(37,99,235,0.08);}
 .wr-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
@@ -7345,7 +7353,23 @@ function getYearGoalWeek(weekOffset=0){
   const leftKm=Math.max(0,target-weekKm);
   const oSum=open.reduce((a,x)=>a+x.w,0);
   open.forEach(x=>{x.left=oSum?leftKm*x.w/oSum:0;});
-  return{target,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
+  // Long run set by hand for this week: it takes that many km and the other open runs
+  // share what's left by their usual weights. The week's total doesn't move.
+  const longKey=dk(mon);
+  const longOv=(state.weekLongKm||{})[longKey];
+  const longSlot=open.find(x=>x.type==='Long');
+  let longMax=0;
+  if(longSlot){
+    const rest=open.filter(x=>x!==longSlot);
+    longMax=rest.length?Math.floor(leftKm):Math.round(leftKm);
+    if(longOv!=null){
+      const lk=Math.max(1,Math.min(longMax,longOv));
+      longSlot.left=lk;longSlot.custom=true;
+      const rSum=rest.reduce((a,x)=>a+x.w,0);
+      rest.forEach(x=>{x.left=rSum?Math.max(0,leftKm-lk)*x.w/rSum:0;});
+    }
+  }
+  return{longKey,longMax,longSlot,target,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
 }
 // Next week's projection sits behind a button showing its km, so you can watch it shrink
 // as you log runs this week. Opens by default on Sundays (planning night).
@@ -7370,6 +7394,19 @@ function renderYearGoalNextWeek(){
     <div class="yg-week-left">Locks in on Monday. Every km you log before then makes it smaller.</div>`:''}
   </div>`;
 }
+let _ygLongOpen=false;
+function toggleYearGoalLong(e){if(e)e.stopPropagation();_ygLongOpen=!_ygLongOpen;renderYearGoalCard();haptic('light');}
+function stepYearGoalLong(d){
+  const w=getYearGoalWeek();if(!w||!w.longSlot)return;
+  const v=Math.max(1,Math.min(w.longMax,Math.round(w.longSlot.left)+d));
+  if(!state.weekLongKm)state.weekLongKm={};
+  state.weekLongKm[w.longKey]=v;saveState();renderYearGoalCard();haptic('light');
+}
+function resetYearGoalLong(){
+  const w=getYearGoalWeek();if(!w)return;
+  if(state.weekLongKm)delete state.weekLongKm[w.longKey];
+  saveState();renderYearGoalCard();haptic('light');
+}
 function renderYearGoalWeek(){
   const w=getYearGoalWeek();
   if(!w||w.target<=0)return'';
@@ -7381,7 +7418,15 @@ function renderYearGoalWeek(){
   const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy'};
   const segs=w.slots.map(x=>x.run
     ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${goalKm(x.run)}</div></div>`
-    :`<div class="yg-seg"><div class="yg-seg-type">${lbl[x.type]}</div><div class="yg-seg-km">${done?'–':Math.round(x.left)}</div></div>`).join('');
+    :x===w.longSlot&&!done
+      ?`<div class="yg-seg tap" onclick="toggleYearGoalLong(event)" role="button" aria-label="Adjust long run"><div class="yg-seg-type">${lbl[x.type]}${x.custom?' •':' ✎'}</div><div class="yg-seg-km">${Math.round(x.left)}</div></div>`
+      :`<div class="yg-seg"><div class="yg-seg-type">${lbl[x.type]}</div><div class="yg-seg-km">${done?'–':Math.round(x.left)}</div></div>`).join('');
+  const lk=w.longSlot?Math.round(w.longSlot.left):0;
+  const longEdit=_ygLongOpen&&w.longSlot&&!done?`<div class="yg-long-edit" onclick="event.stopPropagation()">
+      <span>Long run</span>
+      <span class="yg-step"><button onclick="stepYearGoalLong(-1)" ${lk<=1?'disabled':''} aria-label="Shorter">−</button><strong>${lk} km</strong><button onclick="stepYearGoalLong(1)" ${lk>=w.longMax?'disabled':''} aria-label="Longer">+</button></span>
+      ${w.longSlot.custom?`<button class="yg-reset" onclick="resetYearGoalLong()">Reset</button>`:'<span style="width:34px;"></span>'}
+    </div>`:'';
   let left='';
   if(done)left=`<strong style="color:var(--green);">Week done ✓</strong>${w.weekKm-w.target>=1?` ${f1(w.weekKm-w.target)}km over, which lowers every week's target from here.`:''}`;
   else{
@@ -7393,6 +7438,7 @@ function renderYearGoalWeek(){
     <div class="yg-week-head"><span>This week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span><span><strong>${f1(w.weekKm)}</strong> / ${f1(w.target)} km</span></div>
     <div class="yg-week-bar"><div style="width:${Math.min(100,w.weekKm/w.target*100).toFixed(1)}%;"></div></div>
     <div class="yg-segs" style="grid-template-columns:repeat(${w.slots.length},1fr);">${segs}</div>
+    ${longEdit}
     <div class="yg-week-left">${left}</div>
   </div>`;
 }

@@ -1,0 +1,11 @@
+{
+  "name": "weekly-tracker",
+  "private": true,
+  "description": "Personal training app: tests only, the app itself is index.html",
+  "scripts": {
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "playwright": "1.55.0"
+  }
+}

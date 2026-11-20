@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="89">
+<meta name="app-version" content="90">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -494,6 +494,9 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .wd.gone{opacity:0.35;border-color:transparent;cursor:default;}
 .wd-lbl{font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;}
 .uw-chip em.uw-gym{color:var(--accent2);min-height:0;}
+.yp-call{margin:10px 0;padding:11px 12px;border-radius:12px;font-size:13px;line-height:1.5;color:var(--text2);background:color-mix(in srgb,var(--accent) 8%,var(--surface2));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);}
+.yp-call b{color:var(--text);}
+.yp-call-btn{display:block;margin-top:9px;padding:9px 12px;border-radius:9px;border:none;background:var(--accent);color:var(--on-accent);font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
 .uw-limits{margin-top:9px;font-size:12px;color:var(--text2);}
 .uw-chip.done{border-top-color:var(--green);}
 .uw-chip.done b{color:var(--green);}
@@ -1596,7 +1599,7 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
     </div>
     <div class="chart-card" style="padding:0 0;">
       <div class="settings-row" style="padding:16px 20px;" onclick="exportData()">
-        <div><div class="settings-row-label">Back up now</div><div class="settings-row-meta">Save to Files or iCloud Drive</div></div>
+        <div><div class="settings-row-label">Back up now</div><div class="settings-row-meta" id="backup-meta">Save to Files or iCloud Drive</div></div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </div>
       <div class="settings-row" style="padding:16px 20px;" onclick="document.getElementById('import-file').click()">
@@ -1611,12 +1614,6 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
       </div>
     </div>
     <div class="csv-help">Needs a date column plus any of HRV, resting HR or sleep score, one row per day. Days you've already logged keep their values.</div>
-    <div class="chart-card" style="padding:0 0;margin-top:12px;">
-      <div class="settings-row" style="padding:16px 20px;" onclick="closeModal('settings-modal');openShortcutGuide()">
-        <div><div class="settings-row-label">Morning Shortcut</div><div class="settings-row-meta">Resting HR from Apple Health when your alarm stops</div></div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-    </div>
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
     <input type="file" id="import-morning-file" accept=".csv,.txt,text/csv" style="display:none;" onchange="importMorningCsv(event)">
     <div class="gap-sm"></div>
@@ -2884,7 +2881,7 @@ function renderRunCoachCard(){
   const hrr={Easy:[0.60,0.72],Long:[0.60,0.75],Tempo:[0.84,0.89]}[P.type];
   let paceTxt='',hrTxt='';
   if(fm){
-    const slow=_paceAtPct(fm.vdot,zone[0]),fast=_paceAtPct(fm.vdot,zone[1]);
+    const slow=_paceAtPct(fm.tvdot,zone[0]),fast=_paceAtPct(fm.tvdot,zone[1]);
     paceTxt=`<span class="rc-pace" data-secs="${fast},${slow}">${fmtMS(fast)}–${fmtMS(slow)}/km</span>`;
     const mx=fm.hrMax.v,rest=fm.hrRest.v;
     hrTxt=P.type==='Tempo'?`${Math.round(rest+hrr[0]*(mx-rest))}–${Math.round(rest+hrr[1]*(mx-rest))} bpm`:`under ${Math.round(rest+hrr[1]*(mx-rest))} bpm`;
@@ -2895,12 +2892,12 @@ function renderRunCoachCard(){
   if(P.type==='Tempo'){
     const warm=2,cool=2,mid=Math.max(3,P.km-warm-cool);
     shape=easyDay?`Readiness says ${esc(rd.state.label.toLowerCase())}: run it all easy today and move the tempo.`
-      :pw&&pw.kind==='taper'&&!pw.overridden?`${warm} km easy, ${Math.min(mid,4)} km at tempo pace${fm?` (${fmtMS(_paceAtPct(fm.vdot,0.88))}/km)`:''}, rest easy. Short and sharp in a taper.`
-      :`${warm} km easy, ${mid} km at tempo pace${fm?` (${fmtMS(_paceAtPct(fm.vdot,0.88))}/km, comfortably hard)`:''}, ${cool} km easy.`;
+      :pw&&pw.kind==='taper'&&!pw.overridden?`${warm} km easy, ${Math.min(mid,4)} km at tempo pace${fm?` (${fmtMS(_paceAtPct(fm.tvdot,0.88))}/km)`:''}, rest easy. Short and sharp in a taper.`
+      :`${warm} km easy, ${mid} km at tempo pace${fm?` (${fmtMS(_paceAtPct(fm.tvdot,0.88))}/km, comfortably hard)`:''}, ${cool} km easy.`;
   }else if(P.type==='Long'){
     shape=pw&&pw.overridden?`All of it conversational: no pace work with ${next?esc(next.name||'the race'):'the race'} ${dNext} days out.`
       :pw&&(pw.kind==='taper'||pw.kind==='race')?`Conversational the whole way; this is about time on feet, not fitness.`
-      :`Conversational. If you feel good, the last 3 km can drift towards marathon pace${fm?` (${fmtMS(_paceAtPct(fm.vdot,0.79))}/km)`:''}.`;
+      :`Conversational. If you feel good, the last 3 km can drift towards marathon pace${fm?` (${fmtMS(_paceAtPct(fm.tvdot,0.79))}/km)`:''}.`;
     if(P.km>=20)shape+=` Take fluids and something to eat every 40 minutes or so.`;
   }else{
     shape=easyDay?`Readiness says ${esc(rd.state.label.toLowerCase())}: keep it to the slow end, or cut it short if your legs say so.`:`Fully conversational: if you can't talk in full sentences, slow down.`;
@@ -3132,7 +3129,7 @@ function _getCalendarWeek(weekOffset){
   }
   if(W.coach)var rd=days.find(d=>d.note==='race');
   // Session detail
-  const fm=getFitnessModel(),pace=p=>fm?fmtMS(_paceAtPct(fm.vdot,p)):null;
+  const fm=getFitnessModel(),pace=p=>fm?fmtMS(_paceAtPct(fm.tvdot,p)):null;
   const build=W.kind==='build'&&!W.overridden,recovery=W.kind==='recovery';
   let firstRunAfterRace=!!raceBefore,strides=false;
   const nextRace=getRaces().find(r=>r.date>=monK);
@@ -3396,6 +3393,12 @@ function renderUsualWeek(){
 }
 function calPick(mon,key){_calPick=_calPick&&_calPick.key===key&&_calPick.mon===mon?null:{mon,key};renderPlanCalendar();}
 function calMove(mon,key,i){state.calMoves=state.calMoves||{};state.calMoves[mon]=state.calMoves[mon]||{};state.calMoves[mon][key]=i;_calPick=null;saveState();haptic('light');refreshPlanViews();}
+// Back to the coach's week: clears your moves, run edits and busy days for that week.
+function resetWeekAll(mon){
+  if(!confirm('Reset this week to the coach\'s plan? Your moves, edits and busy days for it are cleared.'))return;
+  ['calMoves','weekSlotEdits','weekDays'].forEach(k=>{if(state[k])delete state[k][mon];});
+  _cwMemo={};saveState();haptic('light');toastMsg('Week reset to the coach\'s plan');refreshPlanViews();
+}
 function calReset(mon){if(state.calMoves)delete state.calMoves[mon];saveState();refreshPlanViews();}
 function renderPlanCalendar(){
   const el=document.getElementById('plan-cal-wrap');if(!el)return;
@@ -3420,7 +3423,7 @@ function renderPlanCalendar(){
       const empty=!done&&!plan&&!gym?`<div class="pc-rest">${d.past?'':'Rest'}</div>`:'';
       return`<div class="pc-day${d.isToday?' today':''}${d.past?' past':''}"><div class="pc-d"><b>${_CAL_DAY[d.i]}</b><span>${new Date(d.ds+'T12:00:00').getDate()}</span></div><div class="pc-items">${done}${plan}${gym}${empty}</div></div>`;
     }).join('');
-    return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${shape}${planMode()==='coach'?((state.weekDays||{})[w.mon]?`<button onclick="keepWeekDays(${w.weekOffset})">Keep these days</button>`:''):reshaped?`<button onclick="promoteUsualWeek(${w.weekOffset})">Make this my usual week</button>`:''}${moved?`<button onclick="calReset('${w.mon}')">Reset moves</button>`:''}</div>${w.weekOffset===0&&planMode()==='coach'?'':renderWeekDays(w.weekOffset)}${w.coach&&(w.coach.summary||w.coach.notes.length)&&!(w.weekOffset===0&&planMode()==='coach')?`<div class="pc-sum">${[w.coach.summary,...w.coach.notes].filter(Boolean).join(' ')}</div>`:''}${rows}</div>`;
+    return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${shape}${planMode()==='coach'?((state.weekDays||{})[w.mon]?`<button onclick="keepWeekDays(${w.weekOffset})">Keep these days</button>`:''):reshaped?`<button onclick="promoteUsualWeek(${w.weekOffset})">Make this my usual week</button>`:''}${moved||(state.weekSlotEdits||{})[w.mon]||(state.weekDays||{})[w.mon]?`<button onclick="resetWeekAll('${w.mon}')">Reset week</button>`:''}</div>${w.weekOffset===0&&planMode()==='coach'?'':renderWeekDays(w.weekOffset)}${w.coach&&(w.coach.summary||w.coach.notes.length)&&!(w.weekOffset===0&&planMode()==='coach')?`<div class="pc-sum">${[w.coach.summary,...w.coach.notes].filter(Boolean).join(' ')}</div>`:''}${rows}</div>`;
   };
   el.innerHTML=`<div class="chart-card pc-card"><div class="chart-card-header"><span class="chart-card-title">Plan</span><span class="chart-card-val">tap a run to move or change it</span></div>
     ${renderUsualWeek()}
@@ -3491,7 +3494,7 @@ function renderTodayPlanFromCalendar(readiness){
   if(run){
     const fm=getFitnessModel();
     const zone={Easy:[0.62,0.70],Long:[0.62,0.72],Tempo:[0.86,0.88]}[run.type];
-    const paceTxt=fm&&zone?`${fmtMS(_paceAtPct(fm.vdot,zone[1]))}–${fmtMS(_paceAtPct(fm.vdot,zone[0]))}/km`:'';
+    const paceTxt=fm&&zone?`${fmtMS(_paceAtPct(fm.tvdot,zone[1]))}–${fmtMS(_paceAtPct(fm.tvdot,zone[0]))}/km`:'';
     const effort=run.sub?({Long:'Long Run',B2B:'Long Run',Tempo:'Tempo',Sharpener:'Tempo',Intervals:'Intervals'}[run.sub]||'Easy'):({Long:'Long Run',Tempo:'Tempo',Easy:'Easy'}[run.type]||'Easy');
     const rTxt=rk==='recover'?'Swap it for rest or 20-30 minutes very easy; the plan will rebalance.'
       :rk==='pace'?(run.type==='Tempo'?'Run it all easy today and move the tempo later in the week.':'Keep it to the slow end of the range, and cut it short if your legs say so.')
@@ -3634,7 +3637,7 @@ function renderRunTrendsCoach(runs){
   // Quality pace stalled.
   const q=runs.filter(x=>_runGroup(x.effort)==='quality'&&_tlEffortKey(x.effort)!=='Race'&&_runPaceSecs(x)).map(x=>({ds:x.date,v:_runPaceSecs(x)}));
   const qNow=windowMedian(q,dk(today()),56,3),qThen=windowMedian(q,_dsAgo(84),56,3);
-  if(qNow&&qThen&&Math.abs(qNow-qThen)<4)lines.push(`<b>Tempo pace has barely moved in 12 weeks</b> (${fmtMS(qNow)}/km). After the races, one weekly threshold session (e.g. 3 × 10 minutes at ${fm?fmtMS(_paceAtPct(fm.vdot,0.88)):'tempo'}/km) is the usual way to move it.`);
+  if(qNow&&qThen&&Math.abs(qNow-qThen)<4)lines.push(`<b>Tempo pace has barely moved in 12 weeks</b> (${fmtMS(qNow)}/km). After the races, one weekly threshold session (e.g. 3 × 10 minutes at ${fm?fmtMS(_paceAtPct(fm.tvdot,0.88)):'tempo'}/km) is the usual way to move it.`);
   // Long run share.
   const longest=recent.reduce((a,x)=>Math.max(a,km(x)),0),wkAvg=allKm/4;
   if(wkAvg>=20&&longest>wkAvg*0.5)lines.push(`<b>Your longest recent run (${fmtKm(longest)} km) is over half a typical week.</b> Fine for an ultra runner, but spreading it over the week is easier to recover from.`);
@@ -5824,7 +5827,7 @@ function renderRunSection(){
     }).join('')}
   </div>`:'';
   el.innerHTML=`
-  ${_runLogDate===dk(now)?renderRunCoachCard():''}
+  ${_runLogDate===dk(now)?renderRunCoachCard():''}${paceInsightHtml()}
   ${dayRuns.length?renderRunPBBanner(dayRuns[dayRuns.length-1])+renderRunDebriefCard(dayRuns[dayRuns.length-1]):''}
   <div class="run-input-card">
     ${weekNavHtml}
@@ -5840,7 +5843,7 @@ function renderRunSection(){
     ${_runLogDate===dk(now)?renderRunEffortSuggestion():''}
     <div id="effort-container" style="border-radius:10px;border:1px solid transparent;padding:3px;margin:-3px;transition:border-color 0.2s;">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
-        ${['Easy','Tempo','Intervals','Race','Long Run','Recovery'].map(e=>`<button onclick="selectEffort('${e}')" id="eff-${e.replace(' ','-')}" style="padding:8px 6px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
+        ${['Easy','Tempo','Intervals','Race','Long Run','Recovery'].map(e=>`<button onclick="pickEffort('${e}')" id="eff-${e.replace(' ','-')}" style="padding:8px 6px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
       </div>
     </div>
     <div style="height:12px;"></div>
@@ -5862,7 +5865,7 @@ function renderRunSection(){
       ${last.km&&last.time?`<div style="text-align:right;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${fmtPace(last.km/parseTimeToSecs(last.time))}</div><div style="font-size:11px;color:var(--text3);">avg pace</div></div>`:''}
     </div></div>`:''}
 `;
-  selectedEffort='';
+  selectedEffort='';_autoEffort=null;
   if(document.getElementById('rc-wx'))fillRunWeather();
 }
 let _runLogDate=null;
@@ -5877,6 +5880,7 @@ function shiftRunWeek(dir){
   _runLogDate=dk(addDays(mon,6))>dk(now)?dk(now):dk(addDays(mon,6));
   renderRunSection();
 }
+function pickEffort(e){_autoEffort=null;selectEffort(e);updatePacePreview();}
 function selectEffort(e){
   selectedEffort=e===selectedEffort?'':e;
   document.querySelectorAll('[id^="eff-"]').forEach(b=>{
@@ -5887,10 +5891,82 @@ function selectEffort(e){
   });
   if(selectedEffort){const c=document.getElementById('effort-container');if(c)c.style.borderColor='transparent';}
 }
+// ── PACE INSIGHTS ──
+// Runna's best idea, done in the open: if your last three quality sessions all came in
+// clearly faster (or slower) than their targets, offer to move your training paces.
+// Applied as an offset on the fitness model used for training paces only; race
+// predictions stay purely on your race and heart-rate evidence.
+function getPaceInsight(){
+  const fm=getFitnessModel();if(!fm)return null;
+  const since=state.paceAdjAt||'0000';
+  const q=loadRunData().filter(r=>['Tempo','Intervals'].includes(r.effort)&&r.date>=_dsAgo(42)&&r.date>since).sort((a,b)=>a.date.localeCompare(b.date)).slice(-3);
+  if(q.length<3)return null;
+  const diffs=q.map(r=>{const spk=_runSpk(r),t=getRunTargetSpk(r.effort);return spk&&t?spk-t:null;}).filter(x=>x!=null);
+  if(diffs.length<3)return null;
+  const avg=diffs.reduce((a,b)=>a+b,0)/diffs.length;
+  const faster=diffs.every(d=>d<-8),slower=diffs.every(d=>d>10);
+  if(!faster&&!slower)return null;
+  const delta=Math.max(-1.5,Math.min(1.5,Math.round(-avg/6*2)/2));
+  if(!delta)return null;
+  return{delta,avg:Math.round(avg),n:diffs.length,faster,tempoNow:fmtMS(_paceAtPct(fm.tvdot,0.88)),tempoNew:fmtMS(_paceAtPct(fm.tvdot+delta,0.88))};
+}
+function applyPaceInsight(){
+  const pi=getPaceInsight();if(!pi)return;
+  state.vdotAdj=Math.round(((+state.vdotAdj||0)+pi.delta)*10)/10;state.paceAdjAt=dk(today());
+  _cwMemo={};saveState();haptic('success');toastMsg(`Training paces ${pi.faster?'quickened':'eased'}: tempo now ${pi.tempoNew}/km`);refreshActivePage();
+}
+function resetPaceAdj(){state.vdotAdj=0;state.paceAdjAt=dk(today());_cwMemo={};saveState();toastMsg('Training paces back to your fitness model');refreshActivePage();}
+function paceInsightHtml(){
+  const pi=getPaceInsight(),adj=+state.vdotAdj||0;
+  if(!pi&&!adj)return'';
+  return`<div class="chart-card pi-card"><div class="rc-eyebrow">Pace insight</div>
+    ${pi?`<p class="rc-p"><b>Your last ${pi.n} quality sessions all came in ${pi.faster?'faster':'slower'} than their targets</b> (by about ${Math.abs(pi.avg)} s/km on average). ${pi.faster?'You\'ve outgrown them:':'They\'re a bit ambitious right now:'} move tempo from ${pi.tempoNow} to <b>${pi.tempoNew}/km</b>, with every other training pace shifting to match?</p>
+      <button class="rc-use" onclick="applyPaceInsight()">${pi.faster?'Quicken my paces':'Ease my paces'}</button>`:''}
+    ${adj?`<p class="rc-p" style="margin-top:${pi?10:0}px;">Training paces are ${adj>0?'quicker':'easier'} than your fitness model by ${Math.abs(adj)} (from your sessions). Race predictions aren't affected. <button class="yg-link" style="margin:0;" onclick="resetPaceAdj()">Reset</button></p>`:''}
+  </div>`;
+}
+// ── AUTO-TAG ──
+// What a run most likely was, from the date (a race?), the distance against your normal
+// run, the average pace against the plan's zones and what was planned that day. It's
+// pre-selected unless you've picked an effort yourself, and it says why.
+let _autoEffort=null;
+function guessEffort(km,secs,date){
+  if(!(km>0&&secs>0))return null;
+  const race=getRaces().find(r=>r.date===date&&Math.abs(+r.km-km)<=+r.km*0.12);
+  if(race)return{e:'Race',why:`it's ${esc(race.name||'race')} day`};
+  const st=_runStats(),spk=secs/km,fm=getFitnessModel();
+  const longKm=Math.max(14,st.avg*1.2);
+  const planned=typeof getCalendarRunOn==='function'?getCalendarRunOn(date):null;
+  // Your own easy pace (median of recent easy and long runs) is the best yardstick;
+  // the fitness model's zones are the fallback when there aren't enough of them.
+  const own=loadRunData().filter(r=>['Easy','Long Run'].includes(r.effort)&&r.date>=_dsAgo(56)&&r.date!==date).map(r=>_runSpk(r)).filter(Boolean).sort((a,b)=>a-b);
+  if(own.length>=4){
+    const med=own[Math.floor(own.length/2)];
+    if(spk<=med-30){const iv=planned&&planned.sub==='Intervals';return{e:iv?'Intervals':'Tempo',why:`${fmtPace(km/secs)} is well quicker than your usual easy ${fmtMS(med)}/km`};}
+    if(km>=longKm)return{e:'Long Run',why:`${fmtKm(km)} km is well past your normal ${Math.round(st.avg)} km`};
+    if(spk>=med+25&&km<=st.avg)return{e:'Recovery',why:`${fmtPace(km/secs)} is slower than your usual easy ${fmtMS(med)}/km`};
+    return{e:'Easy',why:`${fmtPace(km/secs)} is around your usual easy ${fmtMS(med)}/km`};
+  }
+  if(fm){
+    const tempo=getRunTargetSpk('Tempo'),slow=_paceAtPct(fm.tvdot,0.6);
+    const easyT=getRunTargetSpk('Easy');
+    if(spk<=Math.max(tempo+15,easyT-20)){const iv=planned&&planned.sub==='Intervals';return{e:iv?'Intervals':'Tempo',why:`${fmtPace(km/secs)} is ${iv?'quality-session':'tempo-session'} pace${iv?' and intervals were planned':''}`};}
+    if(km>=longKm)return{e:'Long Run',why:`${fmtKm(km)} km is well past your normal ${Math.round(st.avg)} km`};
+    if(spk>=slow+10&&km<=st.avg)return{e:'Recovery',why:`${fmtPace(km/secs)} is slower than easy pace`};
+    return{e:'Easy',why:`${fmtPace(km/secs)} is in your easy range`};
+  }
+  if(km>=longKm)return{e:'Long Run',why:`${fmtKm(km)} km is well past your normal ${Math.round(st.avg)} km`};
+  return null;
+}
 function updatePacePreview(){
   const km=parseFloat(document.getElementById('run-km').value)||0;
   const secs=parseTimeToSecs((document.getElementById('run-time').value||'').trim());
-  document.getElementById('pace-preview').textContent=km>0&&secs>0?fmtPace(km/secs):'';
+  const el=document.getElementById('pace-preview');
+  const pace=km>0&&secs>0?fmtPace(km/secs):'';
+  const g=guessEffort(km,secs,typeof _runLogDate!=='undefined'?_runLogDate:dk(today()));
+  if(g&&(!selectedEffort||selectedEffort===_autoEffort)&&g.e!==selectedEffort){selectEffort(g.e);}
+  if(g&&(!selectedEffort||selectedEffort===g.e))_autoEffort=g.e;
+  el.innerHTML=pace+(g?` <span style="color:var(--text3);font-weight:600;">· looks like ${g.e==='Long Run'?'a long run':g.e==='Easy'?'an easy run':g.e==='Intervals'?'intervals':g.e==='Recovery'?'a recovery run':g.e==='Race'?'the race':'a tempo'}: ${g.why}${selectedEffort&&selectedEffort!==g.e?` (you picked ${esc(selectedEffort.toLowerCase())})`:''}</span>`:'');
 }
 function saveRun(){
   const kmEl=document.getElementById('run-km');
@@ -6948,7 +7024,7 @@ function _vo2At(ests,ds){
 let _fmCache=null;
 function getFitnessModel(){
   const runs=loadRunData();
-  const key=JSON.stringify([runs.length,runs[runs.length-1],getVo2Log().slice(-3),(state.profile||{}).maxHr,dk(today()),getHrRest().v]);
+  const key=JSON.stringify([runs.length,runs[runs.length-1],getVo2Log().slice(-3),(state.profile||{}).maxHr,dk(today()),getHrRest().v,state.vdotAdj||0]);
   if(_fmCache&&_fmCache.key===key)return _fmCache.m;
   const m=(()=>{
     const ests=vo2RunEstimates(runs),td=dk(today());
@@ -6977,7 +7053,7 @@ function getFitnessModel(){
     const now=raw*dRatio,ago=agoRaw!=null?agoRaw*dRatio:null;
     const vdot=raw*pRatio,vdotAgo=agoRaw!=null?agoRaw*pRatio:null;
     const preds=PREDICT_DISTS.map(d=>({...d,secs:Math.round(timeForVdot(vdot,d.km)),agoSecs:vdotAgo!=null?Math.round(timeForVdot(vdotAgo,d.km)):null}));
-    return{now,ago,vdot,vdotAgo,cal:gCal||rCal,gCal,rCal,series,preds,n:ests.filter(e=>e.ds>=_dsAgo(41)).length,hrMax:getHrMax(),hrRest:getHrRest()};
+    return{now,ago,vdot,tvdot:vdot+(+state.vdotAdj||0),vdotAgo,cal:gCal||rCal,gCal,rCal,series,preds,n:ests.filter(e=>e.ds>=_dsAgo(41)).length,hrMax:getHrMax(),hrRest:getHrRest()};
   })();
   _fmCache={key,m};
   return m;
@@ -7246,7 +7322,7 @@ function renderTrendsRunAnalysis(){
     ${runs.length>5?`<button onclick="openRunLogModal()" style="width:100%;margin-top:10px;padding:9px;background:none;border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">View all ${runs.length} runs</button>`:''}
   </div>`;
 
-  return renderRunTrendsCoach(runs)+renderRunProgressCard()+summary+renderRunPBCard(runs)+renderPaceTrendCard(runs)+renderAerobicFitnessCard(runs)+renderRacePredictorCard(runs)+effortChart+longRunChart+renderWhatMovesCard('Running')+runLog;
+  return renderRunTrendsCoach(runs)+paceInsightHtml()+renderRunProgressCard()+summary+renderRunPBCard(runs)+renderPaceTrendCard(runs)+renderAerobicFitnessCard(runs)+renderRacePredictorCard(runs)+effortChart+longRunChart+renderWhatMovesCard('Running')+runLog;
 }
 
 // Weeks (of the last 12) that had at least one gym session, trimmed so leading
@@ -8155,6 +8231,14 @@ function _fffTaperRange(km){return km<=10.5?[4,7]:km<=25?[7,10]:[10,21];}
 // exponentially from ~85% to ~40% of normal - about a 45-55% cut overall, inside the
 // 41-60% range the Bosquet et al. (2007) meta-analysis found worked best, with
 // intensity and frequency kept.
+// The same projection, with each day's training scaled by the plan's week for that day.
+function projectFffPlan(hist,endDs,factor){
+  const week=_fffTypicalWeek(hist.map),end=new Date(endDs+'T12:00:00');
+  let s=hist.state,d=new Date(dk(today())+'T12:00:00');const out=[];
+  s=_fffStep(s,hist.map[dk(d)]||week[(d.getDay()+6)%7]*factor(dk(d)));d=addDays(d,1);
+  for(;d<=end;d=addDays(d,1)){out.push({ds:dk(d),fit:s.fit,fat:s.fat,form:_fffForm(s),proj:true});s=_fffStep(s,week[(d.getDay()+6)%7]*factor(dk(d)));}
+  return out;
+}
 function projectFff(hist,endDs,taperDays){
   const week=_fffTypicalWeek(hist.map);
   const end=new Date(endDs+'T12:00:00');
@@ -8185,6 +8269,20 @@ function getRaceTaperPlan(){
   // of the Fresh zone (~+12%) - long enough to shed fatigue, short enough to keep fitness.
   // Once the taper has started it stays started (re-searching daily would keep sliding the start
   // to "tomorrow" as the race nears), and inside the shortest sensible taper it has started.
+  const yw=state.yearRunGoal&&getYearGoalWeek();
+  if(yw&&yw.plan&&yw.plan.weeks.length){
+    const weeks=yw.plan.weeks,base=Math.max(1,yw.base||_weekKmBefore(getMonday(today()),4));
+    const tw=weeks.find(w=>w.race&&w.race.date===r.date&&(w.kind==='taper'||w.kind==='race'));
+    const startMon=tw?tw.mon:dk(getMonday(new Date(r.date+'T12:00:00')));
+    const taperDays=Math.max(1,Math.round((new Date(r.date+'T12:00:00')-new Date(startMon+'T12:00:00'))/864e5));
+    const factor=ds=>{const m=dk(getMonday(new Date(ds+'T12:00:00')));const w=weeks.find(x=>x.mon===m);return w?w.target/(base*(w.days||7)/7):1;};
+    const withPlan=projectFffPlan(hist,r.date,factor),noTaper=projectFff(hist,r.date,0);
+    const raceMorning=withPlan[withPlan.length-1]||{fit:hist.state.fit,fat:hist.state.fat,form:_fffForm(hist.state)};
+    const isB=r.priority==='B';
+    return{race:r,km,daysToRace,taperDays,taperStart:startMon,daysToTaper:Math.max(0,daysToRace-taperDays),
+      raceMorning,raceNoTaper:noTaper[noTaper.length-1]||raceMorning,fitNow:hist.state.fit,proj:withPlan,fromPlan:true,isB,
+      tw:tw?weeks.filter(w=>w.race&&w.race.date===r.date&&(w.kind==='taper'||w.kind==='race')).map(w=>({mon:w.mon,target:w.target,kind:w.kind})):[]};
+  }
   const [minDays,maxDaysRaw]=_fffTaperRange(km);
   let taperDays;
   if(r.taperFor===r.date&&r.taperFrom&&r.taperFrom<=dk(today()))taperDays=Math.round((new Date(r.date+'T12:00:00')-new Date(r.taperFrom+'T12:00:00'))/864e5);
@@ -8305,6 +8403,7 @@ function renderFitnessFormCard(){
   const zone=fffZone(now.form);
   const plan=getRaceTaperPlan(),rec=getRaceRecovery();
   let pts=hist.days.slice(-90),raceIdx=null;
+  if(hist.now&&hist.now.afterToday)pts=pts.slice(0,-1).concat([hist.now]);
   if(plan){pts=pts.concat(plan.proj);raceIdx=pts.length-1;}
   let raceHtml='';
   if(rec){
@@ -8315,11 +8414,11 @@ function renderFitnessFormCard(){
     const fmtF=v=>`${v>=0?'+':''}${Math.round(v)}%`;
     raceHtml=`<div class="fff-race"><div class="fff-race-h">${esc(plan.race.name||'Race')} · ${plan.daysToRace} days</div>
       <div class="fff-race-grid">
-        <div><span>Start taper</span><strong>${plan.daysToTaper>0?fmtShortDate(plan.taperStart):'Now'}</strong><em>${plan.taperDays} days out</em></div>
+        <div><span>${plan.fromPlan&&plan.isB?'Race week':'Start taper'}</span><strong>${plan.daysToTaper>0?fmtShortDate(plan.taperStart):'Now'}</strong><em>${plan.taperDays} days out</em></div>
         <div><span>Race-morning form</span><strong style="color:${rz.col};">${fmtF(plan.raceMorning.form)}</strong><em>${rz.label}</em></div>
-        <div><span>Without a taper</span><strong style="color:${nz.col};">${fmtF(plan.raceNoTaper.form)}</strong><em>${nz.label}</em></div>
+        <div><span>${plan.fromPlan?'Without the easing':'Without a taper'}</span><strong style="color:${nz.col};">${fmtF(plan.raceNoTaper.form)}</strong><em>${nz.label}</em></div>
       </div>
-      <p>Over the last ${plan.taperDays} days, cut weekly volume to roughly half while keeping your usual number of runs and a little race-pace work. That's the shape a meta-analysis of taper studies found worked best. Fitness eases from ${Math.round(plan.fitNow)} to about ${Math.round(plan.raceMorning.fit)}, a price worth paying to arrive fresh.</p></div>`;
+      ${plan.fromPlan?`<p>${plan.isB?`A B race, so you train through: the plan only eases race week, to ${Math.round((plan.tw[plan.tw.length-1]||{}).target||0)} km.`:`Your plan's taper: ${plan.tw.map(w=>`${Math.round(w.target)} km (${w.kind==='race'?'race week':'taper'})`).join(', then ')}.`} Race-morning form is projected from those actual weeks; switch the race to A on the goal card for a full taper.</p>`:`<p>Over the last ${plan.taperDays} days, cut weekly volume to roughly half while keeping your usual number of runs and a little race-pace work. That's the shape a meta-analysis of taper studies found worked best. Fitness eases from ${Math.round(plan.fitNow)} to about ${Math.round(plan.raceMorning.fit)}, a price worth paying to arrive fresh.</p>`}</div>`;
   }else if(!state.race||!state.race.date||daysUntil(state.race.date)<0){
     raceHtml=`<button class="fff-setrace" onclick="openRaceModal()">Add your next race to plan the taper</button>`;
   }
@@ -9712,6 +9811,10 @@ function importMorningCsv(evt){
 const APP_BUILD=(()=>{const m=document.querySelector('meta[name="app-version"]');return m?m.content:'';})();
 function openSettings(){
   const b=document.getElementById('app-build');if(b)b.textContent=APP_BUILD;
+  const bm=document.getElementById('backup-meta');
+  if(bm){const d=state.lastBackupAt?Math.floor((today()-new Date(state.lastBackupAt+'T12:00:00'))/864e5):null;
+    bm.innerHTML=`${d==null?'Never backed up':d<=0?'Backed up today':`Last backup ${d} day${d===1?'':'s'} ago`} · ${_storagePersisted?'storage protected':'storage not yet protected'}`;
+    if(d==null||d>=7)bm.style.color='var(--orange)';}
   document.getElementById('settings-name-input').value=state.userName||'';
   const tp=getThemePref();
   document.querySelectorAll('#theme-seg .seg-tab').forEach(b=>b.classList.toggle('active',b.dataset.themePref===tp));
@@ -10204,14 +10307,30 @@ function renderYearPlanBlock(){
     <div class="yp-hint">The build limit changes this week and the build weeks. Race, taper and recovery weeks${P.weeks[1]&&P.weeks[1].fixed?', like next week,':''} stay as set; switch a race between A and B to change those.</div>
     ${what?`<div class="yp-what">${what}</div>`:''}
   </div>`;
+  // Coach's call: if meeting the goal needs weeks well past your normal, say what Stretch
+  // would give instead, and offer it in one tap.
+  let reality='';
+  if(P.capMode==='goal'&&build.length&&P.base){
+    const pk=Math.max(...build.map(x=>x.target/(x.days/7)),0),over=Math.round((pk/P.base-1)*100);
+    if(over>25){
+      const save=g.capMode;g.capMode='stretch';const SP=buildYearPlan(getMonday(today()),w.plan.R);g.capMode=save;
+      const sb=SP.weeks.filter(x=>!x.fixed),spk=sb.length?Math.max(...sb.map(x=>x.target/(x.days/7))):0;
+      reality=`<div class="yp-call"><b>Coach's call:</b> meeting ${g.targetKm.toLocaleString('en-GB')} km means weeks up to ${Math.round(pk)} km, ${over}% above your normal ${P.base}. That's where injuries come from. Stretch (+25%) keeps weeks to about ${Math.round(spk)} km and reaches ${SP.shortfall<=1?'the goal anyway':`about ${(g.targetKm-SP.shortfall).toLocaleString('en-GB')} km, ${SP.shortfall} short`}. My recommendation: ${SP.shortfall<=1?'Stretch.':'Stretch, and a strong year either way.'}
+        <button class="yp-call-btn" onclick="setPlanCap('stretch',event)">Use Stretch</button></div>`;
+    }
+  }
   return`<div class="yp" onclick="event.stopPropagation()">
     <div class="yp-sum">${summary.split('<div class="yp-risk">')[0]}</div>
-    ${controls}
-    ${summary.includes('<div class="yp-risk">')?'<div class="yp-risk">'+summary.split('<div class="yp-risk">')[1]:''}
+    ${reality}
+    <button class="yg-next-btn" onclick="toggleYpSettings(event)" aria-expanded="${_ypSet}"><span>Plan settings</span><span>build limit · races · ${P.weeks.length} weeks <span class="yg-next-chev${_ypSet?' open':''}">▾</span></span></button>
+    ${_ypSet?`${controls}
+    ${summary.includes('<div class="yp-risk">')&&!reality?'<div class="yp-risk">'+summary.split('<div class="yp-risk">')[1]:''}
     <button class="yg-next-btn" onclick="toggleYearPlan(event)" aria-expanded="${_ygPlanOpen}"><span>Plan to 31 Dec</span><span>${P.weeks.length} weeks <span class="yg-next-chev${_ygPlanOpen?' open':''}">▾</span></span></button>
-    ${_ygPlanOpen?`<div class="yp-list">${rows}<div class="yp-foot">Race weeks are set as a share of your recent ${P.base} km weeks. Build weeks share out the rest, up to ${P.cap??'–'} km. Each week locks in on Monday; whatever you run more or less moves the rest of the plan.</div></div>`:''}
+    ${_ygPlanOpen?`<div class="yp-list">${rows}<div class="yp-foot">Race weeks are set as a share of your recent ${P.base} km weeks. Build weeks share out the rest, up to ${P.cap??'–'} km. Each week locks in on Monday; whatever you run more or less moves the rest of the plan.</div></div>`:''}`:''}
   </div>`;
 }
+let _ypSet=false;
+function toggleYpSettings(e){if(e)e.stopPropagation();_ypSet=!_ypSet;renderYearGoalCard();haptic('light');}
 let _yearGoalRuns=5;
 function setYearGoalRuns(n){
   _yearGoalRuns=n;
@@ -10578,7 +10697,7 @@ function _coachWeek(o,mode,monK,td){
 function _toSecs(t){if(!t)return null;const p=String(t).split(':').map(Number);if(p.some(isNaN))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p.length===2?p[0]*60+p[1]:null;}
 function sessionFor(sub,km,c){
   c=c||{};
-  const fm=getFitnessModel(),P=p=>fm?_paceAtPct(fm.vdot,p):null,f=s=>s?fmtMS(s):null;
+  const fm=getFitnessModel(),P=p=>fm?_paceAtPct(fm.tvdot,p):null,f=s=>s?fmtMS(s):null;
   const easy=fm?`${f(P(0.70))}–${f(P(0.62))}/km`:'conversational';
   const T=f(P(0.88)),I=f(P(0.975)),M=f(P(0.79)),St=f(P(0.75));
   const wn=c.weekNo||0,K=Math.max(1,Math.round(km));
@@ -13214,7 +13333,7 @@ function getRunTargetSpk(type){
   // The same paces the plan prescribes (fitness model), so the debrief and the plan agree.
   const fm=getFitnessModel();
   if(fm){
-    const P=x=>_paceAtPct(fm.vdot,x),easy=P(0.66);
+    const P=x=>_paceAtPct(fm.tvdot,x),easy=P(0.66);
     if(type==='Easy')return easy;
     if(type==='Recovery')return P(0.6);
     if(type==='Long')return P(0.68);
@@ -14093,6 +14212,24 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   localStorage.setItem('rest_time_migration_v2','done');
 })();
 
+// ── DATA SAFETY ──
+// Ask the browser to keep this app's storage (iOS can otherwise clear a web app's data
+// after weeks unopened), and register the service worker so the app opens offline. The
+// worker fetches the page network-first, so updates still arrive straight away.
+var _storagePersisted=false;
+(function dataSafety(){
+  try{if(navigator.storage&&navigator.storage.persisted)navigator.storage.persisted().then(p=>{_storagePersisted=p;if(!p&&navigator.storage.persist)navigator.storage.persist().then(x=>{_storagePersisted=x;});});}catch(e){}
+  try{if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});}catch(e){}
+})();
+// Per-week settings (moves, edits, busy days, swaps) only matter for this week and later;
+// older ones are cleared, along with fields earlier versions no longer use.
+(function tidyState(){
+  const mon=dk(getMonday(today()));let ch=false;
+  ['weekSlotEdits','calMoves','weekDays','planOverrides','weekShape'].forEach(k=>{const o=state[k];if(o&&typeof o==='object')Object.keys(o).forEach(m=>{if(/^\d{4}-\d\d-\d\d$/.test(m)&&m<mon){delete o[m];ch=true;}});});
+  if(state.weekLongKm){delete state.weekLongKm;ch=true;}
+  if(state.yearRunGoal&&state.runTarget!=null){delete state.runTarget;ch=true;}
+  if(ch)saveState();
+})();
 // ── INIT ──
 renderToday();
 handleShortcutLink();

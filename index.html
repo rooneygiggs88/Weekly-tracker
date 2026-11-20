@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="90">
+<meta name="app-version" content="91">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -613,6 +613,11 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .rm-sub{font-size:12.5px;font-weight:600;color:var(--text2);margin:12px 0 8px;}
 .rm-sub b{color:var(--text);}
 .rm-splits{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+.rm-time{display:flex;flex-direction:column;gap:5px;margin-top:6px;}
+.rm-time div{display:grid;grid-template-columns:52px 1fr;gap:8px;font-size:12.5px;line-height:1.4;}
+.rm-time b{font-family:var(--display);font-weight:800;font-size:14px;}
+.rm-time span{color:var(--text2);}
+.rm-report{margin-top:10px;}
 .rm-split{background:var(--surface2);border-radius:9px;padding:6px 4px;text-align:center;}
 .rm-split span{display:block;font-size:9.5px;font-weight:800;color:var(--text3);}
 .rm-split b{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;}
@@ -1554,6 +1559,8 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
     </div>
     <label class="modal-label">Goal time (optional)</label>
     <input class="modal-input" id="race-time-input" type="text" placeholder="mm:ss or h:mm:ss" oninput="updateRacePacePreview()">
+    <label class="modal-label">Start time (optional)</label>
+    <input class="modal-input" id="race-start-input" type="time" placeholder="09:00">
     <div id="race-pace-preview" style="font-size:12px;font-weight:700;color:var(--accent2);margin:-8px 0 14px;min-height:16px;"></div>
     <button class="btn-primary" onclick="saveRace()" style="margin-bottom:10px;">Save Race</button>
     <button class="btn-ghost" style="width:100%;color:var(--red);" onclick="clearRace()">Remove this race</button>
@@ -2586,10 +2593,75 @@ function toggleRaceCheck(id){
   state.raceChecks[k]=state.raceChecks[k]||{};state.raceChecks[k][id]=!state.raceChecks[k][id];
   saveState();haptic('light');renderRaceMode();
 }
+// ── RACE KIT ──
+// The plan for the race itself: a target that's honest about goal vs prediction, km-by-km
+// splits with a controlled start, a race-morning timeline from the start time, fuelling
+// for the distance, and the forecast for the start hour (pace adjusted for heat).
+function racePacePlan(r){
+  const km=+r.km,goal=r.goalTime?parseTimeToSecs(r.goalTime):0,proj=getRaceProjection(r),P=proj?proj.projSecs:0;
+  if(!goal&&!P)return null;
+  let target,first,second,why;
+  if(goal&&P&&P-goal>20){
+    // Goal quicker than predicted: start at predicted pace, earn the rest after halfway.
+    target=Math.round(P-Math.min((P-goal)/2,30));
+    first=P/km;second=(target-first*km/2)/(km/2);
+    why=`Your goal is ${fmtDurationFromSecs(P-goal)} quicker than predicted. The plan: the first half at ${fmtMS(first)}/km (your fitness pace), then ${fmtMS(second)}/km if it feels good, for ${fmtDurationFromSecs(target)}. If you're still strong with 2 km to go, empty the tank: that's where the goal lives.`;
+  }else if(goal){
+    target=goal;first=second=goal/km;
+    why=P&&goal-P>20?`You're predicted ${fmtDurationFromSecs(goal-P)} inside the goal. Run goal pace to two-thirds, then race the rest and see what's there.`:`Goal and prediction agree: even pace at ${fmtMS(goal/km)}/km, a touch slower for the first km while it settles.`;
+  }else{target=P;first=second=P/km;why=`No goal set, so this is your predicted time at even pace.`;}
+  // Splits: the first km 4 s slower, given back over the rest.
+  const whole=Math.floor(km),splits=[];let t=0;
+  for(let k=1;k<=whole;k++){let pace=k<=km/2?first:second;if(k===1)pace+=4;else pace-=4/Math.max(1,whole-1);t+=pace;splits.push({k,t:Math.round(t)});}
+  if(km-whole>0.05)splits.push({k:km,t:Math.round(target),fin:true});
+  return{target,first,second,why,splits,proj:P,goal};
+}
+function raceMorning(r){
+  if(!r.start)return null;
+  const [h,m]=r.start.split(':').map(Number),st=h*60+m,at=x=>{const v=(st+x+1440)%1440;return`${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
+  const long=+r.km>=21;
+  return[[at(-180),'Breakfast: mostly carbs you know (porridge, toast and honey, a banana)'],[at(-75),long?'A last small top-up and a few sips of water; coffee if you usually have it':'Coffee if you usually have it, a few sips of water'],[at(-45),'Arrive, toilets before the queues build'],[at(-25),'Warm up: 10 minutes easy, then 4 strides'],[at(-10),'Into the start pen; stay warm'],[r.start,'Go: hold back for the first km']];
+}
+function raceFuel(r){
+  const km=+r.km;
+  if(km<15)return'No fuel needed for this distance; a few sips at a water station if it\'s warm.';
+  if(km<30)return'One gel around 40 minutes and another at about 75 if you\'re still going, each with water. Practise it on a long run first.';
+  if(km<45)return'About 60 g of carbs an hour from 30 minutes in (a gel every 25–30 minutes), with water at every station.';
+  return'60–90 g of carbs an hour from the start, water to thirst, salt in the heat. Eat early; it\'s much harder to catch up.';
+}
+function fillRaceWx(r){
+  const el=document.getElementById('rm-wx');if(!el||!state.weatherLoc)return;
+  const d=daysUntil(r.date);if(d>6||d<0)return;
+  const loc=state.weatherLoc,hr=r.start?+r.start.split(':')[0]:9;
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&hourly=temperature_2m,dew_point_2m,wind_speed_10m,precipitation_probability&forecast_days=7&timezone=auto`).then(x=>x.json()).then(j=>{
+    const H=j.hourly,i=H.time.indexOf(`${r.date}T${String(hr).padStart(2,'0')}:00`);if(i<0)return;
+    const t=H.temperature_2m[i],dp=H.dew_point_2m[i],w=H.wind_speed_10m[i],rain=H.precipitation_probability[i],heat=_heatSlowPct(t,dp);
+    const plan=racePacePlan(r);
+    el.innerHTML=`<div class="rm-sub" style="margin-top:12px;">Forecast at ${String(hr).padStart(2,'0')}:00</div><div class="rm-tip">${Math.round(t)}°C, wind ${Math.round(w)} km/h${rain>=40?`, ${rain}% chance of rain`:''}. ${heat>=1&&plan?`Warm and humid enough to cost about ${Math.round(heat)}%: aim for ${fmtDurationFromSecs(Math.round(plan.target*(1+heat/100)))} and run by effort.`:t<=4?'Cold: gloves and a layer you can throw away; the first km will feel slow.':'Good racing weather.'}${w>=20?' Tuck in behind others into the wind.':''}</div>`;
+  }).catch(()=>{});
+}
+// After a race: the result against the goal and the prediction, what it says about your
+// fitness, and what it means for the next one.
+function raceReportHtml(){
+  const td=dk(today());
+  const r=[state.race,...(state.extraRaces||[]),...(state.pastRaces||[])].filter(x=>x&&x.date&&x.date<=td&&daysUntil(x.date)>=-3).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if(!r)return'';
+  const run=loadRunData().filter(x=>x.date===r.date&&x.time).sort((a,b)=>Math.abs(a.km-r.km)-Math.abs(b.km-r.km))[0];
+  if(!run||Math.abs(run.km-r.km)>r.km*0.15)return'';
+  const secs=parseTimeToSecs(run.time),goal=r.goalTime?parseTimeToSecs(r.goalTime):0,snap=(state.racePredSnap||{})[r.date];
+  const vs=(a,b)=>{const d=a-b;return Math.abs(d)<5?'bang on':d<0?`${fmtDurationFromSecs(-d)} faster`:`${fmtDurationFromSecs(d)} slower`;};
+  const nx=getRaces().find(x=>x.date>r.date);
+  const np=nx?getRaceProjection(nx):null;
+  const days=Math.max(3,Math.round(r.km/1.609));
+  return`<div class="rm-card rm-report"><div class="rm-eyebrow">Race report</div><div class="rm-name">${esc(r.name||'Race')}: ${esc(run.time)}</div>
+    <div class="rm-tip">${goal?`${vs(secs,goal)} than your ${esc(r.goalTime)} goal`:''}${goal&&snap?'; ':''}${snap?`${vs(secs,snap)} than the app predicted going in (${fmtDurationFromSecs(snap)})`:''}. ${fmtPace(run.km/secs)} average.</div>
+    <div class="rm-tip">Your fitness numbers now include this race${nx&&np?`, so ${esc(nx.name||'the next race')} on ${new Date(nx.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} is now predicted at <b>${np.projTime}</b>${nx.goalTime?` against your ${esc(nx.goalTime)} goal`:''}`:''}. Easy running only for about ${days} days; the plan has already eased off.</div></div>`;
+}
 function renderRaceMode(){
   const el=document.getElementById('race-mode');if(!el)return;
+  const rep=raceReportHtml();
   const r=state.race;
-  if(!r||!r.date||!(+r.km>0)){el.innerHTML='';return;}
+  if(!r||!r.date||!(+r.km>0)){el.innerHTML=rep;return;}
   const d=daysUntil(r.date);
   const runs=loadRunData();
   if(d<0){
@@ -2597,7 +2669,7 @@ function renderRaceMode(){
     el.innerHTML=d>=-3&&!logged?`<button class="rm-after" onclick="showPage('train');switchTrainTab('run');selectRunDay('${r.date}');setTimeout(()=>selectEffort('Race'),60)"><span class="rm-flag">${svgIcon('flag',26)}</span><span><b>How did ${esc(r.name||'the race')} go?</b><span>Log your result and your predictions, PBs and trophies update.</span></span><span class="brief-go">›</span></button>`:'';
     return;
   }
-  if(d>10){el.innerHTML='';return;}
+  if(d>10){el.innerHTML=rep;return;}
   snapRacePrediction(r);
   const km=+r.km,goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
   const proj=getRaceProjection();
@@ -2607,6 +2679,7 @@ function renderRaceMode(){
     el.innerHTML=`<button class="rm-strip" onclick="toggleRaceMode()"><span class="rm-strip-days"><b>${d}</b><i>days</i></span><span class="rm-strip-mid"><b>${esc(r.name||'Race')}</b><span>${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}${proj?` · predicted ${proj.projTime}`:''}</span>${thenTxt?`<span class="rm-then">${thenTxt}</span>`:''}</span><span class="brief-go">›</span></button>`;
     return;
   }
+  const RP=racePacePlan(r),RM=raceMorning(r);
   const pace=goal?goal/km:proj?proj.projSecs/km:null;
   const whole=Math.floor(km);
   const splits=pace?Array.from({length:whole},(_,i)=>i+1).map(k=>`<div class="rm-split"><span>${k}</span><b>${fmtDurationFromSecs(Math.round(pace*k))}</b></div>`).join('')+(km-whole>0.05?`<div class="rm-split fin"><span>${fmtKm(km)}</span><b>${fmtDurationFromSecs(Math.round(pace*km))}</b></div>`:''):'';
@@ -2628,14 +2701,20 @@ function renderRaceMode(){
       <div><div class="rm-eyebrow">Race mode</div><div class="rm-name">${esc(r.name||'Race')}</div><div class="rm-meta">${dateTxt} · ${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</div>${thenTxt?`<div class="rm-then">${thenTxt}</div>`:''}</div>
       <div class="rm-count"><b>${d===0?'Today':d}</b>${d===0?'':`<span>day${d===1?'':'s'}</span>`}</div>
     </div>
-    ${pace?`<div class="rm-sub">${goal?'Goal':'Predicted'} pace <b>${fmtMS(pace)}/km</b>${proj&&goal?` · predicted ${proj.projTime}`:''}${plan&&plan.daysToTaper>0?` · taper from ${fmtShortDate(plan.taperStart)}`:''}</div>
-    <div class="rm-splits">${splits}</div>`:''}
-    ${paceTip?`<div class="rm-tip">${paceTip}</div>`:''}
+    ${pace?`<div class="rm-sub">${goal?'Goal':'Predicted'} pace <b>${fmtMS(pace)}/km</b>${proj&&goal?` · predicted ${proj.projTime}`:''}${plan&&plan.daysToTaper>0?` · ${plan.isB?'race week':'taper'} from ${fmtShortDate(plan.taperStart)}`:''}</div>
+    ${RP?'':`<div class="rm-splits">${splits}</div>`}`:''}
+    ${RP?`<div class="rm-sub" style="margin-top:12px;">Your race plan <b>${fmtDurationFromSecs(RP.target)}</b></div><div class="rm-tip">${RP.why}</div>
+      <div class="rm-splits">${RP.splits.map(x=>`<div class="rm-split${x.fin?' fin':''}"><span>${x.fin?fmtKm(x.k):x.k}</span><b>${fmtDurationFromSecs(x.t)}</b></div>`).join('')}</div>`:paceTip?`<div class="rm-tip">${paceTip}</div>`:''}
+    <div class="rm-sub" style="margin-top:12px;">Race morning</div>
+    ${RM?`<div class="rm-time">${RM.map(([t,x])=>`<div><b>${t}</b><span>${x}</span></div>`).join('')}</div>`:`<button class="rm-more" style="margin-top:4px;" onclick="openRaceModal()">Add the start time for race-morning timings</button>`}
+    <div class="rm-tip" style="margin-top:8px;"><b>Fuel:</b> ${raceFuel(r)}</div>
+    <div id="rm-wx"></div>
     <div class="rm-sub" style="margin-top:12px;">Race-week checklist <b>${doneN}/${all.length}</b></div>
     ${items.map(c=>`<button class="rm-check${checks[c.id]?' done':''}" onclick="toggleRaceCheck('${c.id}')"><span class="rm-box">${checks[c.id]?'✓':''}</span><span>${c.t}</span>${c.d===d?'<em>today</em>':c.d<d?`<em class="later">${c.d===0?'race day':c.d===1?'day before':`${c.d} days out`}</em>`:''}</button>`).join('')}
     ${items.length<all.length||_rmAllChecks?`<button class="rm-more" onclick="toggleRaceChecksAll()">${_rmAllChecks?'Show what is due now':`Show all ${all.length}`}</button>`:''}
     ${d>7?`<button class="rm-more" onclick="toggleRaceMode()">Collapse</button>`:''}
-  </div>`;
+  </div>${rep}`;
+  setTimeout(()=>fillRaceWx(r),0);
 }
 
 // ── TODAY: RINGS + COACH BRIEFING ──
@@ -9283,8 +9362,8 @@ function fmtDurationFromSecs(s){
 // Projects a finish time from recent quality-run pace (Tempo/Fartlek/Intervals/Hard) -
 // a simple heuristic (recent tempo pace applied directly to race distance), not a proper
 // VDOT-style multi-distance conversion, so the copy says so rather than overclaiming precision.
-function getRaceProjection(){
-  const r=state.race;
+function getRaceProjection(race){
+  const r=race||state.race;
   if(!r||!r.date||!r.km)return null;
   const fm=getFitnessModel();
   if(fm){const ps=Math.round(timeForVdot(fm.vdot,+r.km));return{projSecs:ps,pace:fmtPace(r.km/ps),projTime:fmtDurationFromSecs(ps),basis:'at your current fitness'};}
@@ -9667,6 +9746,7 @@ function openRaceModal(which){
   document.getElementById('race-date-input').value=r.date||'';
   document.getElementById('race-km-input').value=r.km||'';
   document.getElementById('race-time-input').value=r.goalTime||'';
+  const _rs=document.getElementById('race-start-input');if(_rs)_rs.value=r.start||'';
   raceDist=r.km?String(r.km):'';
   document.querySelectorAll('#race-dist-row .type-btn').forEach(b=>b.classList.remove('active'));
   updateRacePacePreview();
@@ -9693,8 +9773,9 @@ function saveRace(){
   const date=document.getElementById('race-date-input').value;
   const km=parseFloat(document.getElementById('race-km-input').value)||0;
   const goalTime=(document.getElementById('race-time-input').value||'').trim();
+  const _startEl=document.getElementById('race-start-input'),raceStart=_startEl?(_startEl.value||'').trim():'';
   if(!date){toastMsg('Pick a race date');return;}
-  const rr={name,date,km,goalTime,priority:_racePri};
+  const rr={name,date,km,goalTime,priority:_racePri};if(raceStart)rr.start=raceStart;
   if(_raceEdit==='main')state.race=rr;
   else if(_raceEdit==='new'){
     // The soonest race is always the "next race"; the rest queue behind it.

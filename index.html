@@ -8608,7 +8608,7 @@ function setRacePriority(date,p,e){
 function whatIfPlans(){
   const g=state.yearRunGoal,w=getYearGoalWeek();if(!w)return'';
   const races=[state.race,...(state.extraRaces||[])].filter(r=>r&&r.date&&daysUntil(r.date)>=0);
-  const run=fn=>{const saveCap=g.capMode,saveP=races.map(r=>r.priority);fn();const P=buildYearPlan(getMonday(today()),w.plan.R);g.capMode=saveCap;races.forEach((r,i)=>{r.priority=saveP[i];});return P.shortfall;};
+  const run=fn=>{const saveCap=g.capMode,saveP=races.map(r=>r.priority);fn();const P=buildYearPlan(getMonday(today()),w.plan.R,{cap0:w.plan.weeks[0]?w.plan.weeks[0].cap:null});g.capMode=saveCap;races.forEach((r,i)=>{r.priority=saveP[i];});return P.shortfall;};
   const opts=[];
   if(g.capMode==='goal')return'';
   if(g.capMode!=='stretch')opts.push(['Stretch build limit',run(()=>{g.capMode='stretch';})]);
@@ -8693,7 +8693,20 @@ function getYearGoalWeek(weekOffset=0){
   const rawTarget=Math.round(remainingAtStart*daysThisWeek/daysLeft);
   // The week's number is this week's slot in the plan to 31 Dec (buildYearPlan), so
   // tapers, race weeks and recovery are planned for rather than caught up afterwards.
-  const plan=buildYearPlan(mon,remainingAtStart);
+  // This week can only hold what's done plus the runs still to come at a sensible size:
+  // the long run (your own setting if you've made one) and normal runs for the rest.
+  let cap0=null;
+  if(weekOffset===0){
+    const b=_weekKmBefore(getMonday(today()),4);
+    const nSlots=(YEAR_GOAL_SPLITS[g.runsPerWeek||5]||YEAR_GOAL_SPLITS[5]).length;
+    const daysLeftWk=7-((today().getDay()+6)%7);
+    const openN=Math.min(daysLeftWk,Math.max(0,nSlots-weekRuns.length));
+    const longOpen=!weekRuns.some(r=>r.effort==='Long Run');
+    const lo=(state.weekLongKm||{})[dk(mon)];
+    const longMax=lo!=null?lo:Math.max(16,b*0.45),runMax=Math.max(12,b*0.3);
+    cap0=weekKm+(openN?(longOpen?longMax+(openN-1)*runMax:openN*runMax):0);
+  }
+  const plan=buildYearPlan(mon,remainingAtStart,{cap0});
   const pw=plan.weeks[0]||{target:rawTarget,note:'',race:null,longCap:null};
   const guard={longCap:pw.longCap,base:plan.base};
   let target=pw.target,note=pw.fixed||pw.capped?pw.note:null,race=pw.race;
@@ -8828,7 +8841,7 @@ function weekRaceInfo(mon,base){
 // needed are then spread over the other weeks by days, but never above the safe cap
 // (~15% over your last four weeks) - any week that hits the cap passes the rest on.
 // If it still doesn't fit, the shortfall is reported rather than hidden.
-function buildYearPlan(startMon,R){
+function buildYearPlan(startMon,R,opts){
   const g=state.yearRunGoal;
   const thisMon=getMonday(today());
   const base=_weekKmBefore(thisMon,4);
@@ -8843,7 +8856,11 @@ function buildYearPlan(startMon,R){
   for(let mon=new Date(startMon);mon<=yearEnd;mon=addDays(mon,7)){
     const ws=goalStart>mon?goalStart:mon,sun=addDays(mon,6),we=sun<yearEnd?sun:yearEnd;
     const n=days(ws,we);if(n<=0)continue;
-    const cap=capW*n/7;
+    let cap=capW*n/7;
+    // The current week can only take what fits in the days that are left (about a long
+    // day's running each), so changing the plan on a Friday doesn't ask for a 30 km
+    // "easy" run on Sunday; the rest moves to later weeks.
+    if(dk(mon)===dk(thisMon)&&opts&&opts.cap0!=null)cap=Math.min(cap,opts.cap0);
     const rf=base>=8?weekRaceInfo(mon,base):null;
     const w={mon:dk(mon),days:n,cap,kind:'build',note:'',race:null,longCap:null,fixed:false,target:0};
     if(rf){w.fixed=true;w.kind=rf.kind;w.note=rf.note;w.race=rf.race;w.longCap=rf.longCap;w.target=Math.min(cap,Math.max(base*rf.factor*n/7,rf.minKm));}
@@ -8857,15 +8874,18 @@ function buildYearPlan(startMon,R){
     left=spill;open=next;
   }
   const shortfall=Math.max(0,R-weeks.reduce((a,w)=>a+w.target,0));
+  weeks.forEach(w=>{w.target=Math.round(w.target);});
+  // Rounding each week can leave the total a km or two off; the last open week absorbs it.
+  if(shortfall<=1){const drift=Math.round(R)-weeks.reduce((a,w)=>a+w.target,0);const lastOpen=[...weeks].reverse().find(w=>!w.fixed);if(lastOpen&&drift)lastOpen.target=Math.max(0,lastOpen.target+drift);}
   weeks.forEach(w=>{
-    w.target=Math.round(w.target);
     if(!w.fixed)w.note=w.capped?`Capped at ${Math.round(w.cap)} km, about ${Math.round(capPct*100)}% above your recent ${Math.round(base)} km weeks.`
       :g.capMode==='goal'&&base>=8&&w.target>base*1.15*w.days/7?`${Math.round((w.target/(base*w.days/7)-1)*100)}% above your recent ${Math.round(base)} km weeks.`
       :w.target>base*1.03?'Build week, making up what the race weeks don\'t run.':'Steady week.';
   });
   // When the goal is reached: the end of the week where the running total crosses R.
-  let cum=0,finish=null;for(const w of weeks){cum+=w.target;if(cum>=R-0.5&&!finish){finish=dk(addDays(new Date(w.mon+'T12:00:00'),6));}}
+  let cum=0,finish=null;for(const w of weeks){cum+=w.target;if(cum>=R-1.5&&!finish){finish=dk(addDays(new Date(w.mon+'T12:00:00'),6));}}
   if(finish&&finish>dk(yearEnd))finish=dk(yearEnd);
+  if(!finish&&shortfall<=1)finish=dk(yearEnd);
   return{weeks,base:Math.round(base),cap:isFinite(capW)?Math.round(capW):null,capMode:g.capMode==='stretch'||g.capMode==='goal'?g.capMode:'safe',shortfall:Math.round(shortfall),finish,R};
 }// Next week's projection sits behind a button showing its km, so you can watch it shrink
 // as you log runs this week. Opens by default on Sundays (planning night).

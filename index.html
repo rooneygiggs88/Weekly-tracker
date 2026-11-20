@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="66">
+<meta name="app-version" content="67">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -430,6 +430,17 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .me-chip.legs b{color:var(--c-pink);}
 .me-links{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .me-links button{padding:13px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;}
+.rc-card{position:relative;overflow:hidden;}
+.rc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent);}
+.rc-eyebrow{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
+.rc-big{font-family:var(--display);font-weight:800;font-size:46px;line-height:0.95;text-transform:uppercase;margin:4px 0 10px;}
+.rc-big span{font-size:24px;color:var(--text2);margin-left:4px;}
+.rc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.rc-chips span{display:flex;flex-direction:column;padding:7px 11px;border-radius:10px;background:var(--surface2);font-family:var(--display);font-weight:800;font-size:19px;font-variant-numeric:tabular-nums;}
+.rc-chips i{font-style:normal;font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
+.rc-p{font-size:13.5px;line-height:1.5;color:var(--text2);margin-top:6px;}
+.rc-p b{color:var(--text);font-weight:600;}
+.rc-use{width:100%;margin-top:12px;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--text);background:none;color:var(--text);font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;}
 /* QUICK LOG */
 .ql-h{font-size:20px;font-weight:800;letter-spacing:-0.4px;text-align:center;margin-bottom:16px;}
 .ql-big{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
@@ -2559,6 +2570,86 @@ function getCoachBriefing(){
   getWellnessCoachLines().forEach(l=>out.push({ic:l.ic,t:l.t,go:"showPage('trends');switchTrendsTab('wellness')"}));
   return out.slice(0,6);
 }
+// ── TODAY'S RUN (Run page) ──
+// The coach's view of the week turned into today's run: which one, how far, how fast
+// (from race fitness: Daniels' training intensities) and at what heart rate (from your
+// heart-rate reserve), what shape the session takes, and the week's and the morning's
+// context. "Fill in the form" copies the distance and effort into the log below.
+function _paceAtPct(vdot,pct){
+  const vo2=vdot*pct,a=0.000104,b=0.182258,c=-4.60-vo2;
+  const v=(-b+Math.sqrt(b*b-4*a*c))/(2*a);
+  return 60000/v; // seconds per km
+}
+function getTodaysRunPlan(){
+  const yw=getYearGoalWeek();if(!yw)return null;
+  const now=today(),td=dk(now),dayIdx=(now.getDay()+6)%7,daysLeft=7-dayIdx;
+  const ranToday=loadRunData().filter(r=>r.date===td);
+  const act=(yw.active||yw.open||[]).filter(x=>x.type!=='Race');
+  if(yw.leftKm<=0||!act.length)return{done:true,yw,ranToday};
+  const planned=planTypeThisWeek(dayIdx)==='Run'?runTypeThisWeek(dayIdx):null;
+  const slotFor=t=>t==='Long'?'Long':t==='Tempo'||t==='Intervals'||t==='Fartlek'?'Tempo':t==='Easy'||t==='Recovery'?'Easy':null;
+  let slot=null;
+  if(daysLeft<=1)slot=act.slice().sort((a,b)=>b.left-a.left)[0];
+  if(!slot&&planned)slot=act.find(x=>x.type===slotFor(planned));
+  // Otherwise the long run waits for the last day, and today takes an easy (or tempo).
+  if(!slot)slot=act.filter(x=>x.type==='Easy').sort((a,b)=>a.left-b.left)[0]||act.find(x=>x.type==='Tempo')||act[0];
+  return{yw,slot,km:Math.round(slot.left),type:slot.type,ranToday,daysLeft,runsLeft:act.length};
+}
+function useTodaysRun(km,effort){
+  const k=document.getElementById('run-km');if(k){k.value=km;k.dispatchEvent(new Event('input'));}
+  selectEffort(effort);
+  const f=document.getElementById('run-time');if(f)f.focus();
+  haptic('light');
+}
+function renderRunCoachCard(){
+  const P=getTodaysRunPlan();if(!P)return'';
+  const fm=getFitnessModel(),rd=computeReadiness(),rk=rd&&rd.state?rd.state.key:null;
+  const next=getRaces().filter(r=>daysUntil(r.date)>=0)[0],dNext=next?daysUntil(next.date):null;
+  if(dNext===0)return'';
+  if(P.done){
+    const w1=P.yw.plan&&P.yw.plan.weeks[1];
+    return`<div class="chart-card rc-card"><div class="rc-eyebrow">Today's run</div><div class="rc-big">Week done</div>
+      <p class="rc-p">${fmtKm(P.yw.weekKm)} of ${Math.round(P.yw.target)} km is in. Rest, or a 20-30 minute shakeout if your legs want it.${w1?` Next week: ${w1.target} km${w1.kind==='race'?', race week':''}.`:''}</p></div>`;
+  }
+  const effort={Long:'Long Run',Tempo:'Tempo',Easy:'Easy'}[P.type]||'Easy';
+  const zone={Easy:[0.62,0.70],Long:[0.62,0.72],Tempo:[0.86,0.88]}[P.type]||[0.62,0.70];
+  const hrr={Easy:[0.60,0.72],Long:[0.60,0.75],Tempo:[0.84,0.89]}[P.type];
+  let paceTxt='',hrTxt='';
+  if(fm){
+    const slow=_paceAtPct(fm.vdot,zone[0]),fast=_paceAtPct(fm.vdot,zone[1]);
+    paceTxt=`${fmtMS(fast)}–${fmtMS(slow)}/km`;
+    const mx=fm.hrMax.v,rest=fm.hrRest.v;
+    hrTxt=P.type==='Tempo'?`${Math.round(rest+hrr[0]*(mx-rest))}–${Math.round(rest+hrr[1]*(mx-rest))} bpm`:`under ${Math.round(rest+hrr[1]*(mx-rest))} bpm`;
+  }
+  const pw=P.yw.plan&&P.yw.plan.weeks[0];
+  const easyDay=rk==='recover'||rk==='pace';
+  let shape='';
+  if(P.type==='Tempo'){
+    const warm=2,cool=2,mid=Math.max(3,P.km-warm-cool);
+    shape=easyDay?`Readiness says ${esc(rd.state.label.toLowerCase())}: run it all easy today and move the tempo.`
+      :pw&&pw.kind==='taper'&&!pw.overridden?`${warm} km easy, ${Math.min(mid,4)} km at tempo pace${fm?` (${fmtMS(_paceAtPct(fm.vdot,0.88))}/km)`:''}, rest easy. Short and sharp in a taper.`
+      :`${warm} km easy, ${mid} km at tempo pace${fm?` (${fmtMS(_paceAtPct(fm.vdot,0.88))}/km, comfortably hard)`:''}, ${cool} km easy.`;
+  }else if(P.type==='Long'){
+    shape=pw&&pw.overridden?`All of it conversational: no pace work with ${next?esc(next.name||'the race'):'the race'} ${dNext} days out.`
+      :pw&&(pw.kind==='taper'||pw.kind==='race')?`Conversational the whole way; this is about time on feet, not fitness.`
+      :`Conversational. If you feel good, the last 3 km can drift towards marathon pace${fm?` (${fmtMS(_paceAtPct(fm.vdot,0.79))}/km)`:''}.`;
+    if(P.km>=20)shape+=` Take fluids and something to eat every 40 minutes or so.`;
+  }else{
+    shape=easyDay?`Readiness says ${esc(rd.state.label.toLowerCase())}: keep it to the slow end, or cut it short if your legs say so.`:`Fully conversational: if you can't talk in full sentences, slow down.`;
+  }
+  const ctx=coachWeekAdvice(P.yw,false).trim();
+  const left=P.runsLeft>1?`${P.runsLeft} runs left in ${P.daysLeft} day${P.daysLeft===1?'':'s'}; this is the one for today.`:'The last run of the week.';
+  const tag={Easy:'Easy',Long:'Long run',Tempo:'Tempo'}[P.type]||P.type;
+  return`<div class="chart-card rc-card">
+    <div class="rc-eyebrow">Today's run${P.ranToday.length?' · already ran today':''}</div>
+    <div class="rc-big">${P.km} km <span>${tag}</span></div>
+    ${paceTxt?`<div class="rc-chips"><span><i>Pace</i>${paceTxt}</span>${hrTxt?`<span><i>Heart rate</i>${hrTxt}</span>`:''}</div>`:''}
+    <p class="rc-p"><b>${shape}</b></p>
+    <p class="rc-p">${left} ${ctx}</p>
+    <button class="rc-use" onclick="useTodaysRun(${P.km},'${effort}')">Fill in the form with ${P.km} km ${tag.toLowerCase()}</button>
+  </div>`;
+}
+
 // ── HABITS COACH ──
 // Reads the time of day, streaks and the last fortnight: where to start in the morning,
 // which streak is on the line tonight, what's slipping, and a perfect day when it lands.
@@ -4519,6 +4610,7 @@ function renderRunSection(){
     }).join('')}
   </div>`:'';
   el.innerHTML=`
+  ${_runLogDate===dk(now)?renderRunCoachCard():''}
   ${dayRuns.length?renderRunPBBanner(dayRuns[dayRuns.length-1])+renderRunDebriefCard(dayRuns[dayRuns.length-1]):''}
   <div class="run-input-card">
     ${weekNavHtml}
@@ -10918,12 +11010,25 @@ function getTemplateConflicts(){
   return getPlanConflicts(state.weekPlan.map(t=>t||'Rest'),[0,1,2,3,4,5,6].map(i=>getWeekPlanRunType(i)),[0,1,2,3,4,5,6].map(i=>state.weekPlan[i]==='Run'?getWeekPlanGym(i):null));
 }
 // Readiness-scaled top-set target for the gym logger.
+// Days since the last gym session of any kind, and whether a race is within a week -
+// both change what a sensible target is, whatever readiness says.
+function getGymContext(){
+  const g=loadGymData();const last=g.length?g[g.length-1].date:null;
+  const layoff=last?Math.round((new Date(dk(today())+'T12:00:00')-new Date(last+'T12:00:00'))/864e5):0;
+  const next=getRaces().filter(r=>daysUntil(r.date)>=0)[0];
+  return{layoff,comeback:layoff>=14,race:next&&daysUntil(next.date)<=7?next:null,dRace:next?daysUntil(next.date):null};
+}
 function getLiftTarget(topLast,lastHasWeight,pb){
   if(!topLast)return null;
   const r=computeReadiness();
   const k=r&&r.state?r.state.key:'ready';
   const w=parseFloat(topLast.weight||0),reps=parseFloat(topLast.reps||0);
   const round=v=>Math.round(v/2.5)*2.5;
+  const ctx=getGymContext();
+  // First session after two weeks or more off: about 80% for 8-10 reps, whatever the
+  // readiness. Race week: hold weights where they are.
+  if(lastHasWeight&&w>0&&ctx.comeback)return{weight:Math.max(2.5,round(w*0.8)),reps:Math.max(8,Math.min(10,parseInt(topLast.reps)||10)),tag:'Comeback',note:`${ctx.layoff} days off: about 80%`,col:'var(--st-ready)'};
+  if(lastHasWeight&&w>0&&ctx.race&&k!=='recover')return{weight:w,reps:topLast.reps||'?',tag:'Hold',note:`${esc(ctx.race.name||'race')} in ${ctx.dRace} days: no new loads`,col:'var(--st-pace)'};
   if(lastHasWeight&&w>0){
     if(k==='recover')return{weight:round(w*0.9),reps:topLast.reps||'?',tag:'Light day',note:'technique focus',col:'var(--st-recover)'};
     if(k==='pace')return{weight:w,reps:topLast.reps||'?',tag:'Hold',note:'leave 2–3 reps in the tank',col:'var(--st-pace)'};
@@ -11075,10 +11180,16 @@ function renderGymBriefCard(type){
   const phase=getGymRacePhase();
   const exNames=lastSame?(lastSame.exercises||[]).map(e=>e.name):getDefaultExercisesForType(type).map(e=>e.name);
   // No "add sets" advice on a day that's asking for less.
-  const holdBack=(st&&st.key==='recover')||(phase&&phase.key==='taper');
+  const gctx=getGymContext();
+  const holdBack=(st&&st.key==='recover')||(phase&&phase.key==='taper')||gctx.comeback;
   const gaps=GC_TYPE_MUSCLES[type]&&!holdBack?getGymMuscleGaps(type,exNames):[];
   const lines=[];
-  if(st)lines.push({col:st.col,text:GC_READY_LINE[st.key]});
+  if(gctx.comeback){
+    const tops=lastSame?_gymTopSets(lastSame):[];
+    lines.push({col:'var(--st-ready)',text:`${gctx.layoff} days since your last session, so this is a re-entry: about 80% of your last weights for 8–10 reps${tops.length?` (${tops.map(x=>`${x.name} ${_kg(_r25(x.w*0.8))}`).join(', ')})`:''}. Save PR attempts for next time; muscles come back fast, tendons slower.`});
+    if(st&&st.key==='recover')lines.push({col:st.col,text:GC_READY_LINE.recover});
+  }else if(gctx.race&&st&&st.key!=='recover')lines.push({col:'var(--st-pace)',text:`${gctx.race.name||'Your race'} is ${gctx.dRace===0?'today':`in ${gctx.dRace} days`}: hold your weights, keep it to about 40 minutes and skip anything new.`});
+  else if(st)lines.push({col:st.col,text:GC_READY_LINE[st.key]});
   else lines.push({col:'var(--text3)',text:'Log this morning\'s check-in and the targets get scaled to readiness.'});
   if(lastSame){
     const ago=-_gcDaysUntil(lastSame.date);

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="87">
+<meta name="app-version" content="88">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -4291,7 +4291,8 @@ function renderToday(){
       }
     }
 
-    wrap.innerHTML=(gymRowHtml||runRowHtml||raceRowHtml)?`<div class="week-card">
+    const planShown=yearGoalActive&&!!document.getElementById('plan-cal-wrap')&&!!getCalendarWeek(0);
+    wrap.innerHTML=!planShown&&(gymRowHtml||runRowHtml||raceRowHtml)?`<div class="week-card">
       <div class="week-card-head"><span>This week</span><span>${daysLeft>0?`${daysLeft} day${daysLeft===1?'':'s'} left`:'Last day'}</span></div>
       ${gymRowHtml}${runRowHtml}${raceRowHtml}
     </div>`:'';
@@ -10459,7 +10460,7 @@ function _coachWeek(o,mode,monK,td){
     while(k>0&&pool.length){
       const rd=allRunDays();
       const afterLong=i=>/Long|B2B/.test(typeOn0(i-1)||'')||(i===0&&prevKey.includes(-1));
-      const sc=i=>gapTo(i,rd)-(i===tdI&&rk==='recover'?1.5:0)-(low(i)?0.3:0)-(afterLong(i)?(state.availCustom?0.6:2.5):0);
+      const sc=i=>gapTo(i,rd)-(i===tdI&&rk==='recover'?1.5:0)-(low(i)?0.3:0)-(afterLong(i)?(state.availCustom?0.6:2.5):0)-(raceI!=null&&i===raceI-2?2:0);
       pool.sort((a,b)=>sc(b)-sc(a)||a-b);
       const i=pool.shift();set(i,'Easy','');k--;
     }
@@ -10476,7 +10477,8 @@ function _coachWeek(o,mode,monK,td){
     const l=low(c.day);
     if(firstAfter&&!S.some(s=>s.done&&s.day<c.day&&s.sub!=='Race')){c.sub='Recovery';c.why=`First run after the race: very easy, legs first and watch second.`;firstAfter=false;return;}
     if(['Long','B2B','Race'].includes(typeOn(c.day-1))&&[...chosen.values()].filter(x=>!['Race','Shakeout'].includes(x.sub)).length>=2){c.sub='Recovery';c.why=`The day after the ${typeOn(c.day-1)==='Race'?'race':'long run'}: short and very easy, to get the legs moving.`;return;}
-    if(raceI!=null&&raceI>c.day&&raceI-c.day<=2){c.sub='Shakeout';c.why=`${raceI-c.day===1?'The day before':'Two days before'} the race: a short shakeout with a few strides keeps the legs ticking over.`;return;}
+    if(raceI!=null&&raceI-c.day===1){c.sub='Shakeout';c.why='The day before the race: a short shakeout with a few strides keeps the legs ticking over.';return;}
+    if(raceI!=null&&raceI-c.day===2){c.sub='Recovery';c.why='Two days before the race: short and very easy, nothing that tires the legs.';return;}
     if(l&&l.phase==='low'){c.why=`Easy only while you're ${(_LOW[l.reason]||_LOW.tired).lbl}: cut it short if you need to.`;return;}
     if(c.day===tdI&&rk==='recover'){c.sub='Recovery';c.why='Readiness says recover: very easy, or swap it for rest.';return;}
     if(kind==='build'&&!strides&&!/Long|B2B|Tempo|Intervals|Race/.test(typeOn(c.day+1)||'')&&!/Tempo|Intervals/.test(typeOn(c.day-1)||'')){c.sub='Strides';strides=true;c.why='Easy, with strides at the end: keeps some speed in the legs without a hard session.';return;}

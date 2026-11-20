@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="93">
+<meta name="app-version" content="94">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -992,6 +992,23 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .today-plan-sub{font-size:13px;font-weight:700;letter-spacing:0;color:var(--text2);}
 .today-plan-cta{margin-top:12px;}
 .tp-gymstart{display:block;width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
+.gl-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 10px;border-radius:12px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);backdrop-filter:blur(8px);}
+.gl-l{display:flex;flex-direction:column;min-width:0;flex:1;}
+.gl-l b{font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;line-height:1.1;}
+.gl-l span{font-size:12px;color:var(--text2);font-weight:600;}
+.gl-m{font-family:var(--display);font-weight:800;font-size:15px;color:var(--text2);}
+.gl-menu{border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:10px;width:38px;height:34px;font-size:18px;cursor:pointer;}
+.gl-pop{display:flex;flex-direction:column;gap:6px;margin:-4px 0 10px;padding:8px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);}
+.gl-pop button{text-align:left;padding:10px 12px;border-radius:9px;border:none;background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.gl-pop button.danger{color:var(--red);}
+.gl-nudge{margin:-2px 0 10px;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.45;color:var(--text2);background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid color-mix(in srgb,var(--orange) 30%,transparent);}
+.gw{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;padding:8px 10px;border-radius:9px;background:color-mix(in srgb,var(--orange) 9%,transparent);border:1px solid color-mix(in srgb,var(--orange) 28%,transparent);font-size:12.5px;line-height:1.4;color:var(--text2);}
+.gw b{color:var(--text);margin-right:4px;}
+.gw button{flex-shrink:0;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.gn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.gn-row button{padding:7px 12px;border-radius:18px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.gn-row button.on{background:var(--orange);border-color:var(--orange);color:#0d0d0d;}
+body.gym-live #page-train .train-header{display:none;}
 .cg{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--surface2);}
 .cg-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
 .cg-h span{font-family:var(--display);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);}
@@ -2274,6 +2291,7 @@ function refreshActivePage(){
   if(id==='today')renderToday();else if(id==='trends')renderTrends();else if(id==='me')renderMe();else if(id==='train')renderTrain();
 }
 function showPage(name){
+  if(name!=='train')document.body.classList.remove('gym-live');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
@@ -4654,6 +4672,7 @@ function renderPlateCalc(weightKg){
 function openTrainPicker(){openModal('train-picker-modal');}
 let activeTrainTab='run';
 function switchTrainTab(tab){
+  if(tab!=='gym')document.body.classList.remove('gym-live');
   activeTrainTab=tab;
   document.querySelectorAll('.train-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
   document.querySelectorAll('.train-section').forEach(s=>s.classList.toggle('active',s.id===`train-${tab}`));
@@ -4721,6 +4740,7 @@ function gymSetActiveEx(i){
 function renderGymSection(){
   const el=document.getElementById('gym-content');
   if(gymDraft){renderGymLogger();return;}
+  document.body.classList.remove('gym-live');
   _gymPickedType=null;
   _gymShowOtherTypes=false;
   const sessions=loadGymData();
@@ -4921,32 +4941,30 @@ function renderGymLogger(){
   const sessions=loadGymData();
   const lastSame=sessions.filter(s=>s.type===gymDraft.type).slice(-1)[0];
   const prog=loadGymProg();
-  el.innerHTML=`
-  <div class="chart-card" style="margin-bottom:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 12%,transparent) 0%,color-mix(in srgb,var(--accent) 4%,transparent) 100%);border-color:color-mix(in srgb,var(--accent) 30%,transparent);">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:${gymDraft.superset?'var(--amber)':'var(--accent2)'};margin-bottom:4px;">${gymDraft.superset?'⚡ Superset session':'Session in progress'}</div>
-        <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">${esc(gymDraft.type)}</div>
-      </div>
-      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-        <div><div style="font-size:12px;color:var(--text3);font-weight:700;" id="gym-session-elapsed">${gymElapsed()}</div><div style="font-size:10px;color:var(--text3);">elapsed</div></div>
-        <button onclick="gymShowTypeEdit()" style="padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Change type</button>
-      </div>
-    </div>
-    <div id="gym-type-edit" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+  document.body.classList.add('gym-live');
+  const doneEx=gymDraft.exercises.filter(x=>x._completed).length,totEx=gymDraft.exercises.length;
+  const bar=`<div class="gl-bar">
+    <div class="gl-l"><b>${esc(gymDraft.type)}</b><span><span id="gym-session-elapsed">${gymElapsed()}</span>${gymDraft.planMins?` of ~${gymDraft.planMins} min`:''}</span></div>
+    <div class="gl-m">${doneEx}/${totEx} done</div>
+    <button class="gl-menu" onclick="gymToggleMenu(event)" aria-label="Session menu">⋯</button>
+  </div>
+  ${_gymMenu?`<div class="gl-pop" onclick="event.stopPropagation()">
+    <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
+    ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${lastSame.date})</button>`:''}
+    <button onclick="_gymMenu=false;gymAddEx()">Add an exercise</button>
+    <button class="danger" onclick="_gymMenu=false;openModal('gym-discard-modal')">Discard session</button>
+  </div>`:''}
+  ${gymTimeNudge()}`;
+  el.innerHTML=bar+`
+  <div id="gym-type-edit" class="chart-card" style="display:none;margin-bottom:10px;">
       <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Select new type</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
         ${['Push','Pull','Legs','Core','Custom'].map(t=>`<button onclick="gymConfirmTypeChange('${t}')" style="padding:10px 6px;border-radius:var(--radius-xs);border:2px solid ${gymDraft.type===t?'var(--accent)':'var(--border)'};background:${gymDraft.type===t?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${gymDraft.type===t?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">${t}</button>`).join('')}
       </div>
       <button onclick="gymHideTypeEdit()" style="width:100%;padding:8px;border-radius:var(--radius-xs);border:1px solid var(--border);background:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
     </div>
-  </div>
-  ${renderGymScoreboard()}
-  ${lastSame?`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px;">
-    <div style="font-size:12px;color:var(--text3);font-weight:600;">Last ${esc(gymDraft.type)}: ${lastSame.date} · ${(lastSame.exercises||[]).length} ex</div>
-    <button onclick="copyLastSameSession()" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Copy this</button>
-  </div>`:''}
   ${gymDraft.superset?renderSupersetExercisesHtml(lastSame,prog,sessions):renderGymFocusFlow(lastSame,prog,sessions)}
+  ${renderGymScoreboard()}
   <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
   <label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label>
   <textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;margin-bottom:10px;" oninput="gymDraft.notes=this.value;saveGymDraft();">${esc(gymDraft.notes||'')}</textarea>
@@ -4956,6 +4974,25 @@ function renderGymLogger(){
   startGymPersist();
 }
 function gymSetType(t){gymDraft.type=t;renderGymLogger();}
+// Log the prescribed warm-ups in one tap (kept as warm-ups, so they never count as work).
+function gymLogWarmups(i){
+  const ex=gymDraft&&gymDraft.exercises[i];if(!ex||!ex._warmups)return;
+  ex.sets=[...ex._warmups.map(([w,r])=>({weight:String(w),reps:String(r),warmup:true,technique:false})),...ex.sets];
+  ex._warmups=null;gymKpResetTarget();renderGymLogger();haptic('success');
+}
+let _gymMenu=false;
+function gymToggleMenu(e){if(e)e.stopPropagation();_gymMenu=!_gymMenu;renderGymLogger();}
+// How the session is tracking against its planned time, and what to cut if it's running over.
+function gymTimeNudge(){
+  if(!gymDraft||!gymDraft.planMins)return'';
+  const el=(Date.now()-gymDraft.startedAt)/60000;
+  let rem=0,lastEx=null;
+  gymDraft.exercises.forEach(ex=>{if(ex._completed)return;const left=Math.max(0,(ex._planSets||3)-_gcWorking(ex).length);if(left){rem+=left*((getExRestSecs(ex.name)||90)+40)/60;lastEx=ex;}});
+  const over=Math.round(el+rem-gymDraft.planMins);
+  if(el>gymDraft.planMins+5)return`<div class="gl-nudge">Past the planned ${gymDraft.planMins} minutes: finish this lift and call it a session.</div>`;
+  if(over>=5&&lastEx)return`<div class="gl-nudge">Running about ${over} min over: drop ${esc(lastEx.name)} (or its last set) and you'll finish on time.</div>`;
+  return'';
+}
 function gymShowTypeEdit(){const el=document.getElementById('gym-type-edit');if(el)el.style.display='block';}
 function gymHideTypeEdit(){const el=document.getElementById('gym-type-edit');if(el)el.style.display='none';}
 function gymConfirmTypeChange(t){
@@ -5339,7 +5376,10 @@ function findLastExOccurrence(name,sessions){
 }
 function getLastExSets(name,sessions){
   const found=findLastExOccurrence(name,sessions);
-  return found?(found.ex.sets||[]).filter(s=>!s.warmup&&!s.technique):[];
+  const ws=found?(found.ex.sets||[]).filter(s=>!s.warmup&&!s.technique):[];
+  // Sets well under the day's top weight were warm-ups, flagged or not.
+  const top=Math.max(0,...ws.map(s=>parseFloat(s.weight||0)));
+  return top>=20?ws.filter(s=>!(parseFloat(s.weight||0)>0)||parseFloat(s.weight)>=top*0.7):ws;
 }
 function getLastExDate(name,sessions){
   const found=findLastExOccurrence(name,sessions);
@@ -5409,7 +5449,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
   const pb=parseFloat(pbSet.weight||0);
   const pbReps=everWeighted?0:parseFloat(pbSet.reps||0);
   // Today's top-set target, scaled by readiness: push on good days, hold or lighten on rough ones.
-  const liftT=getLiftTarget(topLast,lastHasWeight,pb);
+  const liftT=getLiftTarget(topLast,lastHasWeight,pb,lastSets);
   const targetWeight=liftT&&liftT.weight!=null?liftT.weight:null;
   const targetReps=liftT&&liftT.weight==null?liftT.reps:null;
   const sugg=getExerciseSuggestions(ex.name,gymSessions);
@@ -5430,8 +5470,9 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       ${trend?`<div style="padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:${trend.col};font-size:11px;font-weight:800;">${trend.label}</div>`:''}
     </div>`:''}
     ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Trained${lastDateStr?` · ${lastDateStr}`:''}</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}</span>`).join('')}</div></div>`:''}
-    ${focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&gymSetFilled(s,ex.name))?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:color-mix(in srgb,var(--accent) 8%,transparent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
+    ${!(gymDraft&&gymDraft.coach)&&focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&gymSetFilled(s,ex.name))?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:color-mix(in srgb,var(--accent) 8%,transparent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
     ${ex._why?`<div class="gc-why">Added to the plan: ${esc(ex._why)}</div>`:''}
+    ${focusMode&&ex._warmups&&ex._warmups.length&&!(ex.sets||[]).some(s=>gymSetFilled(s,ex.name))?`<div class="gw"><span><b>Warm up first</b> ${ex._warmups.map(([w,r])=>`${w} kg × ${r}`).join(' · ')}</span><button onclick="gymLogWarmups(${i})">Log them</button></div>`:''}
     ${liftT?`<div id="ex-hint-${i}" class="lift-target" style="--lt:${liftT.col};"><b>${liftT.tag}</b> ${targetWeight!=null?`${targetWeight}kg × ${liftT.reps} reps`:`${targetReps} reps`}${ex._planSets?` · ${ex._planSets} set${ex._planSets===1?'':'s'}`:''} <span>${liftT.note}</span></div>`:ex._planSets?`<div id="ex-hint-${i}" class="lift-target" style="--lt:var(--green);"><b>Plan</b> ${ex._planSets} set${ex._planSets===1?'':'s'}</div>`:`<div id="ex-hint-${i}"></div>`}
     ${focusMode?(()=>{
       const setTgt=getSetTarget(ex,gymKpCurrentSi(i,ex),lastSets,pb);
@@ -5838,12 +5879,21 @@ function openGymEffortModal(ts,type){
     <div class="modal-handle"></div>
     <h3>Rate this session</h3>
     <div style="font-size:13px;color:var(--text3);margin-bottom:22px;font-weight:600;">How did ${esc(type||'it')} feel today?</div>
+    <div style="font-size:12px;color:var(--text3);font-weight:700;margin:-8px 0 8px;">Anything niggling? Tap it first (optional)</div>
+    <div class="gn-row">${['Shoulder','Elbow','Wrist','Back','Knee'].map(n=>`<button id="gn-${n}" onclick="gymTagNiggle('${n}')">${n}</button>`).join('')}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
       ${pill('Easy','🌤️')}${pill('Solid','💪')}${pill('Pushed','🔥')}${pill('Max','⚡')}
     </div>
     <button onclick="closeModal('gym-effort-modal')" style="width:100%;text-align:center;background:none;border:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;padding:6px;cursor:pointer;">Skip</button>
   `;
   openModal('gym-effort-modal');
+}
+// A niggle eases the related lifts in the next fortnight's sessions.
+function gymTagNiggle(part){
+  if(_gymEffortTs==null)return;
+  const sessions=loadGymData(),s=sessions.find(x=>x.ts===_gymEffortTs);if(!s)return;
+  s.niggles=s.niggles||[];const i=s.niggles.indexOf(part);if(i>=0)s.niggles.splice(i,1);else s.niggles.push(part);
+  saveGymData(sessions);const b=document.getElementById('gn-'+part);if(b)b.classList.toggle('on',i<0);haptic('light');
 }
 function gymTagEffort(effort){
   if(_gymEffortTs==null)return;
@@ -13081,7 +13131,16 @@ function getGymContext(){
   const next=getRaces().filter(r=>daysUntil(r.date)>=0)[0];
   return{layoff,comeback:layoff>=14,race:next&&daysUntil(next.date)<=7?next:null,dRace:next?daysUntil(next.date):null};
 }
-function getLiftTarget(topLast,lastHasWeight,pb){
+// What last time's sets say about next time, with no extra taps: reps held across the
+// sets at the top weight means there was room, so the weight goes up; reps falling away
+// (8, 7, 6) means it was near the limit, so hold it; a single short top set adds a rep
+// first; light lifts add reps before weight.
+function _readSets(lastSets,w){
+  const at=(lastSets||[]).filter(s=>parseFloat(s.weight||0)===w).map(s=>parseInt(s.reps)||0).filter(Boolean);
+  if(!at.length)return null;
+  return{at,first:at[0],min:Math.min(...at),drop:at[0]-at[at.length-1],n:at.length};
+}
+function getLiftTarget(topLast,lastHasWeight,pb,lastSets){
   if(!topLast)return null;
   const r=computeReadiness();
   const k=r&&r.state?r.state.key:'ready';
@@ -13097,7 +13156,12 @@ function getLiftTarget(topLast,lastHasWeight,pb){
     if(k==='pace')return{weight:w,reps:topLast.reps||'?',tag:'Hold',note:'leave 2–3 reps in the tank',col:'var(--st-pace)'};
     const t=Math.round((w+2.5)*2)/2;
     const pr=pb>0&&t>pb;
-    return{weight:t,reps:topLast.reps||'?',tag:k==='go'&&pr?'PR attempt':'Target',note:k==='go'?(pr?'readiness is high':'+2.5kg, good day for it'):'+2.5kg',col:k==='go'?'var(--st-go)':'var(--green)'};
+    const rs=_readSets(lastSets,w);
+    if(rs&&rs.n>=2&&rs.drop>=2)return{weight:w,reps:rs.first,tag:'Hold',note:`reps fell ${rs.at.join('→')} last time: same weight, hold the ${rs.first}s`,col:'var(--st-pace)'};
+    if(w<20&&rs&&rs.min<12)return{weight:w,reps:Math.min(15,rs.min+2),tag:'Target',note:`light lift: add reps before weight (${rs.min}+ last time)`,col:'var(--green)'};
+    if(rs&&rs.n===1&&rs.first<6)return{weight:w,reps:rs.first+1,tag:'Target',note:`${rs.first} reps last time: same weight, one more rep`,col:'var(--green)'};
+    const held=rs&&rs.n>=2?`held ${rs.min}s across ${rs.n} sets at ${_kg(w)}: `:'';
+    return{weight:t,reps:rs?rs.min:(topLast.reps||'?'),tag:k==='go'&&pr?'PR attempt':'Target',note:held+(k==='go'?(pr?'+2.5 kg, readiness is high':'+2.5 kg, good day for it'):'+2.5 kg'),col:k==='go'?'var(--st-go)':'var(--green)'};
   }
   if(reps>0){
     if(k==='recover')return{reps:Math.max(1,reps-2),tag:'Light day',note:'easy reps',col:'var(--st-recover)'};
@@ -13297,9 +13361,17 @@ function planGymSession(type){
     const last=getLastExSets(pk.name,sessions)||[],hasW=last.some(x=>parseFloat(x.weight||0)>0),top=_gcTopLast(last);
     let n=last.filter(x=>!x.warmup&&!x.technique).length||3;
     if(taper)n=Math.max(1,Math.round(n/2));else if(k==='recover')n=Math.max(1,n-1);
-    return{name:pk.name,sets:Math.min(4,n),tgt:top?getLiftTarget(top,hasW,0):null,rest:getExRestSecs(pk.name)||90,w:top?parseFloat(top.weight||0):0};
+    let tgt=top?getLiftTarget(top,hasW,0,last):null;
+    // Stalled for 4+ sessions: 10% back and build again (not after a break, already eased).
+    const mo=!ctx.comeback&&hasW?_liftMomentum(pk.name):null;
+    if(mo&&mo.stall>=4&&mo.pct<2&&tgt&&tgt.weight){tgt={...tgt,weight:Math.max(2.5,Math.round(parseFloat(top.weight)*0.9/2.5)*2.5),tag:'Reset',note:`no new best in ${mo.stall} sessions: 10% back and build again`};}
+    return{name:pk.name,sets:Math.min(4,n),tgt,rest:getExRestSecs(pk.name)||90,w:top?parseFloat(top.weight||0):0};
   }).sort((a,b)=>b.w-a.w);
   if(!taper&&k!=='recover')getGymMuscleGaps(type,rows.map(r=>r.name)).forEach(g=>{if(g.ex&&!rows.some(r=>r.name===g.ex))rows.push({name:g.ex,sets:Math.min(3,Math.max(2,g.short)),tgt:null,rest:getExRestSecs(g.ex)||75,w:0,why:`${g.muscle} is short this week`});});
+  // A niggle you flagged in the last fortnight: one set fewer on the lifts that load it.
+  const NIG={Shoulder:['Shoulders','Chest'],Elbow:['Triceps','Biceps'],Wrist:['Biceps','Triceps','Chest'],Back:['Back'],Knee:['Quads','Hamstrings','Glutes']};
+  const recentN=[...new Set(sessions.filter(x=>x.date>=_dsAgo(14)&&Array.isArray(x.niggles)).flatMap(x=>x.niggles))];
+  recentN.forEach(nj=>{const ms=NIG[nj]||[];rows.forEach(r=>{if((getExerciseMuscles(r.name)||[]).some(m=>ms.includes(m))&&r.sets>1){r.sets--;r.eased=nj;}});});
   const budget=taper||ctx.race?30:40;
   const mins=()=>rows.reduce((a,r)=>a+r.sets*(r.rest+40),0)/60+6;
   let guard=0;
@@ -13308,6 +13380,7 @@ function planGymSession(type){
   if(ctx.comeback)notes.push(`${ctx.layoff} days since the gym: about 80% of your last weights for 8–10 reps. Muscle comes back fast; tendons are slower.`);
   else if(ctx.race)notes.push(`${esc(ctx.race.name||'Race')} in ${ctx.dRace} days: hold your weights, nothing to failure.`);
   if(taper)notes.push('Taper: half the sets.');else if(k==='recover')notes.push('Readiness says recover: one set fewer per lift, technique first.');
+  if(recentN.length)notes.push(`${recentN.join(' and ')} niggle flagged recently: one set fewer on the lifts that load it. Stop anything that hurts.`);
   return{type,rows,mins:Math.round(mins()),notes};
 }
 function renderCoachGymPreview(type,compact){
@@ -13333,9 +13406,15 @@ function buildGymSession(type){
   const trimLegs=!!(clash&&clash.level==='warn');
   const P=planGymSession(type);
   if(P){
-    const exercises=P.rows.map(r=>({name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why}));
+    const r25=v=>Math.round(v/2.5)*2.5;
+    const exercises=P.rows.map((r,j)=>{
+      const T=r.tgt&&r.tgt.weight?+r.tgt.weight:0;
+      // Ramp-up sets for the first two heavy lifts: bar, ~50%, ~75%.
+      const wu=j<2&&T>=40?[[20,10],[r25(T*0.5),5],[r25(T*0.75),3]].filter(([w],x,a)=>w<T&&(x===0||w>a[x-1][0])):null;
+      return{name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why,_warmups:wu};
+    });
     _gymFocusIdx=null;_gymShowAllEx=false;gymKpResetTarget();
-    gymDraft={type,exercises,startedAt:Date.now()};
+    gymDraft={type,exercises,startedAt:Date.now(),coach:true,planMins:P.mins};
     renderGymLogger();
     toastMsg(`The coach's ${type}: ${exercises.length} exercises, about ${P.mins} min`,3000);haptic('light');
     return;
@@ -13365,7 +13444,7 @@ function getSetTarget(ex,si,lastSets,pb){
   const sets=ex.sets||[];
   const s=sets[si];if(!s||s.warmup||s.technique)return null;
   const topLast=_gcTopLast(lastSets);
-  const base=getLiftTarget(topLast,lastSets.some(x=>parseFloat(x.weight||0)>0),pb||0);
+  const base=getLiftTarget(topLast,lastSets.some(x=>parseFloat(x.weight||0)>0),pb||0,lastSets);
   const prev=sets.slice(0,si).filter(x=>!x.warmup&&!x.technique&&gymSetFilled(x,ex.name)).pop();
   if(!prev){
     if(!base)return null;
@@ -13519,6 +13598,14 @@ function renderGymVerdictCard(session){
   if(v.volPct!=null)lines.push({col:v.volPct>=0?'var(--st-go)':'var(--text3)',text:`Volume ${v.volPct>=0?'+':''}${v.volPct}% on the same lifts as your last ${session.type} (${fmtShortDate(v.lastSame.date)}).`});
   if(v.tomorrow)lines.push({col:'var(--st-ready)',text:v.tomorrow});
   v.tips.forEach(t=>lines.push({col:'var(--st-pace)',text:t}));
+  // Next time, lift by lift: what these sets mean for the next session's targets.
+  const nxt=(session.exercises||[]).map(e=>{const ws=(e.sets||[]).filter(x=>!x.warmup&&!x.technique&&parseFloat(x.weight||0)>0);if(!ws.length)return null;
+    const top=ws.reduce((a,b)=>parseFloat(b.weight)>parseFloat(a.weight)?b:a);const t=getLiftTarget(top,true,0,ws);
+    return t&&t.weight?{w:parseFloat(top.weight),name:e.name,t}:null;}).filter(Boolean).sort((a,b)=>b.w-a.w).slice(0,3);
+  if(nxt.length)lines.push({col:'var(--st-go)',text:'Next time: '+nxt.map(x=>`${x.name} ${_kg(+x.t.weight)} × ${x.t.reps}${+x.t.weight>x.w?' (up)':+x.t.weight<x.w?' (back)':''}`).join('; ')+'.'});
+  const legs=(session.exercises||[]).some(e=>(getExerciseMuscles(e.name)||[]).some(m=>['Quads','Hamstrings','Glutes','Calves'].includes(m)));
+  const cw=getCalendarWeek(0),nr=cw&&cw.days.find(d=>d.ds>session.date&&d.planned.some(p=>p.type!=='Race'));
+  if(nr&&!v.tomorrow){const p0=nr.planned[0],rn=`${_CW_DAY[nr.i]}'s ${p0.km} km ${(p0.title||p0.type).toLowerCase().replace(/^easy$/,'easy run')}`;lines.push({col:'var(--text3)',text:legs?`Legs today, so keep ${rn} easy.`:`Upper body only, so ${rn} isn't affected.`});}
   return`<div class="chart-card rd-mini gc-brief" style="--st:${col};">
     <div class="rd-mini-head"><span class="rd-eyebrow">Session verdict</span></div>
     <div class="rd-mini-state">${esc(head)}</div>

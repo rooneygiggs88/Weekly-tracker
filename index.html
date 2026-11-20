@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="79">
+<meta name="app-version" content="80">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -476,6 +476,38 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .np-wk b{font-family:var(--display);font-weight:800;font-size:18px;}
 .np-wk em{font-style:normal;font-size:10.5px;font-weight:700;color:var(--green);min-height:13px;}
 .pc-week{margin-bottom:14px;}
+.pc-shape{display:flex;align-items:flex-end;gap:2px;height:18px;width:52px;}
+.pc-shape i{flex:1;background:var(--c-easy);border-radius:2px;opacity:0.75;}
+.pc-shape i.done{background:var(--green);opacity:1;}
+.pc-shape i.race{background:var(--c-race);opacity:1;}
+.uw{margin:2px 0 16px;padding:12px;border-radius:12px;background:var(--surface2);}
+.uw-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px;}
+.uw-h span{font-family:var(--display);font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:0.04em;}
+.uw-h em{font-style:normal;font-size:12px;font-weight:600;color:var(--text2);}
+.uw-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.uw-chip{display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 0 6px;border-radius:9px;border:1px solid var(--border);border-top:3px solid var(--text3);background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit;min-width:0;}
+.uw-chip span{font-family:var(--display);font-weight:700;font-size:11px;text-transform:uppercase;color:var(--text3);}
+.uw-chip b{font-family:var(--display);font-weight:800;font-size:13px;text-transform:uppercase;line-height:1.1;}
+.uw-chip em{font-style:normal;font-size:9.5px;font-weight:700;color:var(--text2);min-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.uw-chip.long{border-top-color:var(--c-long);}
+.uw-chip.tempo,.uw-chip.intervals{border-top-color:var(--c-tempo);}
+.uw-chip.easy{border-top-color:var(--c-easy);}
+.uw-chip.gym{border-top-color:var(--accent2);}
+.uw-chip.rest{border-top-color:transparent;}
+.uw-chip.rest b{color:var(--text3);}
+.uw-chip.sel{outline:2px solid var(--accent);outline-offset:1px;}
+.uw-ed{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+.uw-ed-h{font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;}
+.uw-ed-row{display:flex;align-items:center;gap:8px;}
+.uw-ed-row>span{font-size:12px;font-weight:700;color:var(--text2);width:30px;flex-shrink:0;}
+.uw-opts{display:flex;flex-wrap:wrap;gap:5px;flex:1;}
+.uw-opts button{padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+.uw-opts button.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent);}
+.uw-ed-row{align-items:flex-start!important;}
+.uw-ed-row>span:first-child{padding-top:7px;}
+.uw-check{margin-top:8px;padding:8px 10px;border-radius:9px;font-size:12px;line-height:1.45;color:var(--text2);background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid color-mix(in srgb,var(--orange) 30%,transparent);}
+.uw-note{margin-top:8px;font-size:12px;color:var(--text2);}
+.uw-foot{margin-top:9px;font-size:11.5px;line-height:1.45;color:var(--text3);}
 .pc-wh{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;padding:4px 0 8px;border-bottom:1px solid var(--border);}
 .pc-wh span{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
 .pc-wh b{font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;}
@@ -1494,7 +1526,8 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
     <input class="modal-input" id="year-goal-target" type="number" inputmode="decimal" step="1" placeholder="e.g. 1610" oninput="updateYearGoalPreview()">
     <label class="modal-label">Km remaining right now</label>
     <input class="modal-input" id="year-goal-remaining" type="number" inputmode="numeric" step="1" placeholder="e.g. 651" oninput="updateYearGoalPreview()">
-    <label class="modal-label">Runs per week</label>
+    <label class="modal-label" id="year-goal-runs-lbl">Runs per week</label>
+    <div id="year-goal-runs-note" style="font-size:12.5px;color:var(--text2);margin:-4px 0 14px;line-height:1.5;"></div>
     <div class="type-row" id="year-goal-runs-row">
       <button class="type-btn" data-runs="4" onclick="setYearGoalRuns(4)">4</button>
       <button class="type-btn" data-runs="5" onclick="setYearGoalRuns(5)">5</button>
@@ -2916,24 +2949,30 @@ function _calSlotsFor(weekOffset){
   if(weekOffset<=1){
     const w=getYearGoalWeek(weekOffset);if(!w)return null;
     const pw=w.plan&&w.plan.weeks[0];
-    const slots=(weekOffset===0?(w.active||w.open||[]):w.slots).map(x=>({type:x.type,km:Math.round(x.left!=null?x.left:x.km),id:x.id})).filter(x=>x.km>0);
+    const slots=(weekOffset===0?(w.active||w.open||[]):w.slots).map(x=>({type:x.type,km:Math.round(x.left!=null?x.left:x.km),id:x.id,day:x.day})).filter(x=>x.km>0);
     return{target:w.target,kind:pw?pw.kind:'build',overridden:pw&&pw.overridden,race:w.race,slots,yw:w};
   }
   const base=getYearGoalWeek();if(!base||!base.plan)return null;
   const mon=dk(addDays(getMonday(today()),weekOffset*7));
   const pw=base.plan.weeks.find(x=>x.mon===mon);if(!pw)return null;
   const g=state.yearRunGoal,full=(YEAR_GOAL_SPLITS[g.runsPerWeek||5]||YEAR_GOAL_SPLITS[5]).map(x=>({...x}));
+  const monD=new Date(mon+'T12:00:00'),yEnd=`${g.year}-12-31`,sunD=dk(addDays(monD,6));
+  const fp=_planSlots(weekOffset,monD,mon,sunD<yEnd?sunD:yEnd);
   const n=Math.max(1,Math.min(full.length,Math.round(full.length*pw.days/7)));
-  let sl=full.slice(0,n);
-  if(pw.race&&pw.race.inWeek){const L=sl.find(x=>x.type==='Long');if(L){L.type='Race';L.fixed=pw.race.km;}}
+  let sl=fp||full.slice(0,n);
+  if(pw.race&&pw.race.inWeek){
+    const rdow=pw.race.date?(new Date(pw.race.date+'T12:00:00').getDay()+6)%7:null;
+    const L=sl.find(x=>x.type==='Long')||sl.find(x=>x.day===rdow)||sl[sl.length-1];
+    if(L){L.type='Race';L.fixed=pw.race.km;if(rdow!=null)L.day=rdow;}
+  }
   const fixedKm=sl.filter(x=>x.fixed).reduce((a,x)=>a+x.fixed,0),wSum=sl.filter(x=>!x.fixed).reduce((a,x)=>a+x.w,0);
-  sl.forEach((x,i)=>{x.id=i;});
+  sl.forEach((x,i)=>{if(x.id==null)x.id=i;});
   const E=_weekSlotEdits(mon,sl);
   sl.forEach(x=>{const e=E[x.id];if(e&&e.type&&!x.fixed)x.type=e.type;});
   const cu=_pinned(sl.filter(x=>!x.fixed),E,Math.max(0,pw.target-fixedKm)),cuKm=cu.reduce((a,x)=>a+(+E[x.id].km),0);
   const rs=sl.filter(x=>!x.fixed&&!cu.includes(x)),rSum=rs.reduce((a,x)=>a+x.w,0);
   sl.forEach(x=>{x.km=Math.round(x.fixed!=null?x.fixed:cu.includes(x)?+E[x.id].km:rSum?Math.max(0,pw.target-fixedKm-cuKm)*x.w/rSum:0);});
-  return{target:pw.target,kind:pw.kind,race:pw.race,slots:sl.filter(x=>x.km>0).map(x=>({type:x.type,km:x.km,id:x.id}))};
+  return{target:pw.target,kind:pw.kind,race:pw.race,slots:sl.filter(x=>x.km>0).map(x=>({type:x.type,km:x.km,id:x.id,day:x.day}))};
 }
 // A week's run edits, carrying over the old long-run-only setting.
 function _weekSlotEdits(monK,slots){
@@ -2966,7 +3005,9 @@ function getCalendarWeek(weekOffset){
   const dType=i=>!tmpl?'Run':weekOffset===0?planTypeThisWeek(i):tmpl[i];
   const tRun=[0,1,2,3,4,5,6].map(i=>dType(i)==='Run');
   const tType=[0,1,2,3,4,5,6].map(i=>tRun[i]?(weekOffset===0?runTypeThisWeek(i):getWeekPlanRunType(i)):null);
-  const tGym=[0,1,2,3,4,5,6].map(i=>!tmpl?null:weekOffset===0?gymTypeThisWeek(i):GYM_PLAN_TYPES.has(tmpl[i])?tmpl[i]:tmpl[i]==='Run'?getWeekPlanGym(i):null);
+  const rawG=i=>tmpl?(tmpl[i]==='Run'?(state.weekPlanGym||[])[i]:tmpl[i]):null;
+  const ovT=i=>{const o=weekOffset===0?getPlanOverride():null;return o&&o.types&&o.types[i]!=null;};
+  const tGym=[0,1,2,3,4,5,6].map(i=>!tmpl?null:_isAutoGym(rawG(i))&&!ovT(i)?'Gym':weekOffset===0?gymTypeThisWeek(i):GYM_PLAN_TYPES.has(tmpl[i])?tmpl[i]:tmpl[i]==='Run'?getWeekPlanGym(i):null);
   const days=[0,1,2,3,4,5,6].map(i=>{const ds=dk(addDays(mon,i));return{i,ds,past:ds<td,isToday:ds===td,done:runs.filter(r=>r.date===ds),planned:[],gym:null,note:''};});
   // A race last week (on Sunday) or earlier this week sets up recovery days.
   const raceBefore=getRaces().filter(r=>r.date<monK&&r.date>=dk(addDays(mon,-3)))[0];
@@ -2983,8 +3024,13 @@ function getCalendarWeek(weekOffset){
   nr.forEach(x=>{if(x.km<3){const to=nr.filter(y=>y!==x&&y.km>=3).sort((a,b)=>b.km-a.km)[0];if(to){to.km+=x.km;x.km=0;}}});
   if(nr.length&&nr.every(x=>x.km<3)){const sum=nr.reduce((a,x)=>a+x.km,0);nr.forEach(x=>{x.km=0;});if(sum>=2){nr[0].km=sum;nr[0].type='Easy';}}
   const slots=sl0.filter(x=>x.km>0).map((s,j)=>({...s,key:s.id!=null?'r'+s.id:s.type+j,oldKey:s.type+j}));
+  // No tempo the week after a race or in a recovery week: it's an easy run on its own day.
+  if(raceBefore||W.kind==='recovery')slots.forEach(x=>{if(x.type==='Tempo')x.type='Easy';});
   const moves=(state.calMoves||{})[monK]||{};
-  const pick=(s,cands)=>{const mv=moves[s.key]!=null?moves[s.key]:moves[s.oldKey];if(mv!=null){const d=days[mv];if(d&&!d.past)return d;}return cands[0];};
+  const pick=(s,cands)=>{const mv=moves[s.key]!=null?moves[s.key]:moves[s.oldKey];if(mv!=null){const d=days[mv];if(d&&!d.past)return d;}
+    const own=s.day!=null?days[s.day]:null;if(own&&cands.includes(own))return own;return cands[0];};
+  // Runs whose own day is still to come get placed first, so a missed run doesn't take it.
+  slots.sort((a,b)=>((a.day!=null&&days[a.day]&&!days[a.day].past)?0:1)-((b.day!=null&&days[b.day]&&!days[b.day].past)?0:1));
   const free=d=>!used.get(d.i);
   // Race
   slots.filter(s=>s.type==='Race').forEach(s=>{const d=pick(s,[raceDay||open[open.length-1]].filter(Boolean));if(d){place(d,s);d.note='race';}});
@@ -3040,6 +3086,99 @@ function getCalendarWeek(weekOffset){
   return{mon:monK,weekOffset,kind:W.kind,target:W.target,days,raceBefore};
 }
 let _calPick=null,_calAll=false;
+// ── YOUR USUAL WEEK ──
+// The one place you say how your week goes: which days you run (and what kind), lift
+// (a set session or "coach picks"), or rest. The coach does the rest: distances from
+// the goal and races, paces from your fitness, the gym session on "coach picks" days,
+// and on-the-day changes from readiness. Edits here apply from this week.
+let _uwSel=null,_uwUndo=null;
+const _UW_RUN=['Easy','Tempo','Intervals','Long'],_UW_GYM=['Gym','Push','Pull','Legs','Core'];
+function _uwDay(i){
+  const p=state.weekPlan||[];const t=p[i]||'Rest';
+  const run=t==='Run'?getWeekPlanRunTypeRaw(i):null;
+  const gym=t==='Run'?((state.weekPlanGym||[])[i]||null):(_UW_GYM.includes(t)||t==='Custom'?t:null);
+  return{run,gym};
+}
+function getWeekPlanRunTypeRaw(i){return(state.weekPlanRunType&&state.weekPlanRunType[i])||getWeekPlanRunType(i);}
+function setUsualDay(i,kind,val,e){
+  if(e)e.stopPropagation();
+  const had=Array.isArray(state.weekPlan);
+  if(!had){state.weekPlan=new Array(7).fill('Rest');state.weekPlanRunType=new Array(7).fill(null);state.weekPlanGym=new Array(7).fill(null);}
+  state.weekPlanRunType=state.weekPlanRunType||new Array(7).fill(null);state.weekPlanGym=state.weekPlanGym||new Array(7).fill(null);
+  _uwUndo=null;
+  const cur=_uwDay(i);
+  if(kind==='run')cur.run=val;else cur.gym=val;
+  if(cur.run){state.weekPlan[i]='Run';state.weekPlanRunType[i]=cur.run;state.weekPlanGym[i]=cur.gym;}
+  else if(cur.gym){state.weekPlan[i]=cur.gym;state.weekPlanGym[i]=null;}
+  else{state.weekPlan[i]='Rest';state.weekPlanGym[i]=null;}
+  // This week's one-off swap for that day no longer applies.
+  const o=getPlanOverride();if(o){['types','runTypes','gyms'].forEach(k=>{if(o[k])delete o[k][i];});}
+  if(!had)state.slotIdsV2=false;
+  _gymAutoCache={t:0,v:null};
+  saveState();haptic('light');refreshPlanViews();
+}
+function toggleUsualDay(i,e){if(e)e.stopPropagation();_uwSel=_uwSel===i?null:i;renderPlanCalendar();haptic('light');}
+// Take a week's actual shape (after moves and type changes) as the usual week.
+function promoteUsualWeek(offset){
+  const cw=getCalendarWeek(offset);if(!cw)return;
+  _uwUndo={weekPlan:state.weekPlan?[...state.weekPlan]:null,rt:state.weekPlanRunType?[...state.weekPlanRunType]:null,gym:state.weekPlanGym?[...state.weekPlanGym]:null,mon:cw.mon,moves:(state.calMoves||{})[cw.mon],edits:JSON.parse(JSON.stringify((state.weekSlotEdits||{})[cw.mon]||{})),label:offset===0?'this week':offset===1?'next week':`the week of ${_pbDate(cw.mon)}`};
+  const P=[],RT=[],G=[];
+  cw.days.forEach(d=>{
+    const u=_uwDay(d.i);
+    const pl=d.planned.filter(x=>x.type!=='Race').sort((a,b)=>b.km-a.km)[0];
+    const dn=d.done.sort((a,b)=>b.km-a.km)[0];
+    let run=pl?(pl.type==='Long'?'Long':pl.type==='Tempo'?(u.run==='Intervals'?'Intervals':'Tempo'):'Easy'):dn?(dn.effort==='Long Run'?'Long':['Tempo','Intervals'].includes(dn.effort)?dn.effort:'Easy'):null;
+    if(!run&&d.planned.some(x=>x.type==='Race'))run=u.run;   // race day: keep what the day usually is
+    const gym=d.gym?(d.gym==='Upper body'||d.gym==='Gym'?(u.gym||'Gym'):d.gym):(d.past?u.gym:null);
+    P.push(run?'Run':gym||'Rest');RT.push(run);G.push(run?gym:null);
+  });
+  state.weekPlan=P;state.weekPlanRunType=RT.map((r,i)=>r||(state.weekPlanRunType||[])[i]||null);state.weekPlanGym=G;
+  if(state.calMoves)delete state.calMoves[cw.mon];
+  const E=(state.weekSlotEdits||{})[cw.mon];if(E)Object.values(E).forEach(e=>{delete e.type;});
+  state.slotIdsV2=true;
+  saveState();haptic('success');refreshPlanViews();
+}
+function undoUsualWeek(){
+  const u=_uwUndo;if(!u)return;
+  state.weekPlan=u.weekPlan;state.weekPlanRunType=u.rt;state.weekPlanGym=u.gym;
+  state.calMoves=state.calMoves||{};if(u.moves)state.calMoves[u.mon]=u.moves;
+  state.weekSlotEdits=state.weekSlotEdits||{};state.weekSlotEdits[u.mon]=u.edits;
+  _uwUndo=null;saveState();haptic('light');refreshPlanViews();
+}
+function renderUsualWeek(){
+  const has=Array.isArray(state.weekPlan);
+  const nm=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const chips=nm.map((n,i)=>{
+    const u=has?_uwDay(i):{run:null,gym:null};
+    const main=u.run?(u.run==='Intervals'?'Ints':u.run):u.gym?(u.gym==='Gym'?'Gym':u.gym):'Rest';
+    const cls=u.run?u.run.toLowerCase():u.gym?'gym':'rest';
+    const sub=u.run&&u.gym?`+ ${u.gym==='Gym'?'gym':u.gym.toLowerCase()}`:u.gym==='Gym'&&!u.run?'auto':'';
+    return`<button class="uw-chip ${cls}${_uwSel===i?' sel':''}" onclick="toggleUsualDay(${i},event)"><span>${n}</span><b>${main}</b><em>${sub}</em></button>`;
+  }).join('');
+  let ed='';
+  if(_uwSel!=null){
+    const i=_uwSel,u=has?_uwDay(i):{run:null,gym:null};
+    const seg=(kind,opts,cur,lbl)=>`<span class="uw-opts">${opts.map(([v,l])=>`<button class="${(cur||'')===(v||'')?'on':''}" onclick="setUsualDay(${i},'${kind}',${v?`'${v}'`:'null'},event)">${l}</button>`).join('')}</span>`;
+    ed=`<div class="uw-ed" onclick="event.stopPropagation()">
+      <div class="uw-ed-h">${DAY_NAMES[i]}s</div>
+      <div class="uw-ed-row"><span>Run</span>${seg('run',[[null,'None'],..._UW_RUN.map(x=>[x,x==='Intervals'?'Ints':x])],u.run)}</div>
+      <div class="uw-ed-row"><span>Gym</span>${seg('gym',[[null,'None'],['Gym','Coach picks'],['Push','Push'],['Pull','Pull'],['Legs','Legs'],['Core','Core']],u.gym)}</div>
+    </div>`;
+  }
+  const runs=has?state.weekPlan.filter(t=>t==='Run').length:0;
+  const gyms=has?[0,1,2,3,4,5,6].filter(i=>_uwDay(i).gym).length:0;
+  const longI=has?[0,1,2,3,4,5,6].find(i=>_uwDay(i).run==='Long'):undefined;
+  const sum=has?`${runs} run${runs===1?'':'s'}${gyms?` · ${gyms} gym`:''}${longI!=null?` · long on ${nm[longI]}`:''}${!runs?' · add a run day to plan your km':longI==null?' · no long run day':''}`:'Tap a day to set how your week usually goes.';
+  const checks=has?getTemplateConflicts().slice(0,3):[];
+  const undo=_uwUndo?`<div class="uw-note">Usual week now matches ${_uwUndo.label}. <button class="yg-link" onclick="undoUsualWeek()">Undo</button></div>`:'';
+  return`<div class="uw">
+    <div class="uw-h"><span>Your usual week</span><em>${sum}</em></div>
+    <div class="uw-row">${chips}</div>
+    ${ed}${undo}
+    ${checks.map(c=>`<div class="uw-check">${esc(c.text)}</div>`).join('')}
+    <div class="uw-foot">You set the days; the coach sets the distances from your goal and races, the paces from your fitness, and the gym session on "coach picks" days.</div>
+  </div>`;
+}
 function calPick(mon,key){_calPick=_calPick&&_calPick.key===key&&_calPick.mon===mon?null:{mon,key};renderPlanCalendar();}
 function calMove(mon,key,i){state.calMoves=state.calMoves||{};state.calMoves[mon]=state.calMoves[mon]||{};state.calMoves[mon][key]=i;_calPick=null;saveState();haptic('light');refreshPlanViews();}
 function calReset(mon){if(state.calMoves)delete state.calMoves[mon];saveState();refreshPlanViews();}
@@ -3050,19 +3189,26 @@ function renderPlanCalendar(){
   const n=_calAll?base.plan.weeks.length:2;
   const weeks=[];for(let o=0;o<n;o++){const w=getCalendarWeek(o);if(w)weeks.push(w);}
   const kindTxt={race:'Race week',taper:'Taper week',recovery:'Recovery week',build:'Build week'};
+  const tmpl0=Array.isArray(state.weekPlan);
   const wk=w=>{
     const moved=(state.calMoves||{})[w.mon];
+    const reshaped=moved&&Object.keys(moved).length||Object.values((state.weekSlotEdits||{})[w.mon]||{}).some(e=>e.type);
+    // The week's shape: km a day, planned and done.
+    const kmDay=w.days.map(d=>d.done.reduce((a,r)=>a+(+r.km||0),0)+d.planned.reduce((a,x)=>a+x.km,0));
+    const mx=Math.max(...kmDay,1);
+    const shape=`<div class="pc-shape">${kmDay.map((k,i)=>`<i class="${w.days[i].done.length?'done':w.days[i].planned.some(x=>x.type==='Race')?'race':''}" style="height:${k?Math.max(12,k/mx*100):4}%"></i>`).join('')}</div>`;
     const rows=w.days.map(d=>{
       const done=d.done.map(r=>`<div class="pc-item done"><b>✓ ${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}</b></div>`).join('');
       const plan=d.planned.map(s=>{const sel=_calPick&&_calPick.mon===w.mon&&_calPick.key===s.key;
         return`<div class="pc-item ${s.type.toLowerCase()}${sel?' sel':''}" onclick="calPick('${w.mon}','${s.key}')"><b>${s.km} km ${esc(s.title||s.type)}</b><span>${s.desc||''}</span>${sel?`<div class="pc-move">${_CAL_DAY.map((nm,i)=>w.days[i].past?'':`<button onclick="event.stopPropagation();calMove('${w.mon}','${s.key}',${i})" class="${i===d.i?'on':''}">${nm}</button>`).join('')}</div>${s.id!=null&&s.type!=='Race'?slotEditorHtml(w.mon,s,s.km):''}`:''}</div>`;}).join('');
-      const gym=d.gym?`<div class="pc-item gym"><b>${d.gym}</b><span>${d.gym==='Upper body'?'Short and light, no legs.':GYM_PLAN_TYPES.has(d.gym)?`From your plan.${(W=>W==='race'||W==='taper')(w.kind)?' Keep it short in a '+w.kind+' week.':''}`:'A normal session; legs only if no key run within 48 hours.'}</span></div>`:'';
+      const gym=d.gym?`<div class="pc-item gym"><b>${d.gym==='Gym'&&tmpl0&&d.isToday?_coachGymType():d.gym}${d.gym==='Gym'&&tmpl0?' · coach picks':''}</b><span>${d.gym==='Gym'&&tmpl0?(d.isToday?`Today: ${_coachGymType()}, the coach's pick from your muscle balance and progress.`:'The coach picks the session on the day, from your muscle balance and progress.'):d.gym==='Upper body'?'Short and light, no legs.':GYM_PLAN_TYPES.has(d.gym)?`From your plan.${(W=>W==='race'||W==='taper')(w.kind)?' Keep it short in a '+w.kind+' week.':''}`:'A normal session; legs only if no key run within 48 hours.'}</span></div>`:'';
       const empty=!done&&!plan&&!gym?`<div class="pc-rest">${d.past?'':'Rest'}</div>`:'';
       return`<div class="pc-day${d.isToday?' today':''}${d.past?' past':''}"><div class="pc-d"><b>${_CAL_DAY[d.i]}</b><span>${new Date(d.ds+'T12:00:00').getDate()}</span></div><div class="pc-items">${done}${plan}${gym}${empty}</div></div>`;
     }).join('');
-    return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${moved?`<button onclick="calReset('${w.mon}')">Reset moves</button>`:''}</div>${rows}</div>`;
+    return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${shape}${reshaped?`<button onclick="promoteUsualWeek(${w.weekOffset})">Make this my usual week</button>`:''}${moved?`<button onclick="calReset('${w.mon}')">Reset moves</button>`:''}</div>${rows}</div>`;
   };
   el.innerHTML=`<div class="chart-card pc-card"><div class="chart-card-header"><span class="chart-card-title">Plan</span><span class="chart-card-val">tap a run to move or change it</span></div>
+    ${renderUsualWeek()}
     ${weeks.map(wk).join('')}
     <button class="tl-more" onclick="_calAll=!_calAll;renderPlanCalendar()">${_calAll?'Show two weeks':'Show every week to 31 Dec'}</button></div>`;
 }
@@ -3101,12 +3247,12 @@ function renderTodayPlanFromCalendar(readiness){
       <div class="today-plan-type">${run.km} km ${esc(run.title||run.type)}</div>
       <div class="today-plan-meta">${run.desc||''}${paceTxt?` <b>Pace ${paceTxt}.</b>`:''}${doneTxt?` ${doneTxt}`:''}</div>
       ${adv(rTxt)}
-      ${d.gym?`<div class="today-plan-meta" style="margin-top:6px;"><b>Plus ${esc(d.gym.toLowerCase())}</b>: ${d.gym==='Upper body'?'short and light, no legs.':'keep legs light with a key run close.'}</div>`:''}
+      ${d.gym?`<div class="today-plan-meta" style="margin-top:6px;"><b>Plus ${esc((d.gym==='Gym'?_coachGymType():d.gym).toLowerCase())}</b>${d.gym==='Gym'?' (the coach\'s pick)':''}: ${d.gym==='Upper body'?'short and light, no legs.':'keep legs light with a key run close.'}</div>`:''}
       <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('run');setTimeout(()=>useTodaysRun(${run.km},'${effort}'),80)">Log this run</button>`;
   }
   if(d.gym){
     const due=(getGymCoachLine()||'').replace(/<[^>]+>/g,'');
-    return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">${GYM_PLAN_TYPES.has(d.gym)?esc(d.gym):'Gym'}${d.gym==='Upper body'?' · upper body':''}</div>
+    return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">${d.gym==='Gym'?esc(_coachGymType()):GYM_PLAN_TYPES.has(d.gym)?esc(d.gym):'Gym'}${d.gym==='Upper body'?' · upper body':''}</div>
       <div class="today-plan-meta">${due||'A normal session.'} ${doneTxt}</div>
       ${adv(rk==='recover'?'Make it mobility instead today.':'')}
       <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('gym')">Start gym session</button>`;
@@ -3541,6 +3687,8 @@ function getGymCoachLine(){
     return{t,s,d,gaps,short,tops,mom,up,score};
   }).sort((a,b)=>b.score-a.score);
   const due=cands[0];
+  if(due)_gymDue=due.t;
+  if(_gymResolving)return null;
   // Why this one over the next best, in plain words.
   let why='';
   if(due&&cands[1]){
@@ -9805,6 +9953,41 @@ const YEAR_GOAL_SPLITS={
 };
 // Which slots to keep in a short week (goal started mid-week, or the last few days of
 // December): long run first, then an easy run, then tempo.
+// The week's runs, straight from your usual week: one per run day, its type from that
+// day (Long, Tempo/Intervals, Easy), keyed by the day so edits and moves stick to it.
+// Only the days inside [from, to] count (a goal started mid-week, the last days of the
+// year). Null without a usual week, and the old runs-per-week split is used instead.
+const _SLOT_W={Long:16,Tempo:10,Easy:9};
+function _planSlots(weekOffset,mon,from,to){
+  if(!Array.isArray(state.weekPlan))return null;
+  const out=[];
+  for(let i=0;i<7;i++){
+    const ds=dk(addDays(mon,i));if(ds<from||ds>to)continue;
+    const t=weekOffset===0?planTypeThisWeek(i):state.weekPlan[i];if(t!=='Run')continue;
+    const rt=weekOffset===0?runTypeThisWeek(i):getWeekPlanRunType(i);
+    const type=rt==='Long'?'Long':['Tempo','Intervals'].includes(rt)?'Tempo':'Easy';
+    out.push({type,w:_SLOT_W[type],id:i,day:i});
+  }
+  return out.length?out:null;
+}
+function usualRunDays(){return Array.isArray(state.weekPlan)?state.weekPlan.filter(t=>t==='Run').length:0;}
+// Week edits used to be keyed by position in a fixed split; with the usual week they're
+// keyed by day. Carry existing ones over once, matching by type.
+function _migrateSlotIds(){
+  if(state.slotIdsV2||!usualRunDays())return;
+  const old=(YEAR_GOAL_SPLITS[(state.yearRunGoal&&state.yearRunGoal.runsPerWeek)||5]||YEAR_GOAL_SPLITS[5]);
+  const nu=[0,1,2,3,4,5,6].filter(i=>state.weekPlan[i]==='Run').map(i=>({i,type:getWeekPlanRunType(i)==='Long'?'Long':['Tempo','Intervals'].includes(getWeekPlanRunType(i))?'Tempo':'Easy'}));
+  Object.keys(state.weekSlotEdits||{}).forEach(mon=>{
+    const E=state.weekSlotEdits[mon],out={},used=new Set();
+    Object.keys(E).sort((a,b)=>(old[a]&&old[a].type==='Long'?-1:0)-(old[b]&&old[b].type==='Long'?-1:0)).forEach(k=>{
+      const ty=old[k]?old[k].type:'Easy';
+      const m=nu.find(x=>!used.has(x.i)&&x.type===ty)||nu.find(x=>!used.has(x.i));
+      if(m){used.add(m.i);out[m.i]=E[k];}
+    });
+    state.weekSlotEdits[mon]=out;
+  });
+  state.calMoves={};state.slotIdsV2=true;saveState();
+}
 const YEAR_GOAL_SLOT_PRIORITY=['Long','Easy','Tempo','Easy','Easy','Easy'];
 // This week's share of what's left, fixed for the week: km remaining at the start of the
 // week x (days this week / days left in the year). A short week gets a pro-rata target,
@@ -9836,21 +10019,27 @@ function getYearGoalWeek(weekOffset=0){
   const pw=plan.weeks[0]||{target:rawTarget,note:'',race:null,longCap:null};
   const guard={longCap:pw.longCap,base:plan.base};
   let target=pw.target,note=pw.fixed||pw.capped||pw.overridden?pw.note:null,race=pw.race;
-  // Slots for this week, scaled to the target.
+  // Slots for this week: your usual week's run days, or the old split without one.
+  _migrateSlotIds();
+  const fromPlan=_planSlots(weekOffset,mon,dk(weekStart),dk(weekEnd));
   const runs=g.runsPerWeek||5;
   const full=YEAR_GOAL_SPLITS[runs]||YEAR_GOAL_SPLITS[5];
-  const n=Math.max(1,Math.min(full.length,Math.round(full.length*daysThisWeek/7)));
-  let slots=full.map(x=>({...x}));
-  if(n<full.length){
+  const n=fromPlan?fromPlan.length:Math.max(1,Math.min(full.length,Math.round(full.length*daysThisWeek/7)));
+  let slots=fromPlan||full.map(x=>({...x}));
+  if(!fromPlan&&n<full.length){
     const keep=[];const pool=[...slots];
     YEAR_GOAL_SLOT_PRIORITY.forEach(t=>{if(keep.length<n){const i=pool.findIndex(x=>x.type===t);if(i>=0)keep.push(pool.splice(i,1)[0]);}});
     slots=slots.filter(x=>keep.includes(x));
   }
   // Race week: the long run slot becomes the race itself, at race distance.
-  if(race&&race.inWeek){const L=slots.find(x=>x.type==='Long');if(L){L.type='Race';L.fixedKm=race.km;}}
+  if(race&&race.inWeek){
+    const rdow=race.date?(new Date(race.date+'T12:00:00').getDay()+6)%7:null;
+    const L=slots.find(x=>x.type==='Long')||slots.find(x=>x.day===rdow)||slots[slots.length-1];
+    if(L){L.type='Race';L.fixedKm=race.km;if(rdow!=null)L.day=rdow;}
+  }
   // Your edits to this week's runs (tap a run on the goal card or the calendar): a type
-  // and/or a distance per run, keyed by its place in the week. The others rebalance.
-  slots.forEach((x,i)=>{x.id=i;});
+  // and/or a distance per run, keyed by its day (or place in the week). Others rebalance.
+  slots.forEach((x,i)=>{if(x.id==null)x.id=i;});
   const E=_weekSlotEdits(monStr,slots);
   slots.forEach(x=>{const e=E[x.id];if(e&&e.type&&x.type!=='Race')x.type=e.type;});
   const wSum=slots.reduce((a,x)=>a+x.w,0);
@@ -9866,8 +10055,10 @@ function getYearGoalWeek(weekOffset=0){
   }
   const slotType=(e,r)=>r&&r===longR?'Long':e==='Long Run'?'Long':e==='Race'&&slots.some(x=>x.type==='Race')?'Race':e==='Easy'?'Easy':(e?'Tempo':'Easy');
   const extra=[];
-  weekRuns.forEach(r=>{const sl=slots.find(x=>!x.run&&x.type===slotType(r.effort,r));if(sl)sl.run=r;else extra.push(r);});
-  extra.forEach(r=>{const sl=slots.find(x=>!x.run);if(sl)sl.run=r;});
+  const rdw=r=>(new Date(r.date+'T12:00:00').getDay()+6)%7;
+  const near=(c,r)=>c.sort((a,b)=>(a.day!=null?Math.abs(a.day-rdw(r)):0)-(b.day!=null?Math.abs(b.day-rdw(r)):0))[0];
+  weekRuns.forEach(r=>{const sl=near(slots.filter(x=>!x.run&&x.type===slotType(r.effort,r)),r);if(sl)sl.run=r;else extra.push(r);});
+  extra.forEach(r=>{const sl=near(slots.filter(x=>!x.run),r);if(sl)sl.run=r;});
   slots.forEach(x=>{if(x.run)x.runType=x.run===longR&&x.type==='Long'?'Long':slotType(x.run.effort,x.run);});
   // Re-split what's left of the week over the open slots.
   const open=slots.filter(x=>!x.run);
@@ -9977,7 +10168,7 @@ function weekRaceInfo(mon,base){
       note=w===0?`Race week: ${nm} on ${rd.toLocaleDateString('en-GB',{weekday:'long'})}${pri==='B'?', trained through':''}.`:`Taper for ${nm}, ${w===1?'next week':`in ${w} weeks`}.`;}}
     else{const Rc=RACE_RECOVERY(km,pri),i=-w-1;if(i<Rc.length){f=Rc[i];kind='recovery';note=`Recovery after ${nm}.`;}}
     if(f==null)return;
-    const info={factor:f,kind,note,race:{km,name:r.name,inWeek:w===0,weeksTo:w},longCap:w===1&&pri==='A'?(km<=10.5?16:km<=25?18:28):null,minKm:w===0?km+6:0};
+    const info={factor:f,kind,note,race:{km,name:r.name,date:r.date,inWeek:w===0,weeksTo:w},longCap:w===1&&pri==='A'?(km<=10.5?16:km<=25?18:28):null,minKm:w===0?km+6:0};
     if(!best||f<best.factor||(f===best.factor&&kind==='race')){
       // keep the deepest cut, but remember a race in the same week and any long-run cap
       const prev=best;best=info;
@@ -10170,6 +10361,10 @@ function openYearGoalModal(){
   document.getElementById('year-goal-target').value=g?g.targetKm:'';
   document.getElementById('year-goal-remaining').value=same&&p?Math.round(p.remaining*10)/10:(g?g.targetKm:'');
   setYearGoalRuns((g&&g.runsPerWeek)||5);
+  // With a usual week, runs per week is just its run days.
+  const ur=usualRunDays();
+  document.getElementById('year-goal-runs-row').style.display=ur?'none':'';
+  document.getElementById('year-goal-runs-note').innerHTML=ur?`${ur} a week, from your usual week. Change it on the Plan card.`:'';
   updateYearGoalPreview();
   openModal('year-goal-modal');
 }
@@ -11770,7 +11965,20 @@ function _planWeekKey(){return dk(getMonday(today()));}
 function getPlanOverride(){return(state.planOverrides&&state.planOverrides[_planWeekKey()])||null;}
 // Double days: a Run day can also carry a gym session (state.weekPlanGym[i]), so the plan
 // can say "Tempo + Push". gymTypeThisWeek is the gym session planned that day either way.
-function getWeekPlanGym(i){const t=state.weekPlanGym&&state.weekPlanGym[i];return GYM_PLAN_TYPES.has(t)?t:null;}
+function getWeekPlanGym(i){const t=state.weekPlanGym&&state.weekPlanGym[i];return t==='Gym'?_coachGymType():GYM_PLAN_TYPES.has(t)?t:null;}
+// A "coach picks" gym day reads as the session the gym coach scores highest right now
+// (muscle sets short, days since, lift momentum), so everything that asks "what's the
+// gym session" gets a real answer. Cached briefly: it's asked a lot per render.
+let _gymDue=null,_gymResolving=false,_gymAutoCache={t:0,v:null};
+function _coachGymType(){
+  if(Date.now()-_gymAutoCache.t<1500&&_gymAutoCache.v)return _gymAutoCache.v;
+  const fb=()=>{const g=loadGymData().filter(x=>['Push','Pull','Legs'].includes(x.type));const l=g.length?g[g.length-1].type:null;return l==='Push'?'Pull':'Push';};
+  if(_gymResolving)return fb();
+  _gymResolving=true;_gymDue=null;
+  try{getGymCoachLine();}catch(e){}finally{_gymResolving=false;}
+  const v=_gymDue||fb();_gymAutoCache={t:Date.now(),v};return v;
+}
+const _isAutoGym=v=>v==='Gym';
 function gymTypeThisWeek(i){
   const t=planTypeThisWeek(i);
   if(GYM_PLAN_TYPES.has(t))return t;
@@ -11789,7 +11997,7 @@ function legsByRunning(){
   if(!Array.isArray(p)||!p.includes('Run'))return false;
   return!p.includes('Legs')&&![0,1,2,3,4,5,6].some(i=>getWeekPlanGym(i)==='Legs');
 }
-function planTypeThisWeek(i){const o=getPlanOverride();if(o&&o.types&&o.types[i]!=null)return o.types[i];return Array.isArray(state.weekPlan)?state.weekPlan[i]||null:null;}
+function planTypeThisWeek(i){const o=getPlanOverride();const t=o&&o.types&&o.types[i]!=null?o.types[i]:Array.isArray(state.weekPlan)?state.weekPlan[i]||null:null;return t==='Gym'?_coachGymType():t;}
 function runTypeThisWeek(i){const o=getPlanOverride();if(o&&o.runTypes&&o.runTypes[i]!=null)return o.runTypes[i];return getWeekPlanRunType(i);}
 let _planUndo=null;
 function swapPlanDaysThisWeek(i,j){
@@ -11919,7 +12127,8 @@ function _gcPlanDay(n){
   if(j>=0&&j<7)return{type:planTypeThisWeek(j),runType:runTypeThisWeek(j),gym:gymTypeThisWeek(j),day:DAY_NAMES[j]};
   const k=((j%7)+7)%7;
   const t=Array.isArray(state.weekPlan)?state.weekPlan[k]||null:null;
-  return{type:t,runType:getWeekPlanRunType(k),gym:GYM_PLAN_TYPES.has(t)?t:t==='Run'?getWeekPlanGym(k):null,day:DAY_NAMES[k]};
+  const tt=t==='Gym'?_coachGymType():t;
+  return{type:tt,runType:getWeekPlanRunType(k),gym:GYM_PLAN_TYPES.has(tt)?tt:tt==='Run'?getWeekPlanGym(k):null,day:DAY_NAMES[k]};
 }
 // The upper-body day that's waited longest - offered when legs would clash with running.
 function _gcUpperAlt(){
@@ -12423,7 +12632,18 @@ function getGymWeekOverview(){
   const remaining=scheduled.filter(s=>!s.done);
   return{total:scheduled.length,doneCount,remaining,scheduled};
 }
+// The usual week is edited on Today's Plan card now; Me shows it and links there.
 function renderWeekPlanSection(){
+  const nm=['M','T','W','T','F','S','S'];
+  const has=Array.isArray(state.weekPlan);
+  const row=has?nm.map((n,i)=>{const u=_uwDay(i);const m=u.run?(u.run==='Intervals'?'Ints':u.run):u.gym||'Rest';return`<div class="uw-chip ${u.run?u.run.toLowerCase():u.gym?'gym':'rest'}" style="cursor:default;"><span>${n}</span><b>${m}</b><em>${u.run&&u.gym?'+ '+(u.gym==='Gym'?'gym':u.gym.toLowerCase()):''}</em></div>`;}).join(''):'';
+  return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Your usual week</span></div>
+    ${has?`<div class="uw-row" style="margin-bottom:10px;">${row}</div>`:''}
+    <p style="font-size:13px;line-height:1.5;color:var(--text2);margin:0 0 10px;">Your week now lives on the Plan card on Today: set your run days, long and tempo days and gym days there, and the coach plans the distances around them.</p>
+    <button class="btn-primary" style="width:100%;" onclick="openUsualWeek()">Edit on Today</button></div>`;
+}
+function openUsualWeek(){showPage('today');_uwSel=null;setTimeout(()=>{const e=document.getElementById('plan-cal-wrap');if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},120);}
+function _oldRenderWeekPlanSection(){
   const plan=state.weekPlan;
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};

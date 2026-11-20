@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="73">
+<meta name="app-version" content="74">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -3021,6 +3021,50 @@ function getCalendarRunOn(ds){
   return{...s,day:d};
 }
 
+// ── TODAY'S PLAN (from the calendar) ──
+// Today's card reads the same calendar as the Plan card, the Run page and the coach, so
+// they can't disagree: today's run with how to do it and its paces, a gym session, race
+// day, or rest, with readiness applied and one tap to log it.
+function renderTodayPlanFromCalendar(readiness){
+  const cw=getCalendarWeek(0);if(!cw)return null;
+  const td=dk(today()),d=cw.days.find(x=>x.ds===td);if(!d)return null;
+  const rk=readiness&&readiness.state?readiness.state.key:null;
+  const nxDay=cw.days.find(x=>x.ds>td&&x.planned.length);
+  const nxTxt=nxDay?`Next: ${_CAL_DAY[nxDay.i]}, ${nxDay.planned[0].km} km ${esc((nxDay.planned[0].title||nxDay.planned[0].type).toLowerCase())}.`:'';
+  const adv=t=>readiness&&readiness.state&&t?`<div class="today-plan-advice" style="--st:${readiness.state.col};"><b>${readiness.state.label}.</b> ${t}</div>`:'';
+  const doneTxt=d.done.length?`Already logged today: ${d.done.map(r=>`${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}`).join(', ')}.`:'';
+  const race=d.planned.find(x=>x.type==='Race');
+  const run=d.planned.filter(x=>x.type!=='Race').sort((a,b)=>b.km-a.km)[0];
+  if(race)return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">Race day</div><div class="today-plan-meta">${race.desc||''}</div>${adv('Trust the taper; the work is done.')}`;
+  if(run){
+    const fm=getFitnessModel();
+    const zone={Easy:[0.62,0.70],Long:[0.62,0.72],Tempo:[0.86,0.88]}[run.type];
+    const paceTxt=fm&&zone?`${fmtMS(_paceAtPct(fm.vdot,zone[1]))}–${fmtMS(_paceAtPct(fm.vdot,zone[0]))}/km`:'';
+    const effort={Long:'Long Run',Tempo:'Tempo',Easy:'Easy'}[run.type]||'Easy';
+    const rTxt=rk==='recover'?'Swap it for rest or 20-30 minutes very easy; the plan will rebalance.'
+      :rk==='pace'?(run.type==='Tempo'?'Run it all easy today and move the tempo later in the week.':'Keep it to the slow end of the range, and cut it short if your legs say so.')
+      :rk==='go'?(run.type==='Tempo'?'A good day for the tempo: hit the paces.':'Feeling good; still keep easy runs easy.'):rk==='ready'?'A normal day: run it as written.':'';
+    return`<div class="today-plan-lbl">Today's plan</div>
+      <div class="today-plan-type">${run.km} km ${esc(run.title||run.type)}</div>
+      <div class="today-plan-meta">${run.desc||''}${paceTxt?` <b>Pace ${paceTxt}.</b>`:''}${doneTxt?` ${doneTxt}`:''}</div>
+      ${adv(rTxt)}
+      ${d.gym?`<div class="today-plan-meta" style="margin-top:6px;"><b>Plus ${esc(d.gym.toLowerCase())}</b>: ${d.gym==='Upper body'?'short and light, no legs.':'keep legs light with a key run close.'}</div>`:''}
+      <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('run');setTimeout(()=>useTodaysRun(${run.km},'${effort}'),80)">Log this run</button>`;
+  }
+  if(d.gym){
+    const due=(getGymCoachLine()||'').replace(/<[^>]+>/g,'');
+    return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">Gym${d.gym==='Upper body'?' · upper body':''}</div>
+      <div class="today-plan-meta">${due||'A normal session.'} ${doneTxt}</div>
+      ${adv(rk==='recover'?'Make it mobility instead today.':'')}
+      <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('gym')">Start gym session</button>`;
+  }
+  if(d.done.length)return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">Done</div><div class="today-plan-meta">${doneTxt} ${nxTxt}</div><button class="today-plan-cta done" onclick="showPage('train');switchTrainTab('history')">Logged ✓</button>`;
+  return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">Rest</div>
+    <div class="today-plan-meta">Recovery is where the training turns into fitness. ${nxTxt}</div>
+    ${adv(rk==='go'?'Fully recovered: enjoy the day off; tomorrow you\'ll be fresh.':rk==='recover'||rk==='pace'?'Good timing for a rest day.':'')}
+    <button class="today-plan-cta" style="background:var(--surface2);color:var(--text2);box-shadow:none;border:1px solid var(--border);" onclick="openModal('train-picker-modal')">Log something anyway</button>`;
+}
+
 // ── WHAT'S NEXT (shared by the run debrief, gym verdict and evening wrap-up) ──
 // The next run after today, picked the same way as Today's run: the long run waits for
 // the last day, otherwise an easy (or the planned type for that day).
@@ -3801,6 +3845,9 @@ function renderToday(){
         ${planAdvice(false)}
         <button class="today-plan-cta" style="background:var(--surface2);color:var(--text2);box-shadow:none;border:1px solid var(--border);" onclick="${todayPlan?"openModal('train-picker-modal')":"showPage('me')"}">${todayPlan?'Log something anyway':'Set your week plan'}</button>`;
     }
+    // With a year goal, the calendar decides today; the template version above is the
+    // fallback without one.
+    const calCell=renderTodayPlanFromCalendar(readiness);if(calCell)planCell.innerHTML=calCell;
   }else{wrap.innerHTML='';raceWrap.innerHTML='';planCell.innerHTML='';}
 
   // Goal chips - compact 2-col grid instead of a full-width card per goal

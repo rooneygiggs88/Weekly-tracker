@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="61">
+<meta name="app-version" content="62">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -8636,11 +8636,17 @@ function renderYearGoalCard(){
 }
 // The plan in words, with the week-by-week breakdown behind a button.
 let _ygPlanOpen=false;
-function setPlanCap(m,e){if(e)e.stopPropagation();state.yearRunGoal.capMode=m;saveState();renderYearGoalCard();haptic('light');}
+// Changing the plan moves this week's target, so everything on Today that shows it (the
+// rings, the coach briefing, the race strip) is redrawn, not just the goal card.
+function refreshPlanViews(){
+  const t=document.getElementById('page-today');
+  if(t&&t.classList.contains('active')&&weekOffset===0)renderToday();else renderYearGoalCard();
+}
+function setPlanCap(m,e){if(e)e.stopPropagation();state.yearRunGoal.capMode=m;saveState();refreshPlanViews();haptic('light');}
 function setRacePriority(date,p,e){
   if(e)e.stopPropagation();
   [state.race,...(state.extraRaces||[])].forEach(r=>{if(r&&r.date===date)r.priority=p;});
-  saveState();renderYearGoalCard();haptic('light');
+  saveState();refreshPlanViews();haptic('light');
 }
 // What each lever would do to the shortfall, worked out by re-running the plan.
 function whatIfPlans(){
@@ -8953,12 +8959,12 @@ function stepYearGoalLong(d){
   const w=getYearGoalWeek();if(!w||!w.longSlot)return;
   const v=Math.max(1,Math.min(w.longMax,Math.round(w.longSlot.left)+d));
   if(!state.weekLongKm)state.weekLongKm={};
-  state.weekLongKm[w.longKey]=v;saveState();renderYearGoalCard();haptic('light');
+  state.weekLongKm[w.longKey]=v;saveState();refreshPlanViews();haptic('light');
 }
 function resetYearGoalLong(){
   const w=getYearGoalWeek();if(!w)return;
   if(state.weekLongKm)delete state.weekLongKm[w.longKey];
-  saveState();renderYearGoalCard();haptic('light');
+  saveState();refreshPlanViews();haptic('light');
 }
 function renderYearGoalWeek(){
   const w=getYearGoalWeek();

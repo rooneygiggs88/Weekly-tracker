@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="64">
+<meta name="app-version" content="65">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -2550,9 +2550,8 @@ function getCoachBriefing(){
   }
   const gym=loadGymData();const lastGym=gym.length?gym[gym.length-1].date:null;
   const gymGap=lastGym?Math.round((new Date(td+'T12:00:00')-new Date(lastGym+'T12:00:00'))/864e5):null;
-  if(gymGap!=null&&gymGap>=14&&!(r&&r.date&&daysUntil(r.date)>=0&&daysUntil(r.date)<=7)){
-    out.push({ic:'dumbbell',t:`<b>${gymGap} days since the gym.</b> One short session keeps the strength you built${gymGap>=28?'; two weeks back gets most of it back':''}.`,go:"showPage('train');switchTrainTab('gym')"});
-  }
+  const gymLine=getGymCoachLine();
+  if(gymLine)out.push({ic:'dumbbell',t:gymLine,go:"showPage('train');switchTrainTab('gym')"});
   const health=loadHealthData();const lastW=health.filter(h=>h.weight).slice(-1)[0];
   if(lastW){
     const gap=Math.round((new Date(td+'T12:00:00')-new Date(lastW.date+'T12:00:00'))/864e5);
@@ -2564,6 +2563,75 @@ function getCoachBriefing(){
   else if(vape&&vape.trendPct!=null&&vape.trendPct<=-10)out.push({ic:'wind',t:`<b>Puffs down ${-vape.trendPct}%</b> over the last two weeks compared with the two before. Keep chipping away.`,go:"showPage('trends');switchTrendsTab('wellness')"});
   return out.slice(0,4);
 }
+// ── GYM COACH ──
+// Which session is due (the least recent of Push / Pull / Legs, steering off legs when
+// a key run or race is close), what to lift (your last top sets: about 80% after a
+// long break, +2.5 kg when you hit your reps last time), and whatever context matters
+// today (race nearness, taper, a long run tomorrow, a Recover morning).
+function _gymTopSets(sess,n=2){
+  // The session's heaviest lifts, i.e. the main ones, not whatever came first.
+  const out=[];
+  (sess.exercises||[]).forEach(e=>{
+    const ws=(e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight)>0);if(!ws.length)return;
+    const top=ws.reduce((a,b)=>parseFloat(b.weight)>parseFloat(a.weight)||(parseFloat(b.weight)===parseFloat(a.weight)&&+b.reps>+a.reps)?b:a);
+    out.push({name:e.name,w:parseFloat(top.weight),reps:parseInt(top.reps)||0});
+  });
+  return out.sort((a,b)=>b.w-a.w).slice(0,n);
+}
+const _r25=v=>Math.max(2.5,Math.round(v/2.5)*2.5);
+const _kg=v=>`${+v.toFixed(2)%1?v.toFixed(1).replace(/\.0$/,''):v} kg`;
+function getGymCoachLine(){
+  const gym=loadGymData();if(!gym.length)return null;
+  const now=today(),td=dk(now),dayIdx=(now.getDay()+6)%7;
+  const daysAgo=ds=>Math.round((new Date(td+'T12:00:00')-new Date(ds+'T12:00:00'))/864e5);
+  const lastAny=gym[gym.length-1],gap=daysAgo(lastAny.date);
+  const rd=computeReadiness(),rk=rd&&rd.state?rd.state.key:null;
+  const next=getRaces().filter(x=>daysUntil(x.date)>=0)[0],dNext=next?daysUntil(next.date):null;
+  const rn=next?esc(next.name||'your race'):'';
+  const yw=getYearGoalWeek(),pw=yw&&yw.plan&&yw.plan.weeks[0];
+  const shaped=pw&&(pw.kind==='race'||pw.kind==='taper')&&!pw.overridden;
+  // A long or key run today or tomorrow, from the weekly plan, or the long run still to
+  // do this weekend.
+  const keyRun=i=>i<7&&planTypeThisWeek(i)==='Run'&&['Long','Tempo','Intervals'].includes(runTypeThisWeek(i));
+  const longOpen=yw&&yw.longSlot&&!yw.longSlot.run&&(yw.longSlot.left||0)>=10;
+  const keySoon=keyRun(dayIdx+1)||keyRun(dayIdx)||(longOpen&&dayIdx>=4);
+  const avoidLegs=keySoon||shaped||(dNext!=null&&dNext<=7);
+  const types=['Push','Pull','Legs'].filter(t=>t!=='Legs'||gym.some(g=>g.type==='Legs'));
+  const lastOf=t=>{for(let i=gym.length-1;i>=0;i--)if(gym[i].type===t)return gym[i];return null;};
+  const cands=types.filter(t=>!(avoidLegs&&t==='Legs')).map(t=>({t,s:lastOf(t)})).sort((a,b)=>(a.s?a.s.date:'').localeCompare(b.s?b.s.date:''));
+  const due=cands[0];
+  const todays=gym.filter(g=>g.date===td);
+  // Already lifted today
+  if(todays.length){
+    const sets=todays.reduce((a,g)=>a+(g.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+    const nx=cands.find(c=>!todays.some(g=>g.type===c.t));
+    const why=dNext!=null&&dNext<=7?'until after the race':shaped?'until after the taper':'until after your long run';
+    return`<b>${esc(todays[0].type||'Gym')} done today:</b> ${sets} working set${sets===1?'':'s'}.${nx?` Next up: ${nx.t}${avoidLegs&&nx.t!=='Legs'&&types.includes('Legs')?` (legs can wait ${why})`:''}.`:''}`;
+  }
+  if(dNext!=null&&dNext<=2)return`<b>No lifting until after ${rn}.</b> Fresh legs and a rested body matter more than one session now.`;
+  if(rk==='recover')return`<b>Readiness says recover.</b> Skip the weights today; ten minutes of mobility will do more for you.`;
+  if(gap<3||!due)return null;
+  const typeTxt=due.t,lastT=due.s?daysAgo(due.s.date):null;
+  let head=gap>=14?`<b>${gap} days since the gym: ${typeTxt} is due.</b>`:`<b>${typeTxt} is due</b>${lastT!=null?` (last one ${lastT} days ago)`:''}.`;
+  let lifts='';
+  if(due.s){
+    const tops=_gymTopSets(due.s);
+    if(tops.length){
+      // After a long break: ~80% of the last top set for 8-10 reps. Otherwise progress:
+      // heavier lifts go up 2.5 kg once you hit 8+ reps; light ones (under 20 kg) add reps.
+      if(gap>=14)lifts=` Ease back in at about 80%: ${tops.map(x=>`${esc(x.name)} ${_kg(_r25(x.w*0.8))} × ${Math.max(8,Math.min(10,x.reps||10))}`).join(', ')}.`;
+      else lifts=` ${tops.map(x=>x.w<20?`${esc(x.name)}: ${_kg(x.w)} × ${x.reps} last time, aim for ${Math.min(15,(x.reps||8)+2)} reps`:x.reps>=8?`${esc(x.name)}: ${_kg(x.w)} × ${x.reps} last time, try ${_kg(x.w+2.5)}`:`${esc(x.name)}: repeat ${_kg(x.w)} and add a rep`).join('; ')}.`;
+    }
+  }
+  let ctx='';
+  if(dNext!=null&&dNext<=7)ctx=` With ${rn} in ${dNext} days, keep it upper-body only and about 40 minutes.`;
+  else if(shaped)ctx=` It's a taper week, so keep it short and leave legs alone.`;
+  else if(keySoon&&types.includes('Legs'))ctx=` No legs with a key run so close; this keeps them fresh.`;
+  else if(rk==='pace')ctx=` Readiness says pace yourself, so stop a couple of reps short of failure.`;
+  else if(types.includes('Legs')&&lastOf('Legs')&&daysAgo(lastOf('Legs').date)>=28)ctx=` Legs haven't been trained in ${daysAgo(lastOf('Legs').date)} days; single-leg work helps your running too.`;
+  return head+lifts+ctx;
+}
+
 // The coaching sentence after the week's numbers: one line on what kind of week this
 // is (race, taper, training through, recovery, big build) and, if anything needs
 // flagging, the single most pressing issue (too many runs for the days left, one run

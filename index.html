@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="70">
+<meta name="app-version" content="71">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -442,6 +442,24 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .rc-wx-h em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--text2);}
 .rc-wx p{font-size:13px;line-height:1.45;color:var(--text2);margin-top:6px;}
 .rc-wx-set{margin-top:10px;width:100%;padding:10px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.np-p{font-size:13.5px;line-height:1.5;color:var(--text2);margin-top:8px;}
+.np-p b{color:var(--text);}
+.np-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+.np-pick button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);font-family:inherit;color:var(--text);cursor:pointer;}
+.np-pick b{font-family:var(--display);font-weight:800;font-size:20px;text-transform:uppercase;}
+.np-pick span{font-size:11.5px;font-weight:600;color:var(--text3);}
+.np-big{display:flex;align-items:baseline;gap:8px;}
+.np-big b{font-family:var(--display);font-weight:800;font-size:52px;line-height:1;}
+.np-big span{font-size:13px;font-weight:700;color:var(--text3);}
+.np-bar{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-top:8px;}
+.np-bar div{height:100%;border-radius:4px;}
+.np-ladder{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px;margin-top:12px;}
+.np-wk{padding:6px 7px;border-radius:9px;background:var(--surface2);display:flex;flex-direction:column;}
+.np-wk.now{background:var(--accent);}
+.np-wk.now span,.np-wk.now b,.np-wk.now em{color:var(--on-accent);}
+.np-wk span{font-size:10px;font-weight:700;color:var(--text3);}
+.np-wk b{font-family:var(--display);font-weight:800;font-size:18px;}
+.np-wk em{font-style:normal;font-size:10.5px;font-weight:700;color:var(--green);min-height:13px;}
 .rc-card{position:relative;overflow:hidden;}
 .rc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent);}
 .rc-eyebrow{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
@@ -2311,6 +2329,10 @@ function getTrophies(){
     [[25,'silver'],[50,'gold'],[75,'plat']].forEach(([pc,t])=>{const hit=roll.find(x=>x.n>=7&&x.avg<=base*(1-pc/100));
       add('Wellness',`vape${pc}`,`−${pc}%|NICOTINE`,`Nicotine down ${pc}%`,`A 7-day average of puffs ${pc}% below where you started.`,hit?hit.date:null,base>0?(1-nowAvg/base)/(pc/100):0,`now ${Math.max(0,Math.round((1-nowAvg/base)*100))}% down`,t);});
   }
+  {const vv=loadVapingData().filter(x=>x.date).sort((a,b)=>a.date.localeCompare(b.date));let run=0,hit=null;
+    const byDay={};vv.forEach(x=>{byDay[x.date]=(byDay[x.date]||0)+(+x.puffs||0);});
+    Object.keys(byDay).sort().forEach((d,i,arr)=>{const prev=i?arr[i-1]:null;const consec=prev&&Math.round((new Date(d+'T12:00:00')-new Date(prev+'T12:00:00'))/864e5)===1;run=byDay[d]===0?(consec?run+1:1):0;if(run>=7&&!hit)hit=d;});
+    if(vv.length)add('Wellness','nicfree','7 DAYS|NIC-FREE','Nicotine-free week','Seven logged days in a row at zero.',hit,run/7,`${run} of 7 days`,'plat');}
   const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
   if(goalW){const h=loadHealthData().filter(x=>x.weight).sort((a,b)=>a.date.localeCompare(b.date));const hit=h.find(x=>x.weight<=goalW);const lastW=h.length?h[h.length-1].weight:null;
     add('Wellness','weight',`${goalW}|KG`,`Hit ${goalW} kg`,'Reach your goal weight.',hit?hit.date:null,lastW&&h.length?Math.max(0,1-(lastW-goalW)/Math.max(1,h[0].weight-goalW)):0,lastW?`now ${lastW} kg`:'log a weigh-in','gold');}
@@ -2777,7 +2799,7 @@ function getWellnessPageCoach(){
   const nic=getWellnessCoachLines().filter(l=>l.ic==='wind');
   nic.forEach(l=>out.push(l));
   const v=loadVapingData().filter(x=>x.date&&+x.puffs>=0);
-  if(v.length>=7){
+  if(v.length>=7&&!getNicPlan()){
     const byWeek={};v.forEach(x=>{const k=dk(getMonday(new Date(x.date+'T12:00:00')));(byWeek[k]=byWeek[k]||[]).push(+x.puffs);});
     const avgs=Object.entries(byWeek).filter(([k,a])=>a.length>=4&&k<dk(getMonday(today()))).map(([k,a])=>({k,v:a.reduce((s,y)=>s+y,0)/a.length})).sort((a,b)=>a.v-b.v);
     if(avgs.length>=2){const best=avgs[0],recent=Object.entries(byWeek).sort((a,b)=>b[0].localeCompare(a[0]))[0];
@@ -2967,6 +2989,72 @@ function renderGymTrendsCoach(){
   return`<div class="brief-card"><div class="brief-h">Coach</div>${lines.map(l=>`<div class="brief-line" style="cursor:default;"><span class="brief-ic">${svgIcon('dumbbell',18)}</span><span class="brief-t">${l}</span></div>`).join('')}</div>`;
 }
 
+// ── NICOTINE PLAN ──
+// A cut-down plan to a quit-by date: puffs step down evenly week by week from your
+// current daily average to zero, and strength drops a level at two milestones (about two
+// thirds and one third of where you started). The weekly target drives the daily one on
+// Today. Money saved is worked out from what you said you spend at the start.
+function _nicAvg(from,to){const v=loadVapingData().filter(x=>x.date>=from&&x.date<=to&&+x.puffs>=0).map(x=>+x.puffs);return v.length?{avg:v.reduce((a,b)=>a+b,0)/v.length,n:v.length}:null;}
+function _nicLatestMg(){const v=loadVapingData().filter(x=>+x.mg>0).sort((a,b)=>a.date.localeCompare(b.date));return v.length?+v[v.length-1].mg:null;}
+function getNicPlan(){
+  const P=state.nicPlan;if(!P||!P.start||!P.quit)return null;
+  const s=new Date(P.start+'T12:00:00'),q=new Date(P.quit+'T12:00:00');
+  const weeks=Math.max(1,Math.round((q-s)/(7*864e5)));
+  const ladder=[];
+  for(let k=0;k<weeks;k++){
+    const from=dk(addDays(s,k*7)),to=dk(addDays(s,k*7+6));
+    const target=Math.max(0,Math.round(P.startPuffs*(1-(k+1)/weeks)/5)*5);
+    const act=_nicAvg(from,to);
+    const stage=target>P.startPuffs*0.66?0:target>P.startPuffs*0.33?1:2;
+    ladder.push({k,from,to,target,act,stage});
+  }
+  const td=dk(today());
+  const cur=ladder.find(w=>td>=w.from&&td<=w.to)||(td>P.quit?null:ladder[0]);
+  const mgSteps=[P.startMg||null,P.startMg?Math.max(3,Math.round(P.startMg/2)):null,P.startMg?3:null];
+  let saved=0;
+  if(P.costPerWeek>0)ladder.forEach(w=>{if(w.act&&w.from<=td)saved+=P.costPerWeek*Math.max(0,1-w.act.avg/P.startPuffs)*Math.min(1,w.act.n/7);});
+  return{...P,weeks,ladder,cur,mgSteps,saved,done:td>P.quit};
+}
+function startNicPlan(weeks){
+  const td=dk(today());
+  const base=_nicAvg(_dsAgo(13),td)||_nicAvg(_dsAgo(60),td);
+  if(!base){toastMsg('Log a few days of puffs first');return;}
+  const cost=parseFloat(prompt('Roughly what do you spend on vaping a week now, in £? (optional, for money saved)')||'')||0;
+  state.nicPlan={start:td,quit:dk(addDays(today(),weeks*7)),startPuffs:Math.round(base.avg),startMg:_nicLatestMg(),costPerWeek:cost};
+  saveState();haptic('success');refreshActivePage();
+}
+function endNicPlan(){if(!confirm('End the nicotine plan?'))return;state.nicPlan=null;saveState();refreshActivePage();}
+// This week's daily target from the plan, or null without one.
+function getNicPlanTarget(){const p=getNicPlan();return p&&p.cur?p.cur.target:null;}
+function renderNicPlanCard(){
+  const p=getNicPlan();
+  if(!p){
+    const base=_nicAvg(_dsAgo(13),dk(today()));
+    return`<div class="chart-card np-card"><div class="chart-card-header"><span class="chart-card-title">Plan to cut down</span></div>
+      <p class="np-p">${base?`You're averaging <b>${Math.round(base.avg)} puffs a day</b>. `:''}Pick a quit-by date and the app sets a weekly target that steps down evenly to zero, tells you when to drop strength, and tracks the money you save.</p>
+      <div class="np-pick">${[8,12,16].map(w=>`<button onclick="startNicPlan(${w})"><b>${w} weeks</b><span>quit by ${_pbDate(dk(addDays(today(),w*7)))}</span></button>`).join('')}</div></div>`;
+  }
+  const c=p.cur,td=dk(today());
+  if(p.done){
+    const last7=_nicAvg(_dsAgo(6),td);
+    return`<div class="chart-card np-card"><div class="chart-card-header"><span class="chart-card-title">Nicotine plan</span><button class="rd-info" onclick="endNicPlan()">End</button></div>
+      <p class="np-p">${last7&&last7.avg===0?'<b>Quit day passed and you\'re at zero.</b> Every day from here gets easier; cravings fade within a few weeks.':`<b>Quit-by date was ${_pbDate(p.quit)}.</b> ${last7?`You're at ${Math.round(last7.avg)} a day.`:''} Set a new date if you need longer: no shame in that, most quits take more than one go.`}</p></div>`;
+  }
+  const wkAct=_nicAvg(c.from,td),pct=wkAct?Math.min(100,wkAct.avg/Math.max(1,c.target||1)*100):0;
+  const on=wkAct?wkAct.avg<=c.target+0.5:null;
+  const mg=p.mgSteps[c.stage];
+  const mgTxt=p.startMg&&c.stage>0&&mg?`Strength: down to <b>${mg} mg</b> from this week.`:p.startMg?`Strength: stay on ${p.startMg} mg for now; you'll drop a level at about two thirds of where you started.`:'';
+  return`<div class="chart-card np-card">
+    <div class="chart-card-header"><span class="chart-card-title">Nicotine plan</span><span class="chart-card-val">week ${c.k+1} of ${p.weeks} · quit by ${_pbDate(p.quit)}</span></div>
+    <div class="np-big"><b>${c.target}</b><span>puffs a day this week</span></div>
+    <div class="np-bar"><div style="width:${pct.toFixed(0)}%;background:${on===false?'var(--orange)':'var(--green)'};"></div></div>
+    <p class="np-p">${wkAct?`This week so far: <b>${Math.round(wkAct.avg)} a day</b> over ${wkAct.n} logged day${wkAct.n===1?'':'s'}, ${on?'on target':'above target; the next days can bring the average back'}.`:'Log today\'s puffs to start this week.'} ${mgTxt}</p>
+    ${p.costPerWeek>0?`<p class="np-p">Saved so far: <b>£${p.saved.toFixed(0)}</b>, against £${p.costPerWeek.toFixed(0)} a week at the start.</p>`:''}
+    <div class="np-ladder">${p.ladder.map(w=>`<div class="np-wk${w===c?' now':''}"><span>${_pbDate(w.from)}</span><b>${w.target}</b><em>${w.act&&w.from<td?(w.act.avg<=w.target+0.5?'✓ ':'')+Math.round(w.act.avg):''}</em></div>`).join('')}</div>
+    <button class="tl-more" onclick="endNicPlan()">End plan</button>
+  </div>`;
+}
+
 // ── HABITS COACH ──
 // Reads the time of day, streaks and the last fortnight: where to start in the morning,
 // which streak is on the line tonight, what's slipping, and a perfect day when it lands.
@@ -3024,10 +3112,11 @@ function getWellnessCoachLines(){
   if(v.length){
     const n=w.nic,todayLog=v.filter(x=>x.date===td).reduce((a,x)=>a+ +x.puffs,0);
     const last7=v.filter(x=>x.date>=_dsAgo(7)&&x.date<td).map(x=>+x.puffs),avg7=last7.length?last7.reduce((a,b)=>a+b,0)/last7.length:(n&&n.recent)||null;
-    const target=avg7?Math.round(avg7*0.9/5)*5:null;
+    const planT=getNicPlanTarget();
+    const target=planT!=null?planT:avg7?Math.round(avg7*0.9/5)*5:null;
     if(n&&n.lastGap>=2)out.push({ic:'wind',t:`<b>Nicotine not logged for ${n.lastGap} days.</b> Your last fortnight averaged ${Math.round(n.recent)} puffs a day${target?`; log today and aim for under ${target}`:''}. What gets counted comes down.`});
     else if(todayLog&&target)out.push({ic:'wind',t:todayLog<=target?`<b>${todayLog} puffs so far, under today's ${target} target.</b>${n&&n.trendPct<0?` Down ${-n.trendPct}% on the fortnight before.`:''}`:`<b>${todayLog} puffs today, over the ${target} target.</b> No drama: tomorrow's target resets from your average.`});
-    else if(target)out.push({ic:'wind',t:`<b>Today's nicotine target: under ${target} puffs</b>, 10% below your 7-day average of ${Math.round(avg7)}.${n&&n.trendPct!=null?` ${n.trendPct<0?`Down ${-n.trendPct}%`:`Up ${n.trendPct}%`} on the fortnight before.`:''}`});
+    else if(target)out.push({ic:'wind',t:`<b>Today's nicotine target: under ${target} puffs</b>, ${planT!=null?'from your cut-down plan':`10% below your 7-day average of ${Math.round(avg7)}`}.${n&&n.trendPct!=null?` ${n.trendPct<0?`Down ${-n.trendPct}%`:`Up ${n.trendPct}%`} on the fortnight before.`:''}`});
   }
   // Weight: when to weigh in, and what the trend means with the training you're doing.
   if(w.lastW){
@@ -6173,6 +6262,7 @@ function renderWellnessTab(){
     ${sec('Body composition')}
     ${renderWeightSection(health)}
     ${sec('Nicotine')}
+    ${renderNicPlanCard()}
     ${renderVapingSection()}
     ${sec('What moves your recovery')}
     ${renderWhatMovesCard('Body & recovery')}

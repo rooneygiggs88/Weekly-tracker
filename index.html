@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="72">
+<meta name="app-version" content="73">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -444,6 +444,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .rc-wx-set{margin-top:10px;width:100%;padding:10px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 .np-p{font-size:13.5px;line-height:1.5;color:var(--text2);margin-top:8px;}
 .np-p b{color:var(--text);}
+.np-inline{border:none;background:none;padding:0;font:inherit;font-weight:700;color:var(--accent2);text-decoration:underline;cursor:pointer;}
+.np-foot{font-size:11.5px;color:var(--text3);margin-top:8px;}
 .np-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
 .np-pick button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);font-family:inherit;color:var(--text);cursor:pointer;}
 .np-pick b{font-family:var(--display);font-weight:800;font-size:20px;text-transform:uppercase;}
@@ -3165,67 +3167,115 @@ function renderGymTrendsCoach(){
 }
 
 // ── NICOTINE PLAN ──
-// A cut-down plan to a quit-by date: puffs step down evenly week by week from your
-// current daily average to zero, and strength drops a level at two milestones (about two
-// thirds and one third of where you started). The weekly target drives the daily one on
-// Today. Money saved is worked out from what you said you spend at the start.
+// Built on daily nicotine dose (puffs × strength, the same estimate as the Nicotine card),
+// not puffs, so dropping strength counts as the progress it is. Reactive: each week's
+// target is set on Monday from your actual last seven days, stepping evenly towards zero
+// by the quit date, and locked for the week. Beat it and next week drops further. The
+// projected quit date comes from your actual rate of decline, with an offer to move the
+// date if you're well ahead or behind. Puff targets are shown at your current strength.
+const _NIC_K=0.005; // mg absorbed per puff per mg/ml, as estimateNicotineMg
+function _nicDayDose(ds){
+  const v=loadVapingData().filter(x=>x.date===ds&&+x.puffs>=0);if(!v.length)return null;
+  return v.reduce((a,x)=>a+(+x.puffs||0)*((+x.mg||_nicLatestMg()||0)*_NIC_K),0);
+}
+function _nicDoseAvg(from,to){
+  const ds=[...new Set(loadVapingData().filter(x=>x.date>=from&&x.date<=to).map(x=>x.date))];
+  const v=ds.map(_nicDayDose).filter(x=>x!=null);
+  return v.length?{avg:v.reduce((a,b)=>a+b,0)/v.length,n:v.length}:null;
+}
 function _nicAvg(from,to){const v=loadVapingData().filter(x=>x.date>=from&&x.date<=to&&+x.puffs>=0).map(x=>+x.puffs);return v.length?{avg:v.reduce((a,b)=>a+b,0)/v.length,n:v.length}:null;}
-function _nicLatestMg(){const v=loadVapingData().filter(x=>+x.mg>0).sort((a,b)=>a.date.localeCompare(b.date));return v.length?+v[v.length-1].mg:null;}
+function _nicLatestMg(){const v=loadVapingData().filter(x=>+x.mg>0).sort((a,b)=>a.date.localeCompare(b.date)||(a.ts||0)-(b.ts||0));return v.length?+v[v.length-1].mg:null;}
+const _r1=v=>Math.round(v*10)/10;
 function getNicPlan(){
   const P=state.nicPlan;if(!P||!P.start||!P.quit)return null;
-  const s=new Date(P.start+'T12:00:00'),q=new Date(P.quit+'T12:00:00');
-  const weeks=Math.max(1,Math.round((q-s)/(7*864e5)));
-  const ladder=[];
-  for(let k=0;k<weeks;k++){
-    const from=dk(addDays(s,k*7)),to=dk(addDays(s,k*7+6));
-    const target=Math.max(0,Math.round(P.startPuffs*(1-(k+1)/weeks)/5)*5);
-    const act=_nicAvg(from,to);
-    const stage=target>P.startPuffs*0.66?0:target>P.startPuffs*0.33?1:2;
-    ladder.push({k,from,to,target,act,stage});
+  const td=dk(today()),mon=dk(getMonday(today())),q=new Date(P.quit+'T12:00:00');
+  // Older plans were puff-based: carry them over to a dose.
+  if(P.startDose==null){P.startDose=_r1((P.startPuffs||0)*((P.startMg||_nicLatestMg()||0)*_NIC_K));}
+  P.locks=P.locks||{};
+  if(td>P.quit)return{...P,done:true};
+  // This week's target: locked on first sight from the last 7 days' actual dose (or the
+  // previous target if nothing was logged), stepping evenly to zero by the quit date.
+  if(P.locks[mon]==null){
+    const weeksLeft=Math.max(1,Math.ceil((q-new Date(mon+'T12:00:00'))/(7*864e5)));
+    const last=_nicDoseAvg(_dsAgo(7),_dsAgo(1));
+    const prevLock=Object.keys(P.locks).sort().slice(-1)[0];
+    const base=last?last.avg:(prevLock?P.locks[prevLock]:P.startDose);
+    P.locks[mon]=_r1(Math.max(0,base*(weeksLeft-1)/weeksLeft));
+    saveState();
   }
-  const td=dk(today());
-  const cur=ladder.find(w=>td>=w.from&&td<=w.to)||(td>P.quit?null:ladder[0]);
-  const mgSteps=[P.startMg||null,P.startMg?Math.max(3,Math.round(P.startMg/2)):null,P.startMg?3:null];
+  const target=P.locks[mon];
+  const mg=_nicLatestMg();
+  const puffsAt=m=>m?Math.round(target/(m*_NIC_K)/5)*5:null;
+  const wk=_nicDoseAvg(mon,td),wkPuffs=_nicAvg(mon,td);
+  // Actual weekly doses, for the ladder and the trend.
+  const weeks=[];
+  for(let d=new Date(P.start+'T12:00:00'),i=0;dk(d)<=P.quit&&i<60;d=addDays(d,7),i++){
+    const m=dk(getMonday(d));if(weeks.some(w=>w.mon===m))continue;
+    const a=_nicDoseAvg(m,dk(addDays(new Date(m+'T12:00:00'),6)));
+    weeks.push({mon:m,lock:P.locks[m],act:a&&m<=mon?_r1(a.avg):null});
+  }
+  // Projected zero date from the habit (puffs) over the last few weeks, valued at today's
+  // strength: a strength drop is a one-off step, not a rate that keeps going, so it's a
+  // bonus on top rather than part of the projection.
+  const pts=[];for(let k=3;k>=0;k--){const a=_nicAvg(_dsAgo(k*7+6),_dsAgo(k*7));if(a&&mg)pts.push({x:-k,y:a.avg*mg*_NIC_K});}
+  let proj=null;
+  if(pts.length>=3){const mx=pts.reduce((a,p)=>a+p.x,0)/pts.length,my=pts.reduce((a,p)=>a+p.y,0)/pts.length;
+    const sl=pts.reduce((a,p)=>a+(p.x-mx)*(p.y-my),0)/pts.reduce((a,p)=>a+(p.x-mx)**2,0);
+    if(sl<-0.05){const wksToZero=my/(-sl);if(wksToZero<52)proj=dk(addDays(today(),Math.round(wksToZero*7)));}}
   let saved=0;
-  if(P.costPerWeek>0)ladder.forEach(w=>{if(w.act&&w.from<=td)saved+=P.costPerWeek*Math.max(0,1-w.act.avg/P.startPuffs)*Math.min(1,w.act.n/7);});
-  return{...P,weeks,ladder,cur,mgSteps,saved,done:td>P.quit};
+  if(P.costPerWeek>0&&P.startDose>0)weeks.forEach(w=>{if(w.act!=null)saved+=P.costPerWeek*Math.max(0,1-w.act/P.startDose);});
+  return{...P,target,mg,puffsAt,wk,wkPuffs,weeks,proj,saved,startDose:P.startDose};
 }
 function startNicPlan(weeks){
   const td=dk(today());
-  const base=_nicAvg(_dsAgo(13),td)||_nicAvg(_dsAgo(60),td);
-  if(!base){toastMsg('Log a few days of puffs first');return;}
+  const base=_nicDoseAvg(_dsAgo(13),td)||_nicDoseAvg(_dsAgo(60),td);
+  if(!base){toastMsg('Log a few days of puffs (with strength) first');return;}
   const cost=parseFloat(prompt('Roughly what do you spend on vaping a week now, in £? (optional, for money saved)')||'')||0;
-  state.nicPlan={start:td,quit:dk(addDays(today(),weeks*7)),startPuffs:Math.round(base.avg),startMg:_nicLatestMg(),costPerWeek:cost};
+  state.nicPlan={start:td,quit:dk(addDays(today(),weeks*7)),startDose:_r1(base.avg),startMg:_nicLatestMg(),costPerWeek:cost,locks:{}};
   saveState();haptic('success');refreshActivePage();
 }
+function moveNicQuit(ds){if(!state.nicPlan)return;state.nicPlan.quit=ds;saveState();haptic('light');refreshActivePage();}
 function endNicPlan(){if(!confirm('End the nicotine plan?'))return;state.nicPlan=null;saveState();refreshActivePage();}
-// This week's daily target from the plan, or null without one.
-function getNicPlanTarget(){const p=getNicPlan();return p&&p.cur?p.cur.target:null;}
+// Today's target as puffs at your current strength (for the coach), or null.
+function getNicPlanTarget(){const p=getNicPlan();return p&&!p.done&&p.mg?p.puffsAt(p.mg):null;}
 function renderNicPlanCard(){
   const p=getNicPlan();
   if(!p){
-    const base=_nicAvg(_dsAgo(13),dk(today()));
+    const base=_nicDoseAvg(_dsAgo(13),dk(today())),mg=_nicLatestMg();
     return`<div class="chart-card np-card"><div class="chart-card-header"><span class="chart-card-title">Plan to cut down</span></div>
-      <p class="np-p">${base?`You're averaging <b>${Math.round(base.avg)} puffs a day</b>. `:''}Pick a quit-by date and the app sets a weekly target that steps down evenly to zero, tells you when to drop strength, and tracks the money you save.</p>
+      <p class="np-p">${base?`You're on about <b>${_r1(base.avg)} mg of nicotine a day</b>${mg?` (${mg} mg strength)`:''}. `:''}Pick a quit-by date. Each week the app sets a nicotine target from what you actually did the week before, stepping down to zero, and shows it as puffs at whatever strength you're on, so dropping strength counts as progress.</p>
       <div class="np-pick">${[8,12,16].map(w=>`<button onclick="startNicPlan(${w})"><b>${w} weeks</b><span>quit by ${_pbDate(dk(addDays(today(),w*7)))}</span></button>`).join('')}</div></div>`;
   }
-  const c=p.cur,td=dk(today());
+  const td=dk(today());
   if(p.done){
-    const last7=_nicAvg(_dsAgo(6),td);
+    const last7=_nicDoseAvg(_dsAgo(6),td);
     return`<div class="chart-card np-card"><div class="chart-card-header"><span class="chart-card-title">Nicotine plan</span><button class="rd-info" onclick="endNicPlan()">End</button></div>
-      <p class="np-p">${last7&&last7.avg===0?'<b>Quit day passed and you\'re at zero.</b> Every day from here gets easier; cravings fade within a few weeks.':`<b>Quit-by date was ${_pbDate(p.quit)}.</b> ${last7?`You're at ${Math.round(last7.avg)} a day.`:''} Set a new date if you need longer: no shame in that, most quits take more than one go.`}</p></div>`;
+      <p class="np-p">${last7&&last7.avg===0?'<b>Quit day passed and you\'re at zero.</b> Every day from here gets easier; cravings fade within a few weeks.':`<b>Quit-by date was ${_pbDate(p.quit)}.</b> ${last7?`You're at ${_r1(last7.avg)} mg a day.`:''} Set a new date if you need longer: most quits take more than one go.`}</p>
+      <div class="np-pick">${[4,8].map(w=>`<button onclick="moveNicQuit('${dk(addDays(today(),w*7))}')"><b>+${w} weeks</b><span>to ${_pbDate(dk(addDays(today(),w*7)))}</span></button>`).join('')}</div></div>`;
   }
-  const wkAct=_nicAvg(c.from,td),pct=wkAct?Math.min(100,wkAct.avg/Math.max(1,c.target||1)*100):0;
-  const on=wkAct?wkAct.avg<=c.target+0.5:null;
-  const mg=p.mgSteps[c.stage];
-  const mgTxt=p.startMg&&c.stage>0&&mg?`Strength: down to <b>${mg} mg</b> from this week.`:p.startMg?`Strength: stay on ${p.startMg} mg for now; you'll drop a level at about two thirds of where you started.`:'';
+  const on=p.wk?p.wk.avg<=p.target+0.05:null;
+  const pct=p.wk&&p.target>0?Math.min(100,p.wk.avg/p.target*100):p.wk?100:0;
+  const weeksLeft=Math.max(1,Math.ceil((new Date(p.quit+'T12:00:00')-getMonday(today()))/(7*864e5)));
+  const puffLine=p.mg?`That's about <b>${p.puffsAt(p.mg)} puffs a day at ${p.mg} mg</b>${p.mg>3?`, or ${p.puffsAt(p.mg/2)} at ${p.mg/2} mg`:''}.`:'Log your strength with your puffs to see this as puffs.';
+  const step=p.mg&&p.mg>3&&p.wkPuffs?`<b>Easiest win:</b> dropping to ${p.mg/2} mg at your current ${Math.round(p.wkPuffs.avg)} puffs would take you to about ${_r1(p.wkPuffs.avg*(p.mg/2)*_NIC_K)} mg a day, without changing the habit at all.`:'';
+  let projTxt='';
+  if(p.proj){
+    const diff=Math.round((new Date(p.quit+'T12:00:00')-new Date(p.proj+'T12:00:00'))/(7*864e5));
+    projTxt=diff>=2&&on!==false?`<b>You're ahead.</b> At the rate your puffs are falling you'd reach zero around ${_pbDate(p.proj)}, ${diff} weeks early. <button class="np-inline" onclick="moveNicQuit('${p.proj}')">Bring the date forward</button>`
+      :diff>=2?`Your puffs are falling fast enough to finish around ${_pbDate(p.proj)}; get this week back under target and you'll be properly ahead.`
+      :diff<=-2?`At your current rate you'd reach zero around ${_pbDate(p.proj)}, ${-diff} weeks after the plan. The targets will keep nudging you; or <button class="np-inline" onclick="moveNicQuit('${p.proj}')">move the date</button>.`
+      :`On course for zero around ${_pbDate(p.proj)}.`;
+  }
   return`<div class="chart-card np-card">
-    <div class="chart-card-header"><span class="chart-card-title">Nicotine plan</span><span class="chart-card-val">week ${c.k+1} of ${p.weeks} · quit by ${_pbDate(p.quit)}</span></div>
-    <div class="np-big"><b>${c.target}</b><span>puffs a day this week</span></div>
+    <div class="chart-card-header"><span class="chart-card-title">Nicotine plan</span><span class="chart-card-val">${weeksLeft} week${weeksLeft===1?'':'s'} to ${_pbDate(p.quit)}</span></div>
+    <div class="np-big"><b>${p.target}</b><span>mg of nicotine a day this week</span></div>
     <div class="np-bar"><div style="width:${pct.toFixed(0)}%;background:${on===false?'var(--orange)':'var(--green)'};"></div></div>
-    <p class="np-p">${wkAct?`This week so far: <b>${Math.round(wkAct.avg)} a day</b> over ${wkAct.n} logged day${wkAct.n===1?'':'s'}, ${on?'on target':'above target; the next days can bring the average back'}.`:'Log today\'s puffs to start this week.'} ${mgTxt}</p>
+    <p class="np-p">${puffLine} ${p.wk?`This week so far: <b>${_r1(p.wk.avg)} mg a day</b>, ${on?'on target':'above target'}.`:'Log today\'s puffs and strength to start the week.'} Next week's target is set from this week's actual, so every day under it brings the next step down.</p>
+    ${step?`<p class="np-p">${step}</p>`:''}
+    ${projTxt?`<p class="np-p">${projTxt}</p>`:''}
     ${p.costPerWeek>0?`<p class="np-p">Saved so far: <b>£${p.saved.toFixed(0)}</b>, against £${p.costPerWeek.toFixed(0)} a week at the start.</p>`:''}
-    <div class="np-ladder">${p.ladder.map(w=>`<div class="np-wk${w===c?' now':''}"><span>${_pbDate(w.from)}</span><b>${w.target}</b><em>${w.act&&w.from<td?(w.act.avg<=w.target+0.5?'✓ ':'')+Math.round(w.act.avg):''}</em></div>`).join('')}</div>
+    <div class="np-ladder">${p.weeks.map(w=>`<div class="np-wk${w.mon===dk(getMonday(today()))?' now':''}"><span>${_pbDate(w.mon)}</span><b>${w.lock!=null?w.lock:'–'}</b><em>${w.act!=null&&w.mon<dk(getMonday(today()))?(w.lock!=null&&w.act<=w.lock+0.05?'✓ ':'')+w.act:''}</em></div>`).join('')}</div>
+    <div class="np-foot">mg a day: target above, actual below. Starting point ${p.startDose} mg${p.startMg?` at ${p.startMg} mg strength`:''}.</div>
     <button class="tl-more" onclick="endNicPlan()">End plan</button>
   </div>`;
 }
@@ -3291,7 +3341,7 @@ function getWellnessCoachLines(){
     const target=planT!=null?planT:avg7?Math.round(avg7*0.9/5)*5:null;
     if(n&&n.lastGap>=2)out.push({ic:'wind',t:`<b>Nicotine not logged for ${n.lastGap} days.</b> Your last fortnight averaged ${Math.round(n.recent)} puffs a day${target?`; log today and aim for under ${target}`:''}. What gets counted comes down.`});
     else if(todayLog&&target)out.push({ic:'wind',t:todayLog<=target?`<b>${todayLog} puffs so far, under today's ${target} target.</b>${n&&n.trendPct<0?` Down ${-n.trendPct}% on the fortnight before.`:''}`:`<b>${todayLog} puffs today, over the ${target} target.</b> No drama: tomorrow's target resets from your average.`});
-    else if(target)out.push({ic:'wind',t:`<b>Today's nicotine target: under ${target} puffs</b>, ${planT!=null?'from your cut-down plan':`10% below your 7-day average of ${Math.round(avg7)}`}.${n&&n.trendPct!=null?` ${n.trendPct<0?`Down ${-n.trendPct}%`:`Up ${n.trendPct}%`} on the fortnight before.`:''}`});
+    else if(target)out.push({ic:'wind',t:`<b>Today's nicotine target: under ${target} puffs</b>, ${planT!=null?`at your current strength, from your plan's ${getNicPlan().target} mg a day`:`10% below your 7-day average of ${Math.round(avg7)}`}.${n&&n.trendPct!=null?` ${n.trendPct<0?`Down ${-n.trendPct}%`:`Up ${n.trendPct}%`} on the fortnight before.`:''}`});
   }
   // Weight: when to weigh in, and what the trend means with the training you're doing.
   if(w.lastW){

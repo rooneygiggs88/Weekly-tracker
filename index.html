@@ -39,6 +39,7 @@
   --c-long:#3d6fe0;--c-tempo:#c96c1a;--c-int:#e0393f;--c-race:#a23fb0;--c-iris:#6366f1;
   --c-lime:#22c55e;--c-slate:#64748b;--c-rust:#bd5500;
   --seg-track:#e1ece9;--seg-fill:#0e7c72;--bar-track:#fbe6df;--bar-fill:#ff7a59;
+  --ring-train:#0aa5b8;--ring-recover:#7c5cff;--ring-habits:#ff6b3d;
   --radius:20px;--radius-sm:14px;--radius-xs:10px;
   --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
   --rounded:ui-rounded,'SF Pro Rounded',-apple-system,system-ui,sans-serif;
@@ -57,6 +58,7 @@
   --c-violet:#a98bff;--c-pink:#ff5fa8;--c-gold:#e0b43a;--c-purple:#c084fc;--c-easy:#45d39a;
   --c-long:#7fa2ff;--c-tempo:#f0a050;--c-int:#ff6b70;--c-race:#d77be6;--c-iris:#9a9cff;
   --c-lime:#4ade80;--c-slate:#94a3b8;--c-rust:#ff8a3d;
+  --ring-train:#2fd4e6;--ring-recover:#9b85ff;--ring-habits:#ff8a5c;
   --seg-track:#1c2e2b;--seg-fill:#2fb5a6;--bar-track:#3a2621;--bar-fill:#ff8a6b;
 }}
 :root[data-theme="dark"]{
@@ -73,6 +75,7 @@
   --c-violet:#a98bff;--c-pink:#ff5fa8;--c-gold:#e0b43a;--c-purple:#c084fc;--c-easy:#45d39a;
   --c-long:#7fa2ff;--c-tempo:#f0a050;--c-int:#ff6b70;--c-race:#d77be6;--c-iris:#9a9cff;
   --c-lime:#4ade80;--c-slate:#94a3b8;--c-rust:#ff8a3d;
+  --ring-train:#2fd4e6;--ring-recover:#9b85ff;--ring-habits:#ff8a5c;
   --seg-track:#1c2e2b;--seg-fill:#2fb5a6;--bar-track:#3a2621;--bar-fill:#ff8a6b;
 }
 /* 100vh on iOS Safari is fixed to the largest possible viewport (keyboard hidden) -
@@ -407,6 +410,37 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .me-chip.legs b{color:var(--c-pink);}
 .me-links{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .me-links button{padding:13px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;}
+/* TODAY RINGS + BRIEFING */
+.rings-card{display:flex;align-items:center;gap:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;box-shadow:var(--card-shadow);}
+.rings-card.closed{border-color:color-mix(in srgb,var(--ring-habits) 40%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--ring-train) 8%,var(--surface)),color-mix(in srgb,var(--ring-recover) 8%,var(--surface)));}
+.rings-svg{position:relative;flex-shrink:0;width:124px;height:124px;}
+.ring-arc{animation:ringIn 1.1s cubic-bezier(.2,.8,.2,1) both;}
+@keyframes ringIn{from{stroke-dashoffset:var(--c);}to{stroke-dashoffset:var(--off);}}
+.rings-done{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--ring-habits);}
+.rings-rows{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.ring-row{display:flex;align-items:baseline;gap:8px;background:none;border:none;padding:5px 0;font-family:inherit;color:var(--text);cursor:pointer;text-align:left;width:100%;}
+.ring-row i{width:9px;height:9px;border-radius:50%;flex-shrink:0;align-self:center;}
+.ring-l{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);width:62px;flex-shrink:0;}
+.ring-v{font-family:var(--rounded);font-size:19px;font-weight:800;letter-spacing:-0.4px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ring-v span{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:0;}
+.ring-v.cta{font-size:15px;color:var(--ring-recover);}
+.rings-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.rings-chips span{font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);padding:3px 8px;border-radius:20px;}
+.rings-note{font-size:12px;font-weight:700;color:var(--ring-habits);margin-top:6px;}
+.brief-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 14px 8px;margin-bottom:12px;box-shadow:var(--card-shadow);}
+.brief-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin:0 2px 6px;}
+.brief-line{display:flex;align-items:flex-start;gap:10px;width:100%;background:none;border:none;border-top:1px solid var(--border);padding:10px 2px;font-family:inherit;text-align:left;color:var(--text2);cursor:pointer;font-size:13.5px;line-height:1.45;}
+.brief-line:first-of-type{border-top:none;}
+.brief-line b{color:var(--text);}
+.brief-ic{font-size:17px;line-height:1.2;flex-shrink:0;}
+.brief-t{flex:1;}
+.brief-go{color:var(--text3);font-size:18px;line-height:1.1;}
+.habits-h{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px 10px;}
+.habits-h span{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);}
+.habits-h b{font-size:12px;font-weight:800;color:var(--ring-habits);}
+.confetti{position:fixed;left:0;right:0;top:38%;height:0;pointer-events:none;z-index:9999;}
+.confetti i{position:absolute;top:0;width:8px;height:12px;border-radius:2px;animation:confetti 1.6s cubic-bezier(.2,.7,.4,1) forwards;}
+@keyframes confetti{0%{transform:translate(0,0) rotate(0);opacity:1;}70%{opacity:1;}100%{transform:translate(var(--dx),calc(var(--dy) * -1.6)) rotate(var(--r));opacity:0;}}
 /* PERSONAL BESTS */
 .pb-banner{border-color:color-mix(in srgb,var(--c-gold) 45%,var(--border));background:linear-gradient(180deg,color-mix(in srgb,var(--c-gold) 12%,var(--surface)),var(--surface));}
 .pb-eyebrow{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--c-gold);}
@@ -889,10 +923,13 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
         <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(this.files[0])">
       </div>
     </div>
-    <div id="alerts-slot"></div>
     <div class="today-greet" id="today-habits"></div>
+    <div id="today-rings"></div>
     <div id="readiness-hero"></div>
     <div class="today-plan-cell" id="today-plan-cell"></div>
+    <div class="goal-stack" id="goal-stack"></div>
+    <div id="today-brief"></div>
+    <div id="alerts-slot"></div>
     <div id="week-review-wrap"></div>
     <div id="rest-day-nudge"></div>
     <div id="story-card"></div>
@@ -902,7 +939,6 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div id="workout-suggestion-wrap"></div>
     <div id="gym-week-wrap"></div>
     <div id="session-card-wrap"></div>
-    <div class="goal-stack" id="goal-stack"></div>
   </div>
 </div>
 
@@ -1516,7 +1552,7 @@ function dismissPRCelebration(){
 }
 function haptic(type='light'){if(!navigator.vibrate)return;if(type==='light')navigator.vibrate(8);if(type==='medium')navigator.vibrate(20);if(type==='success')navigator.vibrate([10,50,20]);}
 function getMonday(date){const d=new Date(date),day=d.getDay();d.setDate(d.getDate()+(day===0?-6:1-day));d.setHours(0,0,0,0);return d;}
-function daysUntil(ds){const now=today();now.setHours(0,0,0,0);const t=new Date(ds+'T12:00:00');return Math.round((t-now)/86400000);}
+function daysUntil(ds){const now=today();now.setHours(0,0,0,0);const t=new Date(ds+'T00:00:00');return Math.round((t-now)/86400000);}
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function fmtShortDate(ds){const d=new Date(ds);return`${d.getDate()}/${d.getMonth()+1}`;}
 // Rounds a distance to 1 decimal for display - a stored value can carry more float
@@ -1866,6 +1902,124 @@ function handleAvatarUpload(file){
   };
   reader.readAsDataURL(file);
 }
+// ── TODAY: RINGS + COACH BRIEFING ──
+// Three rings that close over the day and week: Train (this week's running km against
+// the taper-aware target, or planned gym sessions if there's no running target),
+// Recover (this morning's readiness check-in) and Habits (today's habits ticked).
+function _checkinStreak(){
+  const m=loadMorningData();let n=0;let d=new Date(dk(today())+'T12:00:00');
+  if(!m[dk(d)])d=addDays(d,-1); // today not logged yet doesn't break the streak
+  while(m[dk(d)]){n++;d=addDays(d,-1);}
+  return n;
+}
+function getTodayRings(readiness){
+  const now=today(),mon=dk(getMonday(now)),td=dk(now);
+  const weekKm=loadRunData().filter(r=>r.date>=mon&&r.date<=td).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  const yw=getYearGoalWeek();
+  const target=yw&&yw.target>0?yw.target:(state.runTarget||0);
+  let train;
+  if(target>0)train={pct:Math.min(1,weekKm/target),val:`${fmtKm(weekKm)||0}<span>/${Math.round(target)} km</span>`,sub:'this week'};
+  else{const g=getGymWeekOverview();train=g?{pct:g.total?Math.min(1,g.doneCount/g.total):0,val:`${g.doneCount}<span>/${g.total}</span>`,sub:'sessions this week'}:{pct:0,val:'–',sub:'set a weekly target'};}
+  const checked=!!loadMorningData()[td];
+  const recover=readiness&&readiness.score!=null&&checked
+    ?{pct:Math.max(0.04,readiness.score/100),val:`${readiness.score}<span> ${esc(readiness.state.label)}</span>`,sub:'readiness',col:readiness.state.col}
+    :{pct:0,val:'Check in',sub:'how did you sleep?',cta:true};
+  const gs=goalsActiveOn(td),done=gs.filter(g=>goalDone(td,g)).length;
+  const habits={pct:gs.length?done/gs.length:0,val:`${done}<span>/${gs.length}</span>`,sub:'habits today'};
+  return{train,recover,habits};
+}
+function renderTodayRings(readiness){
+  const el=document.getElementById('today-rings');if(!el)return;
+  const R=getTodayRings(readiness);
+  const rings=[{k:'train',r:52,col:'var(--ring-train)',d:R.train},{k:'recover',r:39,col:'var(--ring-recover)',d:R.recover},{k:'habits',r:26,col:'var(--ring-habits)',d:R.habits}];
+  const svg=rings.map(x=>{const c=2*Math.PI*x.r,off=c*(1-x.d.pct);
+    return`<circle cx="62" cy="62" r="${x.r}" fill="none" stroke="${x.col}" stroke-opacity="0.18" stroke-width="11"/>
+      <circle class="ring-arc" cx="62" cy="62" r="${x.r}" fill="none" stroke="${x.col}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" style="--c:${c.toFixed(1)};--off:${off.toFixed(1)};stroke-dashoffset:${off.toFixed(1)};" transform="rotate(-90 62 62)"/>`;}).join('');
+  const all=rings.every(x=>x.d.pct>=0.999);
+  const streak=getWeeklyStreak(),ci=_checkinStreak();
+  const chips=[streak>0?`🔥 ${streak} week${streak===1?'':'s'} of targets hit`:'',ci>=3?`☀️ ${ci}-day check-in streak`:''].filter(Boolean);
+  const row=(x,label,action)=>`<button class="ring-row" onclick="${action}"><i style="background:${x.col};"></i><span class="ring-l">${label}</span><b class="ring-v${x.d.cta?' cta':''}">${x.d.val}</b></button>`;
+  el.innerHTML=`<div class="rings-card${all?' closed':''}">
+    <div class="rings-svg"><svg viewBox="0 0 124 124" width="124" height="124">${svg}</svg>${all?'<div class="rings-done">✓</div>':''}</div>
+    <div class="rings-rows">
+      ${row(rings[0],'Train',"showPage('trends');switchTrendsTab('running')")}
+      ${row(rings[1],'Recover',R.recover.cta?'openMorningModal()':"showPage('trends');switchTrendsTab('overview')")}
+      ${row(rings[2],'Habits',"document.getElementById('goal-stack').scrollIntoView({behavior:'smooth',block:'center'})")}
+      ${all?`<div class="rings-note">All three closed. That's a proper day.</div>`:chips.length?`<div class="rings-chips">${chips.map(c=>`<span>${c}</span>`).join('')}</div>`:''}
+    </div>
+  </div>`;
+  if(all)_celebrateOnce('rings-'+dk(today()));
+}
+// A small burst of confetti, at most once per key (e.g. once a day for closing rings).
+function _celebrateOnce(key){
+  let seen={};try{seen=JSON.parse(localStorage.getItem('celebrated_v1')||'{}');}catch(e){}
+  if(seen[key])return;seen[key]=Date.now();
+  try{localStorage.setItem('celebrated_v1',JSON.stringify(seen));}catch(e){}
+  celebrate();
+}
+function celebrate(){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const box=document.createElement('div');box.className='confetti';
+  const cols=['var(--ring-train)','var(--ring-recover)','var(--ring-habits)','var(--c-gold)','var(--c-pink)'];
+  for(let i=0;i<36;i++){const p=document.createElement('i');p.style.cssText=`left:${50+(Math.random()-0.5)*30}%;background:${cols[i%cols.length]};--dx:${(Math.random()-0.5)*320}px;--dy:${-160-Math.random()*240}px;--r:${Math.random()*720-360}deg;animation-delay:${Math.random()*0.12}s;`;box.appendChild(p);}
+  document.body.appendChild(box);haptic('success');setTimeout(()=>box.remove(),1800);
+}
+
+// The coach briefing: the 2-4 things worth knowing this morning, pulled from every part
+// of the app so they don't need hunting for. Each line opens where it came from.
+function getCoachBriefing(){
+  const out=[];const now=today(),td=dk(now);
+  const r=state.race;
+  if(r&&r.date){
+    const d=daysUntil(r.date);
+    if(d>=0&&d<=42){
+      const proj=getRaceProjection();const goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
+      let t=d===0?`<b>Race day: ${esc(r.name||'your race')}.</b> Trust the taper.`:`<b>${esc(r.name||'Race')} in ${d} day${d===1?'':'s'}.</b>`;
+      if(d>0&&proj){const diff=goal?proj.projSecs-goal:null;t+=` Predicted ${proj.projTime}${diff==null?'':Math.abs(diff)<30?', right on your goal':diff<0?`, ${fmtDurationFromSecs(-diff)} inside your goal`:`, ${fmtDurationFromSecs(diff)} off your goal`}.`;}
+      out.push({ic:'🏁',t,go:"showPage('trends');switchTrendsTab('running')"});
+    }
+  }
+  const yw=getYearGoalWeek();
+  if(yw&&yw.target>0){
+    if(yw.leftKm<=0)out.push({ic:'✅',t:`<b>Week's running done:</b> ${fmtKm(yw.weekKm)} of ${Math.round(yw.target)} km.`,go:"showPage('train');switchTrainTab('run')"});
+    else{
+      const parts=yw.open.map(x=>`${Math.round(x.left)} ${x.type.toLowerCase()}`);
+      const why=yw.race&&yw.note&&yw.note.startsWith('Race week')?' Race week, so keep it easy.':yw.race&&yw.target<yw.rawTarget?' Taper week, so less is more.':yw.target<yw.rawTarget?' Capped to keep the build safe.':'';
+      out.push({ic:'🏃',t:`<b>${fmtKm(yw.leftKm)} km left this week</b>${parts.length?`: ${parts.join(', ')}`:''}.${why}`,go:"showPage('train');switchTrainTab('run')"});
+    }
+  }
+  const gym=loadGymData();const lastGym=gym.length?gym[gym.length-1].date:null;
+  const gymGap=lastGym?Math.round((new Date(td+'T12:00:00')-new Date(lastGym+'T12:00:00'))/864e5):null;
+  if(gymGap!=null&&gymGap>=14&&!(r&&r.date&&daysUntil(r.date)>=0&&daysUntil(r.date)<=7)){
+    out.push({ic:'🏋️',t:`<b>${gymGap} days since the gym.</b> One short session keeps the strength you built${gymGap>=28?'; two weeks back gets most of it back':''}.`,go:"showPage('train');switchTrainTab('gym')"});
+  }
+  const health=loadHealthData();const lastW=health.filter(h=>h.weight).slice(-1)[0];
+  if(lastW){
+    const gap=Math.round((new Date(td+'T12:00:00')-new Date(lastW.date+'T12:00:00'))/864e5);
+    const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
+    if(gap>=7)out.push({ic:'⚖️',t:`<b>No weigh-in for ${gap} days.</b>${goalW?` Last ${lastW.weight} kg, goal ${goalW} kg.`:''}`,go:"showPage('me');meSetTab('body')"});
+  }
+  const vape=getNicotineSummary();
+  if(vape&&vape.lastGap>=2)out.push({ic:'💨',t:`<b>Nicotine not logged for ${vape.lastGap} days.</b>${vape.trendPct!=null&&vape.trendPct<0?` You were down ${-vape.trendPct}% on the month before.`:''}`,go:"showPage('me');meSetTab('body')"});
+  else if(vape&&vape.trendPct!=null&&vape.trendPct<=-10)out.push({ic:'💨',t:`<b>Puffs down ${-vape.trendPct}%</b> over the last two weeks compared with the two before. Keep chipping away.`,go:"showPage('me');meSetTab('body')"});
+  return out.slice(0,4);
+}
+// Puffs a day: recent 14-day average against the 14 days before.
+function getNicotineSummary(){
+  const v=loadVapingData().filter(x=>x.date&&+x.puffs>=0);if(!v.length)return null;
+  const td=dk(today());const last=v.map(x=>x.date).sort().slice(-1)[0];
+  const gap=Math.round((new Date(td+'T12:00:00')-new Date(last+'T12:00:00'))/864e5);
+  const avg=(a,b)=>{const xs=v.filter(x=>x.date>=a&&x.date<=b).map(x=>+x.puffs);return xs.length?xs.reduce((s,y)=>s+y,0)/xs.length:null;};
+  const end=last;const e=new Date(end+'T12:00:00');
+  const recent=avg(dk(addDays(e,-13)),end),prev=avg(dk(addDays(e,-27)),dk(addDays(e,-14)));
+  return{lastGap:gap,recent,prev,trendPct:recent!=null&&prev?Math.round((recent/prev-1)*100):null,last};
+}
+function renderTodayBrief(){
+  const el=document.getElementById('today-brief');if(!el)return;
+  const lines=getCoachBriefing();
+  el.innerHTML=lines.length?`<div class="brief-card"><div class="brief-h">Coach</div>${lines.map(l=>`<button class="brief-line" onclick="${l.go}"><span class="brief-ic">${l.ic}</span><span class="brief-t">${l.t}</span><span class="brief-go">›</span></button>`).join('')}</div>`:'';
+}
+
 function renderToday(){
   renderAvatar();
   renderYearGoalCard();
@@ -1891,6 +2045,8 @@ function renderToday(){
   const habitsEl=document.getElementById('today-habits');
   const readiness=viewingToday?computeReadiness():null;
   renderReadinessHero(readiness,baseMonday);
+  if(viewingToday){renderTodayRings(readiness);renderTodayBrief();}
+  else{['today-rings','today-brief'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
   const alertsEl=document.getElementById('alerts-slot');
   if(alertsEl)alertsEl.innerHTML=viewingToday?renderAnomalyAlerts():'';
   const nudgeEl=document.getElementById('rest-day-nudge');
@@ -2181,6 +2337,7 @@ function renderToday(){
   // Goal chips - compact 2-col grid instead of a full-width card per goal
   const stack=document.getElementById('goal-stack');
   stack.innerHTML='';
+  {const gs=goalsActiveOn(ds);if(gs.length){const h=document.createElement('div');h.className='habits-h';const n=gs.filter(g=>goalDone(ds,g)).length;h.innerHTML=`<span>${ds===dk(today())?'Today\'s habits':new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}</span><b>${n} of ${gs.length}</b>`;stack.appendChild(h);}}
   const grid=document.createElement('div');
   grid.className='goal-grid';
   goalsActiveOn(ds).forEach(g=>{

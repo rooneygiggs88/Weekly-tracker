@@ -394,6 +394,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .me-week{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);font-weight:600;}
 .me-week span{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-right:8px;}
 .me-week b{color:var(--text);}
+.me-week{display:flex;align-items:center;flex-wrap:wrap;gap:4px;}
+.me-share{margin-left:auto;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
 .me-snaps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
 .me-snap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 12px;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;display:flex;flex-direction:column;min-width:0;}
 .me-snap span{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);}
@@ -419,6 +421,33 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .me-chip.legs b{color:var(--c-pink);}
 .me-links{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .me-links button{padding:13px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;}
+/* RACE MODE */
+.rm-card{border-radius:var(--radius);padding:18px;margin-bottom:12px;border:1px solid color-mix(in srgb,var(--c-race) 45%,var(--border));background:linear-gradient(150deg,color-mix(in srgb,var(--c-race) 16%,var(--surface)),var(--surface) 70%);box-shadow:var(--card-shadow);}
+.rm-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.rm-eyebrow{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--c-race);}
+.rm-name{font-size:24px;font-weight:800;letter-spacing:-0.6px;margin-top:2px;}
+.rm-meta{font-size:12.5px;font-weight:600;color:var(--text2);margin-top:2px;}
+.rm-count{text-align:center;flex-shrink:0;}
+.rm-count b{display:block;font-family:var(--rounded);font-size:40px;font-weight:800;letter-spacing:-1.5px;line-height:1;color:var(--c-race);}
+.rm-count span{font-size:11px;font-weight:700;color:var(--text3);}
+.rm-sub{font-size:12.5px;font-weight:600;color:var(--text2);margin:12px 0 8px;}
+.rm-sub b{color:var(--text);}
+.rm-splits{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+.rm-split{background:var(--surface2);border-radius:9px;padding:6px 4px;text-align:center;}
+.rm-split span{display:block;font-size:9.5px;font-weight:800;color:var(--text3);}
+.rm-split b{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;}
+.rm-split.fin{background:color-mix(in srgb,var(--c-race) 22%,var(--surface2));}
+.rm-tip{font-size:12.5px;color:var(--text2);line-height:1.45;margin-top:10px;padding:9px 11px;border-radius:10px;background:var(--surface2);}
+.rm-check{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;border-top:1px solid var(--border);padding:9px 0;font-family:inherit;font-size:13px;color:var(--text);text-align:left;cursor:pointer;}
+.rm-check em{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:800;text-transform:uppercase;color:var(--c-race);white-space:nowrap;}
+.rm-check em.later{color:var(--text3);font-weight:700;text-transform:none;}
+.rm-box{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;}
+.rm-check.done .rm-box{background:var(--c-race);border-color:var(--c-race);}
+.rm-check.done span:not(.rm-box){color:var(--text3);text-decoration:line-through;}
+.rm-after{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;margin-bottom:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid color-mix(in srgb,var(--c-race) 45%,var(--border));background:color-mix(in srgb,var(--c-race) 10%,var(--surface));}
+.rm-after>span:nth-child(2){flex:1;display:flex;flex-direction:column;font-size:12.5px;color:var(--text2);}
+.rm-after b{font-size:15px;color:var(--text);}
+.rm-flag{font-size:26px;}
 /* TROPHIES */
 .tb-banner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;margin-bottom:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid color-mix(in srgb,var(--c-gold) 45%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--c-gold) 14%,var(--surface)),var(--surface));}
 .tb-medal,.tc-ic{display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--tc) 55%,#fff),var(--tc));box-shadow:0 0 0 3px color-mix(in srgb,var(--tc) 30%,transparent),inset 0 -3px 0 rgba(0,0,0,0.15);}
@@ -955,6 +984,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div class="today-greet" id="today-habits"></div>
     <div id="today-rings"></div>
     <div id="trophy-banner"></div>
+    <div id="race-mode"></div>
     <div id="readiness-hero"></div>
     <div class="today-plan-cell" id="today-plan-cell"></div>
     <div class="goal-stack" id="goal-stack"></div>
@@ -2056,6 +2086,127 @@ function renderTrophyCabinet(){
   </div>`;
 }
 
+// ── SHARE YOUR WEEK ──
+// Draws the week as a 1080x1350 image (a portrait post) and hands it to the phone's share
+// sheet, or downloads it where sharing files isn't supported.
+function _weekStats(monStr){
+  const mon=new Date(monStr+'T12:00:00'),sun=dk(addDays(mon,6));
+  const runs=loadRunData().filter(r=>r.date>=monStr&&r.date<=sun);
+  const gym=loadGymData().filter(g=>g.date>=monStr&&g.date<=sun);
+  const km=runs.reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  const secs=runs.reduce((a,r)=>a+parseTimeToSecs(r.time),0);
+  const days=[0,1,2,3,4,5,6].map(i=>{const ds=dk(addDays(mon,i));const rr=runs.filter(r=>r.date===ds);
+    return{ds,km:rr.reduce((a,r)=>a+(parseFloat(r.km)||0),0),eff:rr.length?_tlEffortKey(rr.sort((a,b)=>(+b.km)-(+a.km))[0].effort):null,gym:gym.filter(g=>g.date===ds).map(g=>g.type||'Gym')};});
+  let hDone=0,hTot=0;days.forEach(d=>{if(d.ds>dk(today()))return;goalsActiveOn(d.ds).forEach(g=>{hTot++;if(goalDone(d.ds,g))hDone++;});});
+  const longest=runs.reduce((a,r)=>(+r.km)>(a?+a.km:0)?r:a,null);
+  const trophies=getTrophies().filter(t=>t.earned&&t.earned>=monStr&&t.earned<=sun);
+  return{mon,monStr,sun,runs,gym,km,secs,days,habitsPct:hTot?Math.round(hDone/hTot*100):null,longest,trophies};
+}
+async function shareWeek(monStr){
+  monStr=monStr||dk(getMonday(today()));
+  const S=_weekStats(monStr);
+  const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+  const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const F=(w,sz)=>`${w} ${sz}px -apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif`;
+  const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#0b0b14');g.addColorStop(1,'#1d1436');x.fillStyle=g;x.fillRect(0,0,W,H);
+  const glow=(cx,cy,r,col)=>{const rg=x.createRadialGradient(cx,cy,0,cx,cy,r);rg.addColorStop(0,col);rg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=rg;x.fillRect(0,0,W,H);};
+  glow(980,120,520,'rgba(47,212,230,0.22)');glow(80,1250,560,'rgba(155,133,255,0.20)');
+  x.fillStyle='rgba(255,255,255,0.55)';x.font=F(700,30);x.fillText(`WEEK OF ${S.mon.toLocaleDateString('en-GB',{day:'numeric',month:'long'}).toUpperCase()}`,80,120);
+  x.fillStyle='#fff';x.font=F(800,76);x.fillText(state.userName?`${state.userName}'s week`:'My week',80,205);
+  const stat=(lbl,val,unit,px,py)=>{x.fillStyle='rgba(255,255,255,0.55)';x.font=F(700,28);x.fillText(lbl.toUpperCase(),px,py);
+    x.fillStyle='#fff';x.font=F(800,104);x.fillText(val,px,py+104);const w=x.measureText(val).width;if(unit){x.font=F(700,40);x.fillStyle='rgba(255,255,255,0.7)';x.fillText(unit,px+w+12,py+104);}};
+  const h=Math.floor(S.secs/3600),m=Math.round(S.secs%3600/60);
+  stat('Distance',(Math.round(S.km*10)/10).toLocaleString('en-GB'),'km',80,330);
+  stat('Time',S.secs?(h?`${h}h ${m}m`:`${m}m`):'0m','',580,330);
+  stat('Runs',String(S.runs.length),'',80,560);
+  stat('Gym',String(S.gym.length),S.gym.length===1?'session':'sessions',580,560);
+  // Day bars
+  const top=800,bh=230,bw=92,gap=(W-160-7*bw)/6,mx=Math.max(10,...S.days.map(d=>d.km));
+  const effCol={Easy:css('--c-easy')||'#45d39a',Recovery:css('--c-easy')||'#45d39a','Long Run':css('--c-long')||'#7fa2ff',Tempo:css('--c-tempo')||'#f0a050',Intervals:css('--c-int')||'#ff6b70',Race:css('--c-race')||'#d77be6'};
+  S.days.forEach((d,i)=>{const bx=80+i*(bw+gap);
+    x.fillStyle='rgba(255,255,255,0.07)';x.beginPath();x.roundRect(bx,top,bw,bh,18);x.fill();
+    if(d.km>0){const hh=Math.max(14,bh*d.km/mx);x.fillStyle=effCol[d.eff]||'#2fd4e6';x.beginPath();x.roundRect(bx,top+bh-hh,bw,hh,18);x.fill();
+      x.fillStyle='#fff';x.font=F(800,30);x.textAlign='center';x.fillText(String(Math.round(d.km)),bx+bw/2,top+bh-hh-14);x.textAlign='left';}
+    if(d.gym.length){x.fillStyle='rgba(255,255,255,0.9)';x.beginPath();x.roundRect(bx+bw/2-22,top+bh+18,44,44,10);x.fill();x.fillStyle='#1d1436';x.font=F(800,22);x.textAlign='center';x.fillText((TL_GYM_LETTER[d.gym[0]]||'G'),bx+bw/2,top+bh+48);x.textAlign='left';}
+    x.fillStyle='rgba(255,255,255,0.55)';x.font=F(700,28);x.textAlign='center';x.fillText('MTWTFSS'[i],bx+bw/2,top+bh+104);x.textAlign='left';});
+  // Highlights
+  const hl=[];
+  if(S.longest)hl.push(`Longest run ${fmtKm(S.longest.km)} km`);
+  if(S.habitsPct!=null)hl.push(`Habits ${S.habitsPct}%`);
+  S.trophies.slice(0,2).forEach(t=>hl.push(`🏆 ${t.name}`));
+  x.font=F(700,34);let hx=80;const hy=1205;
+  hl.slice(0,3).forEach(t=>{const w=x.measureText(t).width+44;if(hx+w>W-80)return;x.fillStyle='rgba(255,255,255,0.1)';x.beginPath();x.roundRect(hx,hy-46,w,64,32);x.fill();x.fillStyle='#fff';x.fillText(t,hx+22,hy-2);hx+=w+14;});
+  x.fillStyle='rgba(255,255,255,0.4)';x.font=F(700,26);x.fillText('TRACKER',80,H-60);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));if(!blob){toastMsg('Could not make the image');return;}
+  const file=new File([blob],`week-${monStr}.png`,{type:'image/png'});
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'My week'});return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+  toastMsg('Image saved');
+}
+
+// ── RACE MODE ──
+// From ten days out, Today gets a race card: countdown, a pacing plan for the goal next
+// to the predicted time, and a race-week checklist that remembers what's been ticked.
+// After the race, it asks for the result so predictions and PBs update.
+const RACE_CHECKLIST=[
+  {id:'long',d:7,t:'Last long run done, nothing big from here'},
+  {id:'logistics',d:5,t:'Start time, travel and parking sorted'},
+  {id:'kit',d:2,t:'Race kit tried on a run (no new shoes on the day)'},
+  {id:'eve',d:1,t:'Kit and bib laid out, watch charged'},
+  {id:'dinner',d:1,t:'Carb-heavy dinner and an early night'},
+  {id:'breakfast',d:0,t:'Breakfast 2 to 3 hours before the start'},
+  {id:'warmup',d:0,t:'10 minutes easy plus 4 strides before the gun'},
+];
+function toggleRaceCheck(id){
+  const r=state.race;if(!r)return;
+  state.raceChecks=state.raceChecks||{};const k=r.date;
+  state.raceChecks[k]=state.raceChecks[k]||{};state.raceChecks[k][id]=!state.raceChecks[k][id];
+  saveState();haptic('light');renderRaceMode();
+}
+function renderRaceMode(){
+  const el=document.getElementById('race-mode');if(!el)return;
+  const r=state.race;
+  if(!r||!r.date||!(+r.km>0)){el.innerHTML='';return;}
+  const d=daysUntil(r.date);
+  const runs=loadRunData();
+  if(d<0){
+    const logged=runs.some(x=>x.date===r.date);
+    el.innerHTML=d>=-3&&!logged?`<button class="rm-after" onclick="showPage('train');switchTrainTab('run');selectRunDay('${r.date}');setTimeout(()=>selectEffort('Race'),60)"><span class="rm-flag">🏁</span><span><b>How did ${esc(r.name||'the race')} go?</b><span>Log your result and your predictions, PBs and trophies update.</span></span><span class="brief-go">›</span></button>`:'';
+    return;
+  }
+  if(d>10){el.innerHTML='';return;}
+  const km=+r.km,goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
+  const proj=getRaceProjection();
+  const pace=goal?goal/km:proj?proj.projSecs/km:null;
+  const whole=Math.floor(km);
+  const splits=pace?Array.from({length:whole},(_,i)=>i+1).map(k=>`<div class="rm-split"><span>${k}</span><b>${fmtDurationFromSecs(Math.round(pace*k))}</b></div>`).join('')+(km-whole>0.05?`<div class="rm-split fin"><span>${fmtKm(km)}</span><b>${fmtDurationFromSecs(Math.round(pace*km))}</b></div>`:''):'';
+  let paceTip='';
+  if(goal&&proj){
+    const gap=proj.projSecs-goal;
+    paceTip=Math.abs(gap)<30?`Goal and prediction agree. Run the first 2 km at ${fmtMS(pace+3)}/km, settle on ${fmtMS(pace)}, and race the last 3.`
+      :gap>0?`The goal is ${fmtDurationFromSecs(gap)} quicker than predicted. Go out at ${fmtMS(proj.projSecs/km)}/km and only push for goal pace after halfway if it feels good.`
+      :`You're predicted ${fmtDurationFromSecs(-gap)} inside the goal. Start on goal pace and use the last third to find out how much is in there.`;
+  }
+  const checks=(state.raceChecks||{})[r.date]||{};
+  const items=RACE_CHECKLIST;
+  const doneN=items.filter(c=>checks[c.id]).length;
+  const plan=getRaceTaperPlan();
+  const dateTxt=new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  el.innerHTML=`<div class="rm-card">
+    <div class="rm-top">
+      <div><div class="rm-eyebrow">Race mode</div><div class="rm-name">${esc(r.name||'Race')}</div><div class="rm-meta">${dateTxt} · ${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</div></div>
+      <div class="rm-count"><b>${d===0?'Today':d}</b>${d===0?'':`<span>day${d===1?'':'s'}</span>`}</div>
+    </div>
+    ${pace?`<div class="rm-sub">${goal?'Goal':'Predicted'} pace <b>${fmtMS(pace)}/km</b>${proj&&goal?` · predicted ${proj.projTime}`:''}${plan&&plan.daysToTaper>0?` · taper from ${fmtShortDate(plan.taperStart)}`:''}</div>
+    <div class="rm-splits">${splits}</div>`:''}
+    ${paceTip?`<div class="rm-tip">${paceTip}</div>`:''}
+    <div class="rm-sub" style="margin-top:12px;">Race-week checklist <b>${doneN}/${items.length}</b></div>
+    ${items.map(c=>`<button class="rm-check${checks[c.id]?' done':''}" onclick="toggleRaceCheck('${c.id}')"><span class="rm-box">${checks[c.id]?'✓':''}</span><span>${c.t}</span>${c.d===d?'<em>today</em>':c.d<d?`<em class="later">${c.d===0?'race day':c.d===1?'day before':`${c.d} days out`}</em>`:''}</button>`).join('')}
+  </div>`;
+}
+
 // ── TODAY: RINGS + COACH BRIEFING ──
 // Three rings that close over the day and week: Train (this week's running km against
 // the taper-aware target, or planned gym sessions if there's no running target),
@@ -2199,8 +2350,8 @@ function renderToday(){
   const habitsEl=document.getElementById('today-habits');
   const readiness=viewingToday?computeReadiness():null;
   renderReadinessHero(readiness,baseMonday);
-  if(viewingToday){renderTodayRings(readiness);renderTodayBrief();renderTrophyBanner();}
-  else{['today-rings','today-brief','trophy-banner'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
+  if(viewingToday){renderTodayRings(readiness);renderTrophyBanner();renderRaceMode();renderTodayBrief();}
+  else{['today-rings','today-brief','trophy-banner','race-mode'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
   const alertsEl=document.getElementById('alerts-slot');
   if(alertsEl)alertsEl.innerHTML=viewingToday?renderAnomalyAlerts():'';
   const nudgeEl=document.getElementById('rest-day-nudge');
@@ -6652,7 +6803,7 @@ function renderMeOverview(){
       <div><b>${yrGym.length}</b><span>gym sessions</span></div>
       <div><b>${Math.round(yrSecs/3600)}</b><span>hours</span></div>
     </div>
-    <div class="me-week"><span>This week</span><b>${fmtKm(km(wkRuns))||0} km</b> · ${wkRuns.length} run${wkRuns.length===1?'':'s'} · ${wkGym.length} gym</div>
+    <div class="me-week"><span>This week</span><b>${fmtKm(km(wkRuns))||0} km</b> · ${wkRuns.length} run${wkRuns.length===1?'':'s'} · ${wkGym.length} gym<button class="me-share" onclick="shareWeek()">Share ↗</button></div>
   </div>`;
   const sec=t=>`<div class="trends-sec">${t}</div>`;
   return`${hero}
@@ -8539,7 +8690,7 @@ function renderWeekReviewCard(){
   if(now.getDay()!==0||weekOffset!==0||state.weekReviewDone===monStr){wrap.innerHTML='';return;}
   const r=buildWeekReview(mon);
   wrap.innerHTML=`<div class="wr-card">
-    <div class="wr-head"><span>Week in review · ${fmtWeekRange(mon)}</span><button onclick="dismissWeekReview()">Done ✓</button></div>
+    <div class="wr-head"><span>Week in review · ${fmtWeekRange(mon)}</span><span style="display:flex;gap:6px;"><button onclick="shareWeek('${monStr}')">Share ↗</button><button onclick="dismissWeekReview()">Done ✓</button></span></div>
     ${renderWeekReviewBody(r,{showNext:true})}
   </div>`;
 }

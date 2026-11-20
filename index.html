@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="62">
+<meta name="app-version" content="63">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -182,6 +182,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-seg-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);white-space:nowrap;}
 .yg-seg.done .yg-seg-type{color:var(--green);}
 .yg-guard{margin-top:8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--c-teal) 10%,transparent);border:1px solid color-mix(in srgb,var(--c-teal) 25%,transparent);font-size:12px;font-weight:600;color:var(--text2);line-height:1.45;}
+.yg-shape{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface2);}
+.yg-shape-h{font-family:var(--display);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;}
 .yg-heavy{margin-top:8px;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid color-mix(in srgb,var(--orange) 35%,transparent);font-size:12.5px;line-height:1.45;color:var(--text2);}
 .yg-heavy b{color:var(--text);}
 .yg-seg.race{border-color:var(--c-race);}
@@ -8642,6 +8644,12 @@ function refreshPlanViews(){
   const t=document.getElementById('page-today');
   if(t&&t.classList.contains('active')&&weekOffset===0)renderToday();else renderYearGoalCard();
 }
+function setWeekShape(v,e){
+  if(e)e.stopPropagation();
+  const k=dk(getMonday(today()));state.weekShape=state.weekShape||{};
+  if(v==='full')state.weekShape[k]='full';else delete state.weekShape[k];
+  saveState();refreshPlanViews();haptic('light');
+}
 function setPlanCap(m,e){if(e)e.stopPropagation();state.yearRunGoal.capMode=m;saveState();refreshPlanViews();haptic('light');}
 function setRacePriority(date,p,e){
   if(e)e.stopPropagation();
@@ -8741,7 +8749,7 @@ function getYearGoalWeek(weekOffset=0){
   const plan=buildYearPlan(mon,remainingAtStart);
   const pw=plan.weeks[0]||{target:rawTarget,note:'',race:null,longCap:null};
   const guard={longCap:pw.longCap,base:plan.base};
-  let target=pw.target,note=pw.fixed||pw.capped?pw.note:null,race=pw.race;
+  let target=pw.target,note=pw.fixed||pw.capped||pw.overridden?pw.note:null,race=pw.race;
   // Slots for this week, scaled to the target.
   const runs=g.runsPerWeek||5;
   const full=YEAR_GOAL_SPLITS[runs]||YEAR_GOAL_SPLITS[5];
@@ -8904,8 +8912,11 @@ function buildYearPlan(startMon,R,opts){
     // The current week can only take what fits in the days that are left (about a long
     // day's running each), so changing the plan on a Friday doesn't ask for a 30 km
     // "easy" run on Sunday; the rest moves to later weeks.
-    const rf=base>=8?weekRaceInfo(mon,base):null;
+    let rf=base>=8?weekRaceInfo(mon,base):null;
     const w={mon:dk(mon),days:n,cap,kind:'build',note:'',race:null,longCap:null,fixed:false,target:0};
+    // A one-off "full week" override for a taper or recovery week (set from the This
+    // Week block). Race weeks keep their shape; every other week follows the defaults.
+    if(rf&&rf.kind!=='race'){w.shaped=rf.kind;w.shapedNote=rf.note;if((state.weekShape||{})[dk(mon)]==='full'){w.overridden=true;rf=null;}}
     if(rf){w.fixed=true;w.kind=rf.kind;w.note=rf.note;w.race=rf.race;w.longCap=rf.longCap;w.target=Math.min(cap,Math.max(base*rf.factor*n/7,rf.minKm));}
     weeks.push(w);
   }
@@ -8921,7 +8932,8 @@ function buildYearPlan(startMon,R,opts){
   // Rounding each week can leave the total a km or two off; the last open week absorbs it.
   if(shortfall<=1){const drift=Math.round(R)-weeks.reduce((a,w)=>a+w.target,0);const lastOpen=[...weeks].reverse().find(w=>!w.fixed);if(lastOpen&&drift)lastOpen.target=Math.max(0,lastOpen.target+drift);}
   weeks.forEach(w=>{
-    if(!w.fixed)w.note=w.capped?`Capped at ${Math.round(w.cap)} km, about ${Math.round(capPct*100)}% above your recent ${Math.round(base)} km weeks.`
+    if(!w.fixed&&w.overridden)w.note=`Training through: a full week instead of the ${w.shaped} the plan had.`;
+    else if(!w.fixed)w.note=w.capped?`Capped at ${Math.round(w.cap)} km, about ${Math.round(capPct*100)}% above your recent ${Math.round(base)} km weeks.`
       :g.capMode==='goal'&&base>=8&&w.target>base*1.15*w.days/7?`${Math.round((w.target/(base*w.days/7)-1)*100)}% above your recent ${Math.round(base)} km weeks.`
       :w.target>base*1.03?'Build week, making up what the race weeks don\'t run.':'Steady week.';
   });
@@ -9004,6 +9016,22 @@ function renderYearGoalWeek(){
     ${longEdit}
     <div class="yg-week-left">${left}</div>
     ${w.note?`<div class="yg-guard">${w.note}</div>`:''}
+    ${(()=>{
+      // Taper or recovery week: let this one week be trained as a full week instead,
+      // showing what each choice means in km. The defaults below stay as they are.
+      const pw=w.plan&&w.plan.weeks[0];
+      if(!pw||!pw.shaped||done)return'';
+      const k=dk(getMonday(today())),cur=(state.weekShape||{})[k]==='full';
+      state.weekShape=state.weekShape||{};
+      const save=state.weekShape[k];
+      if(cur)delete state.weekShape[k];else state.weekShape[k]='full';
+      const alt=getYearGoalWeek();
+      if(save===undefined)delete state.weekShape[k];else state.weekShape[k]=save;
+      const shapedKm=cur?alt.target:w.target,fullKm=cur?w.target:alt.target;
+      const lbl=pw.shaped==='taper'?'Taper':'Recovery';
+      return`<div class="yg-shape" onclick="event.stopPropagation()"><div class="yg-shape-h">This week</div>
+        <span class="yp-seg"><button class="${cur?'':'on'}" onclick="setWeekShape('plan',event)">${lbl} · ${Math.round(shapedKm)} km</button><button class="${cur?'on':''}" onclick="setWeekShape('full',event)">Full week · ${Math.round(fullKm)} km</button></span></div>`;
+    })()}
     ${(()=>{
       // One open run carrying far more than a normal run: say so, and point at the
       // long-run stepper to share it out. Nothing is hidden or moved for you.

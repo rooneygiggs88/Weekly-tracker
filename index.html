@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="76">
+<meta name="app-version" content="77">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -198,6 +198,19 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-seg.next{border-style:solid;background:var(--surface2);border-color:transparent;}
 .yg-seg.tap{cursor:pointer;border-color:var(--accent2);border-style:solid;-webkit-tap-highlight-color:transparent;}
 .yg-seg.tap .yg-seg-type{color:var(--accent2);}
+.yg-seg.done.tap{border-style:solid;border-color:var(--border);}
+.yg-seg.done.tap .yg-seg-type{color:var(--green);}
+.yg-seg.tap.opt{border-style:dashed;border-color:var(--border);}
+.yg-seg.tap.opt .yg-seg-type{color:var(--text3);}
+.yg-seg.sel{background:var(--surface2);border-color:var(--accent);}
+.yg-edit{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--surface2);display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:700;color:var(--text2);}
+.yg-edit-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.yg-edit .yg-step{display:flex;align-items:center;gap:10px;}
+.yg-edit .yg-step button{all:unset;cursor:pointer;width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text);}
+.yg-edit .yg-step button:disabled{opacity:0.35;cursor:default;}
+.yg-edit .yg-step strong{font-size:16px;color:var(--text);min-width:52px;text-align:center;font-variant-numeric:tabular-nums;}
+.yg-link{all:unset;cursor:pointer;color:var(--accent2);font-size:12px;font-weight:700;margin-left:12px;}
+.yg-edit-hint{font-weight:500;color:var(--text3);}
 .yg-long-edit{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--surface2);font-size:12px;font-weight:700;color:var(--text2);}
 .yg-long-edit .yg-step{display:flex;align-items:center;gap:10px;}
 .yg-long-edit button{all:unset;cursor:pointer;width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--text);-webkit-tap-highlight-color:transparent;}
@@ -2903,7 +2916,7 @@ function _calSlotsFor(weekOffset){
   if(weekOffset<=1){
     const w=getYearGoalWeek(weekOffset);if(!w)return null;
     const pw=w.plan&&w.plan.weeks[0];
-    const slots=(weekOffset===0?(w.active||w.open||[]):w.slots).map(x=>({type:x.type,km:Math.round(x.left!=null?x.left:x.km)})).filter(x=>x.km>0);
+    const slots=(weekOffset===0?(w.active||w.open||[]):w.slots).map(x=>({type:x.type,km:Math.round(x.left!=null?x.left:x.km),id:x.id})).filter(x=>x.km>0);
     return{target:w.target,kind:pw?pw.kind:'build',overridden:pw&&pw.overridden,race:w.race,slots,yw:w};
   }
   const base=getYearGoalWeek();if(!base||!base.plan)return null;
@@ -2914,8 +2927,20 @@ function _calSlotsFor(weekOffset){
   let sl=full.slice(0,n);
   if(pw.race&&pw.race.inWeek){const L=sl.find(x=>x.type==='Long');if(L){L.type='Race';L.fixed=pw.race.km;}}
   const fixedKm=sl.filter(x=>x.fixed).reduce((a,x)=>a+x.fixed,0),wSum=sl.filter(x=>!x.fixed).reduce((a,x)=>a+x.w,0);
-  sl.forEach(x=>{x.km=Math.round(x.fixed!=null?x.fixed:Math.max(0,pw.target-fixedKm)*x.w/wSum);});
-  return{target:pw.target,kind:pw.kind,race:pw.race,slots:sl.filter(x=>x.km>0).map(x=>({type:x.type,km:x.km}))};
+  sl.forEach((x,i)=>{x.id=i;});
+  const E=_weekSlotEdits(mon,sl);
+  sl.forEach(x=>{const e=E[x.id];if(e&&e.type&&!x.fixed)x.type=e.type;});
+  const cu=sl.filter(x=>!x.fixed&&E[x.id]&&E[x.id].km!=null),cuKm=cu.reduce((a,x)=>a+(+E[x.id].km),0);
+  const rs=sl.filter(x=>!x.fixed&&!cu.includes(x)),rSum=rs.reduce((a,x)=>a+x.w,0);
+  sl.forEach(x=>{x.km=Math.round(x.fixed!=null?x.fixed:cu.includes(x)?+E[x.id].km:rSum?Math.max(0,pw.target-fixedKm-cuKm)*x.w/rSum:0);});
+  return{target:pw.target,kind:pw.kind,race:pw.race,slots:sl.filter(x=>x.km>0).map(x=>({type:x.type,km:x.km,id:x.id}))};
+}
+// A week's run edits, carrying over the old long-run-only setting.
+function _weekSlotEdits(monK,slots){
+  const E=(state.weekSlotEdits||{})[monK]||{};
+  const old=(state.weekLongKm||{})[monK];
+  if(old!=null&&slots){const L=slots.find(x=>x.type==='Long');if(L&&!E[L.id]){state.weekSlotEdits=state.weekSlotEdits||{};state.weekSlotEdits[monK]={...E,[L.id]:{km:old}};}delete state.weekLongKm[monK];saveState();return(state.weekSlotEdits||{})[monK]||{};}
+  return E;
 }
 function _calRaceOn(ds){return getRaces().find(r=>r.date===ds);}
 function getCalendarWeek(weekOffset){
@@ -2939,9 +2964,9 @@ function getCalendarWeek(weekOffset){
   const sl0=W.slots.map(x=>({...x})),nr=sl0.filter(x=>x.type!=='Race');
   nr.forEach(x=>{if(x.km<3){const to=nr.filter(y=>y!==x&&y.km>=3).sort((a,b)=>b.km-a.km)[0];if(to){to.km+=x.km;x.km=0;}}});
   if(nr.length&&nr.every(x=>x.km<3)){const sum=nr.reduce((a,x)=>a+x.km,0);nr.forEach(x=>{x.km=0;});if(sum>=2){nr[0].km=sum;nr[0].type='Easy';}}
-  const slots=sl0.filter(x=>x.km>0).map((s,j)=>({...s,key:s.type+j}));
+  const slots=sl0.filter(x=>x.km>0).map((s,j)=>({...s,key:s.id!=null?'r'+s.id:s.type+j,oldKey:s.type+j}));
   const moves=(state.calMoves||{})[monK]||{};
-  const pick=(s,cands)=>{const mv=moves[s.key];if(mv!=null){const d=days[mv];if(d&&!d.past)return d;}return cands[0];};
+  const pick=(s,cands)=>{const mv=moves[s.key]!=null?moves[s.key]:moves[s.oldKey];if(mv!=null){const d=days[mv];if(d&&!d.past)return d;}return cands[0];};
   const free=d=>!used.get(d.i);
   // Race
   slots.filter(s=>s.type==='Race').forEach(s=>{const d=pick(s,[raceDay||open[open.length-1]].filter(Boolean));if(d){place(d,s);d.note='race';}});
@@ -3002,14 +3027,14 @@ function renderPlanCalendar(){
     const rows=w.days.map(d=>{
       const done=d.done.map(r=>`<div class="pc-item done"><b>✓ ${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}</b></div>`).join('');
       const plan=d.planned.map(s=>{const sel=_calPick&&_calPick.mon===w.mon&&_calPick.key===s.key;
-        return`<div class="pc-item ${s.type.toLowerCase()}${sel?' sel':''}" onclick="calPick('${w.mon}','${s.key}')"><b>${s.km} km ${esc(s.title||s.type)}</b><span>${s.desc||''}</span>${sel?`<div class="pc-move">${_CAL_DAY.map((nm,i)=>w.days[i].past?'':`<button onclick="event.stopPropagation();calMove('${w.mon}','${s.key}',${i})" class="${i===d.i?'on':''}">${nm}</button>`).join('')}</div>`:''}</div>`;}).join('');
+        return`<div class="pc-item ${s.type.toLowerCase()}${sel?' sel':''}" onclick="calPick('${w.mon}','${s.key}')"><b>${s.km} km ${esc(s.title||s.type)}</b><span>${s.desc||''}</span>${sel?`<div class="pc-move">${_CAL_DAY.map((nm,i)=>w.days[i].past?'':`<button onclick="event.stopPropagation();calMove('${w.mon}','${s.key}',${i})" class="${i===d.i?'on':''}">${nm}</button>`).join('')}</div>${s.id!=null&&s.type!=='Race'?slotEditorHtml(w.mon,s,s.km):''}`:''}</div>`;}).join('');
       const gym=d.gym?`<div class="pc-item gym"><b>${d.gym}</b><span>${d.gym==='Upper body'?'Short and light, no legs.':'A normal session; legs only if no key run within 48 hours.'}</span></div>`:'';
       const empty=!done&&!plan&&!gym?`<div class="pc-rest">${d.past?'':'Rest'}</div>`:'';
       return`<div class="pc-day${d.isToday?' today':''}${d.past?' past':''}"><div class="pc-d"><b>${_CAL_DAY[d.i]}</b><span>${new Date(d.ds+'T12:00:00').getDate()}</span></div><div class="pc-items">${done}${plan}${gym}${empty}</div></div>`;
     }).join('');
     return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${moved?`<button onclick="calReset('${w.mon}')">Reset moves</button>`:''}</div>${rows}</div>`;
   };
-  el.innerHTML=`<div class="chart-card pc-card"><div class="chart-card-header"><span class="chart-card-title">Plan</span><span class="chart-card-val">tap a run to move it</span></div>
+  el.innerHTML=`<div class="chart-card pc-card"><div class="chart-card-header"><span class="chart-card-title">Plan</span><span class="chart-card-val">tap a run to move or change it</span></div>
     ${weeks.map(wk).join('')}
     <button class="tl-more" onclick="_calAll=!_calAll;renderPlanCalendar()">${_calAll?'Show two weeks':'Show every week to 31 Dec'}</button></div>`;
 }
@@ -9731,8 +9756,9 @@ function renderYearPlanBlock(){
     ${what?`<div class="yp-what">${what}</div>`:''}
   </div>`;
   return`<div class="yp" onclick="event.stopPropagation()">
-    <div class="yp-sum">${summary}</div>
+    <div class="yp-sum">${summary.split('<div class="yp-risk">')[0]}</div>
     ${controls}
+    ${summary.includes('<div class="yp-risk">')?'<div class="yp-risk">'+summary.split('<div class="yp-risk">')[1]:''}
     <button class="yg-next-btn" onclick="toggleYearPlan(event)" aria-expanded="${_ygPlanOpen}"><span>Plan to 31 Dec</span><span>${P.weeks.length} weeks <span class="yg-next-chev${_ygPlanOpen?' open':''}">▾</span></span></button>
     ${_ygPlanOpen?`<div class="yp-list">${rows}<div class="yp-foot">Race weeks are set as a share of your recent ${P.base} km weeks. Build weeks share out the rest, up to ${P.cap??'–'} km. Each week locks in on Monday; whatever you run more or less moves the rest of the plan.</div></div>`:''}
   </div>`;
@@ -9794,15 +9820,27 @@ function getYearGoalWeek(weekOffset=0){
   }
   // Race week: the long run slot becomes the race itself, at race distance.
   if(race&&race.inWeek){const L=slots.find(x=>x.type==='Long');if(L){L.type='Race';L.fixedKm=race.km;}}
+  // Your edits to this week's runs (tap a run on the goal card or the calendar): a type
+  // and/or a distance per run, keyed by its place in the week. The others rebalance.
+  slots.forEach((x,i)=>{x.id=i;});
+  const E=_weekSlotEdits(monStr,slots);
+  slots.forEach(x=>{const e=E[x.id];if(e&&e.type&&x.type!=='Race')x.type=e.type;});
   const wSum=slots.reduce((a,x)=>a+x.w,0);
   slots.forEach(x=>{x.km=target*x.w/wSum;x.run=null;});
   // Match logged runs to slots by type (Long Run -> long, Tempo/Intervals/etc -> tempo,
   // Easy -> easy), then anything left over fills the next open slot.
-  const slotType=e=>e==='Long Run'?'Long':e==='Race'&&slots.some(x=>x.type==='Race')?'Race':e==='Easy'?'Easy':(e?'Tempo':'Easy');
+  // No run tagged Long Run this week? The clearly longest run (14 km+, well past the
+  // next one) is the long run, whatever effort it was logged as.
+  let longR=null;
+  if(!weekRuns.some(r=>r.effort==='Long Run')){
+    const byKm=[...weekRuns].filter(r=>r.effort!=='Race').sort((a,b)=>goalKm(b)-goalKm(a));
+    if(byKm[0]&&goalKm(byKm[0])>=14&&(!byKm[1]||goalKm(byKm[0])>=goalKm(byKm[1])*1.4))longR=byKm[0];
+  }
+  const slotType=(e,r)=>r&&r===longR?'Long':e==='Long Run'?'Long':e==='Race'&&slots.some(x=>x.type==='Race')?'Race':e==='Easy'?'Easy':(e?'Tempo':'Easy');
   const extra=[];
-  weekRuns.forEach(r=>{const sl=slots.find(x=>!x.run&&x.type===slotType(r.effort));if(sl)sl.run=r;else extra.push(r);});
+  weekRuns.forEach(r=>{const sl=slots.find(x=>!x.run&&x.type===slotType(r.effort,r));if(sl)sl.run=r;else extra.push(r);});
   extra.forEach(r=>{const sl=slots.find(x=>!x.run);if(sl)sl.run=r;});
-  slots.forEach(x=>{if(x.run)x.runType=slotType(x.run.effort);});
+  slots.forEach(x=>{if(x.run)x.runType=x.run===longR&&x.type==='Long'?'Long':slotType(x.run.effort,x.run);});
   // Re-split what's left of the week over the open slots.
   const open=slots.filter(x=>!x.run);
   const leftKm=Math.max(0,target-weekKm);
@@ -9818,37 +9856,38 @@ function getYearGoalWeek(weekOffset=0){
     const others=flex.filter(x=>x!==lsl),s2=others.reduce((a,x)=>a+x.w,0);
     others.forEach(x=>{x.left+=s2?spare*x.w/s2:0;});
   }
-  // Long run set by hand for this week: it takes that many km and the other open runs
-  // share what's left by their usual weights. The week's total doesn't move.
+  // Runs you've set by hand take exactly that (0 = skipped) and the other open runs
+  // share what's left by their usual weights, so the week's total doesn't move.
   const longKey=dk(mon);
-  const longOv=(state.weekLongKm||{})[longKey];
   const longSlot=open.find(x=>x.type==='Long');
-  let longMax=0;
-  if(longSlot){
-    const rest=open.filter(x=>x!==longSlot);
-    longMax=rest.length?Math.floor(leftKm):Math.round(leftKm);
-    if(longOv!=null){
-      const lk=Math.max(1,Math.min(longMax,longOv));
-      longSlot.left=lk;longSlot.custom=true;
-      const rSum=rest.reduce((a,x)=>a+x.w,0);
-      rest.forEach(x=>{x.left=rSum?Math.max(0,leftKm-lk)*x.w/rSum:0;});
-    }
+  const longMax=Math.max(1,Math.round(leftKm));
+  const cust=flex.filter(x=>E[x.id]&&E[x.id].km!=null);
+  if(cust.length){
+    cust.forEach(x=>{x.left=Math.max(0,+E[x.id].km);x.custom=true;});
+    const rest=flex.filter(x=>!x.custom),rSum=rest.reduce((a,x)=>a+x.w,0);
+    const restKm=Math.max(0,flexKm-cust.reduce((a,x)=>a+x.left,0));
+    rest.forEach(x=>{x.left=rSum?restKm*x.w/rSum:0;});
+    const rl=rest.find(x=>x.type==='Long');
+    if(rl&&guard.longCap!=null&&rl.left>guard.longCap){const sp=rl.left-guard.longCap;rl.left=guard.longCap;const o=rest.filter(x=>x!==rl),s2=o.reduce((a,x)=>a+x.w,0);o.forEach(x=>{x.left+=s2?sp*x.w/s2:0;});}
   }
+  const overBy=Math.round(cust.reduce((a,x)=>a+x.left,0)-flexKm);
   // Runs too small to bother with (under 3 km) fold into the biggest other run; anything
   // left at zero is optional rather than "a 0 km run".
   // Your own long-run setting is never changed: if it's the only run big enough, the
   // leftover is shown as a small top-up for any run instead.
   let topUp=0;
   open.forEach(x=>{
-    if(x.left>0.05&&x.left<3){const to=open.filter(y=>y!==x&&y.left>=3&&!y.custom).sort((a,b)=>b.left-a.left)[0];if(to){to.left+=x.left;x.left=0;}else{topUp+=x.left;x.left=0;}}
+    if(!x.custom&&x.left>0.05&&x.left<3){const to=open.filter(y=>y!==x&&y.left>=3&&!y.custom).sort((a,b)=>b.left-a.left)[0];if(to){to.left+=x.left;x.left=0;}else{topUp+=x.left;x.left=0;}}
   });
-  if(topUp>=3){const to=open.find(x=>x.left===0&&x!==longSlot);if(to){to.left=topUp;topUp=0;}}
+  if(topUp>=3){const to=open.find(x=>x.left===0&&!x.custom);if(to){to.left=topUp;topUp=0;}}
   open.forEach(x=>{x.optional=Math.round(x.left)===0;});
   const active=open.filter(x=>!x.optional),optional=open.filter(x=>x.optional);
   topUp=Math.round(topUp);
-  if(longSlot&&longSlot.custom&&guard.longCap!=null&&longSlot.left>guard.longCap)
-    note=(note?note+' ':'')+`Your ${Math.round(longSlot.left)} km long run is your call, but with the race a week later, ${guard.longCap} km or less would keep your legs fresher.`;
-  return{plan,active,optional,topUp,longKey,longMax,longSlot,target,rawTarget,note,race,base:guard.base,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
+  const cl=open.find(x=>x.custom&&x.type==='Long'&&x.left>0);
+  if(cl&&guard.longCap!=null&&cl.left>guard.longCap)
+    note=(note?note+' ':'')+`Your ${Math.round(cl.left)} km long run is your call, but with the race a week later, ${guard.longCap} km or less would keep your legs fresher.`;
+  if(overBy>=1)note=(note?note+' ':'')+`Your runs add up to ${overBy} km more than this week's ${Math.round(target)} km. That's fine: anything extra comes off the weeks after.`;
+  return{plan,active,optional,topUp,longKey,longMax,longSlot,edits:E,mon:monStr,target,rawTarget,note,race,base:guard.base,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
 }
 // Two guard rails on the catch-up maths. (1) A ramp cap: no more than ~15% above your
 // average of the last four complete weeks, since big jumps in weekly load are the most
@@ -9997,18 +10036,40 @@ function renderYearGoalNextWeek(){
     <div class="yg-week-left">Locks in on Monday. Every km you log before then makes it smaller.</div>${w.note?`<div class="yg-guard">${w.note}</div>`:''}`:''}
   </div>`;
 }
-let _ygLongOpen=false;
-function toggleYearGoalLong(e){if(e)e.stopPropagation();_ygLongOpen=!_ygLongOpen;renderYearGoalCard();haptic('light');}
-function stepYearGoalLong(d){
-  const w=getYearGoalWeek();if(!w||!w.longSlot)return;
-  const v=Math.max(1,Math.min(w.longMax,Math.round(w.longSlot.left)+d));
-  if(!state.weekLongKm)state.weekLongKm={};
-  state.weekLongKm[w.longKey]=v;saveState();refreshPlanViews();haptic('light');
+// ── EDITING A WEEK'S RUNS ──
+// Tap any run on the goal card or the calendar to change its type or distance, or skip
+// it. Stored per week as {slot: {type, km}}; the week's other runs share what's left,
+// and the calendar, Today's plan and the coaches all read the same week.
+let _ygEdit=null;
+function toggleYearGoalSlot(id,e){if(e)e.stopPropagation();_ygEdit=_ygEdit===id?null:id;renderYearGoalCard();haptic('light');}
+function setSlotEdit(mon,id,patch,e){
+  if(e)e.stopPropagation();
+  state.weekSlotEdits=state.weekSlotEdits||{};const W=state.weekSlotEdits[mon]=state.weekSlotEdits[mon]||{};
+  const cur={...(W[id]||{}),...patch};
+  if(cur.km!=null)cur.km=Math.max(0,Math.min(60,Math.round(cur.km)));
+  W[id]=cur;saveState();haptic('light');refreshPlanViews();
 }
-function resetYearGoalLong(){
-  const w=getYearGoalWeek();if(!w)return;
-  if(state.weekLongKm)delete state.weekLongKm[w.longKey];
-  saveState();refreshPlanViews();haptic('light');
+function resetSlotEdit(mon,id,e){
+  if(e)e.stopPropagation();
+  const W=(state.weekSlotEdits||{})[mon];if(W){delete W[id];if(!Object.keys(W).length)delete state.weekSlotEdits[mon];}
+  saveState();haptic('light');refreshPlanViews();
+}
+// Open the run editor for a logged run.
+function openRunEditFor(date,loggedAt,km,e){
+  if(e)e.stopPropagation();
+  const i=loadRunData().findIndex(r=>r.date===date&&(r.loggedAt||0)===loggedAt&&+r.km===+km);
+  if(i>=0)openRunEdit(i);
+}
+// The editor shown under a run: type, distance, skip, reset.
+function slotEditorHtml(mon,s,km){
+  const e=((state.weekSlotEdits||{})[mon]||{})[s.id];
+  const t=s.type;
+  return`<div class="yg-edit" onclick="event.stopPropagation()">
+    <div class="yg-edit-row"><span class="yp-seg">${['Easy','Tempo','Long'].map(x=>`<button class="${t===x?'on':''}" onclick="setSlotEdit('${mon}',${s.id},{type:'${x}'},event)">${x}</button>`).join('')}</span></div>
+    <div class="yg-edit-row"><span class="yg-step"><button onclick="setSlotEdit('${mon}',${s.id},{km:${km-1}},event)" ${km<=0?'disabled':''} aria-label="Shorter">−</button><strong>${km} km</strong><button onclick="setSlotEdit('${mon}',${s.id},{km:${km+1}},event)" aria-label="Longer">+</button></span>
+      <span>${km>0?`<button class="yg-link" onclick="setSlotEdit('${mon}',${s.id},{km:0},event)">Skip</button>`:''}${e?`<button class="yg-link" onclick="resetSlotEdit('${mon}',${s.id},event)">Reset</button>`:''}</span></div>
+    <div class="yg-edit-hint">The week's other runs share what's left.</div>
+  </div>`;
 }
 function renderYearGoalWeek(){
   const w=getYearGoalWeek();
@@ -10019,18 +10080,14 @@ function renderYearGoalWeek(){
   const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
   const done=w.leftKm<=0;
   const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy',Race:'Race'};
-  const shown=w.slots.filter(x=>x.run||!x.optional||done);
+  const shown=w.slots;
   const segs=shown.map(x=>x.run
-    ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${goalKm(x.run)}</div></div>`
-    :x===w.longSlot&&!done
-      ?`<div class="yg-seg tap" onclick="toggleYearGoalLong(event)" role="button" aria-label="Adjust long run"><div class="yg-seg-type">${lbl[x.type]}${x.custom?' •':' ✎'}</div><div class="yg-seg-km">${Math.round(x.left)}</div></div>`
+    ?`<div class="yg-seg done tap" onclick="openRunEditFor('${x.run.date}',${x.run.loggedAt||0},${+x.run.km},event)" role="button" aria-label="Edit this run"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${goalKm(x.run)}</div></div>`
+    :!done&&x.type!=='Race'
+      ?`<div class="yg-seg tap${_ygEdit===x.id?' sel':''}${x.optional?' opt':''}" onclick="toggleYearGoalSlot(${x.id},event)" role="button" aria-label="Edit this run"><div class="yg-seg-type">${lbl[x.type]}${x.custom?' •':''}</div><div class="yg-seg-km">${x.custom&&Math.round(x.left)===0?'skip':x.optional?'–':Math.round(x.left)}</div></div>`
       :`<div class="yg-seg"><div class="yg-seg-type">${lbl[x.type]}</div><div class="yg-seg-km">${done?'–':Math.round(x.left)}</div></div>`).join('');
-  const lk=w.longSlot?Math.round(w.longSlot.left):0;
-  const longEdit=_ygLongOpen&&w.longSlot&&!done?`<div class="yg-long-edit" onclick="event.stopPropagation()">
-      <span>Long run</span>
-      <span class="yg-step"><button onclick="stepYearGoalLong(-1)" ${lk<=1?'disabled':''} aria-label="Shorter">−</button><strong>${lk} km</strong><button onclick="stepYearGoalLong(1)" ${lk>=w.longMax?'disabled':''} aria-label="Longer">+</button></span>
-      ${w.longSlot.custom?`<button class="yg-reset" onclick="resetYearGoalLong()">Reset</button>`:'<span style="width:34px;"></span>'}
-    </div>`:'';
+  const es=_ygEdit!=null&&!done?w.slots.find(x=>x.id===_ygEdit&&!x.run):null;
+  const longEdit=es?slotEditorHtml(w.mon,es,Math.round(es.left)):'';
   let left='';
   if(done)left=`<strong style="color:var(--green);">Week done ✓</strong>${w.weekKm-w.target>=1?` ${f1(w.weekKm-w.target)}km over, which lowers every week's target from here.`:''}`;
   else{
@@ -10071,7 +10128,7 @@ function renderYearGoalWeek(){
       const b=w.base||0,runMax=Math.max(12,b*0.3);
       const big=w.open.filter(x=>x!==w.longSlot&&x.type!=='Race').sort((a,c)=>c.left-a.left)[0];
       if(!big||big.left<=Math.max(runMax,w.longSlot?w.longSlot.left:0)+0.5)return'';
-      return`<div class="yg-heavy"><b>One ${big.type.toLowerCase()} run is carrying ${Math.round(big.left)} km.</b> ${w.longSlot?'Tap the long run to make it longer and share the load, or':'You could'} split it over the days left. Anything you don't run this week rolls into next week's plan.</div>`;
+      return`<div class="yg-heavy"><b>One ${big.type.toLowerCase()} run is carrying ${Math.round(big.left)} km.</b> Tap any run to make it longer and share the load, or split it over the days left. Anything you don't run this week rolls into next week's plan.</div>`;
     })()}
   </div>`;
 }

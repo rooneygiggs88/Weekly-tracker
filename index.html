@@ -173,6 +173,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-seg.done{border:1px solid rgba(5,150,105,0.35);background:rgba(5,150,105,0.1);}
 .yg-seg-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);white-space:nowrap;}
 .yg-seg.done .yg-seg-type{color:var(--green);}
+.yg-guard{margin-top:8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--c-teal) 10%,transparent);border:1px solid color-mix(in srgb,var(--c-teal) 25%,transparent);font-size:12px;font-weight:600;color:var(--text2);line-height:1.45;}
+.yg-seg.race{border-color:var(--c-race);}
 .yg-seg-km{font-size:15px;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums;}
 .yg-next{border-top-style:dashed;}
 .yg-next-btn{all:unset;box-sizing:border-box;width:100%;display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:10px;background:var(--surface2);cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -4738,18 +4740,31 @@ function getFitnessModel(){
   const m=(()=>{
     const ests=vo2RunEstimates(runs),td=dk(today());
     const raw=_vo2At(ests,td);if(raw==null)return null;
-    let ratio=1,cal=null;
+    // Two calibrations. The VO2max *number* is put on your watch's scale when you've
+    // logged Garmin readings, so it matches what you see there. Race *predictions* are
+    // calibrated to real race results, because watch VO2max typically reads higher than
+    // the race fitness (VDOT) your results show. The strongest recent race wins: races
+    // are best efforts, so a slow one is more likely an off day than lost fitness.
+    const clamp=v=>Math.max(0.8,Math.min(1.35,v));
     const logs=getVo2Log().slice(-3).map(l=>{const r=_vo2At(ests,l.date);return r?{l,ratio:l.vo2/r}:null;}).filter(Boolean);
-    if(logs.length){ratio=logs.reduce((a,x)=>a+x.ratio,0)/logs.length;const L=logs[logs.length-1].l;cal={type:'garmin',date:L.date,vo2:L.vo2};}
-    else{
-      const races=runs.filter(r=>_tlEffortKey(r.effort)==='Race'&&+r.km>=3&&+r.km<=42.5&&parseTimeToSecs(r.time)>0&&r.date>=_dsAgo(365)).sort((a,b)=>b.date.localeCompare(a.date));
-      for(const r of races){const rv=_vo2At(ests,r.date);if(rv){ratio=vdotFromRace(+r.km,parseTimeToSecs(r.time))/rv;cal={type:'race',date:r.date,km:+r.km};break;}}
+    let gRatio=null,gCal=null;
+    if(logs.length){gRatio=clamp(logs.reduce((a,x)=>a+x.ratio,0)/logs.length);const L=logs[logs.length-1].l;gCal={type:'garmin',date:L.date,vo2:L.vo2};}
+    let rRatio=null,rCal=null;
+    for(const win of [182,365]){
+      runs.filter(r=>_tlEffortKey(r.effort)==='Race'&&+r.km>=3&&+r.km<=42.5&&parseTimeToSecs(r.time)>0&&r.date>=_dsAgo(win)).forEach(r=>{
+        const rv=_vo2At(ests,r.date);if(!rv)return;const q=vdotFromRace(+r.km,parseTimeToSecs(r.time))/rv;
+        if(rRatio==null||q>rRatio){rRatio=q;rCal={type:'race',date:r.date,km:+r.km,name:r.note||''};}
+      });
+      if(rRatio!=null)break;
     }
-    ratio=Math.max(0.85,Math.min(1.2,ratio));
-    const series=[];for(let k=25;k>=0;k--){const ds=_dsAgo(k*7);const v=_vo2At(ests,ds);if(v!=null)series.push({ds,v:v*ratio});}
-    const now=raw*ratio,agoRaw=_vo2At(ests,_dsAgo(28)),ago=agoRaw!=null?agoRaw*ratio:null;
-    const preds=PREDICT_DISTS.map(d=>({...d,secs:Math.round(timeForVdot(now,d.km)),agoSecs:ago!=null?Math.round(timeForVdot(ago,d.km)):null}));
-    return{now,ago,cal,series,preds,n:ests.filter(e=>e.ds>=_dsAgo(41)).length,hrMax:getHrMax(),hrRest:getHrRest()};
+    if(rRatio!=null)rRatio=clamp(rRatio);
+    const dRatio=gRatio??rRatio??1,pRatio=rRatio??gRatio??1;
+    const series=[];for(let k=25;k>=0;k--){const ds=_dsAgo(k*7);const v=_vo2At(ests,ds);if(v!=null)series.push({ds,v:v*dRatio});}
+    const agoRaw=_vo2At(ests,_dsAgo(28));
+    const now=raw*dRatio,ago=agoRaw!=null?agoRaw*dRatio:null;
+    const vdot=raw*pRatio,vdotAgo=agoRaw!=null?agoRaw*pRatio:null;
+    const preds=PREDICT_DISTS.map(d=>({...d,secs:Math.round(timeForVdot(vdot,d.km)),agoSecs:vdotAgo!=null?Math.round(timeForVdot(vdotAgo,d.km)):null}));
+    return{now,ago,vdot,vdotAgo,cal:gCal||rCal,gCal,rCal,series,preds,n:ests.filter(e=>e.ds>=_dsAgo(41)).length,hrMax:getHrMax(),hrRest:getHrRest()};
   })();
   _fmCache={key,m};
   return m;
@@ -4765,21 +4780,24 @@ function renderRacePredictorCard(runs){
   const fmtD=_pbDate;
   const chg=m.ago!=null?m.now-m.ago:null;
   const chgHtml=chg==null?'':Math.abs(chg)<0.3?`<span style="color:var(--text3);">steady over 4 weeks</span>`:`<span style="color:${chg>0?'var(--green)':'var(--red)'};">${chg>0?'▲':'▼'} ${Math.abs(chg).toFixed(1)} in 4 weeks</span>`;
-  const calTxt=m.cal?.type==='garmin'?`Calibrated to the Garmin VO2max you logged on ${fmtD(m.cal.date)} (${m.cal.vo2}).`
-    :m.cal?.type==='race'?`Calibrated to your ${fmtKm(m.cal.km)} km race on ${fmtD(m.cal.date)}.`
-    :`Not calibrated yet. Log a race, or your Garmin VO2max in Me → Body &amp; settings, to sharpen it.`;
+  const calTxt=[
+    m.gCal?`VO2max is on your Garmin's scale (you logged ${m.gCal.vo2} on ${fmtD(m.gCal.date)}).`:'',
+    m.rCal?`Times are calibrated to your strongest recent race, ${m.rCal.name?esc(m.rCal.name)+', ':''}${fmtKm(m.rCal.km)} km on ${fmtD(m.rCal.date)}, since watch VO2max usually reads higher than race results.`:'',
+    !m.gCal&&!m.rCal?'Not calibrated yet. Log a race, or your Garmin VO2max in Me → Body &amp; settings, to sharpen it.':'',
+  ].filter(Boolean).join(' ');
   const r=state.race;let goalHtml='';
   if(r&&+r.km&&r.goalTime&&parseTimeToSecs(r.goalTime)>0&&daysUntil(r.date)>=0){
-    const goal=parseTimeToSecs(r.goalTime),pred=Math.round(timeForVdot(m.now,+r.km)),gap=pred-goal;
+    const goal=parseTimeToSecs(r.goalTime),pred=Math.round(timeForVdot(m.vdot,+r.km)),gap=pred-goal;
     const need=vdotFromRace(+r.km,goal);
     goalHtml=`<div class="rp2-goal"><div class="rp2-goal-h">Goal · ${esc(r.name||'Race')}</div>
-      Goal <strong>${esc(r.goalTime)}</strong> · predicted <strong>${fmtDurationFromSecs(pred)}</strong>. ${gap<=0?`<span style="color:var(--green);font-weight:700;">On track, ${fmtDurationFromSecs(-gap)} to spare.</span>`:`<strong>${fmtDurationFromSecs(gap)}</strong> to find, which needs a VO2max of about <strong>${need.toFixed(1)}</strong> (you're at ${m.now.toFixed(1)}).`}</div>`;
+      Goal <strong>${esc(r.goalTime)}</strong> · predicted <strong>${fmtDurationFromSecs(pred)}</strong>. ${gap<=0?`<span style="color:var(--green);font-weight:700;">On track, ${fmtDurationFromSecs(-gap)} to spare.</span>`:`<strong>${fmtDurationFromSecs(gap)}</strong> to find, which needs race fitness (VDOT) of about <strong>${need.toFixed(1)}</strong>; you're at ${m.vdot.toFixed(1)}.`}</div>`;
   }
   return`<div class="chart-card">
     <div class="chart-card-header"><span class="chart-card-title">Race predictions</span><span class="chart-card-val">updates with every run</span></div>
     <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
       <div style="font-size:34px;font-weight:800;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;">${m.now.toFixed(1)}</div>
       <div style="font-size:12.5px;font-weight:700;color:var(--text2);">VO2max estimate<br>${chgHtml}</div>
+      ${Math.abs(m.vdot-m.now)>=0.5?`<div style="margin-left:auto;text-align:right;"><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;">${m.vdot.toFixed(1)}</div><div style="font-size:11px;font-weight:700;color:var(--text3);">race fitness</div></div>`:''}
     </div>
     ${m.series.length>=2?trendChart({days:Math.min(182,_trendDays(m.series)),H:96,fmt:v=>v.toFixed(1),series:[{pts:[],line:m.series,col:'var(--c-indigo)'}]}):''}
     <div class="rp2-grid">
@@ -6894,7 +6912,7 @@ function getRaceProjection(){
   const r=state.race;
   if(!r||!r.date||!r.km)return null;
   const fm=getFitnessModel();
-  if(fm){const ps=Math.round(timeForVdot(fm.now,+r.km));return{projSecs:ps,pace:fmtPace(r.km/ps),projTime:fmtDurationFromSecs(ps),basis:'at your current fitness'};}
+  if(fm){const ps=Math.round(timeForVdot(fm.vdot,+r.km));return{projSecs:ps,pace:fmtPace(r.km/ps),projTime:fmtDurationFromSecs(ps),basis:'at your current fitness'};}
   const QUALITY=new Set(['Tempo','Fartlek','Intervals','Hard']);
   const runs=loadRunData().filter(x=>x.km&&x.time&&QUALITY.has(x.effort));
   const recent=runs.slice(-6);
@@ -6939,6 +6957,10 @@ function getRaceBuildPlan(){
   else if(weeksToRace===2){targetKm=Math.round(baseline*0.7);phase='Taper';}
   else if(weeksToRace===3){targetKm=Math.round(baseline*0.85);phase='Taper';}
   else{targetKm=Math.round(Math.min(baseline*1.1,baseline+8));phase='Build';}
+  // With a year goal, its (taper-aware) weekly target is the one to follow, so the two
+  // cards never disagree.
+  const yw=getYearGoalWeek();
+  if(yw&&yw.target>0)targetKm=Math.round(yw.target);
   return{baseline:Math.round(baseline*10)/10,targetKm,thisWeekKm:Math.round(thisWeekKm*10)/10,weeksToRace,phase};
 }
 // Always-on volume + pace status vs. the race goal, shown on the Today countdown card.
@@ -7841,7 +7863,12 @@ function getYearGoalWeek(weekOffset=0){
     .sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
   const weekKm=weekRuns.reduce((a,r)=>a+goalKm(r),0);
   const remainingAtStart=Math.max(0,g.startRemaining-getGoalRunKm(g))+weekKm;
-  const target=Math.round(remainingAtStart*daysThisWeek/daysLeft);
+  const rawTarget=Math.round(remainingAtStart*daysThisWeek/daysLeft);
+  const guard=weekGuardRails(mon,daysThisWeek);
+  let target=rawTarget,note=null,race=null;
+  if(guard.taper!=null&&guard.taper<target){target=guard.taper;note=guard.taperNote;}
+  else if(guard.cap!=null&&guard.cap<target){target=guard.cap;note=guard.capNote;}
+  if(guard.race)race=guard.race;
   // Slots for this week, scaled to the target.
   const runs=g.runsPerWeek||5;
   const full=YEAR_GOAL_SPLITS[runs]||YEAR_GOAL_SPLITS[5];
@@ -7852,11 +7879,13 @@ function getYearGoalWeek(weekOffset=0){
     YEAR_GOAL_SLOT_PRIORITY.forEach(t=>{if(keep.length<n){const i=pool.findIndex(x=>x.type===t);if(i>=0)keep.push(pool.splice(i,1)[0]);}});
     slots=slots.filter(x=>keep.includes(x));
   }
+  // Race week: the long run slot becomes the race itself, at race distance.
+  if(race&&race.inWeek){const L=slots.find(x=>x.type==='Long');if(L){L.type='Race';L.fixedKm=race.km;}}
   const wSum=slots.reduce((a,x)=>a+x.w,0);
   slots.forEach(x=>{x.km=target*x.w/wSum;x.run=null;});
   // Match logged runs to slots by type (Long Run -> long, Tempo/Intervals/etc -> tempo,
   // Easy -> easy), then anything left over fills the next open slot.
-  const slotType=e=>e==='Long Run'?'Long':e==='Easy'?'Easy':(e?'Tempo':'Easy');
+  const slotType=e=>e==='Long Run'?'Long':e==='Race'&&slots.some(x=>x.type==='Race')?'Race':e==='Easy'?'Easy':(e?'Tempo':'Easy');
   const extra=[];
   weekRuns.forEach(r=>{const sl=slots.find(x=>!x.run&&x.type===slotType(r.effort));if(sl)sl.run=r;else extra.push(r);});
   extra.forEach(r=>{const sl=slots.find(x=>!x.run);if(sl)sl.run=r;});
@@ -7864,8 +7893,18 @@ function getYearGoalWeek(weekOffset=0){
   // Re-split what's left of the week over the open slots.
   const open=slots.filter(x=>!x.run);
   const leftKm=Math.max(0,target-weekKm);
-  const oSum=open.reduce((a,x)=>a+x.w,0);
-  open.forEach(x=>{x.left=oSum?leftKm*x.w/oSum:0;});
+  const fixed=open.filter(x=>x.fixedKm!=null),flex=open.filter(x=>x.fixedKm==null);
+  fixed.forEach(x=>{x.left=x.fixedKm;});
+  const flexKm=Math.max(0,leftKm-fixed.reduce((a,x)=>a+x.left,0));
+  const oSum=flex.reduce((a,x)=>a+x.w,0);
+  flex.forEach(x=>{x.left=oSum?flexKm*x.w/oSum:0;});
+  // The week before a race, cap the long run so it doesn't eat into the taper.
+  const lsl=flex.find(x=>x.type==='Long');
+  if(lsl&&guard.longCap!=null&&lsl.left>guard.longCap){
+    const spare=lsl.left-guard.longCap;lsl.left=guard.longCap;
+    const others=flex.filter(x=>x!==lsl),s2=others.reduce((a,x)=>a+x.w,0);
+    others.forEach(x=>{x.left+=s2?spare*x.w/s2:0;});
+  }
   // Long run set by hand for this week: it takes that many km and the other open runs
   // share what's left by their usual weights. The week's total doesn't move.
   const longKey=dk(mon);
@@ -7882,7 +7921,46 @@ function getYearGoalWeek(weekOffset=0){
       rest.forEach(x=>{x.left=rSum?Math.max(0,leftKm-lk)*x.w/rSum:0;});
     }
   }
-  return{longKey,longMax,longSlot,target,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
+  if(longSlot&&longSlot.custom&&guard.longCap!=null&&longSlot.left>guard.longCap)
+    note=(note?note+' ':'')+`Your ${Math.round(longSlot.left)} km long run is your call, but with the race a week later, ${guard.longCap} km or less would keep your legs fresher.`;
+  return{longKey,longMax,longSlot,target,rawTarget,note,race,base:guard.base,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
+}
+// Two guard rails on the catch-up maths. (1) A ramp cap: no more than ~15% above your
+// average of the last four complete weeks, since big jumps in weekly load are the most
+// consistent training-error pattern behind running injuries. (2) A race taper: volume is
+// trimmed in the weeks before your race, more for longer races (the taper meta-analysis
+// found a 40-60% cut over 1-3 weeks worked best). Applies to the week starting `mon`.
+function _weekKmBefore(mon,n){
+  const runs=loadRunData();let t=0;
+  for(let w=1;w<=n;w++){const a=dk(addDays(mon,-7*w)),b=dk(addDays(mon,-7*w+6));t+=runs.filter(r=>r.date>=a&&r.date<=b).reduce((s,r)=>s+(parseFloat(r.km)||0),0);}
+  return t/n;
+}
+function weekGuardRails(mon,daysThisWeek=7){
+  const thisMon=getMonday(today());
+  // Base from the four complete weeks before *this* week, so next week's preview doesn't
+  // count a half-finished week.
+  const base=_weekKmBefore(thisMon,4);
+  const out={base:Math.round(base),cap:null,taper:null,longCap:null,race:null};
+  if(base>=8){
+    out.cap=Math.round((base*1.15+2)*daysThisWeek/7);
+    out.capNote=`Capped at ${out.cap} km, about 15% above your recent ${Math.round(base)} km weeks. Bigger jumps are where running injuries come from.`;
+  }
+  const r=state.race;
+  if(r&&r.date&&+r.km>0){
+    const rd=new Date(r.date+'T12:00:00');
+    const weeksTo=Math.round((getMonday(rd)-getMonday(mon))/(7*864e5));
+    const km=+r.km;
+    const F=km<=10.5?[0.6,0.9]:km<=25?[0.55,0.75,0.9]:[0.45,0.65,0.8,0.9];
+    if(weeksTo>=0&&weeksTo<F.length&&base>=8){
+      out.taper=Math.round(Math.max(base*F[weeksTo],weeksTo===0?km+6:0));
+      const nm=esc(r.name||'your race');
+      out.taperNote=weeksTo===0?`Race week: ${nm} is on ${rd.toLocaleDateString('en-GB',{weekday:'long'})}, so the rest of the week is short and easy.`
+        :`Taper: ${nm} is ${weeksTo===1?'next week':`in ${weeksTo} weeks`}, so this week is trimmed to ${out.taper} km.`;
+      out.race={km,inWeek:weeksTo===0,weeksTo};
+      if(weeksTo===1)out.longCap=km<=10.5?16:km<=25?18:28;
+    }
+  }
+  return out;
 }
 // Next week's projection sits behind a button showing its km, so you can watch it shrink
 // as you log runs this week. Opens by default on Sundays (planning night).
@@ -7897,14 +7975,14 @@ function renderYearGoalNextWeek(){
   if(!w||w.target<=0)return'';
   const open=_ygNextOpen==null?today().getDay()===0:_ygNextOpen;
   const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
-  const segs=w.slots.map(x=>`<div class="yg-seg next"><div class="yg-seg-type">${x.type}</div><div class="yg-seg-km">${x.run?goalKm(x.run):Math.round(x.left)}</div></div>`).join('');
+  const segs=w.slots.map(x=>`<div class="yg-seg next${x.type==='Race'?' race':''}"><div class="yg-seg-type">${x.type}</div><div class="yg-seg-km">${x.run?goalKm(x.run):Math.round(x.left)}</div></div>`).join('');
   return`<div class="yg-week yg-next">
     <button class="yg-next-btn" onclick="toggleYearGoalNext(event)" aria-expanded="${open}">
       <span>Next week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span>
       <span><strong>${f1(w.target)}</strong> km <span class="yg-next-chev${open?' open':''}">▾</span></span>
     </button>
     ${open?`<div class="yg-segs" style="grid-template-columns:repeat(${w.slots.length},1fr);margin-top:8px;">${segs}</div>
-    <div class="yg-week-left">Locks in on Monday. Every km you log before then makes it smaller.</div>`:''}
+    <div class="yg-week-left">Locks in on Monday. Every km you log before then makes it smaller.</div>${w.note?`<div class="yg-guard">${w.note}</div>`:''}`:''}
   </div>`;
 }
 let _ygLongOpen=false;
@@ -7928,7 +8006,7 @@ function renderYearGoalWeek(){
   if(state.weekRunTargets[wk]!==t){state.weekRunTargets[wk]=t;saveState();}
   const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
   const done=w.leftKm<=0;
-  const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy'};
+  const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy',Race:'Race'};
   const segs=w.slots.map(x=>x.run
     ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${goalKm(x.run)}</div></div>`
     :x===w.longSlot&&!done
@@ -7944,7 +8022,7 @@ function renderYearGoalWeek(){
   if(done)left=`<strong style="color:var(--green);">Week done ✓</strong>${w.weekKm-w.target>=1?` ${f1(w.weekKm-w.target)}km over, which lowers every week's target from here.`:''}`;
   else{
     const groups={};w.open.forEach(x=>{(groups[x.type]=groups[x.type]||[]).push(Math.round(x.left));});
-    const parts=['Long','Tempo','Easy'].filter(t=>groups[t]).map(t=>{const a=groups[t];const same=a.every(v=>v===a[0]);return a.length>1&&same?`${a.length} × ${a[0]} ${t.toLowerCase()}`:a.map(v=>`${v} ${t.toLowerCase()}`).join(', ');});
+    const parts=['Race','Long','Tempo','Easy'].filter(t=>groups[t]).map(t=>{const a=groups[t];const same=a.every(v=>v===a[0]);return a.length>1&&same?`${a.length} × ${a[0]} ${t.toLowerCase()}`:a.map(v=>`${v} ${t.toLowerCase()}`).join(', ');});
     left=w.open.length?`${w.open.length} run${w.open.length===1?'':'s'} left: <strong>${parts.join(', ')}</strong>`:`<strong>${f1(w.leftKm)}km</strong> still to go this week. One more run should do it.`;
   }
   return`<div class="yg-week">
@@ -7953,6 +8031,7 @@ function renderYearGoalWeek(){
     <div class="yg-segs" style="grid-template-columns:repeat(${w.slots.length},1fr);">${segs}</div>
     ${longEdit}
     <div class="yg-week-left">${left}</div>
+    ${w.note?`<div class="yg-guard">${w.note}</div>`:''}
   </div>`;
 }
 function openYearGoalModal(){

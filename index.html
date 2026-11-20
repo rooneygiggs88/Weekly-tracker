@@ -3515,6 +3515,7 @@ function renderRunSection(){
     <div style="height:16px;"></div>
     <button class="btn-primary" onclick="saveRun()">Save Run</button>
   </div>
+  ${renderRunProgressCard()}
   ${last?`<div class="chart-card" onclick="showPage('trends');switchTrendsTab('running');" style="cursor:pointer;">
     <div class="chart-card-header"><span class="chart-card-title">Last Run</span><span style="font-size:11px;color:var(--accent2);font-weight:700;">View all →</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -4142,6 +4143,92 @@ function renderTrends(){
   `;
 }
 
+// ── RUN PROGRESS CARD ──
+// Strava-style weekly summary: the selected week's distance / time / pace on top and a
+// 12-week area chart of km below. Tapping a week on the chart swaps the headline numbers
+// to that week. The same card renders on the Run tab and in Trends > Run, so a tap
+// re-renders every copy (class .rp-card) to keep them in step.
+const RP_WEEKS=12;
+let _rpSel=RP_WEEKS-1;
+let _rpGradSeq=0;
+function _rpBuckets(){
+  const runs=loadRunData();const mon0=getMonday(today());const out=[];
+  for(let w=RP_WEEKS-1;w>=0;w--){
+    const mon=addDays(mon0,-w*7);const a=dk(mon),b=dk(addDays(mon,6));
+    const wr=runs.filter(r=>r.date>=a&&r.date<=b);
+    const km=wr.reduce((s,r)=>s+(parseFloat(r.km)||0),0);
+    const timed=wr.filter(r=>r.km&&r.time);
+    const secs=wr.reduce((s,r)=>s+parseTimeToSecs(r.time),0);
+    const tKm=timed.reduce((s,r)=>s+(parseFloat(r.km)||0),0);
+    const tSecs=timed.reduce((s,r)=>s+parseTimeToSecs(r.time),0);
+    out.push({mon,km,secs,runs:wr.length,pace:tKm>0&&tSecs>0?tKm/tSecs:null});
+  }
+  return out;
+}
+function rpSelect(i){
+  _rpSel=Math.max(0,Math.min(RP_WEEKS-1,i));haptic('light');
+  document.querySelectorAll('.rp-card').forEach(c=>{c.outerHTML=renderRunProgressCard();});
+}
+function renderRunProgressCard(){
+  const wk=_rpBuckets();
+  if(!wk.some(w=>w.km>0))return'';
+  const sel=wk[_rpSel]||wk[wk.length-1];
+  const ago=RP_WEEKS-1-_rpSel;
+  const title=ago===0?'This week':ago===1?'Last week':`Week of ${sel.mon.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`;
+  const h=Math.floor(sel.secs/3600),m=Math.round((sel.secs%3600)/60);
+  const timeStr=sel.secs?(h?`${h}h ${m}m`:`${m}m`):'—';
+  const stat=(l,v,u)=>`<div><div style="font-size:12px;font-weight:600;color:var(--text2);">${l}</div><div style="font-size:24px;font-weight:800;letter-spacing:-0.8px;font-variant-numeric:tabular-nums;margin-top:2px;">${v}${u?`<span style="font-size:14px;font-weight:700;margin-left:3px;">${u}</span>`:''}</div></div>`;
+
+  // Chart geometry - y axis on the right like Strava, 0 / mid / top gridlines.
+  const W=320,H=150,PL=8,PR=40,PT=10,PB=22;
+  const cw=W-PL-PR,ch=H-PT-PB;
+  const peak=Math.max(...wk.map(w=>w.km),1);
+  const step=peak<=20?10:peak<=40?20:peak<=80?40:peak<=120?60:100;
+  const top=Math.ceil(peak/step)*step;
+  const x=i=>PL+(i/(RP_WEEKS-1))*cw;
+  const y=km=>PT+ch-(km/top)*ch;
+  const col='var(--c-teal)';
+  const gid=`rp-grad-${++_rpGradSeq}`;
+  let g='';
+  [0,top/2,top].forEach(v=>{
+    const yy=y(v).toFixed(1);
+    g+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="var(--border)" stroke-width="1"/>`;
+    g+=`<text x="${W-PR+6}" y="${(+yy+4).toFixed(1)}" font-size="10" font-weight="600" fill="var(--text2)">${v} km</text>`;
+  });
+  // Month labels under the first week that starts in each month.
+  // When the opening label would collide with the next month's, the earlier one gives way.
+  const mIdx=wk.map((w,i)=>i).filter(i=>i===0||wk[i].mon.getMonth()!==wk[i-1].mon.getMonth());
+  if(mIdx.length>1&&x(mIdx[1])-x(mIdx[0])<34)mIdx.shift();
+  mIdx.forEach(i=>{
+    g+=`<text x="${x(i).toFixed(1)}" y="${H-4}" font-size="10" font-weight="600" fill="var(--text3)" text-anchor="${i===0?'start':'middle'}">${wk[i].mon.toLocaleDateString('en-GB',{month:'short'}).slice(0,3).toUpperCase()}</text>`;
+  });
+  const pts=wk.map((w,i)=>`${x(i).toFixed(1)},${y(w.km).toFixed(1)}`);
+  const area=`M${x(0).toFixed(1)},${y(0).toFixed(1)} L${pts.join(' L')} L${x(RP_WEEKS-1).toFixed(1)},${y(0).toFixed(1)} Z`;
+  g+=`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.35"/><stop offset="1" stop-color="${col}" stop-opacity="0.02"/></linearGradient></defs>`;
+  g+=`<path d="${area}" fill="url(#${gid})"/>`;
+  g+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const sx=x(_rpSel).toFixed(1);
+  g+=`<line x1="${sx}" y1="${PT}" x2="${sx}" y2="${PT+ch}" stroke="var(--text)" stroke-width="1.5" opacity="0.7"/>`;
+  wk.forEach((w,i)=>{
+    const cx=x(i).toFixed(1),cy=y(w.km).toFixed(1);
+    g+=i===_rpSel
+      ?`<circle cx="${cx}" cy="${cy}" r="11" fill="${col}" opacity="0.2"/><circle cx="${cx}" cy="${cy}" r="5.5" fill="${col}"/>`
+      :`<circle cx="${cx}" cy="${cy}" r="4" fill="var(--surface)" stroke="${col}" stroke-width="2"/>`;
+  });
+  // Full-height tap columns, one per week, so a fat finger anywhere near a point lands.
+  const slot=cw/(RP_WEEKS-1);
+  wk.forEach((w,i)=>{g+=`<rect x="${(x(i)-slot/2).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}" fill="transparent" style="cursor:pointer" onclick="rpSelect(${i})"><title>${w.km.toFixed(1)} km</title></rect>`;});
+
+  return`<div class="chart-card rp-card">
+    <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;margin-bottom:12px;">${title}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,auto);justify-content:start;gap:24px;margin-bottom:18px;">
+      ${stat('Distance',sel.km?fmtKm(sel.km):'0','km')}${stat('Time',timeStr)}${stat('Pace',sel.pace?fmtPace(sel.pace).replace('/km',''):'—',sel.pace?'/km':'')}
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">Past ${RP_WEEKS} weeks${sel.runs?` · ${sel.runs} run${sel.runs===1?'':'s'} in the selected week`:''}</div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;font-family:-apple-system,system-ui,sans-serif;">${g}</svg>
+  </div>`;
+}
+
 // ── TRENDS: RUNNING ANALYSIS ──
 function renderTrendsRunAnalysis(){
   const runs=loadRunData();
@@ -4209,52 +4296,6 @@ function renderTrendsRunAnalysis(){
   let firstNonZero=0;
   while(firstNonZero<weekBuckets.length-1&&weekBuckets[firstNonZero].km===0)firstNonZero++;
   const trimmed=weekBuckets.slice(firstNonZero);
-
-  // 1. Training load — weekly km bar chart
-  const loadChart=(()=>{
-    const weeks=trimmed.filter(w=>w.km>0);
-    if(weeks.length<2) return `<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Training Load</span></div><div class="empty-state" style="padding:16px 0 0;">Log 2+ weeks of runs to see load trend.</div></div>`;
-    const W=320,H=110,PT=10,PB=22,PL=32,PR=8;
-    const chartH=H-PT-PB,chartW=W-PL-PR;
-    const maxKm=Math.max(...trimmed.map(w=>w.km),1);
-    const slotW=chartW/trimmed.length;
-    const barW=Math.max(4,Math.floor(slotW*0.65));
-    const yStep=maxKm<=20?5:maxKm<=50?10:20;
-    let axisSvg='';
-    for(let km=0;km<=maxKm;km+=yStep){
-      const y=PT+chartH-(km/maxKm)*chartH;
-      axisSvg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="${km===0?1.5:0.8}" stroke-dasharray="${km===0?'':'4,3'}"/>`;
-      axisSvg+=`<text x="${(PL-4).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${km}</text>`;
-    }
-    // With many weeks logged, a label on every bar collides with its neighbours - a
-    // fixed-width chart with 7px text just doesn't have room for 20-30 labels side by
-    // side. Only label the current week and the peak week (like Pace Progression only
-    // labels its best/last dots), and only print a date label when it won't overlap the
-    // previous one given the actual slot width.
-    const peakKm=Math.max(...trimmed.map(w=>w.km));
-    const minDateLabelGap=18;
-    let lastDateLabelX=-Infinity;
-    const bars=trimmed.map((w,i)=>{
-      const cx=PL+slotW*i+slotW/2;
-      const x=cx-barW/2;
-      const bh=Math.max(2,Math.round((w.km/maxKm)*chartH));
-      const by=PT+chartH-bh;
-      const isNow=i===trimmed.length-1;
-      const isPeak=w.km>0&&w.km===peakKm;
-      const fill=isNow?'var(--orange)':'var(--accent)';
-      let label='';
-      if(cx-lastDateLabelX>=minDateLabelGap||i===trimmed.length-1){
-        label=`<text x="${cx.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${w.label}</text>`;
-        lastDateLabelX=cx;
-      }
-      const val=(w.km>0&&(isNow||isPeak))?`<text x="${cx.toFixed(1)}" y="${(by-3).toFixed(1)}" text-anchor="middle" font-size="7" fill="${fill}" font-family="-apple-system,sans-serif" font-weight="800">${w.km}</text>`:'';
-      return `<rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${barW}" height="${bh}" rx="3" fill="${fill}" opacity="${w.km?0.85:0.2}"/>${label}${val}`;
-    }).join('');
-    return `<div class="chart-card">
-      <div class="chart-card-header"><span class="chart-card-title">Training Load</span><span class="chart-card-val">km/week · current in orange</span></div>
-      <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;">${axisSvg}${bars}</svg>
-    </div>`;
-  })();
 
   // 2. Pace progression — individual run dots
   const paceChart=(()=>{
@@ -4565,7 +4606,7 @@ function renderTrendsRunAnalysis(){
     </div>`;
   })();
 
-  return summary+loadChart+paceChart+effortChart+longRunChart+hrChart+renderAerobicEfficiencyCard(runs)+renderRacePredictorCard(runs)+renderWhatMovesCard('Running')+runLog;
+  return renderRunProgressCard()+summary+paceChart+effortChart+longRunChart+hrChart+renderAerobicEfficiencyCard(runs)+renderRacePredictorCard(runs)+renderWhatMovesCard('Running')+runLog;
 }
 
 // Weeks (of the last 12) that had at least one gym session, trimmed so leading

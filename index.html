@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="71">
+<meta name="app-version" content="72">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -460,6 +460,32 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .np-wk span{font-size:10px;font-weight:700;color:var(--text3);}
 .np-wk b{font-family:var(--display);font-weight:800;font-size:18px;}
 .np-wk em{font-style:normal;font-size:10.5px;font-weight:700;color:var(--green);min-height:13px;}
+.pc-week{margin-bottom:14px;}
+.pc-wh{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;padding:4px 0 8px;border-bottom:1px solid var(--border);}
+.pc-wh span{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
+.pc-wh b{font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;}
+.pc-wh button{margin-left:auto;border:none;background:none;color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.pc-day{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.pc-day.past{opacity:0.55;}
+.pc-day.today .pc-d b{color:var(--text);background:var(--accent);color:var(--on-accent);border-radius:6px;padding:1px 6px;}
+.pc-d{display:flex;flex-direction:column;align-items:flex-start;}
+.pc-d b{font-family:var(--display);font-weight:800;font-size:15px;text-transform:uppercase;}
+.pc-d span{font-family:var(--display);font-weight:700;font-size:13px;color:var(--text3);}
+.pc-items{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.pc-item{padding:7px 10px;border-radius:9px;background:var(--surface2);border-left:4px solid var(--text3);cursor:pointer;}
+.pc-item b{display:block;font-family:var(--display);font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:0.02em;}
+.pc-item span{display:block;font-size:12px;line-height:1.4;color:var(--text2);margin-top:1px;}
+.pc-item.long{border-left-color:var(--c-long);}
+.pc-item.tempo{border-left-color:var(--c-tempo);}
+.pc-item.easy{border-left-color:var(--c-easy);}
+.pc-item.race{border-left-color:var(--c-race);background:color-mix(in srgb,var(--c-race) 12%,var(--surface2));}
+.pc-item.gym{border-left-color:var(--text3);cursor:default;}
+.pc-item.done{border-left-color:var(--green);cursor:default;background:color-mix(in srgb,var(--green) 10%,var(--surface2));}
+.pc-item.sel{outline:2px solid var(--text);}
+.pc-rest{font-size:12.5px;font-weight:600;color:var(--text3);padding:7px 0;}
+.pc-move{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.pc-move button{padding:5px 9px;border-radius:7px;border:1px solid var(--border);background:var(--surface);font-family:var(--display);font-weight:700;font-size:13px;text-transform:uppercase;color:var(--text);cursor:pointer;}
+.pc-move button.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent);}
 .rc-card{position:relative;overflow:hidden;}
 .rc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent);}
 .rc-eyebrow{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
@@ -1248,6 +1274,7 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
     <div id="story-card"></div>
     <div class="week-strip" id="week-strip"></div>
     <div id="year-goal-wrap"></div>
+    <div id="plan-cal-wrap"></div>
     <div id="race-card-wrap"></div>
     <div id="workout-suggestion-wrap"></div>
     <div id="gym-week-wrap"></div>
@@ -2700,6 +2727,14 @@ function getTodaysRunPlan(){
   const ranToday=loadRunData().filter(r=>r.date===td);
   const act=(yw.active||yw.open||[]).filter(x=>x.type!=='Race');
   if(yw.leftKm<=0||!act.length)return{done:true,yw,ranToday};
+  // The calendar decides when it has today covered (including rest days).
+  const cw=getCalendarWeek(0);
+  if(cw){
+    const cd=cw.days.find(d=>d.ds===td);
+    const c=cd&&cd.planned.filter(x=>x.type!=='Race').sort((a,b)=>b.km-a.km)[0];
+    if(c)return{yw,slot:null,km:c.km,type:c.type==='Race'?'Easy':c.type,title:c.title,desc:c.desc,ranToday,daysLeft,runsLeft:act.length};
+    if(cd&&!cd.planned.length&&!ranToday.length){const nx=cw.days.find(d=>d.ds>td&&d.planned.length);return{yw,restDay:true,next:nx?{day:_CAL_DAY[nx.i],s:nx.planned[0]}:null,ranToday,daysLeft,runsLeft:act.length};}
+  }
   const planned=planTypeThisWeek(dayIdx)==='Run'?runTypeThisWeek(dayIdx):null;
   const slotFor=t=>t==='Long'?'Long':t==='Tempo'||t==='Intervals'||t==='Fartlek'?'Tempo':t==='Easy'||t==='Recovery'?'Easy':null;
   let slot=null;
@@ -2720,6 +2755,10 @@ function renderRunCoachCard(){
   const fm=getFitnessModel(),rd=computeReadiness(),rk=rd&&rd.state?rd.state.key:null;
   const next=getRaces().filter(r=>daysUntil(r.date)>=0)[0],dNext=next?daysUntil(next.date):null;
   if(dNext===0)return'';
+  if(P.restDay){
+    return`<div class="chart-card rc-card"><div class="rc-eyebrow">Today's run</div><div class="rc-big">Rest day</div>
+      <p class="rc-p">Your plan has today off. Recovery is where the training turns into fitness.${P.next?` Next: <b>${P.next.day}, ${P.next.s.km} km ${esc((P.next.s.title||P.next.s.type).toLowerCase())}</b>.`:''} Moved things around? Tap a run in the Plan on Today to change its day.</p></div>`;
+  }
   if(P.done){
     const w1=P.yw.plan&&P.yw.plan.weeks[1];
     return`<div class="chart-card rc-card"><div class="rc-eyebrow">Today's run</div><div class="rc-big">Week done</div>
@@ -2751,9 +2790,10 @@ function renderRunCoachCard(){
   }else{
     shape=easyDay?`Readiness says ${esc(rd.state.label.toLowerCase())}: keep it to the slow end, or cut it short if your legs say so.`:`Fully conversational: if you can't talk in full sentences, slow down.`;
   }
+  if(P.desc&&(P.title==='Recovery jog'||P.type==='Tempo'||P.type==='Long'))shape=P.desc+(easyDay&&P.type==='Tempo'?` Readiness says ${esc(rd.state.label.toLowerCase())}: run it all easy today.`:'');
   const ctx=coachWeekAdvice(P.yw,false).trim();
   const left=P.runsLeft>1?`${P.runsLeft} runs left in ${P.daysLeft} day${P.daysLeft===1?'':'s'}; this is the one for today.`:'The last run of the week.';
-  const tag={Easy:'Easy',Long:'Long run',Tempo:'Tempo'}[P.type]||P.type;
+  const tag=P.title==='Recovery jog'?'Recovery jog':({Easy:'Easy',Long:'Long run',Tempo:'Tempo'}[P.type]||P.type);
   return`<div class="chart-card rc-card">
     <div class="rc-eyebrow">Today's run${P.ranToday.length?' · already ran today':''}</div>
     <div class="rc-big">${P.km} km <span>${tag}</span></div>
@@ -2848,11 +2888,146 @@ function renderHabitsCoachCard(){
   </div>`;
 }
 
+// ── PLAN CALENDAR ──
+// Puts each week's runs on days. Your weekly template says which days you run and which
+// are rest days; races go on race day, the long run on the last run day, the tempo
+// midweek (never next to the long run or within two days of a race), easy runs fill the
+// rest. After a race: rest the next day, then a short recovery jog, and a recovery week
+// has no tempo. Build weeks get real sessions: a threshold set, strides, a marathon-pace
+// finish on the long run. Gym days go where they won't hurt a key run. Tap a run to move
+// it; moves are remembered per week.
+const _CAL_DAY=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function _calSlotsFor(weekOffset){
+  if(weekOffset<=1){
+    const w=getYearGoalWeek(weekOffset);if(!w)return null;
+    const pw=w.plan&&w.plan.weeks[0];
+    const slots=(weekOffset===0?(w.active||w.open||[]):w.slots).map(x=>({type:x.type,km:Math.round(x.left!=null?x.left:x.km)})).filter(x=>x.km>0);
+    return{target:w.target,kind:pw?pw.kind:'build',overridden:pw&&pw.overridden,race:w.race,slots,yw:w};
+  }
+  const base=getYearGoalWeek();if(!base||!base.plan)return null;
+  const mon=dk(addDays(getMonday(today()),weekOffset*7));
+  const pw=base.plan.weeks.find(x=>x.mon===mon);if(!pw)return null;
+  const g=state.yearRunGoal,full=(YEAR_GOAL_SPLITS[g.runsPerWeek||5]||YEAR_GOAL_SPLITS[5]).map(x=>({...x}));
+  const n=Math.max(1,Math.min(full.length,Math.round(full.length*pw.days/7)));
+  let sl=full.slice(0,n);
+  if(pw.race&&pw.race.inWeek){const L=sl.find(x=>x.type==='Long');if(L){L.type='Race';L.fixed=pw.race.km;}}
+  const fixedKm=sl.filter(x=>x.fixed).reduce((a,x)=>a+x.fixed,0),wSum=sl.filter(x=>!x.fixed).reduce((a,x)=>a+x.w,0);
+  sl.forEach(x=>{x.km=Math.round(x.fixed!=null?x.fixed:Math.max(0,pw.target-fixedKm)*x.w/wSum);});
+  return{target:pw.target,kind:pw.kind,race:pw.race,slots:sl.filter(x=>x.km>0).map(x=>({type:x.type,km:x.km}))};
+}
+function _calRaceOn(ds){return getRaces().find(r=>r.date===ds);}
+function getCalendarWeek(weekOffset){
+  const W=_calSlotsFor(weekOffset);if(!W)return null;
+  const mon=addDays(getMonday(today()),weekOffset*7),monK=dk(mon),td=dk(today());
+  const runs=loadRunData();
+  const tmpl=Array.isArray(state.weekPlan)?state.weekPlan:null;
+  const tRun=tmpl?tmpl.map(t=>t==='Run'):[1,1,1,1,1,1,1].map(Boolean);
+  const tType=[0,1,2,3,4,5,6].map(i=>getWeekPlanRunType?getWeekPlanRunType(i):null);
+  const days=[0,1,2,3,4,5,6].map(i=>{const ds=dk(addDays(mon,i));return{i,ds,past:ds<td,isToday:ds===td,done:runs.filter(r=>r.date===ds),planned:[],gym:null,note:''};});
+  // A race last week (on Sunday) or earlier this week sets up recovery days.
+  const raceBefore=getRaces().filter(r=>r.date<monK&&r.date>=dk(addDays(mon,-3)))[0];
+  const firstFree=days.find(d=>!d.past&&!(d.isToday&&d.done.length));
+  const open=days.filter(d=>d.ds>=(firstFree?firstFree.ds:'9999'));
+  const used=new Map();
+  const place=(d,s)=>{d.planned.push(s);used.set(d.i,(used.get(d.i)||0)+1);};
+  const isRunDay=d=>tRun[d.i]&&!(raceBefore&&d.ds===dk(addDays(new Date(raceBefore.date+'T12:00:00'),1)));
+  const raceDay=open.find(d=>_calRaceOn(d.ds)&&W.slots.some(s=>s.type==='Race'));
+  // Runs too short to bother with fold into the biggest other run; if they're all tiny
+  // (a race week where the race is most of the km), they become one easy run.
+  const sl0=W.slots.map(x=>({...x})),nr=sl0.filter(x=>x.type!=='Race');
+  nr.forEach(x=>{if(x.km<3){const to=nr.filter(y=>y!==x&&y.km>=3).sort((a,b)=>b.km-a.km)[0];if(to){to.km+=x.km;x.km=0;}}});
+  if(nr.length&&nr.every(x=>x.km<3)){const sum=nr.reduce((a,x)=>a+x.km,0);nr.forEach(x=>{x.km=0;});if(sum>=2){nr[0].km=sum;nr[0].type='Easy';}}
+  const slots=sl0.filter(x=>x.km>0).map((s,j)=>({...s,key:s.type+j}));
+  const moves=(state.calMoves||{})[monK]||{};
+  const pick=(s,cands)=>{const mv=moves[s.key];if(mv!=null){const d=days[mv];if(d&&!d.past)return d;}return cands[0];};
+  const free=d=>!used.get(d.i);
+  // Race
+  slots.filter(s=>s.type==='Race').forEach(s=>{const d=pick(s,[raceDay||open[open.length-1]].filter(Boolean));if(d){place(d,s);d.note='race';}});
+  const rd=days.find(d=>d.note==='race');
+  // Long: the last run day (not the race day or the day before it)
+  slots.filter(s=>s.type==='Long').forEach(s=>{const c=open.filter(d=>free(d)&&isRunDay(d)&&!(rd&&Math.abs(d.i-rd.i)<=1)).reverse();const d=pick(s,c.length?c:open.filter(free).reverse());if(d)place(d,s);});
+  const ld=days.find(d=>d.planned.some(p=>p.type==='Long'));
+  // Tempo: the template's tempo day if it fits, else midweek away from the long run and race
+  slots.filter(s=>s.type==='Tempo').forEach(s=>{
+    const ok=d=>free(d)&&isRunDay(d)&&!(ld&&Math.abs(d.i-ld.i)<=1)&&!(rd&&rd.i-d.i<=2&&rd.i>=d.i)&&!(raceBefore&&d.i<3);
+    const c=open.filter(ok).sort((a,b)=>(tType[b.i]==='Tempo')-(tType[a.i]==='Tempo')||Math.abs(a.i-2)-Math.abs(b.i-2));
+    const d=pick(s,c.length?c:open.filter(free));if(d)place(d,s);
+  });
+  // Easy: remaining run days, then spare days, then doubles
+  slots.filter(s=>s.type==='Easy').forEach(s=>{
+    const c=[...open.filter(d=>free(d)&&isRunDay(d)),...open.filter(d=>free(d)&&!(rd&&d.i===rd.i+1)),...open.filter(d=>d!==rd).sort((a,b)=>(used.get(a.i)||0)-(used.get(b.i)||0))];
+    const d=pick(s,c);if(d)place(d,s);
+  });
+  // Session detail
+  const fm=getFitnessModel(),pace=p=>fm?fmtMS(_paceAtPct(fm.vdot,p)):null;
+  const build=W.kind==='build'&&!W.overridden,recovery=W.kind==='recovery';
+  let firstRunAfterRace=!!raceBefore,strides=false;
+  days.forEach(d=>d.planned.forEach(s=>{
+    if(s.type==='Race'){const r=_calRaceOn(d.ds);s.title=`${esc((r&&r.name)||'Race')}`;s.desc=`${fmtKm(s.km)} km race${r&&r.goalTime?`, goal ${esc(r.goalTime)}`:''}. 10 minutes easy and 4 strides first.`;return;}
+    if(firstRunAfterRace){firstRunAfterRace=false;s.title='Recovery jog';s.desc='Very easy and conversational; cut it short if your legs aren\'t ready. Legs first, watch second.';return;}
+    if(s.type==='Long'){s.title='Long run';s.desc=build&&s.km>=16?`Conversational; if it feels good, the last 3 km at marathon pace${pace(0.79)?` (${pace(0.79)}/km)`:''}.${s.km>=20?' Fuel every 40 minutes.':''}`:`All conversational${s.km>=20?'; fuel every 40 minutes':''}.`;return;}
+    if(s.type==='Tempo'){
+      if(recovery||raceBefore){s.type='Easy';s.title='Easy';s.desc=raceBefore?'Easy: no tempo the week after a race.':'Easy: no tempo in a recovery week.';return;}
+      s.title='Tempo';const mid=Math.max(3,s.km-4);
+      s.desc=W.kind==='taper'||W.kind==='race'?`2 km easy, ${Math.min(mid,4)} km at tempo${pace(0.88)?` (${pace(0.88)}/km)`:''}, rest easy. Short and sharp.`:build&&s.km>=9?`Threshold: 2 km easy, 3 × 10 minutes at ${pace(0.88)||'tempo'}/km with 2 minutes jog, then easy to ${s.km} km.`:`2 km easy, ${mid} km at tempo${pace(0.88)?` (${pace(0.88)}/km)`:''}, 2 km easy.`;return;}
+    s.title='Easy';s.desc=build&&!strides&&s.km>=6?(strides=true,'Easy, plus 6 × 20-second strides at the end.'):'Conversational.';
+  }));
+  // Gym: build weeks two, taper/race one upper-body, recovery from midweek; never the
+  // day before the long run, the tempo or the race.
+  const keyIdx=new Set(days.filter(d=>d.planned.some(p=>p.type==='Long'||p.type==='Tempo'||p.type==='Race')).map(d=>d.i));
+  const wantGym=W.kind==='race'||W.kind==='taper'?1:2;
+  const afterRace=raceBefore?Math.round((new Date(raceBefore.date+'T12:00:00')-mon)/864e5)+1:null;
+  let g=days.filter(d=>d.ds>=td&&d.gym==null&&!keyIdx.has(d.i+1)&&!keyIdx.has(d.i)&&!(recovery&&d.i<3)&&!(afterRace!=null&&d.i<=afterRace)&&!(rd&&d.i===rd.i+1));
+  // Spread them out: no two gym days back to back when there's room.
+  g=g.filter((d,j,a)=>j===0||d.i-a[j-1].i>1||a.length<=wantGym).slice(0,wantGym);
+  const gymDone=loadGymData().filter(x=>x.date>=monK&&x.date<=dk(addDays(mon,6))).length;
+  g.slice(0,Math.max(0,wantGym-gymDone)).forEach(d=>{d.gym=W.kind==='race'||W.kind==='taper'?'Upper body':'Gym';});
+  return{mon:monK,weekOffset,kind:W.kind,target:W.target,days,raceBefore};
+}
+let _calPick=null,_calAll=false;
+function calPick(mon,key){_calPick=_calPick&&_calPick.key===key&&_calPick.mon===mon?null:{mon,key};renderPlanCalendar();}
+function calMove(mon,key,i){state.calMoves=state.calMoves||{};state.calMoves[mon]=state.calMoves[mon]||{};state.calMoves[mon][key]=i;_calPick=null;saveState();haptic('light');refreshPlanViews();}
+function calReset(mon){if(state.calMoves)delete state.calMoves[mon];saveState();refreshPlanViews();}
+function renderPlanCalendar(){
+  const el=document.getElementById('plan-cal-wrap');if(!el)return;
+  const g=state.yearRunGoal;if(!g||today().getFullYear()!==g.year){el.innerHTML='';return;}
+  const base=getYearGoalWeek();if(!base||!base.plan){el.innerHTML='';return;}
+  const n=_calAll?base.plan.weeks.length:2;
+  const weeks=[];for(let o=0;o<n;o++){const w=getCalendarWeek(o);if(w)weeks.push(w);}
+  const kindTxt={race:'Race week',taper:'Taper week',recovery:'Recovery week',build:'Build week'};
+  const wk=w=>{
+    const moved=(state.calMoves||{})[w.mon];
+    const rows=w.days.map(d=>{
+      const done=d.done.map(r=>`<div class="pc-item done"><b>✓ ${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}</b></div>`).join('');
+      const plan=d.planned.map(s=>{const sel=_calPick&&_calPick.mon===w.mon&&_calPick.key===s.key;
+        return`<div class="pc-item ${s.type.toLowerCase()}${sel?' sel':''}" onclick="calPick('${w.mon}','${s.key}')"><b>${s.km} km ${esc(s.title||s.type)}</b><span>${s.desc||''}</span>${sel?`<div class="pc-move">${_CAL_DAY.map((nm,i)=>w.days[i].past?'':`<button onclick="event.stopPropagation();calMove('${w.mon}','${s.key}',${i})" class="${i===d.i?'on':''}">${nm}</button>`).join('')}</div>`:''}</div>`;}).join('');
+      const gym=d.gym?`<div class="pc-item gym"><b>${d.gym}</b><span>${d.gym==='Upper body'?'Short and light, no legs.':'A normal session; legs only if no key run within 48 hours.'}</span></div>`:'';
+      const empty=!done&&!plan&&!gym?`<div class="pc-rest">${d.past?'':'Rest'}</div>`:'';
+      return`<div class="pc-day${d.isToday?' today':''}${d.past?' past':''}"><div class="pc-d"><b>${_CAL_DAY[d.i]}</b><span>${new Date(d.ds+'T12:00:00').getDate()}</span></div><div class="pc-items">${done}${plan}${gym}${empty}</div></div>`;
+    }).join('');
+    return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${moved?`<button onclick="calReset('${w.mon}')">Reset moves</button>`:''}</div>${rows}</div>`;
+  };
+  el.innerHTML=`<div class="chart-card pc-card"><div class="chart-card-header"><span class="chart-card-title">Plan</span><span class="chart-card-val">tap a run to move it</span></div>
+    ${weeks.map(wk).join('')}
+    <button class="tl-more" onclick="_calAll=!_calAll;renderPlanCalendar()">${_calAll?'Show two weeks':'Show every week to 31 Dec'}</button></div>`;
+}
+// Today's and tomorrow's runs from the calendar, when it has them.
+function getCalendarRunOn(ds){
+  const w=getCalendarWeek(0);if(!w)return null;
+  const d=w.days.find(x=>x.ds===ds);if(!d||!d.planned.length)return null;
+  const s=d.planned.slice().sort((a,b)=>b.km-a.km)[0];
+  return{...s,day:d};
+}
+
 // ── WHAT'S NEXT (shared by the run debrief, gym verdict and evening wrap-up) ──
 // The next run after today, picked the same way as Today's run: the long run waits for
 // the last day, otherwise an easy (or the planned type for that day).
 function getNextRunAfterToday(){
   const yw=getYearGoalWeek();if(!yw)return null;
+  const cw=getCalendarWeek(0);
+  if(cw){const td=dk(today());const nx=cw.days.find(d=>d.ds>td&&d.planned.length);
+    if(nx){const s=nx.planned.slice().sort((a,b)=>b.km-a.km)[0];const after=cw.days.filter(d=>d.ds>td).reduce((a,d)=>a+d.planned.length,0);
+      return{km:s.km,type:s.type==='Race'?'Easy':s.type,label:(s.title||s.type).toLowerCase(),left:after,daysAfter:nx.i-((today().getDay()+6)%7),day:_CAL_DAY[nx.i]};}}
   const now=today(),dayIdx=(now.getDay()+6)%7,daysAfter=6-dayIdx;
   const act=(yw.active||yw.open||[]).filter(x=>x.type!=='Race');
   if(!act.length||daysAfter<=0)return null;
@@ -3289,8 +3464,8 @@ function renderToday(){
   const habitsEl=document.getElementById('today-habits');
   const readiness=viewingToday?computeReadiness():null;
   renderReadinessHero(readiness,baseMonday);
-  if(viewingToday){renderTodayRings(readiness);renderTrophyBanner();renderRaceMode();renderTodayBrief();}
-  else{['today-rings','today-brief','trophy-banner','race-mode'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
+  if(viewingToday){renderTodayRings(readiness);renderTrophyBanner();renderRaceMode();renderTodayBrief();renderPlanCalendar();}
+  else{['today-rings','today-brief','trophy-banner','race-mode','plan-cal-wrap'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
   const alertsEl=document.getElementById('alerts-slot');
   if(alertsEl)alertsEl.innerHTML=viewingToday?renderAnomalyAlerts():'';
   const nudgeEl=document.getElementById('rest-day-nudge');

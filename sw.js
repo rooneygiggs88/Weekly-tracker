@@ -1,10 +1,14 @@
-const CACHE = 'tracker-v52';
+const CACHE = 'tracker-v53';
 const ASSETS = [
   '/Weekly-tracker/',
   '/Weekly-tracker/index.html',
   '/Weekly-tracker/manifest.json',
   '/Weekly-tracker/icon-192.png',
   '/Weekly-tracker/icon-512.png',
+  '/Weekly-tracker/fonts/barlow-condensed-600.woff2',
+  '/Weekly-tracker/fonts/barlow-condensed-700.woff2',
+  '/Weekly-tracker/fonts/barlow-condensed-800.woff2',
+  '/Weekly-tracker/fonts/barlow-condensed-800-italic.woff2',
 ];
 
 self.addEventListener('install', e => {

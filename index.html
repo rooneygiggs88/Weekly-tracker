@@ -26,12 +26,12 @@
    used across charts, plan types and effort tags, each with a brighter dark variant. */
 :root{
   color-scheme:light;
-  --bg:#f4f4f8;--surface:#ffffff;--surface2:#efeff6;
-  --border:#e3e3ee;--text:#15121f;--text2:#635f82;--text3:#9c98b6;
-  --accent:#2563eb;--accent2:#1d4ed8;
-  --green:#059669;--red:#dc2626;--orange:#ea580c;--amber:#d29922;
-  --on-text:#ffffff;--nav-bg:rgba(255,255,255,0.88);--overlay-bg:rgba(255,255,255,0.96);
-  --card-shadow:0 1px 2px rgba(21,18,31,0.04),0 8px 24px -18px rgba(21,18,31,0.18);
+  --bg:#f2efe7;--surface:#fbf9f4;--surface2:#e8e4d9;
+  --border:#dbd6c9;--text:#121210;--text2:#57534a;--text3:#8a8579;
+  --accent:#121210;--accent2:#4a6400;--on-accent:#f5f2ea;--hi:#d4ff3a;--hi-ink:#121210;
+  --green:#1f8a4c;--red:#d63a2a;--orange:#d9601a;--amber:#b88400;
+  --on-text:#ffffff;--nav-bg:rgba(242,239,231,0.9);--overlay-bg:rgba(242,239,231,0.97);
+  --card-shadow:none;
   --st-go:#18a15c;--st-ready:#0b88b5;--st-pace:#c48004;--st-recover:#d6304a;
   --band:rgba(11,136,181,0.14);
   --c-green:#08845b;--c-teal:#017d92;--c-red:#e80e0e;--c-indigo:#5261fa;--c-orange:#c25000;
@@ -39,43 +39,44 @@
   --c-long:#3d6fe0;--c-tempo:#c96c1a;--c-int:#e0393f;--c-race:#a23fb0;--c-iris:#6366f1;
   --c-lime:#22c55e;--c-slate:#64748b;--c-rust:#bd5500;
   --seg-track:#e1ece9;--seg-fill:#0e7c72;--bar-track:#fbe6df;--bar-fill:#ff7a59;
-  --ring-train:#0aa5b8;--ring-recover:#7c5cff;--ring-habits:#ff6b3d;
-  --radius:20px;--radius-sm:14px;--radius-xs:10px;
+  --ring-train:#6f9500;--ring-recover:#1e86b8;--ring-habits:#e5531f;
+  --radius:14px;--radius-sm:11px;--radius-xs:8px;
+  --display:'Barlow Condensed','Avenir Next Condensed','Arial Narrow',sans-serif;
   --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
   --rounded:ui-rounded,'SF Pro Rounded',-apple-system,system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   color-scheme:dark;
-  --bg:#0b0b11;--surface:#16151f;--surface2:#211f2d;
-  --border:#2b2939;--text:#f2f1f8;--text2:#aba8c6;--text3:#716e8e;
-  --accent:#4f7dff;--accent2:#86a3ff;
-  --green:#34d399;--red:#f87171;--orange:#fb923c;--amber:#fbbf24;
-  --on-text:#0b0b11;--nav-bg:rgba(17,16,24,0.86);--overlay-bg:rgba(11,11,17,0.96);
-  --card-shadow:0 1px 0 rgba(255,255,255,0.03);
+  --bg:#0c0c0b;--surface:#161614;--surface2:#21211e;
+  --border:#2d2c28;--text:#f5f3ec;--text2:#b9b5a9;--text3:#7f7b70;
+  --accent:#d4ff3a;--accent2:#d4ff3a;--on-accent:#0c0c0b;--hi:#d4ff3a;--hi-ink:#0c0c0b;
+  --green:#4ade80;--red:#ff6b5b;--orange:#ff8a3d;--amber:#fbbf24;
+  --on-text:#0c0c0b;--nav-bg:rgba(12,12,11,0.9);--overlay-bg:rgba(12,12,11,0.97);
+  --card-shadow:none;
   --st-go:#20a068;--st-ready:#1d8fc4;--st-pace:#bd840c;--st-recover:#db4560;
   --band:rgba(29,143,196,0.22);
   --c-green:#3ccf91;--c-teal:#3ac3d6;--c-red:#ff5a5a;--c-indigo:#8b96ff;--c-orange:#ff8a3d;
   --c-violet:#a98bff;--c-pink:#ff5fa8;--c-gold:#e0b43a;--c-purple:#c084fc;--c-easy:#45d39a;
   --c-long:#7fa2ff;--c-tempo:#f0a050;--c-int:#ff6b70;--c-race:#d77be6;--c-iris:#9a9cff;
   --c-lime:#4ade80;--c-slate:#94a3b8;--c-rust:#ff8a3d;
-  --ring-train:#2fd4e6;--ring-recover:#9b85ff;--ring-habits:#ff8a5c;
+  --ring-train:#d4ff3a;--ring-recover:#6fd3ff;--ring-habits:#ff6a3d;
   --seg-track:#1c2e2b;--seg-fill:#2fb5a6;--bar-track:#3a2621;--bar-fill:#ff8a6b;
 }}
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0b0b11;--surface:#16151f;--surface2:#211f2d;
-  --border:#2b2939;--text:#f2f1f8;--text2:#aba8c6;--text3:#716e8e;
-  --accent:#4f7dff;--accent2:#86a3ff;
-  --green:#34d399;--red:#f87171;--orange:#fb923c;--amber:#fbbf24;
-  --on-text:#0b0b11;--nav-bg:rgba(17,16,24,0.86);--overlay-bg:rgba(11,11,17,0.96);
-  --card-shadow:0 1px 0 rgba(255,255,255,0.03);
+  --bg:#0c0c0b;--surface:#161614;--surface2:#21211e;
+  --border:#2d2c28;--text:#f5f3ec;--text2:#b9b5a9;--text3:#7f7b70;
+  --accent:#d4ff3a;--accent2:#d4ff3a;--on-accent:#0c0c0b;--hi:#d4ff3a;--hi-ink:#0c0c0b;
+  --green:#4ade80;--red:#ff6b5b;--orange:#ff8a3d;--amber:#fbbf24;
+  --on-text:#0c0c0b;--nav-bg:rgba(12,12,11,0.9);--overlay-bg:rgba(12,12,11,0.97);
+  --card-shadow:none;
   --st-go:#20a068;--st-ready:#1d8fc4;--st-pace:#bd840c;--st-recover:#db4560;
   --band:rgba(29,143,196,0.22);
   --c-green:#3ccf91;--c-teal:#3ac3d6;--c-red:#ff5a5a;--c-indigo:#8b96ff;--c-orange:#ff8a3d;
   --c-violet:#a98bff;--c-pink:#ff5fa8;--c-gold:#e0b43a;--c-purple:#c084fc;--c-easy:#45d39a;
   --c-long:#7fa2ff;--c-tempo:#f0a050;--c-int:#ff6b70;--c-race:#d77be6;--c-iris:#9a9cff;
   --c-lime:#4ade80;--c-slate:#94a3b8;--c-rust:#ff8a3d;
-  --ring-train:#2fd4e6;--ring-recover:#9b85ff;--ring-habits:#ff8a5c;
+  --ring-train:#d4ff3a;--ring-recover:#6fd3ff;--ring-habits:#ff6a3d;
   --seg-track:#1c2e2b;--seg-fill:#2fb5a6;--bar-track:#3a2621;--bar-fill:#ff8a6b;
 }
 /* 100vh on iOS Safari is fixed to the largest possible viewport (keyboard hidden) -
@@ -93,7 +94,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .nav-btn.active{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);}
 .nav-btn{transition:transform 0.12s,background 0.2s;}
 .nav-btn:active,.ql-tile:active,.brief-line:active,.ring-row:active,.tc-medal:active,.me-snap:active{transform:scale(0.96);}
-.nav-btn.active svg{filter:drop-shadow(0 0 6px rgba(37,99,235,0.6));}
+.nav-btn.active svg{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 60%,transparent));}
 
 /* PAGES */
 .page{display:none;}
@@ -115,7 +116,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .today-plan-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);}
 .today-plan-type{font-size:30px;font-weight:800;letter-spacing:-1.2px;margin-top:3px;}
 .today-plan-meta{font-size:12px;font-weight:600;color:var(--text2);line-height:1.4;margin-top:3px;}
-.today-plan-cta{margin-top:auto;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px -6px rgba(37,99,235,0.7);}
+.today-plan-cta{margin-top:auto;padding:12px;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px -6px color-mix(in srgb,var(--accent) 70%,transparent);}
 .today-plan-cta.done{background:var(--surface2);color:var(--green);box-shadow:none;border:1px solid rgba(8,132,91,0.3);}
 .today-plan-alt{background:none;border:none;color:var(--text3);font-family:inherit;font-size:11px;font-weight:600;text-align:center;margin-top:8px;cursor:pointer;padding:2px;}
 
@@ -198,7 +199,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-long-edit strong{font-size:16px;color:var(--text);min-width:44px;text-align:center;font-variant-numeric:tabular-nums;}
 .yg-long-edit .yg-reset{all:unset;cursor:pointer;color:var(--accent2);font-size:12px;font-weight:700;}
 .yg-week-left{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5;}
-.wr-card{background:var(--surface);border:1px solid rgba(37,99,235,0.35);border-radius:var(--radius);padding:16px 18px;margin:0 0 12px;box-shadow:0 6px 20px rgba(37,99,235,0.08);}
+.wr-card{background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-radius:var(--radius);padding:16px 18px;margin:0 0 12px;box-shadow:0 6px 20px color-mix(in srgb,var(--accent) 8%,transparent);}
 .wr-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
 .wr-head span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent2);}
 .wr-head button{border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:12px;font-weight:800;padding:6px 12px;border-radius:14px;cursor:pointer;}
@@ -214,7 +215,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .wr-habit{font-size:12px;color:var(--text2);background:var(--surface2);border-radius:10px;padding:4px 9px;}
 .wr-habit.full{background:rgba(5,150,105,0.12);color:var(--green);}
 .wr-habit strong{color:inherit;font-weight:800;}
-.wr-focus{font-size:13px;color:var(--text2);line-height:1.5;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(37,99,235,0.07);}
+.wr-focus{font-size:13px;color:var(--text2);line-height:1.5;margin-top:10px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent) 7%,transparent);}
 .wr-focus strong{color:var(--accent2);}
 .wr-hist-row{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;padding:11px 0;font-size:12.5px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .week-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;}
@@ -263,17 +264,17 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .checkin-slider-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text3);margin-bottom:6px;}
 .checkin-hrv-picks{display:flex;gap:8px;}
 .checkin-hrv-pick{flex:1;padding:13px 0;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--mono);font-size:15px;font-weight:700;text-align:center;cursor:pointer;}
-.checkin-hrv-pick.active{border:2px solid var(--accent);background:rgba(37,99,235,0.12);color:var(--accent2);}
+.checkin-hrv-pick.active{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent2);}
 .checkin-hrv-pick.type{border-style:dashed;color:var(--text3);font-family:inherit;font-size:13px;}
 
 /* TRAIN */
-.train-header{padding:60px 24px 20px;background:linear-gradient(180deg,rgba(37,99,235,0.08) 0%,transparent 100%);}
+.train-header{padding:60px 24px 20px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 8%,transparent) 0%,transparent 100%);}
 .train-header h1{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:4px;}
 .train-header p{font-size:14px;color:var(--text2);font-weight:600;}
 .train-tabs{display:flex;gap:8px;padding:16px 24px;overflow-x:auto;scrollbar-width:none;}
 .train-tabs::-webkit-scrollbar{display:none;}
 .train-tab{flex-shrink:0;padding:8px 18px;border-radius:24px;border:1px solid var(--border);background:var(--surface);font-family:inherit;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.15s;}
-.train-tab.active{background:var(--accent);border-color:var(--accent);color:white;box-shadow:0 4px 12px rgba(37,99,235,0.35);}
+.train-tab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 35%,transparent);}
 
 /* Trends page tabs - a single segmented control rather than separate pill buttons,
    since there are always exactly 3 fixed options (unlike Train's tab row). */
@@ -316,7 +317,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .metric-card .m-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px;}
 .metric-card .m-val{font-size:36px;font-weight:800;letter-spacing:-2px;line-height:1;color:var(--text);}
 .metric-card .m-unit{font-size:14px;font-weight:600;color:var(--text2);margin-top:4px;}
-.metric-card.accent{background:rgba(37,99,235,0.1);border-color:rgba(37,99,235,0.25);}
+.metric-card.accent{background:color-mix(in srgb,var(--accent) 10%,transparent);border-color:color-mix(in srgb,var(--accent) 25%,transparent);}
 .metric-card.accent .m-val{color:var(--accent2);}
 .metric-card.green{background:rgba(8,132,91,0.08);border-color:rgba(8,132,91,0.2);}
 .metric-card.green .m-val{color:var(--green);}
@@ -385,7 +386,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .me-avatar{position:relative;width:68px;height:68px;border-radius:50%;flex-shrink:0;border:2px solid var(--border);background:var(--surface2);color:var(--text2);padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;font-size:22px;font-weight:800;}
 .me-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .me-avatar svg{width:30px;height:30px;}
-.me-avatar i{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-style:normal;font-size:11px;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);}
+.me-avatar i{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-style:normal;font-size:11px;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);}
 .me-name{font-size:22px;font-weight:800;letter-spacing:-0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .me-since{font-size:12.5px;font-weight:600;color:var(--text3);margin-top:2px;}
 .me-year-h{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;}
@@ -562,7 +563,7 @@ i.tl-gym{display:inline-block;border-radius:3px;}
 .section-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);padding:0 24px;margin:20px 0 10px;}
 
 /* BUTTONS */
-.btn-primary{width:100%;padding:16px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.02em;box-shadow:0 4px 20px rgba(37,99,235,0.4);transition:all 0.2s;}
+.btn-primary{width:100%;padding:16px;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.02em;box-shadow:0 4px 20px color-mix(in srgb,var(--accent) 40%,transparent);transition:all 0.2s;}
 .btn-primary:active{transform:scale(0.97);}
 .btn-secondary{width:100%;padding:14px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;}
 .btn-secondary:active{transform:scale(0.98);}
@@ -588,7 +589,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .modal-input::placeholder{color:var(--text2);font-weight:500;}
 .type-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
 .type-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;}
-.type-btn.active{background:var(--accent);border-color:var(--accent);color:white;}
+.type-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
 
 /* REST TIMER OVERLAY */
 .rest-overlay{position:fixed;inset:0;z-index:300;background:var(--overlay-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;opacity:0;pointer-events:none;transition:opacity 0.25s ease;}
@@ -619,7 +620,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 /* PR CELEBRATION */
 .pr-celebration{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding-top:80px;z-index:500;pointer-events:none;opacity:0;transition:opacity 0.3s;}
 .pr-celebration.show{opacity:1;pointer-events:auto;}
-.pr-celebration-card{background:linear-gradient(135deg,var(--accent),#1d4ed8);color:#fff;padding:18px 26px;border-radius:20px;box-shadow:0 12px 40px rgba(37,99,235,0.45);text-align:center;transform:scale(0.85) translateY(-10px);transition:transform 0.35s cubic-bezier(.34,1.56,.64,1);max-width:88%;cursor:pointer;}
+.pr-celebration-card{background:linear-gradient(135deg,var(--accent),#1d4ed8);color:#fff;padding:18px 26px;border-radius:20px;box-shadow:0 12px 40px color-mix(in srgb,var(--accent) 45%,transparent);text-align:center;transform:scale(0.85) translateY(-10px);transition:transform 0.35s cubic-bezier(.34,1.56,.64,1);max-width:88%;cursor:pointer;}
 .pr-celebration.show .pr-celebration-card{transform:scale(1) translateY(0);}
 
 /* ANOMALY ALERTS */
@@ -627,12 +628,12 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .anomaly-banner{border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;position:relative;}
 .anomaly-banner.alert-gym{background:rgba(194,80,0,0.1);border:1px solid rgba(194,80,0,0.3);}
 .anomaly-banner.alert-score{background:rgba(232,14,14,0.1);border:1px solid rgba(232,14,14,0.3);}
-.anomaly-banner.alert-backup{background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);}
+.anomaly-banner.alert-backup{background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);}
 .anomaly-banner-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
 .anomaly-banner-body{flex:1;}
 .anomaly-banner-title{font-size:13px;font-weight:800;margin-bottom:2px;}
 .anomaly-banner-desc{font-size:12px;font-weight:500;opacity:0.8;}
-.anomaly-banner-action{margin-top:8px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.15);color:var(--accent2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;}
+.anomaly-banner-action{margin-top:8px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;}
 .anomaly-dismiss{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:2px;}
 
 /* RUN TARGET PROGRESS */
@@ -646,7 +647,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .week-plan-day-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);}
 .week-plan-pill{width:100%;padding:6px 2px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .week-plan-pill.active-push{background:rgba(232,14,14,0.15);border-color:rgba(232,14,14,0.4);color:var(--c-red);}
-.week-plan-pill.active-pull{background:rgba(37,99,235,0.15);border-color:rgba(37,99,235,0.4);color:var(--accent2);}
+.week-plan-pill.active-pull{background:color-mix(in srgb,var(--accent) 15%,transparent);border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent2);}
 .week-plan-pill.active-legs{background:rgba(8,132,91,0.15);border-color:rgba(8,132,91,0.4);color:var(--green);}
 .week-plan-pill.active-core{background:rgba(144,109,1,0.15);border-color:rgba(144,109,1,0.4);color:var(--c-gold);}
 .week-plan-pill.active-custom{background:rgba(131,78,250,0.15);border-color:rgba(131,78,250,0.4);color:var(--c-purple);}
@@ -664,7 +665,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 /* MUSCLE TAG CHECKBOXES */
 .muscle-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
 .muscle-check-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all 0.15s;}
-.muscle-check-item.selected{border-color:var(--accent);background:rgba(37,99,235,0.12);}
+.muscle-check-item.selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);}
 .muscle-check-item span{font-size:13px;font-weight:700;flex:1;}
 .muscle-check-box{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;}
 .muscle-check-item.selected .muscle-check-box{background:var(--accent);border-color:var(--accent);}
@@ -674,7 +675,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .empty-state strong{color:var(--text2);display:block;font-size:16px;margin-bottom:6px;}
 
 /* FAB */
-.fab{width:48px;height:48px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(37,99,235,0.45);flex-shrink:0;}
+.fab{width:48px;height:48px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px color-mix(in srgb,var(--accent) 45%,transparent);flex-shrink:0;}
 
 /* UTILITY */
 ::-webkit-scrollbar{width:0;height:0;}
@@ -741,7 +742,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .rd-toggle{color:var(--text3);}
 .rd-empty-title{font-family:var(--rounded);font-size:28px;font-weight:800;letter-spacing:-0.8px;margin-top:6px;color:var(--text);}
 .rd-empty-desc{font-size:13px;font-weight:500;color:var(--text2);line-height:1.5;margin:6px 0 14px;}
-.rd-cta{width:100%;padding:14px;border:none;border-radius:14px;background:var(--accent);color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 20px -10px var(--accent);}
+.rd-cta{width:100%;padding:14px;border:none;border-radius:14px;background:var(--accent);color:var(--on-accent);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 20px -10px var(--accent);}
 .rd-cta:active{transform:scale(0.98);}
 .rd-loadline{font-size:12px;color:var(--text3);margin-top:12px;}
 .rd-loadline strong{color:var(--text2);}
@@ -767,7 +768,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .today-dbl-row:first-of-type{margin-top:6px;}
 .today-dbl-name{font-size:14px;font-weight:800;color:var(--text);}
 .today-dbl-meta{font-size:12px;color:var(--text3);font-weight:600;line-height:1.4;margin-top:1px;}
-.today-dbl-row button{flex-shrink:0;padding:8px 14px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;}
+.today-dbl-row button{flex-shrink:0;padding:8px 14px;border-radius:10px;border:none;background:var(--accent);color:var(--on-accent);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;}
 .today-dbl-row.done button{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green);}
 .today-dbl-row.done .today-dbl-name{color:var(--text3);}
 .today-dbl-order{margin-top:6px;}
@@ -965,7 +966,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .sc-steps code,.checkin-intro code{font-family:var(--mono);font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:5px;}
 .sc-url{display:flex;align-items:center;gap:8px;margin-top:6px;background:var(--surface2);border-radius:10px;padding:8px 10px;}
 .sc-url code{flex:1;min-width:0;overflow-wrap:anywhere;font-size:11.5px;background:none;padding:0;user-select:text;-webkit-user-select:text;}
-.sc-url button{border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;}
+.sc-url button{border:none;background:var(--accent);color:var(--on-accent);font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;}
 .ask-card{margin-bottom:10px;}
 .app-build{text-align:center;font-size:11px;color:var(--text3);margin-top:6px;font-variant-numeric:tabular-nums;}
 .race-done{font-family:var(--rounded);font-size:36px;font-weight:800;letter-spacing:-1.2px;color:var(--st-go);line-height:1.1;}
@@ -978,6 +979,136 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .fff-load{margin:4px 0 10px;}
 .fff-load-h{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;}
 .fff-load-h strong{font-size:12px;font-weight:800;}
+
+/* ══ TRACKSIDE ══════════════════════════════════════════════════════════════════
+   The visual system: the language of race bibs, timing boards and finish clocks.
+   - Type: Barlow Condensed (self-hosted, OFL) for every number and heading - set like
+     a scoreboard: heavy, upright, uppercase for labels. The iPhone's own SF for prose.
+   - Colour: warm ink and paper rather than cold grey; one signature colour (volt) that
+     means "this is the thing" - the active tab, the primary button, the Train ring.
+     Light mode uses ink for actions and volt only as a highlighter.
+   - Shape: tighter corners, no outlines around cards (surfaces separate by tone),
+     hairline rules inside them. Big numerals carry the hierarchy, not boxes.
+   - No emoji in the interface; icons are drawn (svgIcon) and trophies are medals. */
+@font-face{font-family:'Barlow Condensed';src:url(fonts/barlow-condensed-600.woff2) format('woff2');font-weight:600;font-style:normal;font-display:swap;}
+@font-face{font-family:'Barlow Condensed';src:url(fonts/barlow-condensed-700.woff2) format('woff2');font-weight:700;font-style:normal;font-display:swap;}
+@font-face{font-family:'Barlow Condensed';src:url(fonts/barlow-condensed-800.woff2) format('woff2');font-weight:800;font-style:normal;font-display:swap;}
+@font-face{font-family:'Barlow Condensed';src:url(fonts/barlow-condensed-800-italic.woff2) format('woff2');font-weight:800;font-style:italic;font-display:swap;}
+:root{--rounded:var(--display);}
+body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+::selection{background:var(--hi);color:var(--hi-ink);}
+
+/* Surfaces: tone, not outlines */
+.chart-card,.metric-card,.rd-card,.rings-card,.brief-card,.year-goal-card,.week-card,.wr-card,.run-input-card,.rm-card,.goal-chip,.me-snap,.week-day,.tr-more>summary,.me-links button{border-color:transparent;box-shadow:none;}
+.chart-card,.metric-card,.rd-card,.rings-card,.brief-card,.year-goal-card,.week-card,.wr-card,.run-input-card{border-radius:var(--radius);}
+.goal-chip{border-radius:var(--radius-sm);}
+
+/* Display type */
+.page-header h1,.train-header h1{font-family:var(--display);font-weight:800;font-size:52px;line-height:0.9;letter-spacing:-0.5px;text-transform:uppercase;}
+.page-header p,.train-header p{font-size:13px;font-weight:600;color:var(--text3);margin-top:6px;}
+.today-greet{font-family:var(--display);font-weight:800;font-size:44px;line-height:0.92;letter-spacing:-0.3px;text-transform:uppercase;margin:10px 0 18px;text-wrap:balance;}
+.today-date{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:0.08em;}
+.chart-card-title,.trends-sec,.rt-title,.brief-h,.habits-h span,.me-year-h,.me-sub-h,.tr-tile-l,.rm-eyebrow,.ring-l,.fff-stats span,.rd-eyebrow,.year-goal-head span,.week-card-head span,.tb-eyebrow,.rp2-goal-h,.pb-eyebrow,.ql-tile em,.today-plan-lbl,.m-label,.week-card-row-label,.yg-seg-type,.me-week span,.tl-head,.ffg-seg span{font-family:var(--display);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;}
+.chart-card-title{font-size:17px;color:var(--text);letter-spacing:0.04em;}
+.trends-sec{font-size:15px;color:var(--text3);margin:28px 2px 10px;}
+.brief-h,.habits-h span,.me-sub-h,.me-year-h{font-size:14px;}
+.tr-tile-l,.ring-l,.fff-stats span,.rd-eyebrow,.rm-eyebrow,.tb-eyebrow,.m-label{font-size:13px;}
+.chart-card-val{font-weight:600;}
+
+/* Numerals: scoreboard */
+.m-val,.tr-tile-v,.pb-val,.ring-v,.me-stats b,.me-snap b,.rm-count b,.rm-name,.year-goal-big,.ff-zone,.fff-stats strong,.rp2-t,.me-race-days b,.me-name,.rm-split b,.yg-seg-km,.me-preds b,.week-day-num,.ql-h,.ql-tile b,.tb-text b,.today-plan-type,.rd-verb,.rd-ring-num,.rd-mini-score,.tl-tot b,.tc-next-top b,.me-race-name,.habits-h b,.rings-done{font-family:var(--display);font-weight:800;letter-spacing:0;font-variant-numeric:tabular-nums;}
+.tr-tile-v{font-size:34px;line-height:1;}
+.tr-tile-v span{font-family:-apple-system,sans-serif;}
+.pb-val{font-size:30px;line-height:1;}
+.ring-v{font-size:26px;}
+.ring-v span{font-family:var(--display);font-size:15px;}
+.me-stats b{font-size:34px;line-height:1;}
+.me-snap b{font-size:30px;}
+.me-name{font-size:30px;text-transform:uppercase;line-height:0.95;}
+.rm-name{font-size:34px;text-transform:uppercase;line-height:0.95;}
+.rm-count b{font-size:64px;letter-spacing:-1px;}
+.year-goal-big{font-size:84px!important;line-height:0.85;letter-spacing:-1px;}
+.ff-zone{font-size:46px;text-transform:uppercase;line-height:0.9;}
+.fff-stats strong{font-size:32px;}
+.rp2-t{font-size:28px;}
+.rd-verb{font-size:46px;text-transform:uppercase;line-height:0.92;letter-spacing:-0.2px;}
+.today-plan-type{font-size:40px!important;text-transform:uppercase;line-height:0.95;}
+.week-day-num{font-size:22px;}
+.yg-seg-km{font-size:24px;}
+.rm-split b{font-size:16px;}
+.me-preds b{font-size:19px;}
+.ql-h{font-size:30px;text-transform:uppercase;}
+.ql-tile b{font-size:21px;text-transform:uppercase;}
+.ql-tile.big b{font-size:26px;}
+.tb-text b{font-size:22px;text-transform:uppercase;}
+
+/* Volt: the one signature colour */
+.nav{border-top:none;}
+.nav-btn{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;}
+.nav-btn.active{background:var(--accent);color:var(--on-accent);}
+.nav-btn.active svg{filter:none;}
+.seg-track{background:var(--surface);border-radius:var(--radius-sm);}
+.seg-tab{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border-radius:8px;}
+.seg-tab.active{background:var(--accent);color:var(--on-accent);}
+.week-day{background:var(--surface);}
+.week-day.today{background:var(--accent);border-color:var(--accent);}
+.week-day.today .week-day-num,.week-day.today .week-day-label{color:var(--on-accent)!important;}
+.btn-primary,.rd-cta,.today-plan-cta{border-radius:var(--radius-sm);font-family:var(--display);font-size:19px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;box-shadow:none!important;}
+.goal-chip.done{background:color-mix(in srgb,var(--accent) 10%,var(--surface));}
+.goal-chip.done .goal-chip-check{background:var(--accent);border-color:var(--accent);}
+.goal-chip.done .goal-chip-check svg{stroke:var(--on-accent);}
+
+/* Rings: heavier, with the train ring as the volt mark */
+.rings-card{padding:20px 18px;}
+.ring-l{width:70px;}
+
+/* Coach: numbered like a race programme */
+.brief-card{padding:16px 16px 8px;}
+.brief-ic{width:34px;height:34px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--text);}
+.brief-line{align-items:center;font-size:14px;}
+
+/* Medals */
+.tb-medal,.tc-ic,.tc-next-ic{flex-direction:column;line-height:1;color:#141412;font-family:var(--display);text-align:center;}
+.tc-ic b,.tb-medal b{font-weight:800;font-size:19px;letter-spacing:-0.2px;}
+.tc-ic i,.tb-medal i{font-style:normal;font-weight:700;font-size:7.5px;letter-spacing:0.08em;margin-top:1px;opacity:0.8;}
+.tc-ic{width:58px;height:58px;}
+.tc-medal.locked .tc-ic{color:var(--text3);}
+.tc-next-ic{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--tc);flex-shrink:0;}
+.tc-next-ic b{font-size:12px;font-weight:800;}
+.tc-next-ic i{display:none;}
+.tb-medal{width:54px;height:54px;}
+
+/* Quick log */
+.ql-tile{color:var(--text);}
+.ql-ic{color:var(--qc);}
+.ql-tile:first-child{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.ql-tile:first-child .ql-ic,.ql-tile:first-child em{color:var(--on-accent);opacity:0.85;}
+
+/* Race mode: a bib */
+.rm-card{background:var(--surface);border:none;position:relative;overflow:hidden;}
+.rm-card::before{content:'';position:absolute;inset:0 0 auto 0;height:6px;background:repeating-linear-gradient(90deg,var(--accent) 0 18px,transparent 18px 26px);}
+.rm-eyebrow,.rm-count b{color:var(--accent2);}
+.rm-check.done .rm-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.rm-split.fin{background:var(--accent);}
+.rm-split.fin span,.rm-split.fin b{color:var(--on-accent);}
+
+/* Light mode: volt as a highlighter, ink for actions */
+:root:not([data-theme="dark"]) .rm-eyebrow,:root:not([data-theme="dark"]) .rm-count b{color:var(--text);}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rm-eyebrow,:root:not([data-theme="light"]) .rm-count b{color:var(--accent);}}
+
+.me-stats{gap:10px;}
+.me-stats b{font-size:29px;}
+.me-snap b.w{font-size:19px;text-transform:uppercase;padding-top:6px;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.05;word-break:break-word;}
+.rings-svg{width:112px;height:112px;}
+.rings-svg svg{width:112px;height:112px;}
+.rings-card{gap:14px;}
+.ring-l{width:62px;font-size:12px;}
+.ring-v{font-size:23px;}
+.ring-v span{font-size:13px;}
+.rd-empty-title,.rd-main-text .rd-verb{font-family:var(--display);font-weight:800;text-transform:uppercase;letter-spacing:0;line-height:0.92;}
+.rd-empty-title{font-size:44px;}
+.today-plan-cell{border-color:transparent!important;box-shadow:none!important;}
+.hi{background:linear-gradient(transparent 55%,var(--hi) 55% 92%,transparent 92%);color:inherit;padding:0 2px;}
 </style>
 </head>
 <body>
@@ -1559,13 +1690,13 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     <div class="modal-handle"></div>
     <div class="ql-h">Log something</div>
     <div class="ql-big">
-      <button class="ql-tile big" style="--qc:var(--c-teal);" onclick="closeModal('train-picker-modal');showPage('train');switchTrainTab('run')"><span class="ql-ic">🏃</span><b>Run</b><em>distance, time, effort</em></button>
-      <button class="ql-tile big" style="--qc:var(--c-red);" onclick="closeModal('train-picker-modal');showPage('train');switchTrainTab('gym')"><span class="ql-ic">🏋️</span><b>Gym</b><em>a weights session</em></button>
+      <button class="ql-tile big" style="--qc:var(--c-teal);" onclick="closeModal('train-picker-modal');showPage('train');switchTrainTab('run')"><span class="ql-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 2.5V22"/><path d="M6.5 12.5 9 9l4 1 2.5 3.5H19"/><path d="M11 15l-1.5-3.5"/></svg></span><b>Run</b><em>distance, time, effort</em></button>
+      <button class="ql-tile big" style="--qc:var(--c-red);" onclick="closeModal('train-picker-modal');showPage('train');switchTrainTab('gym')"><span class="ql-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg></span><b>Gym</b><em>a weights session</em></button>
     </div>
     <div class="ql-small">
-      <button class="ql-tile" style="--qc:var(--ring-recover);" onclick="closeModal('train-picker-modal');openMorningModal()"><span class="ql-ic">☀️</span><b>Check-in</b><em>sleep, HRV, feel</em></button>
-      <button class="ql-tile" style="--qc:var(--c-indigo);" onclick="closeModal('train-picker-modal');openHealthModal()"><span class="ql-ic">⚖️</span><b>Weigh-in</b><em>weight, body fat</em></button>
-      <button class="ql-tile" style="--qc:var(--c-orange);" onclick="closeModal('train-picker-modal');openVapingModal()"><span class="ql-ic">💨</span><b>Nicotine</b><em>today's puffs</em></button>
+      <button class="ql-tile" style="--qc:var(--ring-recover);" onclick="closeModal('train-picker-modal');openMorningModal()"><span class="ql-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg></span><b>Check-in</b><em>sleep, HRV, feel</em></button>
+      <button class="ql-tile" style="--qc:var(--c-indigo);" onclick="closeModal('train-picker-modal');openHealthModal()"><span class="ql-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 9.5a5 5 0 0 1 8 0"/><path d="M12 9.5 13.5 8"/></svg></span><b>Weigh-in</b><em>weight, body fat</em></button>
+      <button class="ql-tile" style="--qc:var(--c-orange);" onclick="closeModal('train-picker-modal');openVapingModal()"><span class="ql-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 12h15a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 16h7"/></svg></span><b>Nicotine</b><em>today's puffs</em></button>
     </div>
     <button onclick="closeModal('train-picker-modal');showPage('train')" class="ql-more">Open the Train page (history, PRs, volume) →</button>
   </div>
@@ -1682,7 +1813,7 @@ const GOAL_ICONS=[
   {kw:['health','heart','hrv'],                 col:'var(--c-pink)',bg:'rgba(224,18,120,0.12)', d:'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'},
   {kw:['protein','macro','calorie','calori'],   col:'var(--c-gold)',bg:'rgba(144,109,1,0.12)',  d:'M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7zm0 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'},
 ];
-const _ICON_DEFAULT={col:'var(--accent)',bg:'rgba(37,99,235,0.12)',d:'M20 6L9 17l-5-5'};
+const _ICON_DEFAULT={col:'var(--accent)',bg:'color-mix(in srgb,var(--accent) 12%,transparent)',d:'M20 6L9 17l-5-5'};
 function _goalIconData(name){const n=(name||'').toLowerCase();return GOAL_ICONS.find(i=>i.kw.some(k=>n.includes(k)))||_ICON_DEFAULT;}
 function goalAvatar(name,size=42){const{col,bg,d}=_goalIconData(name);const r=Math.round(size*0.28);const ic=Math.round(size*0.5);return`<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${bg};border:1px solid ${tint(col,20)};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="${ic}" height="${ic}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg></div>`;}
 function goalAvatarInline(name,size=36){return goalAvatar(name,size);}
@@ -1973,6 +2104,20 @@ function handleAvatarUpload(file){
   };
   reader.readAsDataURL(file);
 }
+// Line icons (24px grid, 2px stroke) - drawn rather than emoji, so they take the
+// theme's colour and read as one set.
+const ICONS={
+  flag:'<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+  run:'<circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 2.5V22"/><path d="M6.5 12.5 9 9l4 1 2.5 3.5H19"/><path d="M11 15l-1.5-3.5"/>',
+  check:'<path d="M4 12.5 9.5 18 20 6"/>',
+  dumbbell:'<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  scale:'<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 9.5a5 5 0 0 1 8 0"/><path d="M12 9.5 13.5 8"/>',
+  wind:'<path d="M3 8h10a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 12h15a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 16h7"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  medal:'<circle cx="12" cy="15" r="5.5"/><path d="M8.5 10.5 6 3h4l2 5 2-5h4l-2.5 7.5"/>',
+};
+function svgIcon(k,size=20){return`<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]||''}</svg>`;}
+
 // ── TROPHY CABINET ──
 // Every trophy is worked out from data already logged (nothing extra is stored apart from
 // which ones you've already been shown), so history counts the moment this ships. Each
@@ -1999,37 +2144,37 @@ function getTrophies(){
   const add=(cat,id,ic,name,desc,earned,prog,progLbl,tier)=>T.push({cat,id,ic,name,desc,earned,prog:earned?1:Math.max(0,Math.min(0.999,prog||0)),progLbl,tier:tier||'bronze'});
   // Distance this year
   [[100,'bronze'],[250,'bronze'],[500,'silver'],[1000,'gold'],[1500,'gold'],[2000,'plat']].forEach(([k,t])=>
-    add('Distance',`yr${k}`,'🛣️',`${k.toLocaleString('en-GB')} km in ${yr}`,`Run ${k.toLocaleString('en-GB')} km in a calendar year.`,_firstDateReaching(yItems,k,km),yKm/k,`${Math.round(yKm).toLocaleString('en-GB')} / ${k.toLocaleString('en-GB')} km`,t));
+    add('Distance',`yr${k}`,`${k>=1000?k/1000+'K':k}|KM`,`${k.toLocaleString('en-GB')} km in ${yr}`,`Run ${k.toLocaleString('en-GB')} km in a calendar year.`,_firstDateReaching(yItems,k,km),yKm/k,`${Math.round(yKm).toLocaleString('en-GB')} / ${k.toLocaleString('en-GB')} km`,t));
   // Single-run distances
   const longest=runs.reduce((a,r)=>Math.max(a,km(r)),0);
   const firstOver=k=>{const r=runs.find(x=>km(x)>=k);return r?r.date:null;};
-  [[10,'10K','🔟','bronze'],[21.0975,'Half marathon','🥈','silver'],[30,'30 km run','💪','silver'],[42.195,'Marathon','🏅','gold'],[50,'Ultra: 50 km','⛰️','gold'],[80,'Ultra: 80 km+','🦾','plat']].forEach(([k,n,ic,t])=>
+  [[10,'10K','10K|RUN','bronze'],[21.0975,'Half marathon','HM|21.1','silver'],[30,'30 km run','30K|RUN','silver'],[42.195,'Marathon','42K|FULL','gold'],[50,'Ultra: 50 km','50K|ULTRA','gold'],[80,'Ultra: 80 km+','80K+|ULTRA','plat']].forEach(([k,n,ic,t])=>
     add('Distance',`one${k}`,ic,n,`Cover ${k>=42?k.toFixed(k%1?1:0):fmtKm(k)} km in a single run.`,firstOver(k-0.05),longest/k,`longest ${fmtKm(longest)} km`,t));
   // Biggest week
   const wk=_weeklyKmMap(runs);const wkEntries=Object.entries(wk).sort((a,b)=>a[0].localeCompare(b[0]));const bestWk=Math.max(0,...Object.values(wk));
   [[40,'bronze'],[60,'silver'],[80,'gold'],[100,'plat']].forEach(([k,t])=>{const e=wkEntries.find(([,v])=>v>=k);
-    add('Volume',`wk${k}`,'📈',`${k} km week`,`Run ${k} km in one Monday-to-Sunday week.`,e?dk(addDays(new Date(e[0]+'T12:00:00'),6))>dk(today())?dk(today()):dk(addDays(new Date(e[0]+'T12:00:00'),6)):null,bestWk/k,`best ${Math.round(bestWk)} km`,t);});
+    add('Volume',`wk${k}`,`${k}|KM WEEK`,`${k} km week`,`Run ${k} km in one Monday-to-Sunday week.`,e?dk(addDays(new Date(e[0]+'T12:00:00'),6))>dk(today())?dk(today()):dk(addDays(new Date(e[0]+'T12:00:00'),6)):null,bestWk/k,`best ${Math.round(bestWk)} km`,t);});
   // Racing
   const races=runs.filter(r=>_tlEffortKey(r.effort)==='Race');
-  [[1,'First race','🎽','bronze'],[5,'Five races','🏁','silver'],[10,'Ten races','🏆','gold']].forEach(([n,nm,ic,t])=>
+  [[1,'First race','1ST|RACE','bronze'],[5,'Five races','×5|RACES','silver'],[10,'Ten races','×10|RACES','gold']].forEach(([n,nm,ic,t])=>
     add('Racing',`race${n}`,ic,nm,`Finish ${n===1?'a race':n+' races'}.`,races[n-1]?races[n-1].date:null,races.length/n,`${races.length} / ${n}`,t));
   const pbs=getRunPBs(runs);const pbDates=PB_DISTS.map(d=>pbs[d.key][0]).filter(Boolean).map(x=>x.run.date).sort();
-  add('Racing','pb','⚡','PB set','Hold a personal best at 5K, 10K, half or marathon.',pbDates[0]||null,0,'log a timed run at a PB distance','silver');
+  add('Racing','pb','PB|SET','PB set','Hold a personal best at 5K, 10K, half or marathon.',pbDates[0]||null,0,'log a timed run at a PB distance','silver');
   // Consistency
   let bestRunStreak=0,cur=0,streakDate=null;const wkSet=new Set(wkEntries.filter(([,v])=>v>0).map(([k])=>k));
   const runsPerWeek={};runs.forEach(r=>{const k=dk(getMonday(new Date(r.date+'T12:00:00')));runsPerWeek[k]=(runsPerWeek[k]||0)+1;});
   const firstMon=runs.length?getMonday(new Date(runs[0].date+'T12:00:00')):null;const streakHits={};
   if(firstMon)for(let m=new Date(firstMon);m<=today();m=addDays(m,7)){const k=dk(m);if((runsPerWeek[k]||0)>=3){cur++;if(cur>bestRunStreak)bestRunStreak=cur;[4,8,12].forEach(n=>{if(cur===n&&!streakHits[n])streakHits[n]=dk(addDays(m,6))>dk(today())?dk(today()):dk(addDays(m,6));});}else if(dk(m)!==dk(getMonday(today())))cur=0;}
-  [[4,'bronze'],[8,'silver'],[12,'gold']].forEach(([n,t])=>add('Consistency',`rs${n}`,'🔁',`${n} weeks of 3+ runs`,`Run at least three times a week, ${n} weeks in a row.`,streakHits[n]||null,bestRunStreak/n,`best ${bestRunStreak} in a row`,t));
-  [[7,'bronze'],[30,'silver'],[100,'gold']].forEach(([n,t])=>add('Consistency',`ci${n}`,'☀️',`${n} morning check-ins`,`Log ${n} readiness check-ins.`,mDates[n-1]||null,mDates.length/n,`${mDates.length} / ${n}`,t));
+  [[4,'bronze'],[8,'silver'],[12,'gold']].forEach(([n,t])=>add('Consistency',`rs${n}`,`${n}|WEEKS`,`${n} weeks of 3+ runs`,`Run at least three times a week, ${n} weeks in a row.`,streakHits[n]||null,bestRunStreak/n,`best ${bestRunStreak} in a row`,t));
+  [[7,'bronze'],[30,'silver'],[100,'gold']].forEach(([n,t])=>add('Consistency',`ci${n}`,`${n}|MORNINGS`,`${n} morning check-ins`,`Log ${n} readiness check-ins.`,mDates[n-1]||null,mDates.length/n,`${mDates.length} / ${n}`,t));
   // Early bird / night owl
   const early=runs.filter(r=>r.startTime&&r.startTime<'07:00'),late=runs.filter(r=>r.startTime&&r.startTime>='20:00');
-  add('Consistency','early','🌅','Early bird','Ten runs started before 7am.',early[9]?early[9].date:null,early.length/10,`${early.length} / 10`,'bronze');
-  add('Consistency','owl','🌙','Night owl','Ten runs started after 8pm.',late[9]?late[9].date:null,late.length/10,`${late.length} / 10`,'bronze');
+  add('Consistency','early','AM|×10','Early bird','Ten runs started before 7am.',early[9]?early[9].date:null,early.length/10,`${early.length} / 10`,'bronze');
+  add('Consistency','owl','PM|×10','Night owl','Ten runs started after 8pm.',late[9]?late[9].date:null,late.length/10,`${late.length} / 10`,'bronze');
   // Strength
-  [[10,'bronze'],[25,'silver'],[50,'gold'],[100,'plat']].forEach(([n,t])=>add('Strength',`gym${n}`,'🏋️',`${n} gym sessions`,`Log ${n} gym sessions.`,gym[n-1]?gym[n-1].date:null,gym.length/n,`${gym.length} / ${n}`,t));
+  [[10,'bronze'],[25,'silver'],[50,'gold'],[100,'plat']].forEach(([n,t])=>add('Strength',`gym${n}`,`${n}|SESSIONS`,`${n} gym sessions`,`Log ${n} gym sessions.`,gym[n-1]?gym[n-1].date:null,gym.length/n,`${gym.length} / ${n}`,t));
   const legs=gym.filter(g=>g.type==='Legs');
-  add('Strength','legs','🦵',"Didn't skip leg day",'Ten leg sessions.',legs[9]?legs[9].date:null,legs.length/10,`${legs.length} / 10`,'silver');
+  add('Strength','legs','LEGS|×10',"Didn't skip leg day",'Ten leg sessions.',legs[9]?legs[9].date:null,legs.length/10,`${legs.length} / 10`,'silver');
   // Wellness
   const vape=loadVapingData().filter(x=>x.date&&+x.puffs>=0).sort((a,b)=>a.date.localeCompare(b.date));
   if(vape.length>=7){
@@ -2037,17 +2182,18 @@ function getTrophies(){
     const roll=vape.map((x,i)=>{const w=vape.slice(Math.max(0,i-6),i+1);return{date:x.date,avg:w.reduce((a,y)=>a+ +y.puffs,0)/w.length,n:w.length};});
     const nowAvg=roll[roll.length-1].avg;
     [[25,'silver'],[50,'gold'],[75,'plat']].forEach(([pc,t])=>{const hit=roll.find(x=>x.n>=7&&x.avg<=base*(1-pc/100));
-      add('Wellness',`vape${pc}`,'💨',`Nicotine down ${pc}%`,`A 7-day average of puffs ${pc}% below where you started.`,hit?hit.date:null,base>0?(1-nowAvg/base)/(pc/100):0,`now ${Math.max(0,Math.round((1-nowAvg/base)*100))}% down`,t);});
+      add('Wellness',`vape${pc}`,`−${pc}%|NICOTINE`,`Nicotine down ${pc}%`,`A 7-day average of puffs ${pc}% below where you started.`,hit?hit.date:null,base>0?(1-nowAvg/base)/(pc/100):0,`now ${Math.max(0,Math.round((1-nowAvg/base)*100))}% down`,t);});
   }
   const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
   if(goalW){const h=loadHealthData().filter(x=>x.weight).sort((a,b)=>a.date.localeCompare(b.date));const hit=h.find(x=>x.weight<=goalW);const lastW=h.length?h[h.length-1].weight:null;
-    add('Wellness','weight','🎯',`Hit ${goalW} kg`,'Reach your goal weight.',hit?hit.date:null,lastW&&h.length?Math.max(0,1-(lastW-goalW)/Math.max(1,h[0].weight-goalW)):0,lastW?`now ${lastW} kg`:'log a weigh-in','gold');}
+    add('Wellness','weight',`${goalW}|KG`,`Hit ${goalW} kg`,'Reach your goal weight.',hit?hit.date:null,lastW&&h.length?Math.max(0,1-(lastW-goalW)/Math.max(1,h[0].weight-goalW)):0,lastW?`now ${lastW} kg`:'log a weigh-in','gold');}
   // Habits: perfect days
   const days=[];const start=new Date((mDates[0]||runs[0]?.date||dk(today()))+'T12:00:00');
   for(let d=new Date(Math.min(start,addDays(today(),-200)));d<=today();d=addDays(d,1)){const ds=dk(d),gs=goalsActiveOn(ds);if(gs.length>=3&&gs.every(g=>goalDone(ds,g)))days.push(ds);}
-  [[1,'bronze'],[7,'silver'],[30,'gold']].forEach(([n,t])=>add('Habits',`perfect${n}`,'✨',n===1?'Perfect day':`${n} perfect days`,`Tick every habit in a day${n>1?`, ${n} times`:''}.`,days[n-1]||null,days.length/n,`${days.length} / ${n}`,t));
+  [[1,'bronze'],[7,'silver'],[30,'gold']].forEach(([n,t])=>add('Habits',`perfect${n}`,`${n}|PERFECT`,n===1?'Perfect day':`${n} perfect days`,`Tick every habit in a day${n>1?`, ${n} times`:''}.`,days[n-1]||null,days.length/n,`${days.length} / ${n}`,t));
   return T;
 }
+function medalFace(ic){const [a,b]=String(ic).split('|');return`<b>${esc(a)}</b>${b?`<i>${esc(b)}</i>`:''}`;}
 const TROPHY_TIER_COL={bronze:'#c98a4b',silver:'#9aa7b8',gold:'#e0b43a',plat:'#7fd6e8'};
 // Newly earned since you last looked; the first time ever, everything already earned is
 // marked seen quietly rather than celebrated all at once.
@@ -2064,7 +2210,7 @@ function renderTrophyBanner(){
   if(!nw.length){el.innerHTML='';return;}
   const t=nw[nw.length-1];
   el.innerHTML=`<button class="tb-banner" onclick="markTrophiesSeen();showPage('me');meSetTab('overview');setTimeout(()=>{const c=document.getElementById('trophy-cabinet');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});},80)">
-    <span class="tb-medal" style="--tc:${TROPHY_TIER_COL[t.tier]};">${t.ic}</span>
+    <span class="tb-medal" style="--tc:${TROPHY_TIER_COL[t.tier]};">${medalFace(t.ic)}</span>
     <span class="tb-text"><span class="tb-eyebrow">New trophy${nw.length>1?` · ${nw.length} new`:''}</span><b>${esc(t.name)}</b><span>${esc(t.desc)}</span></span>
     <span class="brief-go">›</span></button>`;
   _celebrateOnce('trophy-'+nw.map(x=>x.id).join(','));
@@ -2073,18 +2219,18 @@ let _tcOpen=false;
 function toggleTrophyCabinet(){_tcOpen=!_tcOpen;const c=document.getElementById('trophy-cabinet');if(c)c.outerHTML=renderTrophyCabinet();}
 function showTrophy(id){
   const t=getTrophies().find(x=>x.id===id);if(!t)return;
-  toastMsg(t.earned?`${t.ic} ${t.name}: earned ${_pbDate(t.earned)}`:`${t.ic} ${t.name}: ${t.progLbl}`);
+  toastMsg(t.earned?`${t.name}: earned ${_pbDate(t.earned)}`:`${t.name}: ${t.progLbl}`);
 }
 function renderTrophyCabinet(){
   const T=getTrophies();const earned=T.filter(t=>t.earned).sort((a,b)=>b.earned.localeCompare(a.earned));
   const next=T.filter(t=>!t.earned&&t.prog>0).sort((a,b)=>b.prog-a.prog).slice(0,3);
-  const medal=t=>`<button class="tc-medal${t.earned?'':' locked'}" style="--tc:${TROPHY_TIER_COL[t.tier]};" onclick="showTrophy('${t.id}')" aria-label="${esc(t.name)}"><span class="tc-ic">${t.ic}</span><span class="tc-n">${esc(t.name)}</span></button>`;
+  const medal=t=>`<button class="tc-medal${t.earned?'':' locked'}" style="--tc:${TROPHY_TIER_COL[t.tier]};" onclick="showTrophy('${t.id}')" aria-label="${esc(t.name)}"><span class="tc-ic">${medalFace(t.ic)}</span><span class="tc-n">${esc(t.name)}</span></button>`;
   const shown=_tcOpen?[...earned,...T.filter(t=>!t.earned)]:earned.slice(0,8);
   markTrophiesSeen();
   return`<div class="chart-card" id="trophy-cabinet">
     <div class="chart-card-header"><span class="chart-card-title">Trophy cabinet</span><span class="chart-card-val">${earned.length} of ${T.length}</span></div>
     ${earned.length?`<div class="tc-grid">${shown.map(medal).join('')}</div>`:'<div class="pb-sub">Your first trophies are a run or two away.</div>'}
-    ${next.length?`<div class="me-sub-h">Next up</div>${next.map(t=>`<div class="tc-next"><span class="tc-next-ic">${t.ic}</span><div style="flex:1;min-width:0;"><div class="tc-next-top"><b>${esc(t.name)}</b><span>${esc(t.progLbl)}</span></div><div class="tc-bar"><div style="width:${(t.prog*100).toFixed(0)}%;background:${TROPHY_TIER_COL[t.tier]};"></div></div></div></div>`).join('')}`:''}
+    ${next.length?`<div class="me-sub-h">Next up</div>${next.map(t=>`<div class="tc-next"><span class="tc-next-ic" style="--tc:${TROPHY_TIER_COL[t.tier]};">${medalFace(t.ic)}</span><div style="flex:1;min-width:0;"><div class="tc-next-top"><b>${esc(t.name)}</b><span>${esc(t.progLbl)}</span></div><div class="tc-bar"><div style="width:${(t.prog*100).toFixed(0)}%;background:${TROPHY_TIER_COL[t.tier]};"></div></div></div></div>`).join('')}`:''}
     <button class="tl-more" onclick="toggleTrophyCabinet()">${_tcOpen?'Show fewer':`See all ${T.length} trophies`}</button>
   </div>`;
 }
@@ -2110,36 +2256,41 @@ async function shareWeek(monStr){
   const S=_weekStats(monStr);
   const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const F=(w,sz)=>`${w} ${sz}px -apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif`;
-  const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#0b0b14');g.addColorStop(1,'#1d1436');x.fillStyle=g;x.fillRect(0,0,W,H);
+  try{await Promise.all(['800 100px "Barlow Condensed"','700 30px "Barlow Condensed"'].map(f=>document.fonts.load(f)));}catch(e){}
+  const D=(w,sz)=>`${w} ${sz}px "Barlow Condensed","Arial Narrow",sans-serif`;
+  const F=(w,sz)=>`${w} ${sz}px -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif`;
+  const VOLT='#d4ff3a';
+  x.fillStyle='#0c0c0b';x.fillRect(0,0,W,H);
   const glow=(cx,cy,r,col)=>{const rg=x.createRadialGradient(cx,cy,0,cx,cy,r);rg.addColorStop(0,col);rg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=rg;x.fillRect(0,0,W,H);};
-  glow(980,120,520,'rgba(47,212,230,0.22)');glow(80,1250,560,'rgba(155,133,255,0.20)');
-  x.fillStyle='rgba(255,255,255,0.55)';x.font=F(700,30);x.fillText(`WEEK OF ${S.mon.toLocaleDateString('en-GB',{day:'numeric',month:'long'}).toUpperCase()}`,80,120);
-  x.fillStyle='#fff';x.font=F(800,76);x.fillText(state.userName?`${state.userName}'s week`:'My week',80,205);
-  const stat=(lbl,val,unit,px,py)=>{x.fillStyle='rgba(255,255,255,0.55)';x.font=F(700,28);x.fillText(lbl.toUpperCase(),px,py);
-    x.fillStyle='#fff';x.font=F(800,104);x.fillText(val,px,py+104);const w=x.measureText(val).width;if(unit){x.font=F(700,40);x.fillStyle='rgba(255,255,255,0.7)';x.fillText(unit,px+w+12,py+104);}};
+  glow(1000,80,560,'rgba(212,255,58,0.16)');
+  // bib perforation along the top
+  x.fillStyle=VOLT;for(let i=0;i<W;i+=52)x.fillRect(i,0,36,14);
+  x.fillStyle='rgba(255,255,255,0.55)';x.font=D(700,36);x.fillText(`WEEK OF ${S.mon.toLocaleDateString('en-GB',{day:'numeric',month:'long'}).toUpperCase()}`,80,118);
+  x.fillStyle='#f5f3ec';x.font=D(800,118);x.fillText((state.userName?`${state.userName}'s week`:'My week').toUpperCase(),74,226);
+  const stat=(lbl,val,unit,px,py,hi)=>{x.fillStyle='rgba(255,255,255,0.55)';x.font=D(700,34);x.fillText(lbl.toUpperCase(),px,py);
+    x.fillStyle=hi?VOLT:'#f5f3ec';x.font=D(800,150);x.fillText(val,px-4,py+138);const w=x.measureText(val).width;if(unit){x.font=D(700,48);x.fillStyle='rgba(255,255,255,0.7)';x.fillText(unit.toUpperCase(),px+w+8,py+138);}};
   const h=Math.floor(S.secs/3600),m=Math.round(S.secs%3600/60);
-  stat('Distance',(Math.round(S.km*10)/10).toLocaleString('en-GB'),'km',80,330);
-  stat('Time',S.secs?(h?`${h}h ${m}m`:`${m}m`):'0m','',580,330);
-  stat('Runs',String(S.runs.length),'',80,560);
-  stat('Gym',String(S.gym.length),S.gym.length===1?'session':'sessions',580,560);
+  stat('Distance',(Math.round(S.km*10)/10).toLocaleString('en-GB'),'km',80,320,true);
+  stat('Time',S.secs?(h?`${h}h ${m}m`:`${m}m`):'0m','',580,320);
+  stat('Runs',String(S.runs.length),'',80,545);
+  stat('Gym',String(S.gym.length),S.gym.length===1?'session':'sessions',580,545);
   // Day bars
   const top=800,bh=230,bw=92,gap=(W-160-7*bw)/6,mx=Math.max(10,...S.days.map(d=>d.km));
   const effCol={Easy:css('--c-easy')||'#45d39a',Recovery:css('--c-easy')||'#45d39a','Long Run':css('--c-long')||'#7fa2ff',Tempo:css('--c-tempo')||'#f0a050',Intervals:css('--c-int')||'#ff6b70',Race:css('--c-race')||'#d77be6'};
   S.days.forEach((d,i)=>{const bx=80+i*(bw+gap);
     x.fillStyle='rgba(255,255,255,0.07)';x.beginPath();x.roundRect(bx,top,bw,bh,18);x.fill();
     if(d.km>0){const hh=Math.max(14,bh*d.km/mx);x.fillStyle=effCol[d.eff]||'#2fd4e6';x.beginPath();x.roundRect(bx,top+bh-hh,bw,hh,18);x.fill();
-      x.fillStyle='#fff';x.font=F(800,30);x.textAlign='center';x.fillText(String(Math.round(d.km)),bx+bw/2,top+bh-hh-14);x.textAlign='left';}
+      x.fillStyle='#fff';x.font=D(800,40);x.textAlign='center';x.fillText(String(Math.round(d.km)),bx+bw/2,top+bh-hh-14);x.textAlign='left';}
     if(d.gym.length){x.fillStyle='rgba(255,255,255,0.9)';x.beginPath();x.roundRect(bx+bw/2-22,top+bh+18,44,44,10);x.fill();x.fillStyle='#1d1436';x.font=F(800,22);x.textAlign='center';x.fillText((TL_GYM_LETTER[d.gym[0]]||'G'),bx+bw/2,top+bh+48);x.textAlign='left';}
-    x.fillStyle='rgba(255,255,255,0.55)';x.font=F(700,28);x.textAlign='center';x.fillText('MTWTFSS'[i],bx+bw/2,top+bh+104);x.textAlign='left';});
+    x.fillStyle='rgba(255,255,255,0.55)';x.font=D(700,34);x.textAlign='center';x.fillText('MTWTFSS'[i],bx+bw/2,top+bh+104);x.textAlign='left';});
   // Highlights
   const hl=[];
   if(S.longest)hl.push(`Longest run ${fmtKm(S.longest.km)} km`);
   if(S.habitsPct!=null)hl.push(`Habits ${S.habitsPct}%`);
-  S.trophies.slice(0,2).forEach(t=>hl.push(`🏆 ${t.name}`));
+  S.trophies.slice(0,2).forEach(t=>hl.push(`Trophy: ${t.name}`));
   x.font=F(700,34);let hx=80;const hy=1205;
   hl.slice(0,3).forEach(t=>{const w=x.measureText(t).width+44;if(hx+w>W-80)return;x.fillStyle='rgba(255,255,255,0.1)';x.beginPath();x.roundRect(hx,hy-46,w,64,32);x.fill();x.fillStyle='#fff';x.fillText(t,hx+22,hy-2);hx+=w+14;});
-  x.fillStyle='rgba(255,255,255,0.4)';x.font=F(700,26);x.fillText('TRACKER',80,H-60);
+  x.fillStyle=VOLT;x.font=D(800,34);x.fillText('TRACKER',80,H-60);
   const blob=await new Promise(r=>c.toBlob(r,'image/png'));if(!blob){toastMsg('Could not make the image');return;}
   const file=new File([blob],`week-${monStr}.png`,{type:'image/png'});
   try{
@@ -2176,7 +2327,7 @@ function renderRaceMode(){
   const runs=loadRunData();
   if(d<0){
     const logged=runs.some(x=>x.date===r.date);
-    el.innerHTML=d>=-3&&!logged?`<button class="rm-after" onclick="showPage('train');switchTrainTab('run');selectRunDay('${r.date}');setTimeout(()=>selectEffort('Race'),60)"><span class="rm-flag">🏁</span><span><b>How did ${esc(r.name||'the race')} go?</b><span>Log your result and your predictions, PBs and trophies update.</span></span><span class="brief-go">›</span></button>`:'';
+    el.innerHTML=d>=-3&&!logged?`<button class="rm-after" onclick="showPage('train');switchTrainTab('run');selectRunDay('${r.date}');setTimeout(()=>selectEffort('Race'),60)"><span class="rm-flag">${svgIcon('flag',26)}</span><span><b>How did ${esc(r.name||'the race')} go?</b><span>Log your result and your predictions, PBs and trophies update.</span></span><span class="brief-go">›</span></button>`:'';
     return;
   }
   if(d>10){el.innerHTML='';return;}
@@ -2245,7 +2396,7 @@ function renderTodayRings(readiness){
       <circle class="ring-arc" cx="62" cy="62" r="${x.r}" fill="none" stroke="${x.col}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" style="--c:${c.toFixed(1)};--off:${off.toFixed(1)};stroke-dashoffset:${off.toFixed(1)};" transform="rotate(-90 62 62)"/>`;}).join('');
   const all=rings.every(x=>x.d.pct>=0.999);
   const streak=getWeeklyStreak(),ci=_checkinStreak();
-  const chips=[streak>0?`🔥 ${streak} week${streak===1?'':'s'} of targets hit`:'',ci>=3?`☀️ ${ci}-day check-in streak`:''].filter(Boolean);
+  const chips=[streak>0?`${streak} week${streak===1?'':'s'} of targets hit`:'',ci>=3?`${ci}-day check-in streak`:''].filter(Boolean);
   const row=(x,label,action)=>`<button class="ring-row" onclick="${action}"><i style="background:${x.col};"></i><span class="ring-l">${label}</span><b class="ring-v${x.d.cta?' cta':''}">${x.d.val}</b></button>`;
   el.innerHTML=`<div class="rings-card${all?' closed':''}">
     <div class="rings-svg"><svg viewBox="0 0 124 124" width="124" height="124">${svg}</svg>${all?'<div class="rings-done">✓</div>':''}</div>
@@ -2284,32 +2435,32 @@ function getCoachBriefing(){
       const proj=getRaceProjection();const goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
       let t=d===0?`<b>Race day: ${esc(r.name||'your race')}.</b> Trust the taper.`:`<b>${esc(r.name||'Race')} in ${d} day${d===1?'':'s'}.</b>`;
       if(d>0&&proj){const diff=goal?proj.projSecs-goal:null;t+=` Predicted ${proj.projTime}${diff==null?'':Math.abs(diff)<30?', right on your goal':diff<0?`, ${fmtDurationFromSecs(-diff)} inside your goal`:`, ${fmtDurationFromSecs(diff)} off your goal`}.`;}
-      out.push({ic:'🏁',t,go:"showPage('trends');switchTrendsTab('running')"});
+      out.push({ic:'flag',t,go:"showPage('trends');switchTrendsTab('running')"});
     }
   }
   const yw=getYearGoalWeek();
   if(yw&&yw.target>0){
-    if(yw.leftKm<=0)out.push({ic:'✅',t:`<b>Week's running done:</b> ${fmtKm(yw.weekKm)} of ${Math.round(yw.target)} km.`,go:"showPage('train');switchTrainTab('run')"});
+    if(yw.leftKm<=0)out.push({ic:'check',t:`<b>Week's running done:</b> ${fmtKm(yw.weekKm)} of ${Math.round(yw.target)} km.`,go:"showPage('train');switchTrainTab('run')"});
     else{
       const parts=yw.open.map(x=>`${Math.round(x.left)} ${x.type.toLowerCase()}`);
       const why=yw.race&&yw.note&&yw.note.startsWith('Race week')?' Race week, so keep it easy.':yw.race&&yw.target<yw.rawTarget?' Taper week, so less is more.':yw.target<yw.rawTarget?' Capped to keep the build safe.':'';
-      out.push({ic:'🏃',t:`<b>${fmtKm(yw.leftKm)} km left this week</b>${parts.length?`: ${parts.join(', ')}`:''}.${why}`,go:"showPage('train');switchTrainTab('run')"});
+      out.push({ic:'run',t:`<b>${fmtKm(yw.leftKm)} km left this week</b>${parts.length?`: ${parts.join(', ')}`:''}.${why}`,go:"showPage('train');switchTrainTab('run')"});
     }
   }
   const gym=loadGymData();const lastGym=gym.length?gym[gym.length-1].date:null;
   const gymGap=lastGym?Math.round((new Date(td+'T12:00:00')-new Date(lastGym+'T12:00:00'))/864e5):null;
   if(gymGap!=null&&gymGap>=14&&!(r&&r.date&&daysUntil(r.date)>=0&&daysUntil(r.date)<=7)){
-    out.push({ic:'🏋️',t:`<b>${gymGap} days since the gym.</b> One short session keeps the strength you built${gymGap>=28?'; two weeks back gets most of it back':''}.`,go:"showPage('train');switchTrainTab('gym')"});
+    out.push({ic:'dumbbell',t:`<b>${gymGap} days since the gym.</b> One short session keeps the strength you built${gymGap>=28?'; two weeks back gets most of it back':''}.`,go:"showPage('train');switchTrainTab('gym')"});
   }
   const health=loadHealthData();const lastW=health.filter(h=>h.weight).slice(-1)[0];
   if(lastW){
     const gap=Math.round((new Date(td+'T12:00:00')-new Date(lastW.date+'T12:00:00'))/864e5);
     const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
-    if(gap>=7)out.push({ic:'⚖️',t:`<b>No weigh-in for ${gap} days.</b>${goalW?` Last ${lastW.weight} kg, goal ${goalW} kg.`:''}`,go:"showPage('trends');switchTrendsTab('wellness')"});
+    if(gap>=7)out.push({ic:'scale',t:`<b>No weigh-in for ${gap} days.</b>${goalW?` Last ${lastW.weight} kg, goal ${goalW} kg.`:''}`,go:"showPage('trends');switchTrendsTab('wellness')"});
   }
   const vape=getNicotineSummary();
-  if(vape&&vape.lastGap>=2)out.push({ic:'💨',t:`<b>Nicotine not logged for ${vape.lastGap} days.</b>${vape.trendPct!=null&&vape.trendPct<0?` You were down ${-vape.trendPct}% on the month before.`:''}`,go:"showPage('trends');switchTrendsTab('wellness')"});
-  else if(vape&&vape.trendPct!=null&&vape.trendPct<=-10)out.push({ic:'💨',t:`<b>Puffs down ${-vape.trendPct}%</b> over the last two weeks compared with the two before. Keep chipping away.`,go:"showPage('trends');switchTrendsTab('wellness')"});
+  if(vape&&vape.lastGap>=2)out.push({ic:'wind',t:`<b>Nicotine not logged for ${vape.lastGap} days.</b>${vape.trendPct!=null&&vape.trendPct<0?` You were down ${-vape.trendPct}% on the month before.`:''}`,go:"showPage('trends');switchTrendsTab('wellness')"});
+  else if(vape&&vape.trendPct!=null&&vape.trendPct<=-10)out.push({ic:'wind',t:`<b>Puffs down ${-vape.trendPct}%</b> over the last two weeks compared with the two before. Keep chipping away.`,go:"showPage('trends');switchTrendsTab('wellness')"});
   return out.slice(0,4);
 }
 // Puffs a day: recent 14-day average against the 14 days before.
@@ -2325,7 +2476,7 @@ function getNicotineSummary(){
 function renderTodayBrief(){
   const el=document.getElementById('today-brief');if(!el)return;
   const lines=getCoachBriefing();
-  el.innerHTML=lines.length?`<div class="brief-card"><div class="brief-h">Coach</div>${lines.map(l=>`<button class="brief-line" onclick="${l.go}"><span class="brief-ic">${l.ic}</span><span class="brief-t">${l.t}</span><span class="brief-go">›</span></button>`).join('')}</div>`:'';
+  el.innerHTML=lines.length?`<div class="brief-card"><div class="brief-h">Coach</div>${lines.map(l=>`<button class="brief-line" onclick="${l.go}"><span class="brief-ic">${svgIcon(l.ic,18)}</span><span class="brief-t">${l.t}</span><span class="brief-go">›</span></button>`).join('')}</div>`:'';
 }
 
 function renderToday(){
@@ -2956,7 +3107,7 @@ function renderGymTypeSelector(){
       ${isPlannedGymDay?`<button onclick="gymBackToPlan()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0;margin-bottom:10px;">← Back to today's plan (${esc(planType)})</button>`:''}
       <div class="chart-card-header"><span class="chart-card-title">Select Session Type</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-        ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent)'):'var(--border)'};background:${_gymPickedType===t?(t==='Makeup'?'rgba(210,153,34,0.15)':'rgba(37,99,235,0.15)'):'var(--surface2)'};color:${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent2)'):'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
+        ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent)'):'var(--border)'};background:${_gymPickedType===t?(t==='Makeup'?'rgba(210,153,34,0.15)':'color-mix(in srgb,var(--accent) 15%,transparent)'):'var(--surface2)'};color:${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent2)'):'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
       </div>
       ${isMakeup?`<div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.5;padding:8px 12px;background:rgba(210,153,34,0.08);border-radius:var(--radius-xs);border:1px solid rgba(210,153,34,0.2);">Loads Push, Pull${state.makeupIncludeLegs?' &amp; Legs':''} exercises not yet done this week</div>
       <button onclick="gymToggleMakeupLegs()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${state.makeupIncludeLegs?'var(--amber)':'var(--border)'};background:${state.makeupIncludeLegs?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${state.makeupIncludeLegs?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;transition:all 0.15s;">Include legs? ${state.makeupIncludeLegs?'— ON':'— OFF'}</button>`:`<button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">⚡ Superset mode${_gymSupersetMode?' — ON':''}</button>
@@ -3076,7 +3227,7 @@ function renderGymLogger(){
   const lastSame=sessions.filter(s=>s.type===gymDraft.type).slice(-1)[0];
   const prog=loadGymProg();
   el.innerHTML=`
-  <div class="chart-card" style="margin-bottom:10px;background:linear-gradient(135deg,rgba(37,99,235,0.12) 0%,rgba(37,99,235,0.04) 100%);border-color:rgba(37,99,235,0.3);">
+  <div class="chart-card" style="margin-bottom:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 12%,transparent) 0%,color-mix(in srgb,var(--accent) 4%,transparent) 100%);border-color:color-mix(in srgb,var(--accent) 30%,transparent);">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div>
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:${gymDraft.superset?'var(--amber)':'var(--accent2)'};margin-bottom:4px;">${gymDraft.superset?'⚡ Superset session':'Session in progress'}</div>
@@ -3090,7 +3241,7 @@ function renderGymLogger(){
     <div id="gym-type-edit" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
       <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Select new type</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
-        ${['Push','Pull','Legs','Core','Custom'].map(t=>`<button onclick="gymConfirmTypeChange('${t}')" style="padding:10px 6px;border-radius:var(--radius-xs);border:2px solid ${gymDraft.type===t?'var(--accent)':'var(--border)'};background:${gymDraft.type===t?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${gymDraft.type===t?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">${t}</button>`).join('')}
+        ${['Push','Pull','Legs','Core','Custom'].map(t=>`<button onclick="gymConfirmTypeChange('${t}')" style="padding:10px 6px;border-radius:var(--radius-xs);border:2px solid ${gymDraft.type===t?'var(--accent)':'var(--border)'};background:${gymDraft.type===t?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${gymDraft.type===t?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">${t}</button>`).join('')}
       </div>
       <button onclick="gymHideTypeEdit()" style="width:100%;padding:8px;border-radius:var(--radius-xs);border:1px solid var(--border);background:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
     </div>
@@ -3098,7 +3249,7 @@ function renderGymLogger(){
   ${renderGymScoreboard()}
   ${lastSame?`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px;">
     <div style="font-size:12px;color:var(--text3);font-weight:600;">Last ${esc(gymDraft.type)}: ${lastSame.date} · ${(lastSame.exercises||[]).length} ex</div>
-    <button onclick="copyLastSameSession()" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.12);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Copy this</button>
+    <button onclick="copyLastSameSession()" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Copy this</button>
   </div>`:''}
   ${gymDraft.superset?renderSupersetExercisesHtml(lastSame,prog,sessions):renderGymFocusFlow(lastSame,prog,sessions)}
   <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
@@ -3200,7 +3351,7 @@ function _renderNewExRest(active){
   document.getElementById('new-ex-rest').innerHTML=opts.map(s=>{
     const lbl=s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s';
     const sel=active===s;
-    return`<button onclick="_setNewExRest(${s})" style="padding:8px 16px;border-radius:12px;border:2px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${sel?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${lbl}</button>`;
+    return`<button onclick="_setNewExRest(${s})" style="padding:8px 16px;border-radius:12px;border:2px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${sel?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${lbl}</button>`;
   }).join('');
 }
 function _setNewExRest(s){_newExRestSecs=s;_renderNewExRest(s);}
@@ -3208,7 +3359,7 @@ function _renderNewExCategory(active){
   const cats=[{v:'push',l:'Push'},{v:'pull',l:'Pull'},{v:'legs',l:'Legs'},{v:'custom',l:'Custom'}];
   document.getElementById('new-ex-category').innerHTML=cats.map(c=>{
     const sel=active===c.v;
-    return`<button onclick="_setNewExCategory('${c.v}')" style="padding:8px 16px;border-radius:12px;border:2px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${sel?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${c.l}</button>`;
+    return`<button onclick="_setNewExCategory('${c.v}')" style="padding:8px 16px;border-radius:12px;border:2px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${sel?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${c.l}</button>`;
   }).join('');
 }
 function _setNewExCategory(v){_newExCategory=v;_newExCategoryTouched=true;_renderNewExCategory(v);}
@@ -3414,7 +3565,7 @@ function renderSupersetExercisesHtml(lastSame,prog,sessions){
     return`<div style="border:1px solid rgba(210,153,34,0.3);border-radius:12px;padding:14px;margin-bottom:12px;background:rgba(210,153,34,0.04);">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--amber);margin-bottom:10px;">⚡ Superset ${pi+1}</div>
       <div style="border-left:3px solid var(--accent);padding-left:12px;margin-bottom:8px;position:relative;">
-        <div style="position:absolute;left:-11px;top:12px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:white;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">A</div>
+        <div style="position:absolute;left:-11px;top:12px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">A</div>
         ${renderExBlock(exA,iA,lastSame,prog,sessions,true)}
       </div>
       ${exB?`<div style="border-left:3px solid var(--green);padding-left:12px;margin-bottom:10px;position:relative;">
@@ -3584,7 +3735,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       ${trend?`<div style="padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:${trend.col};font-size:11px;font-weight:800;">${trend.label}</div>`:''}
     </div>`:''}
     ${lastSets.length?`<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:5px;">Last Trained${lastDateStr?` · ${lastDateStr}`:''}</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${lastSets.map(s=>`<span style="padding:4px 9px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);">${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}</span>`).join('')}</div></div>`:''}
-    ${focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&gymSetFilled(s,ex.name))?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
+    ${focusMode&&lastSets.length&&!(ex.sets||[]).some(s=>!s.warmup&&gymSetFilled(s,ex.name))?`<button onclick="gymFillFromLast(${i})" style="width:100%;padding:9px;margin-bottom:10px;background:color-mix(in srgb,var(--accent) 8%,transparent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Same as last time? Fill ${lastSets.length} set${lastSets.length!==1?'s':''}</button>`:''}
     ${ex._why?`<div class="gc-why">Added to the plan: ${esc(ex._why)}</div>`:''}
     ${liftT?`<div id="ex-hint-${i}" class="lift-target" style="--lt:${liftT.col};"><b>${liftT.tag}</b> ${targetWeight!=null?`${targetWeight}kg × ${liftT.reps} reps`:`${targetReps} reps`}${ex._planSets?` · ${ex._planSets} set${ex._planSets===1?'':'s'}`:''} <span>${liftT.note}</span></div>`:ex._planSets?`<div id="ex-hint-${i}" class="lift-target" style="--lt:var(--green);"><b>Plan</b> ${ex._planSets} set${ex._planSets===1?'':'s'}</div>`:`<div id="ex-hint-${i}"></div>`}
     ${focusMode?(()=>{
@@ -3620,7 +3771,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
         const flagBg=s.warmup?'rgba(194,80,0,0.15)':s.technique?'rgba(158,61,251,0.15)':done?'rgba(8,132,91,0.15)':'var(--surface2)';
         const flagBorder=s.warmup?'rgba(194,80,0,0.5)':s.technique?'rgba(158,61,251,0.5)':done?'rgba(8,132,91,0.4)':'var(--border)';
         const border=isActive?'2px solid var(--accent)':s.warmup?'1px solid rgba(194,80,0,0.35)':s.technique?'1px solid rgba(158,61,251,0.35)':done?'1px solid rgba(8,132,91,0.35)':'1px dashed var(--border)';
-        const bg=isActive?'rgba(37,99,235,0.06)':s.warmup?'rgba(194,80,0,0.04)':s.technique?'rgba(158,61,251,0.04)':done?'rgba(8,132,91,0.05)':'transparent';
+        const bg=isActive?'color-mix(in srgb,var(--accent) 6%,transparent)':s.warmup?'rgba(194,80,0,0.04)':s.technique?'rgba(158,61,251,0.04)':done?'rgba(8,132,91,0.05)':'transparent';
         return`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:8px;border:${border};background:${bg};margin-bottom:5px;">
           <div onclick="gymKpSelectSet(${i},${si})" style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;cursor:pointer;">
             <button onclick="event.stopPropagation();gymCycleSetFlag(${i},${si})" title="${s.warmup?'Warmup':s.technique?'Technique — still counts as training, excluded from PR trend':'Tap to mark warmup'}" style="width:22px;height:22px;border-radius:6px;border:1px solid ${flagBorder};background:${flagBg};color:${col};font-size:10px;font-weight:800;cursor:pointer;flex-shrink:0;padding:0;">${s.warmup?'W':s.technique?'T':done?'✓':si+1}</button>
@@ -3677,7 +3828,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
     </div>${ghostLine}`;}).join('')}
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button onclick="gymAddSet(${i})" style="flex:1;padding:8px;background:none;border:1px dashed var(--border);border-radius:var(--radius-xs);color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Set</button>
-      ${hideRest?'':`<button onclick="startRestTimer(${_restSecs})" style="padding:8px 14px;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${_restSecs>=60?Math.floor(_restSecs/60)+'m'+(_restSecs%60?_restSecs%60+'s':''):_restSecs+'s'} rest</button>`}
+      ${hideRest?'':`<button onclick="startRestTimer(${_restSecs})" style="padding:8px 14px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:var(--radius-xs);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;" title="Rest timer">${_restSecs>=60?Math.floor(_restSecs/60)+'m'+(_restSecs%60?_restSecs%60+'s':''):_restSecs+'s'} rest</button>`}
     </div>
     ${renderPlateCalc((ex.sets||[]).filter(s=>!s.warmup).reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b||0)?parseFloat(s.weight):b,0))}
     `}
@@ -3795,7 +3946,7 @@ function renderGymKeypad(draft){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 68px;gap:6px;">
       ${digit('1')}${digit('2')}${digit('3')}
-      <button onclick="gymKpLogSet()" style="grid-row:span 4;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;line-height:1.3;">Log<br>set</button>
+      <button onclick="gymKpLogSet()" style="grid-row:span 4;background:var(--accent);color:var(--on-accent);border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;line-height:1.3;">Log<br>set</button>
       ${digit('4')}${digit('5')}${digit('6')}
       ${digit('7')}${digit('8')}${digit('9')}
       ${digit('.')}${digit('0')}<button onclick="gymKpBackspace()" style="${btnStyle}">⌫</button>
@@ -3877,8 +4028,8 @@ function updateProgressHint(i){
     const top=ls.length?(hasWeight
       ?ls.reduce((b,s)=>parseFloat(s.weight||0)>parseFloat(b.weight||0)?s:b,ls[0])
       :ls.reduce((b,s)=>parseFloat(s.reps||0)>parseFloat(b.reps||0)?s:b,ls[0])):null;
-    if(top&&top.weight&&hasWeight)hintEl.innerHTML=`<div style="font-size:11px;color:var(--accent2);font-weight:700;padding:6px 10px;background:rgba(37,99,235,0.08);border-radius:8px;">Last: ${top.weight}kg × ${top.reps||'?'} — try ${Math.round((parseFloat(top.weight)+2.5)*2)/2}kg</div>`;
-    else if(top&&top.reps)hintEl.innerHTML=`<div style="font-size:11px;color:var(--accent2);font-weight:700;padding:6px 10px;background:rgba(37,99,235,0.08);border-radius:8px;">Last: ${top.reps} reps — try ${parseFloat(top.reps)+1}</div>`;
+    if(top&&top.weight&&hasWeight)hintEl.innerHTML=`<div style="font-size:11px;color:var(--accent2);font-weight:700;padding:6px 10px;background:color-mix(in srgb,var(--accent) 8%,transparent);border-radius:8px;">Last: ${top.weight}kg × ${top.reps||'?'} — try ${Math.round((parseFloat(top.weight)+2.5)*2)/2}kg</div>`;
+    else if(top&&top.reps)hintEl.innerHTML=`<div style="font-size:11px;color:var(--accent2);font-weight:700;padding:6px 10px;background:color-mix(in srgb,var(--accent) 8%,transparent);border-radius:8px;">Last: ${top.reps} reps — try ${parseFloat(top.reps)+1}</div>`;
     else hintEl.innerHTML='';
   }else hintEl.innerHTML='';
 }
@@ -4050,7 +4201,7 @@ function renderRunSection(){
     const isFuture=date>now;
     const isActive=ds===_runLogDate;
     const dayRun=runs.filter(r=>r.date===ds).pop();const hasRun=!!dayRun;
-    return`<button onclick="selectRunDay('${ds}')" ${isFuture?'disabled':''} style="flex:1;padding:8px 2px;border-radius:8px;border:2px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${isFuture?'var(--text3)':isActive?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:11px;font-weight:800;cursor:${isFuture?'default':'pointer'};opacity:${isFuture?0.3:1};transition:all 0.15s;position:relative;">
+    return`<button onclick="selectRunDay('${ds}')" ${isFuture?'disabled':''} style="flex:1;padding:8px 2px;border-radius:8px;border:2px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${isFuture?'var(--text3)':isActive?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:11px;font-weight:800;cursor:${isFuture?'default':'pointer'};opacity:${isFuture?0.3:1};transition:all 0.15s;position:relative;">
       <div style="font-size:8px;font-weight:800;text-transform:uppercase;color:inherit;margin-bottom:2px;">${d}</div>
       <div style="font-size:13px;font-weight:800;">${date.getDate()}</div>
       ${hasRun&&!isFuture?`<div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:${effortStyle(_tlEffortKey(dayRun.effort)).text};"></div>`:''}
@@ -4136,7 +4287,7 @@ function selectEffort(e){
   document.querySelectorAll('[id^="eff-"]').forEach(b=>{
     const a=b.id===`eff-${selectedEffort.replace(' ','-')}`;
     b.style.background=a?'var(--accent)':'transparent';
-    b.style.color=a?'white':'var(--text2)';
+    b.style.color=a?'var(--on-accent)':'var(--text2)';
     b.style.borderColor=a?'var(--accent)':'var(--border)';
   });
   if(selectedEffort){const c=document.getElementById('effort-container');if(c)c.style.borderColor='transparent';}
@@ -5093,7 +5244,9 @@ function _runPaceSecs(r){const s=parseTimeToSecs(r.time),k=parseFloat(r.km)||0;i
 // one zig-zag between them.
 function renderPaceTrendCard(runs){
   const pts={easy:[],quality:[]};
-  runs.forEach(r=>{const p=_runPaceSecs(r);if(p)pts[_runGroup(r.effort)].push({ds:r.date,v:p});});
+  // Marathons and ultras run at their own (much slower) pace, so they'd drag the quality
+  // line around; they're left out of the pace trend.
+  runs.forEach(r=>{const p=_runPaceSecs(r);if(!p)return;const g=_runGroup(r.effort);if(g==='quality'&&_tlEffortKey(r.effort)==='Race'&&+r.km>25)return;pts[g].push({ds:r.date,v:p});});
   const all=[...pts.easy,...pts.quality];
   if(all.length<4)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Pace trend</span></div><div class="empty-state" style="padding:16px 0 0;">Log a few more timed runs to see your pace trend.</div></div>`;
   const days=_trendDays(all);const backDays=Math.min(84,days-28);
@@ -5369,7 +5522,7 @@ function renderTrendsRunAnalysis(){
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      ${avgPace?`<span style="padding:4px 10px;border-radius:20px;background:rgba(37,99,235,0.12);color:var(--accent2);font-size:11px;font-weight:700;">avg ${fmtPace(avgPace)}</span>`:''}
+      ${avgPace?`<span style="padding:4px 10px;border-radius:20px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent2);font-size:11px;font-weight:700;">avg ${fmtPace(avgPace)}</span>`:''}
       ${bestPace?`<span style="padding:4px 10px;border-radius:20px;background:rgba(8,132,91,0.12);color:var(--green);font-size:11px;font-weight:700;">best ${fmtPace(bestPace)}</span>`:''}
     </div>
   </div>`;
@@ -5608,7 +5761,7 @@ function renderMuscleBalanceCard(gym,weekCount){
       ${qhMsg?insightPill(qhMsg.msg,qhMsg.col):''}
       ${freqMsg?insightPill(freqMsg.msg,freqMsg.col):''}
       ${notHitThisWeek.length>0&&twGymSessions.length>0?insightPill(`Not hit this week: ${notHitThisWeek.join(', ')}`, 'var(--text3)'):''}
-      ${focusSuggestion?`<div style="padding:8px 10px;border-radius:8px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.3);"><div style="font-size:11px;font-weight:700;color:var(--accent2);">→ ${focusSuggestion}</div></div>`:''}
+      ${focusSuggestion?`<div style="padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--accent) 8%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);"><div style="font-size:11px;font-weight:700;color:var(--accent2);">→ ${focusSuggestion}</div></div>`:''}
     </div>
   </div>`;
 }
@@ -6763,7 +6916,7 @@ function renderMe(){
 
   el.innerHTML=tabs+`
     ${renderFitnessAgeCard()}
-    <button class="me-moved" onclick="showPage('trends');switchTrendsTab('wellness')"><span>⚖️ 💨</span><span><b>Weight, body fat &amp; nicotine</b> now live in Trends → Wellness, alongside sleep and recovery.</span><span class="brief-go">›</span></button>
+    <button class="me-moved" onclick="showPage('trends');switchTrendsTab('wellness')"><span>${svgIcon('scale',22)}</span><span><b>Weight, body fat &amp; nicotine</b> now live in Trends → Wellness, alongside sleep and recovery.</span><span class="brief-go">›</span></button>
     ${renderRaceSection()}
     ${renderWeekPlanSection()}
     ${renderCustomGoalsList()}
@@ -6830,7 +6983,7 @@ function renderMeOverview(){
 // Three numbers that sum up current fitness, each opening the card it comes from.
 function renderMeSnapshot(){
   const fm=getFitnessModel(),hist=getFffHistory(),log=getVo2Log();
-  const tile=(label,val,sub,col,onclick)=>`<button class="me-snap" onclick="${onclick}"><span>${label}</span><b style="${col?`color:${col};`:''}">${val}</b><em>${sub}</em></button>`;
+  const tile=(label,val,sub,col,onclick)=>`<button class="me-snap" onclick="${onclick}"><span>${label}</span><b class="${isNaN(parseFloat(val))&&String(val).length>5?'w':''}" style="${col?`color:${col};`:''}">${val}</b><em>${sub}</em></button>`;
   const tiles=[];
   if(fm){const c=fm.ago!=null?fm.now-fm.ago:null;tiles.push(tile('VO2max',fm.now.toFixed(1),c==null?'estimate':Math.abs(c)<0.3?'steady':`${c>0?'▲':'▼'} ${Math.abs(c).toFixed(1)} in 4 wks`,null,"showPage('trends');switchTrendsTab('running')"));}
   else if(log.length){const L=log[log.length-1];tiles.push(tile('VO2max',L.vo2,'from Garmin',null,"meSetTab('body')"));}
@@ -7036,7 +7189,7 @@ function renderBodyCompCard(health){
   const wAvg7=withW.length>1?rollingRate(withW,'weight',parseDate(withW[withW.length-1].date)).now:null;
   const bAvg7=withBf.length>1?rollingRate(withBf,'bodyFat',parseDate(withBf[withBf.length-1].date)).now:null;
   if(!latestW&&!latestBf){
-    return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div>
+    return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">${renderBodyCompGoalInner(health)}</div>
     </div>`;
   }
@@ -7084,7 +7237,7 @@ function renderBodyCompCard(health){
     <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);margin-bottom:12px;padding-bottom:12px;">
       <div>${latestW?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestW.weight}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Weight</div>${wAvg7!=null?`<div style="font-size:12px;font-weight:700;color:var(--text2);margin-top:3px;">7-day avg ${wAvg7.toFixed(1)}kg</div>`:''}`:'<div style="font-size:13px;color:var(--text3);">No weight yet</div>'}</div>
       <div style="text-align:right;">${latestBf?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestBf.bodyFat}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:2px;">%</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Body Fat</div>${bAvg7!=null?`<div style="font-size:12px;font-weight:700;color:var(--text2);margin-top:3px;">7-day avg ${bAvg7.toFixed(1)}%</div>`:''}`:'<div style="font-size:13px;color:var(--text3);">No body fat yet</div>'}
-        <button onclick="openHealthModal()" style="margin-top:6px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
+        <button onclick="openHealthModal()" style="margin-top:6px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
       </div>
     </div>
     ${chart}
@@ -7225,7 +7378,7 @@ function renderVapingSection(){
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header">
       <span class="chart-card-title">Nicotine</span>
-      <button onclick="openVapingModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
+      <button onclick="openVapingModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
     </div>
     ${data.length?`
       <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;">
@@ -7622,8 +7775,8 @@ function renderRaceSection(){
     <div style="font-size:36px;font-weight:800;letter-spacing:-2px;color:${days<=14?'var(--red)':days<=42?'var(--orange)':'var(--text)'};">${days>=0?days:'Past'}<span style="font-size:16px;color:var(--text2);font-weight:600;"> days</span></div>
     <div style="font-size:13px;color:var(--text3);margin-top:4px;">${r.date}${r.km?' · '+fmtKm(r.km)+'km':''}</div>
     ${(r.goalTime||goalPace)?`<div style="display:flex;gap:8px;margin-top:10px;">
-      ${r.goalTime?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal time: ${esc(r.goalTime)}</span>`:''}
-      ${goalPace?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:rgba(37,99,235,0.1);padding:4px 10px;border-radius:10px;">Goal pace: ${goalPace}</span>`:''}
+      ${r.goalTime?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:color-mix(in srgb,var(--accent) 10%,transparent);padding:4px 10px;border-radius:10px;">Goal time: ${esc(r.goalTime)}</span>`:''}
+      ${goalPace?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:color-mix(in srgb,var(--accent) 10%,transparent);padding:4px 10px;border-radius:10px;">Goal pace: ${goalPace}</span>`:''}
     </div>`:''}
     ${projHtml}
     ${planHtml}
@@ -7642,7 +7795,7 @@ function renderCustomGoalsList(){
     ${editable?`<button onclick="openGoalModal('${esc(g.id)}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>`:`<span style="font-size:10px;font-weight:700;color:var(--text3);padding:3px 8px;border-radius:8px;background:var(--surface2);flex-shrink:0;">Built-in</span>`}
   </div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Goals</span><button onclick="openGoalModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button></div>
+    <div class="chart-card-header"><span class="chart-card-title">Goals</span><button onclick="openGoalModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button></div>
     ${allG.map(g=>row(g,!!(state.customGoals||[]).find(c=>c.id===g.id))).join('')}
   </div>`;
 }
@@ -10807,7 +10960,7 @@ function renderWeekPlanSection(){
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header">
       <span class="chart-card-title">Training Plan</span>
-      <button onclick="toggleWeekPlanEditor()" id="wplan-edit-btn" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">${plan?'Edit':'Set Plan'}</button>
+      <button onclick="toggleWeekPlanEditor()" id="wplan-edit-btn" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">${plan?'Edit':'Set Plan'}</button>
     </div>
     ${plan?`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">${summary}</div>`:`<div style="font-size:13px;color:var(--text3);padding:4px 0 8px;">No plan set. Tap Set Plan to assign workout types to each day.</div>`}
     ${(()=>{const c=getTemplateConflicts();return c.length?`<div class="plan-checks"><div class="plan-checks-h">Plan check</div>${c.map(x=>`<p>${esc(x.text)}</p>`).join('')}</div>`:(plan?`<div class="plan-checks ok">Plan check: no clashes between runs and leg days.${legsByRunning()?' Legs are covered by running, so the gym rotation is Push/Pull.':''}</div>`:'');})()}
@@ -11198,7 +11351,7 @@ function renderExerciseLibrary(){
     <div class="chart-card" style="margin-bottom:10px;">
       <div class="chart-card-header">
         <span class="chart-card-title">Exercise Library</span>
-        <button onclick="openLibraryAddEx()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:rgba(37,99,235,0.1);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button>
+        <button onclick="openLibraryAddEx()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button>
       </div>
       <input id="lib-search" class="modal-input" placeholder="Search exercises…" style="margin-bottom:12px;" oninput="renderExerciseLibrary()" value="${esc(searchVal)}">
       ${sections||`<div style="font-size:13px;color:var(--text3);padding:12px 0;">No exercises found.</div>`}
@@ -11232,7 +11385,7 @@ function openExerciseEdit(name){
   const restHtml=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:8px;">Default Rest Timer</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      ${restOptions.map(s=>{const lbl=s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s';return`<button id="rest-opt-${s}" onclick="libSetRest(${s})" style="padding:7px 14px;border-radius:12px;border:2px solid ${restSecs===s?'var(--accent)':'var(--border)'};background:${restSecs===s?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${restSecs===s?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${lbl}</button>`;}).join('')}
+      ${restOptions.map(s=>{const lbl=s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s';return`<button id="rest-opt-${s}" onclick="libSetRest(${s})" style="padding:7px 14px;border-radius:12px;border:2px solid ${restSecs===s?'var(--accent)':'var(--border)'};background:${restSecs===s?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${restSecs===s?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${lbl}</button>`;}).join('')}
     </div>
   </div>`;
   const existing=document.getElementById('lib-rest-selector');
@@ -11245,7 +11398,7 @@ function openExerciseEdit(name){
   const catHtml=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:8px;">Workout Type</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      ${cats.map(c=>`<button id="cat-opt-${c.v}" onclick="libSetCategory('${c.v}')" style="padding:7px 14px;border-radius:12px;border:2px solid ${_libCategory===c.v?'var(--accent)':'var(--border)'};background:${_libCategory===c.v?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${_libCategory===c.v?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${c.l}</button>`).join('')}
+      ${cats.map(c=>`<button id="cat-opt-${c.v}" onclick="libSetCategory('${c.v}')" style="padding:7px 14px;border-radius:12px;border:2px solid ${_libCategory===c.v?'var(--accent)':'var(--border)'};background:${_libCategory===c.v?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${_libCategory===c.v?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${c.l}</button>`).join('')}
     </div>
   </div>`;
   const existingCat=document.getElementById('lib-category-selector');
@@ -11260,7 +11413,7 @@ function libSetCategory(cat){
   document.querySelectorAll('[id^="cat-opt-"]').forEach(btn=>{
     const active=btn.id==='cat-opt-'+cat;
     btn.style.borderColor=active?'var(--accent)':'var(--border)';
-    btn.style.background=active?'rgba(37,99,235,0.15)':'var(--surface2)';
+    btn.style.background=active?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)';
     btn.style.color=active?'var(--accent2)':'var(--text2)';
   });
 }
@@ -11270,7 +11423,7 @@ function libSetRest(secs){
     const s=parseInt(btn.id.replace('rest-opt-',''));
     const active=s===secs;
     btn.style.borderColor=active?'var(--accent)':'var(--border)';
-    btn.style.background=active?'rgba(37,99,235,0.15)':'var(--surface2)';
+    btn.style.background=active?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)';
     btn.style.color=active?'var(--accent2)':'var(--text2)';
   });
 }
@@ -11394,7 +11547,7 @@ function renderMuscleVolume(){
 // ── Session type colour map ──
 const SESSION_TYPE_COL={
   Push:{bg:'rgba(232,14,14,0.12)',border:'rgba(232,14,14,0.35)',text:'var(--c-red)'},
-  Pull:{bg:'rgba(37,99,235,0.12)',border:'rgba(37,99,235,0.35)',text:'var(--accent2)'},
+  Pull:{bg:'color-mix(in srgb,var(--accent) 12%,transparent)',border:'color-mix(in srgb,var(--accent) 35%,transparent)',text:'var(--accent2)'},
   Legs:{bg:'rgba(8,132,91,0.12)',border:'rgba(8,132,91,0.35)',text:'var(--green)'},
   Core:{bg:'rgba(144,109,1,0.12)',border:'rgba(144,109,1,0.35)',text:'var(--c-gold)'},
   Custom:{bg:'rgba(131,78,250,0.12)',border:'rgba(131,78,250,0.35)',text:'var(--c-purple)'},

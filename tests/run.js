@@ -86,6 +86,24 @@ async function planRules(browser,label,mutate){
 }
 
 // Agreements between features that have drifted apart before.
+// Next year: the New Year card, phases from an A race, and weeks past 31 Dec get runs.
+async function nextYear(browser){
+  const {ctx,page,errors}=await boot(browser,d=>{d.state.yearRunGoal.year-=1;d.state.race.priority='B';d.state.extraRaces.push({name:'Far Ultra',date:new Date(Date.now()+150*864e5).toISOString().slice(0,10),km:50,priority:'A'});});
+  const r=await page.evaluate(()=>{
+    renderYearGoalCard();const card=document.getElementById('year-goal-wrap').innerText;
+    const ph=weekPhase(dk(getMonday(today())));
+    startYearGoal(2000);const after=(getYearGoalWeek()||{}).plan;
+    const ext=after&&after.after||[];
+    let planned=null;if(ext.length){const i=after.weeks.length+1;const w=getCalendarWeek(i);planned=w?w.days.reduce((a,d)=>a+d.planned.length,0):0;}
+    return{card,phase:ph&&ph.phase,goal:state.yearRunGoal.year===today().getFullYear(),ext:ext.length,planned};
+  });
+  check(/in the books/i.test(r.card),'New Year card missing when last year\'s goal is over');
+  check(r.phase==='base',`A race 21 weeks out should be base phase, got ${r.phase}`);
+  check(r.goal,'one-tap goal didn\'t set this year\'s goal');
+  if(r.ext)check(r.planned>0,'weeks past 31 Dec have no runs planned');
+  check(errors.length===0,`next year: page errors: ${errors.join(' | ')}`);
+  await ctx.close();
+}
 async function agreements(browser){
   const {ctx,page,errors}=await boot(browser);
   const r=await page.evaluate(()=>{
@@ -125,6 +143,7 @@ async function agreements(browser){
     await planRules(browser,'coach+busy',d=>{d.state.availCustom=true;d.state.avail=[0,1,2,3,4,5,6].map(i=>({run:i!==4,long:i>=5,gym:i===0||i===3}));});
     await planRules(browser,'manual',d=>{d.state.planMode='manual';d.state.weekPlan=['Rest','Run','Run','Run','Rest','Run','Run'];d.state.weekPlanRunType=[null,'Tempo','Easy','Auto','Easy','Easy','Long'];d.state.weekPlanGym=['Push',null,null,'Pull',null,null,null];});
     await agreements(browser);
+    await nextYear(browser);
   }finally{await browser.close();}
   console.log(`${checks-failures.length}/${checks} checks passed`);
   if(failures.length){console.log('\nFAILURES:\n- '+failures.join('\n- '));process.exit(1);}

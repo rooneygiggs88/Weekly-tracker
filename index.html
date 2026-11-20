@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="63">
+<meta name="app-version" content="64">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -2541,12 +2541,11 @@ function getCoachBriefing(){
   }
   const yw=getYearGoalWeek();
   if(yw&&yw.target>0){
-    if(yw.leftKm<=0)out.push({ic:'check',t:`<b>Week's running done:</b> ${fmtKm(yw.weekKm)} of ${Math.round(yw.target)} km.`,go:"showPage('train');switchTrainTab('run')"});
+    if(yw.leftKm<=0)out.push({ic:'check',t:`<b>Week's running done:</b> ${fmtKm(yw.weekKm)} of ${Math.round(yw.target)} km.${coachWeekAdvice(yw,true)}`,go:"showPage('train');switchTrainTab('run')"});
     else{
       const act=yw.active||yw.open;
       const parts=act.length===1?[`your ${Math.round(act[0].left)} km ${act[0].type==='Long'?'long run':act[0].type.toLowerCase()+' run'} ${yw.topUp?`plus ${yw.topUp} km on top`:'covers it'}`]:[...act.map(x=>`${Math.round(x.left)} ${x.type.toLowerCase()}`),...(yw.topUp?[`plus ${yw.topUp} km on top of any run`]:[])];
-      const why=yw.race&&yw.note&&yw.note.startsWith('Race week')?' Race week, so keep it easy.':yw.race&&yw.target<yw.rawTarget?' Taper week, so less is more.':yw.target<yw.rawTarget?' Capped to keep the build safe.':'';
-      out.push({ic:'run',t:`<b>${fmtKm(yw.leftKm)} km left this week</b>${parts.length?`: ${parts.join(', ')}`:''}.${why}`,go:"showPage('train');switchTrainTab('run')"});
+      out.push({ic:'run',t:`<b>${fmtKm(yw.leftKm)} km left this week</b>${parts.length?`: ${parts.join(', ')}`:''}.${coachWeekAdvice(yw,false)}`,go:"showPage('train');switchTrainTab('run')"});
     }
   }
   const gym=loadGymData();const lastGym=gym.length?gym[gym.length-1].date:null;
@@ -2565,6 +2564,55 @@ function getCoachBriefing(){
   else if(vape&&vape.trendPct!=null&&vape.trendPct<=-10)out.push({ic:'wind',t:`<b>Puffs down ${-vape.trendPct}%</b> over the last two weeks compared with the two before. Keep chipping away.`,go:"showPage('trends');switchTrendsTab('wellness')"});
   return out.slice(0,4);
 }
+// The coaching sentence after the week's numbers: one line on what kind of week this
+// is (race, taper, training through, recovery, big build) and, if anything needs
+// flagging, the single most pressing issue (too many runs for the days left, one run
+// carrying too much, a long run that's big for a race soon after, a rough morning).
+function coachWeekAdvice(yw,done){
+  const pw=yw.plan&&yw.plan.weeks[0];if(!pw)return'';
+  const now=today(),dayIdx=(now.getDay()+6)%7,daysLeft=7-dayIdx;
+  const nm=r=>esc(r.name||`${fmtKm(r.km)} km race`);
+  const next=getRaces().filter(r=>daysUntil(r.date)>=0)[0];
+  const dNext=next?daysUntil(next.date):null;
+  const nextWeekRace=getRaces().find(r=>{const w=Math.round((getMonday(new Date(r.date+'T12:00:00'))-getMonday(now))/(7*864e5));return w===1;});
+  const base=yw.base||0,pct=base?Math.round((yw.target/base-1)*100):0;
+  const act=yw.active||yw.open||[];
+  const L=yw.longSlot&&!yw.longSlot.run?Math.round(yw.longSlot.left):null;
+  const easies=act.filter(x=>x.type==='Easy').map(x=>Math.round(x.left));
+  const easyTxt=easies.length?(easies.every(v=>v===easies[0])?`the ${easies[0]}s`:'the easy runs'):'the easy runs';
+  const out=[];
+  if(done){
+    const w1=yw.plan.weeks[1];
+    if(w1)out.push(w1.kind==='race'?`Next week is race week${nextWeekRace?` for ${nm(nextWeekRace)}`:''}: ${w1.target} km, mostly easy.`:w1.kind==='taper'?`Next week tapers to ${w1.target} km.`:`Next week: ${w1.target} km.`);
+    if(yw.weekKm-yw.target>=3)out.push(`The extra ${Math.round(yw.weekKm-yw.target)} km comes off the weeks ahead.`);
+    return out.length?' '+out.join(' '):'';
+  }
+  // What kind of week
+  if(pw.kind==='race'&&yw.race&&yw.race.inWeek&&next){
+    out.push(dNext===0?`It's race day. Everything else this week was just getting you here.`:dNext===1?`${nm(next)} is tomorrow: rest or a 20-minute jog with a few strides.`:`Race week for ${nm(next)} (${dNext} days): keep ${easyTxt} short and easy, with a few strides two days out.`);
+  }else if(pw.overridden&&pw.shaped==='taper'){
+    out.push(`You're training through ${nextWeekRace?nm(nextWeekRace)+"'s":'the'} taper, so keep ${easyTxt} genuinely easy${L?` and run the ${L} at a conversational pace with no pace work`:''}${dNext!=null?`; the race is ${dNext} days out`:''}.`);
+  }else if(pw.overridden&&pw.shaped==='recovery'){
+    out.push(`A full week straight after a race: keep it easy for the first few days and let readiness decide when to add pace.`);
+  }else if(pw.kind==='taper'){
+    out.push(`Taper week${nextWeekRace?` for ${nm(nextWeekRace)}`:''}: less volume, but keep a few minutes at race pace so your legs stay sharp.`);
+  }else if(pw.kind==='recovery'){
+    out.push(`Recovery week: easy running only until your legs feel normal; readiness will tell you when.`);
+  }else if(pct>=40){
+    out.push(`A big week (${pct}% above your usual ${base} km), so spread it over more runs rather than making any one longer, and keep most of it easy.`);
+  }else if(pw.capped){
+    out.push(`Capped to keep the build safe; the plan absorbs the rest later.`);
+  }
+  // The most pressing issue
+  const big=act.filter(x=>x!==yw.longSlot&&x.type!=='Race').sort((a,b)=>b.left-a.left)[0];
+  const rd=computeReadiness();const rk=rd&&rd.state?rd.state.key:null;
+  if(act.length>daysLeft)out.push(`That's ${act.length} runs in ${daysLeft} day${daysLeft===1?'':'s'}: double up one day or fold a run into the long one.`);
+  else if(big&&big.left>Math.max(12,base*0.3)&&big.left>(L||0)+0.5)out.push(`One easy run is carrying ${Math.round(big.left)} km; a longer long run would share the load.`);
+  else if(L&&pw.longCap&&L>pw.longCap&&!pw.overridden)out.push(`The ${L} km long run is big with a race next week; ${pw.longCap} km or less keeps your legs fresher.`);
+  else if((rk==='recover'||rk==='pace')&&act.length)out.push(`Readiness says ${esc(rd.state.label.toLowerCase())} today, so make today's run the easy one or move it.`);
+  return out.length?' '+out.join(' '):'';
+}
+
 // Puffs a day: recent 14-day average against the 14 days before.
 function getNicotineSummary(){
   const v=loadVapingData().filter(x=>x.date&&+x.puffs>=0);if(!v.length)return null;

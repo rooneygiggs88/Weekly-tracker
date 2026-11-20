@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="75">
+<meta name="app-version" content="76">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -3400,8 +3400,8 @@ function getWellnessCoachLines(){
 }
 
 // ── GYM COACH ──
-// Which session is due (the least recent of Push / Pull / Legs, steering off legs when
-// a key run or race is close), what to lift (your last top sets: about 80% after a
+// Which session is due (scored on days since, muscle sets short of target this week and
+// lift momentum, steering off legs when a key run or race is close), what to lift (your last top sets: about 80% after a
 // long break, +2.5 kg when you hit your reps last time), and whatever context matters
 // today (race nearness, taper, a long run tomorrow, a Recover morning).
 function _gymTopSets(sess,n=2){
@@ -3415,6 +3415,34 @@ function _gymTopSets(sess,n=2){
   return out.sort((a,b)=>b.w-a.w).slice(0,n);
 }
 const _r25=v=>Math.max(2.5,Math.round(v/2.5)*2.5);
+// Working sets per muscle over the last 7 days (rolling, so Monday doesn't reset the
+// picture), with running counted for the leg muscles.
+function _muscleSets7(){
+  const from=_dsAgo(6),c={};ALL_MUSCLE_GROUPS.forEach(m=>c[m]=0);
+  loadGymData().filter(s=>s.date>=from).forEach(s=>(s.exercises||[]).forEach(e=>{
+    const n=(e.sets||[]).filter(x=>!x.warmup).length;
+    getExerciseMuscles(e.name).forEach(m=>{if(c[m]!=null)c[m]+=n;});
+  }));
+  const km=loadRunData().filter(r=>r.date>=from).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  ['Quads','Hamstrings','Glutes','Core'].forEach(m=>c[m]+=km/10);c.Calves+=km/5;
+  return c;
+}
+// A lift's momentum: its best estimated 1RM last time against the median of the three
+// sessions before (in %), and how many sessions in a row it hasn't beaten its best.
+function _liftMomentum(name){
+  const nl=(name||'').toLowerCase(),v=[];
+  loadGymData().forEach(s=>{
+    const e=(s.exercises||[]).find(x=>x.name&&x.name.toLowerCase()===nl);if(!e)return;
+    let b=0;(e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight)>0).forEach(x=>{const w=parseFloat(x.weight),r=parseFloat(x.reps)||0;b=Math.max(b,r<=1?w:w*(1+r/30));});
+    if(b)v.push(b);
+  });
+  if(v.length<3)return null;
+  const prev=v.slice(-4,-1).sort((a,b)=>a-b),med=prev[Math.floor(prev.length/2)];
+  const pct=(v[v.length-1]-med)/med*100;
+  let best=0,since=0;v.forEach(x=>{if(x>best+0.01){best=x;since=0;}else since++;});
+  return{pct,stall:since,n:v.length};
+}
+const _GAP_EX={Chest:'bench press or dips',Back:'rows or pull-ups',Shoulders:'overhead press or lateral raises',Biceps:'curls',Triceps:'pushdowns or dips',Quads:'split squats',Hamstrings:'RDLs',Glutes:'hip thrusts',Calves:'calf raises',Core:'planks or carries'};
 const _kg=v=>`${+v.toFixed(2)%1?v.toFixed(1).replace(/\.0$/,''):v} kg`;
 function getGymCoachLine(){
   const gym=loadGymData();if(!gym.length)return null;
@@ -3439,8 +3467,37 @@ function getGymCoachLine(){
   const legsRun=legsByRunning();
   const types=['Push','Pull','Legs'].filter(t=>t!=='Legs'||(!legsRun&&gym.some(g=>g.type==='Legs')));
   const lastOf=t=>{for(let i=gym.length-1;i>=0;i--)if(gym[i].type===t)return gym[i];return null;};
-  const cands=types.filter(t=>!(avoidLegs&&t==='Legs')).map(t=>({t,s:lastOf(t)})).sort((a,b)=>(a.s?a.s.date:'').localeCompare(b.s?b.s.date:''));
+  // Score each session on what the data says, not just whose turn it is: how long since
+  // you did it, how far its muscles are below their weekly set targets (last 7 days),
+  // and whether its main lifts are on a roll worth riding.
+  const ms=_muscleSets7();
+  const cands=types.filter(t=>!(avoidLegs&&t==='Legs')).map(t=>{
+    const s=lastOf(t),d=s?daysAgo(s.date):21;
+    const gaps=GC_TYPE_MUSCLES[t].map(m=>({m,short:Math.max(0,Math.round((VOL_MUSCLE_TARGETS[m]?VOL_MUSCLE_TARGETS[m].min:0)-ms[m])),have:Math.round(ms[m]),min:VOL_MUSCLE_TARGETS[m]?VOL_MUSCLE_TARGETS[m].min:0})).sort((a,b)=>b.short-a.short);
+    // How far short, as the average fraction per muscle (so Push's three muscles don't
+    // outvote Pull's two). Momentum only counts if the last session is recent.
+    const short=gaps.reduce((a,g)=>a+(g.min?g.short/g.min:0),0)/gaps.length;
+    // Main lifts from the last two sessions of this type (latest wins), the ones that
+    // fill the biggest muscle gap first, so a curls-only "Pull" still suggests rows.
+    const pool=[];gym.filter(g=>g.type===t).slice(-2).reverse().forEach(g=>_gymTopSets(g,4).forEach(x=>{if(!pool.some(y=>y.name===x.name))pool.push(x);}));
+    const hits=x=>getExerciseMuscles(x.name).includes(gaps[0].m)&&gaps[0].short>=2;
+    const tops=pool.sort((a,b)=>(hits(b)-hits(a))||(b.w-a.w)).slice(0,2);
+    const mom=s&&d<14?tops.map(x=>({name:x.name,...(_liftMomentum(x.name)||{})})).filter(x=>x.pct!=null):[];
+    const up=mom.filter(x=>x.pct>=2&&x.stall<=1).sort((a,b)=>b.pct-a.pct)[0]||null;
+    const score=Math.min(d,14)+short*6+(up?2:0);
+    return{t,s,d,gaps,short,tops,mom,up,score};
+  }).sort((a,b)=>b.score-a.score);
   const due=cands[0];
+  // Why this one over the next best, in plain words.
+  let why='';
+  if(due&&cands[1]){
+    const o=cands[1],r=[];
+    if(gap<14&&due.short-o.short>=0.25&&due.gaps[0].short>=2)r.push(`${due.gaps[0].m.toLowerCase()} ${due.gaps[0].short===1?'is 1 set':`is ${due.gaps[0].short} sets`} short this week`);
+    if(due.up)r.push(`${esc(due.up.name)} is climbing (+${Math.round(due.up.pct)}%)`);
+    if(due.d-o.d>=2&&!r.length)r.push(`it's been ${due.d} days, against ${o.d} for ${o.t.toLowerCase()}`);
+    if(gap<14&&!r.length&&o.short-due.short>=0.25)r.push(`${o.t.toLowerCase()} is shorter on sets but you trained it more recently`);
+    if(r.length)why=` ${due.t} over ${o.t}: ${r.join(', and ')}.`;
+  }
   const todays=gym.filter(g=>g.date===td);
   // Already lifted today
   if(todays.length){
@@ -3453,17 +3510,26 @@ function getGymCoachLine(){
   if(rk==='recover')return`<b>Readiness says recover.</b> Skip the weights today; ten minutes of mobility will do more for you.`;
   if(gap<3||!due)return null;
   const typeTxt=due.t,lastT=due.s?daysAgo(due.s.date):null;
-  let head=gap>=14?`<b>${gap} days since the gym: ${typeTxt} is due.</b>`:`<b>${typeTxt} is due</b>${lastT!=null?` (last one ${lastT} days ago)`:''}.`;
+  let head=(gap>=14?`<b>${gap} days since the gym: ${typeTxt} is due.</b>`:`<b>${typeTxt} is due</b>${lastT!=null?` (last one ${lastT} days ago)`:''}.`)+why;
   let lifts='';
+  // A lift that hasn't beaten its best in 4+ sessions needs a change, not more of the same.
+  const st=gap<14?(due.mom||[]).filter(x=>x.stall>=4&&x.pct<2).sort((a,b)=>b.stall-a.stall)[0]:null;
   if(due.s){
-    const tops=_gymTopSets(due.s);
+    const tops=due.tops;
     if(tops.length){
       // After a long break: ~80% of the last top set for 8-10 reps. Otherwise progress:
       // heavier lifts go up 2.5 kg once you hit 8+ reps; light ones (under 20 kg) add reps.
       if(gap>=14)lifts=` Ease back in at about 80%: ${tops.map(x=>`${esc(x.name)} ${_kg(_r25(x.w*0.8))} × ${Math.max(8,Math.min(10,x.reps||10))}`).join(', ')}.`;
-      else lifts=` ${tops.map(x=>x.w<20?`${esc(x.name)}: ${_kg(x.w)} × ${x.reps} last time, aim for ${Math.min(15,(x.reps||8)+2)} reps`:x.reps>=8?`${esc(x.name)}: ${_kg(x.w)} × ${x.reps} last time, try ${_kg(x.w+2.5)}`:`${esc(x.name)}: repeat ${_kg(x.w)} and add a rep`).join('; ')}.`;
+      else lifts=` ${tops.filter(x=>!st||x.name!==st.name).map(x=>x.w<20?`${esc(x.name)}: ${_kg(x.w)} × ${x.reps} last time, aim for ${Math.min(15,(x.reps||8)+2)} reps`:x.reps>=8?`${esc(x.name)}: ${_kg(x.w)} × ${x.reps} last time, try ${_kg(x.w+2.5)}`:`${esc(x.name)}: repeat ${_kg(x.w)} and add a rep`).join('; ')}.`;
     }
   }
+  if(lifts.trim()==='.')lifts='';
+  {
+    if(st)lifts+=` ${esc(st.name)} hasn't beaten its best in ${st.stall} sessions: drop about 10% and build back up over three weeks, or swap to a variation for a block.`;
+  }
+  // The biggest muscle gap in this session, with something to fill it.
+  const g0=due.gaps&&due.gaps[0];
+  if(gap<14&&!shaped&&!(dNext!=null&&dNext<=7)&&g0&&g0.short>=3&&_GAP_EX[g0.m])lifts+=` ${g0.m} is on ${g0.have} of ${g0.min} sets for the week: add ${Math.min(4,g0.short)} sets of ${_GAP_EX[g0.m]}.`;
   let ctx='';
   if(dNext!=null&&dNext<=7)ctx=` With ${rn} in ${dNext} days, keep it upper-body only and about 40 minutes.`;
   else if(shaped)ctx=` It's a taper week, so keep it short and leave legs alone.`;

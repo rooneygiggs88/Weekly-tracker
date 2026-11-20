@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="74">
+<meta name="app-version" content="75">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -3194,13 +3194,14 @@ function renderGymTrendsCoach(){
   const sets={};
   g4.forEach(s=>(s.exercises||[]).forEach(e=>{const n=(e.sets||[]).filter(x=>!x.warmup).length;getExerciseMuscles(e.name).forEach(m=>{sets[m]=(sets[m]||0)+n;});}));
   if(g4.length){
-    const short=Object.entries(VOL_MUSCLE_TARGETS).map(([m,t])=>({m,per:(sets[m]||0)/4,t})).filter(x=>x.per<x.t.min*0.6).sort((a,b)=>a.per/a.t.min-b.per/b.t.min);
+    const short=Object.entries(VOL_MUSCLE_TARGETS).filter(([m])=>!(legsByRunning()&&GC_LEG_MUSCLES.has(m))).map(([m,t])=>({m,per:(sets[m]||0)/4,t})).filter(x=>x.per<x.t.min*0.6).sort((a,b)=>a.per/a.t.min-b.per/b.t.min);
     if(short.length)lines.push(`<b>Falling behind:</b> ${short.slice(0,3).map(x=>`${x.m} (${x.per.toFixed(0)} sets a week, aim ${x.t.min}+)`).join(', ')}.`);
   }
   // Legs, the running-relevant gap.
   const legs=gym.filter(g=>g.type==='Legs'),lastLegs=legs.length?legs[legs.length-1].date:null;
   const legGap=lastLegs?Math.round((new Date(dk(today())+'T12:00:00')-new Date(lastLegs+'T12:00:00'))/864e5):null;
-  if(legGap==null||legGap>=28)lines.push(`<b>Legs: ${legs.length} session${legs.length===1?'':'s'} all year${legGap!=null?`, the last ${legGap} days ago`:''}.</b> Single-leg work (split squats, single-leg RDLs, calf raises) once a week makes runners more injury-resistant; put it 48 hours away from key runs.`);
+  if(legsByRunning())lines.push(`<b>Legs are covered by your running</b> (${Math.round(loadRunData().filter(r=>r.date>=_dsAgo(27)).reduce((a,r)=>a+(parseFloat(r.km)||0),0))} km in 4 weeks), so the gym stays Push / Pull. If you ever want a strength block for running economy, add a Legs day to your weekly template and the app will plan around it.`);
+  else if(legGap==null||legGap>=28)lines.push(`<b>Legs: ${legs.length} session${legs.length===1?'':'s'} all year${legGap!=null?`, the last ${legGap} days ago`:''}.</b> Single-leg work (split squats, single-leg RDLs, calf raises) once a week makes runners more injury-resistant; put it 48 hours away from key runs.`);
   // Strength direction on the main lifts.
   const e1=(w,r)=>w*(1+r/30);
   const lifts={};
@@ -3430,8 +3431,13 @@ function getGymCoachLine(){
   const keyRun=i=>i<7&&planTypeThisWeek(i)==='Run'&&['Long','Tempo','Intervals'].includes(runTypeThisWeek(i));
   const longOpen=yw&&yw.longSlot&&!yw.longSlot.run&&(yw.longSlot.left||0)>=10;
   const keySoon=keyRun(dayIdx+1)||keyRun(dayIdx)||(longOpen&&dayIdx>=4);
-  const avoidLegs=keySoon||shaped||(dNext!=null&&dNext<=7);
-  const types=['Push','Pull','Legs'].filter(t=>t!=='Legs'||gym.some(g=>g.type==='Legs'));
+  const runToday=loadRunData().filter(r=>r.date===td);
+  const hardToday=runToday.some(r=>+r.km>=12||['Tempo','Intervals','Long Run','Race'].includes(r.effort));
+  const avoidLegs=keySoon||shaped||hardToday||(dNext!=null&&dNext<=7);
+  // Your plan has runs and no Legs day: legs are trained by running, so the rotation is
+  // Push / Pull (the same rule as the rest of the gym features).
+  const legsRun=legsByRunning();
+  const types=['Push','Pull','Legs'].filter(t=>t!=='Legs'||(!legsRun&&gym.some(g=>g.type==='Legs')));
   const lastOf=t=>{for(let i=gym.length-1;i>=0;i--)if(gym[i].type===t)return gym[i];return null;};
   const cands=types.filter(t=>!(avoidLegs&&t==='Legs')).map(t=>({t,s:lastOf(t)})).sort((a,b)=>(a.s?a.s.date:'').localeCompare(b.s?b.s.date:''));
   const due=cands[0];
@@ -3440,7 +3446,7 @@ function getGymCoachLine(){
   if(todays.length){
     const sets=todays.reduce((a,g)=>a+(g.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
     const nx=cands.find(c=>!todays.some(g=>g.type===c.t));
-    const why=dNext!=null&&dNext<=7?'until after the race':shaped?'until after the taper':'until after your long run';
+    const why=dNext!=null&&dNext<=7?'until after the race':shaped?'until after the taper':hardToday?'after today\'s run':'until after your long run';
     return`<b>${esc(todays[0].type||'Gym')} done today:</b> ${sets} working set${sets===1?'':'s'}.${nx?` Next up: ${nx.t}${avoidLegs&&nx.t!=='Legs'&&types.includes('Legs')?` (legs can wait ${why})`:''}.`:''}`;
   }
   if(dNext!=null&&dNext<=2)return`<b>No lifting until after ${rn}.</b> Fresh legs and a rested body matter more than one session now.`;
@@ -3461,9 +3467,10 @@ function getGymCoachLine(){
   let ctx='';
   if(dNext!=null&&dNext<=7)ctx=` With ${rn} in ${dNext} days, keep it upper-body only and about 40 minutes.`;
   else if(shaped)ctx=` It's a taper week, so keep it short and leave legs alone.`;
+  else if(hardToday&&types.includes('Legs'))ctx=` No legs after today's run; they've done their work.`;
   else if(keySoon&&types.includes('Legs'))ctx=` No legs with a key run so close; this keeps them fresh.`;
   else if(rk==='pace')ctx=` Readiness says pace yourself, so stop a couple of reps short of failure.`;
-  else if(types.includes('Legs')&&lastOf('Legs')&&daysAgo(lastOf('Legs').date)>=28)ctx=` Legs haven't been trained in ${daysAgo(lastOf('Legs').date)} days; single-leg work helps your running too.`;
+  else if(!legsRun&&types.includes('Legs')&&lastOf('Legs')&&daysAgo(lastOf('Legs').date)>=28)ctx=` Legs haven't been trained in ${daysAgo(lastOf('Legs').date)} days; single-leg work helps your running too.`;
   return head+lifts+ctx;
 }
 

@@ -119,6 +119,9 @@ async function agreements(browser){
     out.easy=(guessEffort(9,9*360,dk(today()))||{}).e;
     // Fitness & Form "now" is consistent with its chart
     const h=getFffHistory();out.fff=!!(h&&h.now);
+    // Coached gym session: belongs to the type, fits the time, starts in the logger
+    const gp=planGymSession('Pull');out.gym=!!gp&&gp.rows.length>=2&&gp.mins<=45&&gp.rows.every(r=>{const m=getExerciseMuscles(r.name)||[];return!m.length||m.some(x=>['Back','Biceps'].includes(x));});
+    buildGymSession('Push');out.draft=!!(gymDraft&&gymDraft.exercises.length);
     // Race kit: the plan's splits finish on its target, and race mode renders
     const rp=racePacePlan(state.race);out.race=!!rp&&rp.splits[rp.splits.length-1].t===Math.round(rp.target);
     _rmOpen=true;renderRaceMode();out.rm=/Your race plan/.test(document.getElementById('race-mode').innerText);
@@ -130,6 +133,8 @@ async function agreements(browser){
   check(r.easy==='Easy',`auto-tag: 9 km at easy pace guessed ${r.easy}`);
   check(r.fff,'fitness & form has no "now" value');
   check(r.race,'race plan splits don\'t finish on the target');
+  check(r.gym,'coach\'s Pull session is empty, too long, or has non-Pull lifts');
+  check(r.draft,'starting the coach\'s session didn\'t load the logger');
   check(r.rm,'race mode has no race plan');
   check(errors.length===0,`agreements: page errors: ${errors.join(' | ')}`);
   await ctx.close();

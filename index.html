@@ -181,6 +181,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-seg-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);white-space:nowrap;}
 .yg-seg.done .yg-seg-type{color:var(--green);}
 .yg-guard{margin-top:8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--c-teal) 10%,transparent);border:1px solid color-mix(in srgb,var(--c-teal) 25%,transparent);font-size:12px;font-weight:600;color:var(--text2);line-height:1.45;}
+.yg-heavy{margin-top:8px;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid color-mix(in srgb,var(--orange) 35%,transparent);font-size:12.5px;line-height:1.45;color:var(--text2);}
+.yg-heavy b{color:var(--text);}
 .yg-seg.race{border-color:var(--c-race);}
 .yg-seg-km{font-size:15px;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums;}
 .yg-next{border-top-style:dashed;}
@@ -8608,7 +8610,7 @@ function setRacePriority(date,p,e){
 function whatIfPlans(){
   const g=state.yearRunGoal,w=getYearGoalWeek();if(!w)return'';
   const races=[state.race,...(state.extraRaces||[])].filter(r=>r&&r.date&&daysUntil(r.date)>=0);
-  const run=fn=>{const saveCap=g.capMode,saveP=races.map(r=>r.priority);fn();const P=buildYearPlan(getMonday(today()),w.plan.R,{cap0:w.plan.weeks[0]?w.plan.weeks[0].cap:null});g.capMode=saveCap;races.forEach((r,i)=>{r.priority=saveP[i];});return P.shortfall;};
+  const run=fn=>{const saveCap=g.capMode,saveP=races.map(r=>r.priority);fn();const P=buildYearPlan(getMonday(today()),w.plan.R);g.capMode=saveCap;races.forEach((r,i)=>{r.priority=saveP[i];});return P.shortfall;};
   const opts=[];
   if(g.capMode==='goal')return'';
   if(g.capMode!=='stretch')opts.push(['Stretch build limit',run(()=>{g.capMode='stretch';})]);
@@ -8693,20 +8695,7 @@ function getYearGoalWeek(weekOffset=0){
   const rawTarget=Math.round(remainingAtStart*daysThisWeek/daysLeft);
   // The week's number is this week's slot in the plan to 31 Dec (buildYearPlan), so
   // tapers, race weeks and recovery are planned for rather than caught up afterwards.
-  // This week can only hold what's done plus the runs still to come at a sensible size:
-  // the long run (your own setting if you've made one) and normal runs for the rest.
-  let cap0=null;
-  if(weekOffset===0){
-    const b=_weekKmBefore(getMonday(today()),4);
-    const nSlots=(YEAR_GOAL_SPLITS[g.runsPerWeek||5]||YEAR_GOAL_SPLITS[5]).length;
-    const daysLeftWk=7-((today().getDay()+6)%7);
-    const openN=Math.min(daysLeftWk,Math.max(0,nSlots-weekRuns.length));
-    const longOpen=!weekRuns.some(r=>r.effort==='Long Run');
-    const lo=(state.weekLongKm||{})[dk(mon)];
-    const longMax=lo!=null?lo:Math.max(16,b*0.45),runMax=Math.max(12,b*0.3);
-    cap0=weekKm+(openN?(longOpen?longMax+(openN-1)*runMax:openN*runMax):0);
-  }
-  const plan=buildYearPlan(mon,remainingAtStart,{cap0});
+  const plan=buildYearPlan(mon,remainingAtStart);
   const pw=plan.weeks[0]||{target:rawTarget,note:'',race:null,longCap:null};
   const guard={longCap:pw.longCap,base:plan.base};
   let target=pw.target,note=pw.fixed||pw.capped?pw.note:null,race=pw.race;
@@ -8860,7 +8849,6 @@ function buildYearPlan(startMon,R,opts){
     // The current week can only take what fits in the days that are left (about a long
     // day's running each), so changing the plan on a Friday doesn't ask for a 30 km
     // "easy" run on Sunday; the rest moves to later weeks.
-    if(dk(mon)===dk(thisMon)&&opts&&opts.cap0!=null)cap=Math.min(cap,opts.cap0);
     const rf=base>=8?weekRaceInfo(mon,base):null;
     const w={mon:dk(mon),days:n,cap,kind:'build',note:'',race:null,longCap:null,fixed:false,target:0};
     if(rf){w.fixed=true;w.kind=rf.kind;w.note=rf.note;w.race=rf.race;w.longCap=rf.longCap;w.target=Math.min(cap,Math.max(base*rf.factor*n/7,rf.minKm));}
@@ -8957,6 +8945,15 @@ function renderYearGoalWeek(){
     ${longEdit}
     <div class="yg-week-left">${left}</div>
     ${w.note?`<div class="yg-guard">${w.note}</div>`:''}
+    ${(()=>{
+      // One open run carrying far more than a normal run: say so, and point at the
+      // long-run stepper to share it out. Nothing is hidden or moved for you.
+      if(done)return'';
+      const b=w.base||0,runMax=Math.max(12,b*0.3);
+      const big=w.open.filter(x=>x!==w.longSlot&&x.type!=='Race').sort((a,c)=>c.left-a.left)[0];
+      if(!big||big.left<=Math.max(runMax,w.longSlot?w.longSlot.left:0)+0.5)return'';
+      return`<div class="yg-heavy"><b>One ${big.type.toLowerCase()} run is carrying ${Math.round(big.left)} km.</b> ${w.longSlot?'Tap the long run to make it longer and share the load, or':'You could'} split it over the days left. Anything you don't run this week rolls into next week's plan.</div>`;
+    })()}
   </div>`;
 }
 function openYearGoalModal(){

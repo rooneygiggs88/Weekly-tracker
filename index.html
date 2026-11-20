@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="68">
+<meta name="app-version" content="69">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -430,6 +430,11 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .me-chip.legs b{color:var(--c-pink);}
 .me-links{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .me-links button{padding:13px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;}
+.wr-next{margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--surface2);}
+.wr-next-h{font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;}
+.wr-next-runs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;}
+.wr-next-runs span{padding:3px 9px;border-radius:20px;background:var(--surface);font-size:12px;font-weight:700;}
+.wr-next p{font-size:12.5px;line-height:1.45;color:var(--text2);}
 .rc-card{position:relative;overflow:hidden;}
 .rc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent);}
 .rc-eyebrow{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
@@ -2451,6 +2456,7 @@ function renderRaceMode(){
     return;
   }
   if(d>10){el.innerHTML='';return;}
+  snapRacePrediction(r);
   const km=+r.km,goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
   const proj=getRaceProjection();
   const nx=(state.extraRaces||[]).filter(x=>x.date&&x.date>r.date).sort((a,b)=>a.date.localeCompare(b.date))[0];
@@ -2557,6 +2563,7 @@ function celebrate(){
 // of the app so they don't need hunting for. Each line opens where it came from.
 function getCoachBriefing(){
   const out=[];const now=today(),td=dk(now);
+  const wrap=getEveningWrapLine();if(wrap)out.push({ic:'moon',t:wrap,go:"document.getElementById('goal-stack').scrollIntoView({behavior:'smooth',block:'center'})"});
   const r=state.race;
   if(r&&r.date){
     const d=daysUntil(r.date);
@@ -2746,6 +2753,147 @@ function renderHabitsCoachCard(){
     ${coach.length?`<div class="hc-coach">${coach.map(c=>`<p>${c}</p>`).join('')}</div>`:''}
     <div class="hc-rows">${rows.map(r=>`<div class="hc-row"><div class="hc-name"><span>${esc(r.g.name)}</span>${r.st.streak>=2?`<span class="hc-streak">${r.st.streak}d streak</span>`:''}</div><div class="hc-strip">${r.marks.map(m=>`<i class="${m===1?'y':m===0?'n':'x'}"></i>`).join('')}</div><div class="hc-n">${r.n}/${r.d}</div></div>`).join('')}</div>
   </div>`;
+}
+
+// ── WHAT'S NEXT (shared by the run debrief, gym verdict and evening wrap-up) ──
+// The next run after today, picked the same way as Today's run: the long run waits for
+// the last day, otherwise an easy (or the planned type for that day).
+function getNextRunAfterToday(){
+  const yw=getYearGoalWeek();if(!yw)return null;
+  const now=today(),dayIdx=(now.getDay()+6)%7,daysAfter=6-dayIdx;
+  const act=(yw.active||yw.open||[]).filter(x=>x.type!=='Race');
+  if(!act.length||daysAfter<=0)return null;
+  const planned=planTypeThisWeek(dayIdx+1)==='Run'?runTypeThisWeek(dayIdx+1):null;
+  const slotFor=t=>t==='Long'?'Long':t==='Tempo'||t==='Intervals'||t==='Fartlek'?'Tempo':t==='Easy'||t==='Recovery'?'Easy':null;
+  let slot=null;
+  if(daysAfter<=1)slot=act.slice().sort((a,b)=>b.left-a.left)[0];
+  if(!slot&&planned)slot=act.find(x=>x.type===slotFor(planned));
+  if(!slot)slot=act.filter(x=>x.type==='Easy').sort((a,b)=>a.left-b.left)[0]||act.find(x=>x.type==='Tempo')||act[0];
+  return{km:Math.round(slot.left),type:slot.type,label:{Long:'long run',Tempo:'tempo',Easy:'easy run'}[slot.type]||'run',left:act.length,daysAfter};
+}
+
+// ── RUN DEBRIEF: the plan after the run ──
+function getRunDebriefPlanLines(run){
+  const out=[];
+  if(run.date<dk(getMonday(today())))return out;
+  const yw=getYearGoalWeek();if(!yw)return out;
+  if(yw.leftKm<=0){
+    const w1=yw.plan&&yw.plan.weeks[1];
+    out.push(`Week done: ${fmtKm(yw.weekKm)} of ${Math.round(yw.target)} km.${w1?` Next week: ${w1.target} km${w1.kind==='race'?', race week':w1.kind==='taper'?', a taper':''}.`:''}`);
+  }else{
+    const act=yw.active||yw.open||[];
+    const parts=act.map(x=>`${Math.round(x.left)} ${x.type==='Long'?'long':x.type.toLowerCase()}`);
+    out.push(`That leaves ${fmtKm(yw.leftKm)} km this week${parts.length?`: ${parts.join(', ')}`:''}.`);
+  }
+  const p=getYearGoalProgress();
+  if(p&&p.isCurrentYear&&p.remaining>0)out.push(`${Math.round(p.done).toLocaleString('en-GB')} km on the year; ${Math.round(p.remaining)} to go.`);
+  return out;
+}
+// The prediction going into a race is saved while race mode is showing, so the result can
+// be judged against it afterwards (the model itself moves once the race is logged).
+function snapRacePrediction(r){
+  if(!r||!r.date)return;
+  const proj=getRaceProjection();if(!proj)return;
+  state.racePredSnap=state.racePredSnap||{};
+  if(state.racePredSnap[r.date]!==proj.projSecs){state.racePredSnap[r.date]=proj.projSecs;saveState();}
+}
+
+// ── EVENING WRAP-UP (Today, after 7pm) ──
+function getEveningWrapLine(){
+  const now=new Date();if(now.getHours()<19)return null;
+  const td=dk(today());
+  const runs=loadRunData().filter(r=>r.date===td),gym=loadGymData().filter(g=>g.date===td);
+  const gs=goalsActiveOn(td),left=gs.filter(g=>!goalDone(td,g));
+  const did=[];
+  if(runs.length)did.push(`${fmtKm(runs.reduce((a,r)=>a+(parseFloat(r.km)||0),0))} km run`);
+  if(gym.length)did.push(`${esc(gym[0].type||'gym')} session`);
+  if(gs.length)did.push(`${gs.length-left.length}/${gs.length} habits`);
+  const todo=[];
+  if(left.length)todo.push(left.slice(0,3).map(g=>esc(g.name)).join(', ')+(left.length>3?` and ${left.length-3} more`:''));
+  const vape=loadVapingData();if(vape.length&&!vape.some(x=>x.date===td))todo.push('log today\'s nicotine');
+  const nx=getNextRunAfterToday();
+  let tmr='';
+  if(nx){tmr=` Tomorrow: ${nx.km} km ${nx.label}.`;if(nx.type==='Long'&&nx.km>=18)tmr+=' Lay out kit and fuel tonight, and eat a proper dinner.';}
+  else{const r=getRaces().find(x=>daysUntil(x.date)===1);if(r)tmr=` Tomorrow: ${esc(r.name||'race day')}. Kit out, alarm set, early night.`;}
+  return`<b>Today:</b> ${did.length?did.join(', '):'a rest day'}.${todo.length?` Before bed: ${todo.join('; ')}.`:' All done.'}${tmr}`;
+}
+
+// ── SUNDAY HAND-OVER: next week's plan in the weekly review ──
+function renderNextWeekHandover(){
+  const w=getYearGoalWeek(1);if(!w||!w.plan)return'';
+  const pw=w.plan.weeks[0];if(!pw)return'';
+  const runs=w.slots.filter(x=>Math.round(x.left||x.km||0)>0).map(x=>`${Math.round(x.left!=null?x.left:x.km)} ${x.type==='Long'?'long':x.type.toLowerCase()}`);
+  const kind={race:'Race week',taper:'Taper week',recovery:'Recovery week',build:'Build week'}[pw.kind]||'Next week';
+  const gymTxt=pw.kind==='race'||pw.kind==='taper'?'Gym: one short upper-body session, early in the week.':pw.kind==='recovery'?'Gym: back to normal from midweek if your legs feel good.':'Gym: two sessions, keeping legs away from the long run.';
+  return`<div class="wr-next"><div class="wr-next-h">${kind} · ${w.target} km</div>
+    ${runs.length?`<div class="wr-next-runs">${runs.map(r=>`<span>${r}</span>`).join('')}</div>`:''}
+    <p>${pw.note||''} ${gymTxt}</p></div>`;
+}
+
+// ── TRENDS > RUN: coach ──
+function renderRunTrendsCoach(runs){
+  const lines=[];
+  const since=_dsAgo(27),recent=runs.filter(r=>r.date>=since);
+  // Intensity balance (by km): most top runners keep ~80% easy.
+  const km=r=>parseFloat(r.km)||0;
+  const easyKm=recent.filter(r=>_runGroup(r.effort)==='easy').reduce((a,r)=>a+km(r),0),allKm=recent.reduce((a,r)=>a+km(r),0);
+  if(allKm>=40){
+    const pct=Math.round(easyKm/allKm*100);
+    lines.push(pct>=75?`<b>${pct}% of the last 4 weeks was easy running</b>, right where it should be: easy volume builds the engine, the hard 20% sharpens it.`
+      :`<b>Only ${pct}% of the last 4 weeks was easy.</b> Most good runners sit around 80%. Make more runs genuinely easy and save the effort for one or two sessions a week.`);
+  }
+  // Fitness direction.
+  const fm=getFitnessModel();
+  if(fm&&fm.vdotAgo!=null){
+    const d=fm.vdot-fm.vdotAgo;
+    lines.push(Math.abs(d)<0.3?`<b>Race fitness is steady</b> at ${fm.vdot.toFixed(1)} over 4 weeks.`
+      :d>0?`<b>Race fitness is up ${d.toFixed(1)}</b> in 4 weeks (now ${fm.vdot.toFixed(1)}): what you're doing is working.`
+      :`<b>Race fitness has dipped ${(-d).toFixed(1)}</b> in 4 weeks. Usually less volume or a niggle; it comes back quickly once training is consistent again.`);
+  }
+  // Race goal: how far the fitness has to move.
+  const r=state.race;
+  if(fm&&r&&r.goalTime&&+r.km>0&&daysUntil(r.date)>=0){
+    const need=vdotFromRace(+r.km,parseTimeToSecs(r.goalTime)),gap=need-fm.vdot;
+    lines.push(gap<=0.15?`<b>${esc(r.name||'The race')} goal (${esc(r.goalTime)}) is within reach</b> at your current fitness. Pace it evenly and it's there.`
+      :`<b>${esc(r.name||'The race')} at ${esc(r.goalTime)} needs about ${gap.toFixed(1)} more race fitness.</b> ${gap<=1?'Close: a good day and even pacing could do it.':'That is more than one taper can find; a realistic target is '+fmtDurationFromSecs(timeForVdot(fm.vdot,+r.km))+', and the goal for the next block.'}`);
+  }
+  // Quality pace stalled.
+  const q=runs.filter(x=>_runGroup(x.effort)==='quality'&&_tlEffortKey(x.effort)!=='Race'&&_runPaceSecs(x)).map(x=>({ds:x.date,v:_runPaceSecs(x)}));
+  const qNow=windowMedian(q,dk(today()),56,3),qThen=windowMedian(q,_dsAgo(84),56,3);
+  if(qNow&&qThen&&Math.abs(qNow-qThen)<4)lines.push(`<b>Tempo pace has barely moved in 12 weeks</b> (${fmtMS(qNow)}/km). After the races, one weekly threshold session (e.g. 3 × 10 minutes at ${fm?fmtMS(_paceAtPct(fm.vdot,0.88)):'tempo'}/km) is the usual way to move it.`);
+  // Long run share.
+  const longest=recent.reduce((a,x)=>Math.max(a,km(x)),0),wkAvg=allKm/4;
+  if(wkAvg>=20&&longest>wkAvg*0.5)lines.push(`<b>Your longest recent run (${fmtKm(longest)} km) is over half a typical week.</b> Fine for an ultra runner, but spreading it over the week is easier to recover from.`);
+  if(!lines.length)return'';
+  return`<div class="brief-card"><div class="brief-h">Coach</div>${lines.map(l=>`<div class="brief-line" style="cursor:default;"><span class="brief-ic">${svgIcon('run',18)}</span><span class="brief-t">${l}</span></div>`).join('')}</div>`;
+}
+
+// ── TRENDS > GYM: coach ──
+function renderGymTrendsCoach(){
+  const gym=loadGymData();if(gym.length<3)return'';
+  const lines=[];
+  const since=_dsAgo(27),prev=_dsAgo(55);
+  const g4=gym.filter(g=>g.date>=since),g8=gym.filter(g=>g.date>=prev&&g.date<since);
+  lines.push(g4.length===0?`<b>No gym sessions in 4 weeks</b> (${g8.length} in the 4 before). Strength fades slowly at first; two short sessions a week gets it back.`
+    :`<b>${(g4.length/4).toFixed(1)} sessions a week</b> over the last 4 weeks${g8.length?`, against ${(g8.length/4).toFixed(1)} before`:''}.${g4.length<4?' Two a week is the sweet spot alongside this much running.':''}`);
+  // Sets per muscle per week (last 4 weeks) against the targets the session coach uses.
+  const sets={};
+  g4.forEach(s=>(s.exercises||[]).forEach(e=>{const n=(e.sets||[]).filter(x=>!x.warmup).length;getExerciseMuscles(e.name).forEach(m=>{sets[m]=(sets[m]||0)+n;});}));
+  if(g4.length){
+    const short=Object.entries(VOL_MUSCLE_TARGETS).map(([m,t])=>({m,per:(sets[m]||0)/4,t})).filter(x=>x.per<x.t.min*0.6).sort((a,b)=>a.per/a.t.min-b.per/b.t.min);
+    if(short.length)lines.push(`<b>Falling behind:</b> ${short.slice(0,3).map(x=>`${x.m} (${x.per.toFixed(0)} sets a week, aim ${x.t.min}+)`).join(', ')}.`);
+  }
+  // Legs, the running-relevant gap.
+  const legs=gym.filter(g=>g.type==='Legs'),lastLegs=legs.length?legs[legs.length-1].date:null;
+  const legGap=lastLegs?Math.round((new Date(dk(today())+'T12:00:00')-new Date(lastLegs+'T12:00:00'))/864e5):null;
+  if(legGap==null||legGap>=28)lines.push(`<b>Legs: ${legs.length} session${legs.length===1?'':'s'} all year${legGap!=null?`, the last ${legGap} days ago`:''}.</b> Single-leg work (split squats, single-leg RDLs, calf raises) once a week makes runners more injury-resistant; put it 48 hours away from key runs.`);
+  // Strength direction on the main lifts.
+  const e1=(w,r)=>w*(1+r/30);
+  const lifts={};
+  gym.filter(g=>g.date>=_dsAgo(90)).forEach(g=>(g.exercises||[]).forEach(e=>{(e.sets||[]).filter(x=>!x.warmup&&parseFloat(x.weight)>0&&+x.reps>0).forEach(x=>{(lifts[e.name]=lifts[e.name]||[]).push({ds:g.date,v:e1(parseFloat(x.weight),+x.reps)});});}));
+  const main=Object.entries(lifts).filter(([,a])=>a.length>=6).map(([n,a])=>{const best=(lo,hi)=>Math.max(0,...a.filter(x=>x.ds>=lo&&x.ds<hi).map(x=>x.v));const now=best(_dsAgo(41),'9999'),then=best(_dsAgo(90),_dsAgo(41));return{n,now,then,top:Math.max(...a.map(x=>x.v))};}).filter(x=>x.now&&x.then).sort((a,b)=>b.top-a.top).slice(0,3);
+  if(main.length)lines.push(`<b>Main lifts, last 6 weeks vs the 6 before:</b> ${main.map(x=>{const p=Math.round((x.now/x.then-1)*100);return`${esc(x.n)} ${p>0?'+':''}${p}%`;}).join(', ')}.${main.every(x=>x.now<x.then*0.97)?' A dip during heavy running blocks is normal; hold weights rather than chase them.':''}`);
+  return`<div class="brief-card"><div class="brief-h">Coach</div>${lines.map(l=>`<div class="brief-line" style="cursor:default;"><span class="brief-ic">${svgIcon('dumbbell',18)}</span><span class="brief-t">${l}</span></div>`).join('')}</div>`;
 }
 
 // ── HABITS COACH ──
@@ -6126,7 +6274,7 @@ function renderTrendsRunAnalysis(){
     ${runs.length>5?`<button onclick="openRunLogModal()" style="width:100%;margin-top:10px;padding:9px;background:none;border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">View all ${runs.length} runs</button>`:''}
   </div>`;
 
-  return renderRunProgressCard()+summary+renderRunPBCard(runs)+renderPaceTrendCard(runs)+renderAerobicFitnessCard(runs)+renderRacePredictorCard(runs)+effortChart+longRunChart+renderWhatMovesCard('Running')+runLog;
+  return renderRunTrendsCoach(runs)+renderRunProgressCard()+summary+renderRunPBCard(runs)+renderPaceTrendCard(runs)+renderAerobicFitnessCard(runs)+renderRacePredictorCard(runs)+effortChart+longRunChart+renderWhatMovesCard('Running')+runLog;
 }
 
 // Weeks (of the last 12) that had at least one gym session, trimmed so leading
@@ -6373,7 +6521,7 @@ function renderTrendsGymAnalysis(){
   </div>`;
 
 
-  return summary+freqChart+volChart+muscleChart+effortChart+renderWhatMovesCard('Lifting')+sessionLog;
+  return renderGymTrendsCoach()+summary+freqChart+volChart+muscleChart+effortChart+renderWhatMovesCard('Lifting')+sessionLog;
 }
 // Gym's equivalent of the run Effort Balance donut - same segmented-circle layout,
 // colored on the same intensity ramp the run side already uses (green -> blue -> orange
@@ -9563,6 +9711,7 @@ function renderWeekReviewCard(){
   wrap.innerHTML=`<div class="wr-card">
     <div class="wr-head"><span>Week in review · ${fmtWeekRange(mon)}</span><span style="display:flex;gap:6px;"><button onclick="shareWeek('${monStr}')">Share ↗</button><button onclick="dismissWeekReview()">Done ✓</button></span></div>
     ${renderWeekReviewBody(r,{showNext:true})}
+    ${renderNextWeekHandover()}
   </div>`;
 }
 function dismissWeekReview(){
@@ -11470,8 +11619,10 @@ function getSessionVerdict(session){
   // Tomorrow, from the plan.
   let tomorrow=null;
   if(session.date===dk(today())){
-    const t1=_gcPlanDay(1);
-    if(_gcLegSets(session)>=6&&t1.type==='Run'&&KEY_RUNS.has(t1.runType))tomorrow=`Tomorrow's ${_gcRunName(t1.runType)}: legs may feel heavy early. Take a longer warm-up and judge the first few km by effort, not pace.`;
+    const t1=_gcPlanDay(1),nx=getNextRunAfterToday();
+    if(_gcLegSets(session)>=6&&nx&&(nx.type==='Long'||nx.type==='Tempo')&&nx.daysAfter<=2)tomorrow=`Next run is the ${nx.km} km ${nx.label}, and today hit your legs: start it slower than usual and judge the first few km by effort.`;
+    else if(nx&&nx.type!=='Easy'&&_gcLegSets(session)<6)tomorrow=`Upper body today keeps your legs fresh for the ${nx.km} km ${nx.label}.`;
+    else if(_gcLegSets(session)>=6&&t1.type==='Run'&&KEY_RUNS.has(t1.runType))tomorrow=`Tomorrow's ${_gcRunName(t1.runType)}: legs may feel heavy early. Take a longer warm-up and judge the first few km by effort, not pace.`;
     else if(volPct!=null&&volPct>=15)tomorrow='A bigger session than last time: expect readiness to dip a little tomorrow. Sleep is the lever tonight.';
     else if(t1.type==='Run'&&!KEY_RUNS.has(t1.runType))tomorrow='Tomorrow\'s easy run will help recovery, not hurt it. Keep it genuinely easy.';
     else if(t1.type==='Rest'||t1.type==='Off')tomorrow='Rest day tomorrow: good timing.';
@@ -11540,7 +11691,7 @@ function getRunDebrief(run){
   const lines=[];
   let head='Logged',col='var(--st-ready)';
   // Goal race: finish time against the goal.
-  const race=state.race;
+  const race=getRaces().find(r=>r.date===run.date)||state.race;
   const isGoalRace=race&&race.date===run.date&&type==='Race';
   if(isGoalRace&&race.goalTime){
     const diff=parseTimeToSecs(run.time)-parseTimeToSecs(race.goalTime);
@@ -11548,6 +11699,8 @@ function getRunDebrief(run){
     const gap=m?`${m}:${String(sec).padStart(2,'0')}`:`${sec}s`;
     head=diff<=0?'Goal beaten':'Race done';col=diff<=0?'var(--st-go)':'var(--st-ready)';
     lines.push({col,text:diff<=0?`${run.time} against a ${race.goalTime} goal: ${gap} inside it.`:`${run.time} against a ${race.goalTime} goal, ${gap} outside it. Finishing a ${fmtKm(run.km)}km race is the work; the goal moves with you.`});
+    const snap=(state.racePredSnap||{})[run.date];
+    if(snap){const d2=parseTimeToSecs(run.time)-snap;lines.push({col:d2<=0?'var(--st-go)':'var(--text3)',text:Math.abs(d2)<10?`Bang on the ${fmtDurationFromSecs(snap)} the app predicted going in.`:d2<0?`${fmtDurationFromSecs(-d2)} faster than the ${fmtDurationFromSecs(snap)} predicted going in. Your predictions move up from here.`:`${fmtDurationFromSecs(d2)} slower than the ${fmtDurationFromSecs(snap)} predicted going in. One race is one day; the trend matters more.`});}
     const days=Math.max(3,Math.round(run.km/1.609));
     lines.push({col:'var(--st-ready)',text:`Recovery: easy running only for about ${days} days, roughly one per mile raced.`});
   }else if(spk){
@@ -11601,7 +11754,9 @@ function getRunDebrief(run){
     const plan=getRaceBuildPlan();
     const target=plan&&plan.targetKm?plan.targetKm:state.runTarget||0;
     const wk=runs.filter(r=>r.date>=dk(getMonday(today()))&&r.date<=dk(today())).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
-    if(target)lines.push({col:'var(--text3)',text:wk>=target?`Week target reached: ${fmtKm(wk)} of ${target}km.`:`${fmtKm(wk)} of ${target}km this week, ${fmtKm(Math.round((target-wk)*10)/10)} to go.`});
+    const planLines=getRunDebriefPlanLines(run);
+    if(planLines.length)planLines.forEach(t=>lines.push({col:'var(--text3)',text:t}));
+    else if(target)lines.push({col:'var(--text3)',text:wk>=target?`Week target reached: ${fmtKm(wk)} of ${target}km.`:`${fmtKm(wk)} of ${target}km this week, ${fmtKm(Math.round((target-wk)*10)/10)} to go.`});
   }
   let tomorrow=null;
   if(run.date===dk(today())&&!isGoalRace){
@@ -11611,6 +11766,10 @@ function getRunDebrief(run){
     else if(hardToday&&t1.gym==='Legs')tomorrow='Legs tomorrow after a hard run: fine, but keep it moderate.';
     else if(hardToday)tomorrow='Easy or rest tomorrow, and expect readiness to dip a little.';
     else if(t1.type==='Run'&&KEY_RUNS.has(t1.runType))tomorrow=`Set up for tomorrow's ${_gcRunName(t1.runType)}.`;
+    // The plan's own next run, when the template had nothing to say.
+    const nx=getNextRunAfterToday();
+    if(nx&&!tomorrow)tomorrow=nx.type==='Long'&&hardToday?`Next up: the ${nx.km} km long run. Keep it conversational after today's effort.`:`Next up: ${nx.km} km ${nx.label}${nx.left>1?`, then ${nx.left-1} more this week`:''}.`;
+    else if(nx&&hardToday&&nx.type==='Long')tomorrow+=` The plan still has a ${nx.km} km long run to come; keep it conversational.`;
     if(type==='Long'&&parseTimeToSecs(run.time)>=5400)lines.push({col:'var(--st-ready)',text:'Over 90 minutes: carbs and some protein within the hour help the next few days.'});
   }
   if(tomorrow)lines.push({col:'var(--st-ready)',text:tomorrow});

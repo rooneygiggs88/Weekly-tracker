@@ -500,6 +500,9 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yp-seg{display:flex;background:var(--surface);border-radius:8px;padding:2px;flex-shrink:0;}
 .yp-seg button{border:none;background:none;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--text3);padding:6px 9px;border-radius:6px;cursor:pointer;white-space:nowrap;}
 .yp-seg button.on{background:var(--accent);color:var(--on-accent);}
+.yp-ctl-row:first-child{flex-wrap:wrap;}
+.yp-seg button.goal:not(.on){color:var(--text);}
+.yp-risk{margin-top:8px;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid color-mix(in srgb,var(--orange) 35%,transparent);font-size:12.5px;line-height:1.45;color:var(--text2);}
 .yp-what{font-size:12.5px;color:var(--text2);line-height:1.45;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);}
 .yp-what b{color:var(--text);}
 /* TROPHIES */
@@ -8606,6 +8609,7 @@ function whatIfPlans(){
   const races=[state.race,...(state.extraRaces||[])].filter(r=>r&&r.date&&daysUntil(r.date)>=0);
   const run=fn=>{const saveCap=g.capMode,saveP=races.map(r=>r.priority);fn();const P=buildYearPlan(getMonday(today()),w.plan.R);g.capMode=saveCap;races.forEach((r,i)=>{r.priority=saveP[i];});return P.shortfall;};
   const opts=[];
+  if(g.capMode==='goal')return'';
   if(g.capMode!=='stretch')opts.push(['Stretch build limit',run(()=>{g.capMode='stretch';})]);
   if(races.some(r=>r.priority!=='B'))opts.push(['All races as B',run(()=>{races.forEach(r=>{r.priority='B';});})]);
   if(g.capMode!=='stretch'&&races.some(r=>r.priority!=='B'))opts.push(['Both',run(()=>{g.capMode='stretch';races.forEach(r=>{r.priority='B';});})]);
@@ -8622,7 +8626,11 @@ function renderYearPlanBlock(){
   const raceTxt=races.length?races.map(r=>esc(r.name||`${fmtKm(r.km)} km`)).join(' and '):'';
   const maxBuild=build.length?Math.max(...build.map(x=>x.target)):0;
   let summary;
-  if(P.shortfall<=1){
+  if(P.capMode==='goal'&&P.shortfall<=1){
+    const pk=Math.max(...build.map(x=>x.target/(x.days/7)),0),over=P.base?Math.round((pk/P.base-1)*100):0;
+    summary=`<b>Meeting the goal:</b> the race weeks stay as set, and the ${build.length} build week${build.length===1?'':'s'} take what's left, up to <b>${Math.round(pk)} km a week</b>. That reaches ${g.targetKm.toLocaleString('en-GB')} km by <b>${fmtD(P.finish)}</b>.`+
+      (over>15?`<div class="yp-risk">That's ${over}% above your recent ${P.base} km weeks, beyond the usual safe-build advice. Keep most of it easy, split the extra into more runs rather than longer ones, and let readiness overrule the plan if a niggle appears.</div>`:'');
+  }else if(P.shortfall<=1){
     summary=`${raceTxt?`The ${fixed.length} race-shaped week${fixed.length===1?'':'s'} around ${raceTxt} ${fixed.length===1?'is':'are'} planned lighter, and`:'The'} km you still need are spread over ${build.length} other week${build.length===1?'':'s'}${maxBuild?` of up to ${maxBuild} km`:''}. That reaches ${g.targetKm.toLocaleString('en-GB')} km by <b>${fmtD(P.finish)}</b>.`;
   }else{
     summary=`Even with every build week at the safe cap of ${P.cap} km, the plan reaches about <b>${(g.targetKm-P.shortfall).toLocaleString('en-GB')} km</b>, ${P.shortfall} km short. Closing that would mean weeks bigger than your body is used to, so it's worth deciding now: push the cap a little, or settle for a strong ${(g.targetKm-P.shortfall).toLocaleString('en-GB')}.`;
@@ -8632,7 +8640,7 @@ function renderYearPlanBlock(){
   const upRaces=getRaces().filter(r=>daysUntil(r.date)>=0&&r.date<=`${g.year}-12-31`);
   const what=P.shortfall>1?whatIfPlans():null;
   const controls=`<div class="yp-ctl">
-    <div class="yp-ctl-row"><span>Build limit</span><span class="yp-seg"><button class="${P.capMode==='safe'?'on':''}" onclick="setPlanCap('safe',event)">Safe +15%</button><button class="${P.capMode==='stretch'?'on':''}" onclick="setPlanCap('stretch',event)">Stretch +25%</button></span></div>
+    <div class="yp-ctl-row"><span>Build limit</span><span class="yp-seg"><button class="${P.capMode==='safe'?'on':''}" onclick="setPlanCap('safe',event)">Safe +15%</button><button class="${P.capMode==='stretch'?'on':''}" onclick="setPlanCap('stretch',event)">Stretch +25%</button><button class="${P.capMode==='goal'?'on goal':'goal'}" onclick="setPlanCap('goal',event)">Meet the goal</button></span></div>
     ${upRaces.map(r=>`<div class="yp-ctl-row"><span>${esc(r.name||`${fmtKm(r.km)} km`)}</span><span class="yp-seg"><button class="${r.priority!=='B'?'on':''}" onclick="setRacePriority('${r.date}','A',event)">A · taper</button><button class="${r.priority==='B'?'on':''}" onclick="setRacePriority('${r.date}','B',event)">B · train through</button></span></div>`).join('')}
     ${what?`<div class="yp-what">${what}</div>`:''}
   </div>`;
@@ -8823,8 +8831,10 @@ function buildYearPlan(startMon,R){
   const g=state.yearRunGoal;
   const thisMon=getMonday(today());
   const base=_weekKmBefore(thisMon,4);
+  // 'goal' lifts the limit: build weeks take whatever the goal needs, and the card says
+  // how far above your normal that is.
   const capPct=g.capMode==='stretch'?0.25:0.15;
-  const capW=base>=8?base*(1+capPct)+2:Infinity;
+  const capW=g.capMode==='goal'||base<8?Infinity:base*(1+capPct)+2;
   const goalStart=new Date(g.startedAt);goalStart.setHours(0,0,0,0);
   const yearEnd=new Date(g.year,11,31);
   const days=(a,b)=>Math.round((b-a)/864e5)+1;
@@ -8848,12 +8858,14 @@ function buildYearPlan(startMon,R){
   const shortfall=Math.max(0,R-weeks.reduce((a,w)=>a+w.target,0));
   weeks.forEach(w=>{
     w.target=Math.round(w.target);
-    if(!w.fixed)w.note=w.capped?`Capped at ${Math.round(w.cap)} km, about ${Math.round(capPct*100)}% above your recent ${Math.round(base)} km weeks.`:w.target>base*1.03?'Build week, making up what the race weeks don\'t run.':'Steady week.';
+    if(!w.fixed)w.note=w.capped?`Capped at ${Math.round(w.cap)} km, about ${Math.round(capPct*100)}% above your recent ${Math.round(base)} km weeks.`
+      :g.capMode==='goal'&&base>=8&&w.target>base*1.15*w.days/7?`${Math.round((w.target/(base*w.days/7)-1)*100)}% above your recent ${Math.round(base)} km weeks.`
+      :w.target>base*1.03?'Build week, making up what the race weeks don\'t run.':'Steady week.';
   });
   // When the goal is reached: the end of the week where the running total crosses R.
   let cum=0,finish=null;for(const w of weeks){cum+=w.target;if(cum>=R-0.5&&!finish){finish=dk(addDays(new Date(w.mon+'T12:00:00'),6));}}
   if(finish&&finish>dk(yearEnd))finish=dk(yearEnd);
-  return{weeks,base:Math.round(base),cap:isFinite(capW)?Math.round(capW):null,capMode:g.capMode==='stretch'?'stretch':'safe',shortfall:Math.round(shortfall),finish,R};
+  return{weeks,base:Math.round(base),cap:isFinite(capW)?Math.round(capW):null,capMode:g.capMode==='stretch'||g.capMode==='goal'?g.capMode:'safe',shortfall:Math.round(shortfall),finish,R};
 }// Next week's projection sits behind a button showing its km, so you can watch it shrink
 // as you log runs this week. Opens by default on Sundays (planning night).
 let _ygNextOpen=null; // null = default for the day

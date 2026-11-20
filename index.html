@@ -322,6 +322,89 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .chart-card-title{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);}
 .chart-card-val{font-size:13px;font-weight:700;color:var(--text3);}
 .svg-chart{width:100%;overflow:visible;display:block;margin-top:8px;}
+/* TREND CARDS (pace, aerobic, VO2max) */
+.tr-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.tr-tile{background:var(--surface2);border-radius:12px;padding:10px 11px;min-width:0;}
+.tr-tile-l{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);}
+.tr-tile-v{font-size:22px;font-weight:800;letter-spacing:-0.6px;font-variant-numeric:tabular-nums;margin-top:2px;}
+.tr-tile-v span{font-size:12px;font-weight:700;color:var(--text3);margin-left:2px;letter-spacing:0;}
+.tr-tile-d{font-size:11.5px;font-weight:700;margin-top:2px;line-height:1.3;}
+.tr-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:11px;font-weight:700;color:var(--text3);}
+.tr-key span{display:flex;align-items:center;gap:5px;}
+.tr-key i{display:inline-block;width:14px;height:3px;border-radius:2px;}
+.tr-key i.dot{width:7px;height:7px;border-radius:50%;background:var(--text3);opacity:0.5;}
+.tr-note{font-size:11.5px;color:var(--text3);font-weight:600;line-height:1.45;margin-top:10px;}
+.rp2-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.rp2-tile{padding:10px 12px;border-radius:12px;background:var(--surface2);}
+.rp2-l{font-size:11px;font-weight:700;color:var(--text3);}
+.rp2-t{font-size:20px;font-weight:800;letter-spacing:-0.5px;margin-top:2px;font-variant-numeric:tabular-nums;}
+.rp2-p{font-size:11px;color:var(--text3);font-weight:600;}
+.rp2-d{font-size:11px;font-weight:700;margin-top:3px;}
+.rp2-goal{margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:12.5px;color:var(--text2);line-height:1.5;}
+.rp2-goal-h{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:4px;}
+/* FITNESS & FORM */
+.ff-zone{font-family:var(--rounded);font-size:28px;font-weight:800;letter-spacing:-0.8px;line-height:1.1;}
+.ff-advice{font-size:13px;color:var(--text2);line-height:1.5;margin:4px 0 4px;}
+.ffg{position:relative;padding:22px 0 22px;margin-top:4px;}
+.ffg-track{position:relative;height:26px;border-radius:8px;overflow:hidden;background:var(--surface2);}
+.ffg-seg{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--zc) 22%,transparent);border-right:1px solid var(--surface);display:flex;align-items:center;justify-content:center;}
+.ffg-seg.on{background:var(--zc);box-shadow:inset 0 0 0 2px var(--text);border-radius:6px;}
+.ffg-seg span{font-size:9.5px;font-weight:800;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:clip;padding:0 2px;}
+.ffg-seg.on span{color:var(--on-text);}
+.ffg-mark{position:absolute;width:0;transform:translateX(-50%);}
+.ffg-mark b{position:absolute;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;white-space:nowrap;color:var(--text);}
+.ffg-mark.today{top:4px;height:18px;border-left:2px solid var(--text);}
+.ffg-mark.today b{top:-3px;left:5px;transform:none;}
+.ffg-mark.race{bottom:4px;height:18px;border-left:2px dashed var(--text2);}
+.ffg-mark.race b{bottom:-3px;left:5px;transform:none;color:var(--text2);}
+.ff-more{margin-top:12px;border-top:1px solid var(--border);padding-top:10px;}
+.ff-more summary{font-size:12.5px;font-weight:700;color:var(--accent2);cursor:pointer;list-style:none;padding:4px 0;}
+.ff-more summary::-webkit-details-marker{display:none;}
+.ff-more summary::after{content:' ▾';}
+.ff-more[open] summary::after{content:' ▴';}
+/* ME OVERVIEW */
+.me-tabs{margin-bottom:14px;}
+.me-hero{padding:20px;}
+.me-top{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.me-avatar{position:relative;width:68px;height:68px;border-radius:50%;flex-shrink:0;border:2px solid var(--border);background:var(--surface2);color:var(--text2);padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;font-size:22px;font-weight:800;}
+.me-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.me-avatar svg{width:30px;height:30px;}
+.me-avatar i{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-style:normal;font-size:11px;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);}
+.me-name{font-size:22px;font-weight:800;letter-spacing:-0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.me-since{font-size:12.5px;font-weight:600;color:var(--text3);margin-top:2px;}
+.me-year-h{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px;}
+.me-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.me-stats>div{display:flex;flex-direction:column;min-width:0;}
+.me-stats b{font-size:21px;font-weight:800;letter-spacing:-0.6px;font-variant-numeric:tabular-nums;}
+.me-stats span{font-size:10.5px;font-weight:700;color:var(--text3);}
+.me-week{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);font-weight:600;}
+.me-week span{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-right:8px;}
+.me-week b{color:var(--text);}
+.me-snaps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.me-snap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 12px;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;display:flex;flex-direction:column;min-width:0;}
+.me-snap span{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);}
+.me-snap b{font-family:var(--rounded);font-size:21px;font-weight:800;letter-spacing:-0.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.me-snap em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--text3);}
+.me-race{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.me-race-name{font-size:18px;font-weight:800;letter-spacing:-0.4px;}
+.me-race-meta{font-size:12px;font-weight:600;color:var(--text3);margin-top:2px;}
+.me-race-days{text-align:center;flex-shrink:0;}
+.me-race-days b{display:block;font-family:var(--rounded);font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;color:var(--accent2);}
+.me-race-days span{font-size:10.5px;font-weight:700;color:var(--text3);}
+.me-race-proj{font-size:13px;color:var(--text2);font-weight:600;margin-top:10px;}
+.me-race-proj b{color:var(--text);}
+.me-sub-h{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin:14px 0 6px;}
+.me-preds{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.me-preds>div{background:var(--surface2);border-radius:10px;padding:8px 8px;min-width:0;}
+.me-preds span{display:block;font-size:10.5px;font-weight:700;color:var(--text3);}
+.me-preds b{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+.me-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.me-chip{padding:5px 10px;border-radius:20px;background:var(--surface2);font-size:12px;font-weight:700;color:var(--text2);}
+.me-chip b{color:var(--text);margin-left:2px;}
+.me-chip.legs{background:color-mix(in srgb,var(--c-pink) 16%,transparent);color:var(--c-pink);}
+.me-chip.legs b{color:var(--c-pink);}
+.me-links{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+.me-links button{padding:13px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;}
 /* PERSONAL BESTS */
 .pb-banner{border-color:color-mix(in srgb,var(--c-gold) 45%,var(--border));background:linear-gradient(180deg,color-mix(in srgb,var(--c-gold) 12%,var(--surface)),var(--surface));}
 .pb-eyebrow{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--c-gold);}
@@ -865,7 +948,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 <div class="page" id="page-me">
   <div class="page-header">
     <h1 id="me-name-heading">Me</h1>
-    <p>Health, race &amp; settings</p>
+    <p id="me-subhead">Your training at a glance</p>
   </div>
   <div id="me-content" class="pad"></div>
 </div>
@@ -1135,11 +1218,13 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 <div class="modal-overlay" id="fitness-modal" onclick="if(event.target===this)closeModal('fitness-modal')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>Fitness age</h3>
+    <h3>Fitness profile</h3>
     <label class="modal-label" for="fit-vo2-input">VO2max (from your watch)</label>
     <input class="modal-input" id="fit-vo2-input" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 52">
     <label class="modal-label" for="fit-birthyear-input">Birth year</label>
     <input class="modal-input" id="fit-birthyear-input" type="number" inputmode="numeric" placeholder="e.g. 1990">
+    <label class="modal-label" for="fit-maxhr-input">Max heart rate (optional)</label>
+    <input class="modal-input" id="fit-maxhr-input" type="number" inputmode="numeric" placeholder="Leave blank to estimate it">
     <label class="modal-label">Norms</label>
     <div class="type-row" id="fit-sex-row">
       <button class="type-btn" data-sex="m" onclick="setFitSex('m')">Male</button>
@@ -1773,6 +1858,7 @@ function handleAvatarUpload(file){
       state.profilePic=canvas.toDataURL('image/jpeg',0.8);
       saveState();
       renderAvatar();
+      if(document.getElementById('page-me').classList.contains('active'))renderMe();
     };
     img.src=e.target.result;
   };
@@ -4161,8 +4247,6 @@ function renderTrends(){
       <div class="metric-card"><div class="m-label">Readiness</div><div class="m-val" style="color:${rdAvg!=null?rdState(rdAvg).col:'var(--text3)'};">${rdAvg??'–'}</div><div class="m-unit">${rdAvg!=null?`7-day average · ${rdState(rdAvg).label}`:'no check-ins this week'}</div></div>
       <div class="metric-card"><div class="m-label">Fitness</div><div class="m-val">${fNow?Math.round(fNow.fit):'–'}</div><div class="m-unit">${fChg!=null?`<span style="color:${fChg>=0?'var(--green)':'var(--red)'};">${fChg>=0?'+':''}${fChg}%</span> in 6 weeks`:'building history'}</div></div>
     </div>
-    ${sec('Training log')}
-    ${renderTrainingLogCard()}
     ${sec('Fitness')}
     ${renderFitnessFormCard()}
     ${sec('Recovery')}
@@ -4324,7 +4408,7 @@ function getRunAchievement(run){
   wins.sort((a,b)=>a.rank-b.rank);
   return{...wins[0],also:wins.slice(1).map(w=>w.head)};
 }
-function _pbDate(ds){return new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+function _pbDate(ds){return new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}).replace('Sept','Sep');}
 function renderRunPBBanner(run){
   const a=getRunAchievement(run);
   if(!a)return'';
@@ -4461,6 +4545,251 @@ function openGymSummary(idx){
   openModal('gym-summary-modal');
 }
 
+// ── TREND CHART ──
+// Time-based trend chart shared by the pace, aerobic and VO2max cards. Single runs are
+// faint dots; the line is a rolling 4-week median sampled weekly, so one odd run (a hilly
+// trail, a GPS glitch, a mistyped time) can't drag the trend or stretch the axis. The y
+// range comes from the line and the middle 90% of runs; anything outside it is pinned to
+// the edge as an open circle.
+function _median(a){if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+function _quant(a,p){const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.max(0,Math.round((s.length-1)*p)))];}
+function fmtMS(s){s=Math.round(s);return`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+function _dsAgo(n){return dk(addDays(new Date(dk(today())+'T12:00:00'),-n));}
+// Median of values in the `win` days ending on endDs (null below minN values).
+function windowMedian(pts,endDs,win=28,minN=2){
+  const a=dk(addDays(new Date(endDs+'T12:00:00'),-(win-1)));
+  const v=pts.filter(p=>p.ds>=a&&p.ds<=endDs).map(p=>p.v);
+  return v.length>=minN?_median(v):null;
+}
+function rollingSeries(pts,days,win=28){
+  const out=[];
+  for(let k=Math.floor(days/7);k>=0;k--){const ds=_dsAgo(k*7);const v=windowMedian(pts,ds,win);if(v!=null)out.push({ds,v});}
+  return out;
+}
+function trendChart({series,days=182,invert=false,fmt=v=>String(Math.round(v)),H=150}){
+  const W=320,PL=6,PR=46,PT=12,PB=20,cw=W-PL-PR,ch=H-PT-PB;
+  const end=new Date(dk(today())+'T12:00:00'),start=addDays(end,-days),startDs=dk(start);
+  const x=ds=>PL+Math.max(0,Math.min(1,((new Date(ds+'T12:00:00')-start)/864e5)/days))*cw;
+  series.forEach(s=>{s.dots=(s.pts||[]).filter(p=>p.ds>=startDs&&p.v!=null&&isFinite(p.v));s.ln=(s.line||rollingSeries(s.dots,days)).filter(p=>p.ds>=startDs);});
+  const dv=series.flatMap(s=>s.dots.map(p=>p.v)),lv=series.flatMap(s=>s.ln.map(p=>p.v));
+  if(!dv.length&&!lv.length)return'';
+  let lo=Math.min(...lv,dv.length?_quant(dv,0.05):Infinity),hi=Math.max(...lv,dv.length?_quant(dv,0.95):-Infinity);
+  const pad=Math.max((hi-lo)*0.14,Math.abs(hi)*0.012);lo-=pad;hi+=pad;
+  const y=v=>{const f=(v-lo)/(hi-lo);return PT+(invert?f:1-f)*ch;};
+  let g='';
+  const stepRaw=(hi-lo)/3,steps=[0.1,0.2,0.5,1,2,5,10,15,20,30,60,120];
+  const step=steps.find(st=>st>=stepRaw)||stepRaw;
+  const ticks=[];for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step)ticks.push(v);
+  ticks.forEach(v=>{const yy=y(v).toFixed(1);if(+yy<PT+8)return;
+    g+=`<line x1="${PL}" x2="${W-PR}" y1="${yy}" y2="${yy}" stroke="var(--border)" stroke-width="1"/>`;
+    g+=`<text x="${PL+2}" y="${(+yy-4).toFixed(1)}" font-size="9" font-weight="600" fill="var(--text3)">${fmt(v)}</text>`;});
+  g+=`<line x1="${PL}" x2="${W-PR}" y1="${PT+ch}" y2="${PT+ch}" stroke="var(--border)" stroke-width="1"/>`;
+  // Month labels, skipping any that would crowd the previous one.
+  let lastX=-99;
+  for(let d=new Date(start.getFullYear(),start.getMonth()+1,1);d<=end;d=new Date(d.getFullYear(),d.getMonth()+1,1)){
+    const xx=x(dk(d));if(xx-lastX<30)continue;lastX=xx;
+    g+=`<line x1="${xx.toFixed(1)}" x2="${xx.toFixed(1)}" y1="${PT+ch}" y2="${PT+ch+3}" stroke="var(--text3)"/>`;
+    g+=`<text x="${xx.toFixed(1)}" y="${H-4}" font-size="9.5" font-weight="600" fill="var(--text3)" text-anchor="middle">${d.toLocaleDateString('en-GB',{month:'short'}).slice(0,3)}</text>`;
+  }
+  series.forEach(s=>s.dots.forEach(p=>{
+    const out=p.v<lo||p.v>hi;const vv=Math.max(lo,Math.min(hi,p.v));
+    g+=out?`<circle cx="${x(p.ds).toFixed(1)}" cy="${y(vv).toFixed(1)}" r="2.6" fill="none" stroke="${s.col}" stroke-width="1.2" opacity="0.6"/>`
+      :`<circle cx="${x(p.ds).toFixed(1)}" cy="${y(vv).toFixed(1)}" r="2.6" fill="${s.col}" opacity="0.28"/>`;
+  }));
+  const ends=[];
+  series.forEach(s=>{
+    if(!s.ln.length)return;
+    if(s.ln.length>1)g+=`<polyline points="${s.ln.map(p=>`${x(p.ds).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ')}" fill="none" stroke="${s.col}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const L=s.ln[s.ln.length-1];
+    g+=`<circle cx="${x(L.ds).toFixed(1)}" cy="${y(L.v).toFixed(1)}" r="4.5" fill="${s.col}" stroke="var(--surface)" stroke-width="1.5"/>`;
+    ends.push({y:y(L.v),txt:fmt(L.v),col:s.col});
+  });
+  ends.sort((a,b)=>a.y-b.y);for(let i=1;i<ends.length;i++)if(ends[i].y-ends[i-1].y<13)ends[i].y=ends[i-1].y+13;
+  ends.forEach(e=>{g+=`<text x="${W-PR+8}" y="${(e.y+4).toFixed(1)}" font-size="11" font-weight="800" fill="${e.col}">${e.txt}</text>`;});
+  return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;font-family:-apple-system,system-ui,sans-serif;">${g}</svg>`;
+}
+function _trendDelta(now,then,{lowerIsBetter,unit,fmtD,same=4,thenLabel}){
+  if(now==null||then==null)return{txt:'not enough runs to compare yet',col:'var(--text3)',dir:0};
+  const d=then-now;const better=lowerIsBetter?d:-d;const mag=Math.abs(d);
+  if(mag<same)return{txt:`about the same as ${thenLabel}`,col:'var(--text3)',dir:0};
+  return{txt:`${fmtD(mag)}${unit} ${better>0?(lowerIsBetter&&unit.includes('/km')?'faster':'better'):(lowerIsBetter&&unit.includes('/km')?'slower':'worse')} than ${thenLabel}`,col:better>0?'var(--green)':'var(--red)',dir:better>0?1:-1};
+}
+function _monthLabel(ds){return new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{month:'long'});}
+function _trendTile(label,value,unit,delta){
+  return`<div class="tr-tile"><div class="tr-tile-l">${label}</div><div class="tr-tile-v">${value}<span>${unit}</span></div><div class="tr-tile-d" style="color:${delta.col};">${esc(delta.txt)}</div></div>`;
+}
+function _trendDays(pts){const first=pts.map(p=>p.ds).sort()[0];if(!first)return 182;const span=Math.round((new Date(dk(today())+'T12:00:00')-new Date(first+'T12:00:00'))/864e5)+7;return Math.max(56,Math.min(182,span));}
+function _runGroup(e){const k=_tlEffortKey(e);return k==='Easy'||k==='Recovery'||k==='Long Run'?'easy':'quality';}
+function _runPaceSecs(r){const s=parseTimeToSecs(r.time),k=parseFloat(r.km)||0;if(!s||k<1)return null;const p=s/k;return p>=150&&p<=720?p:null;}
+
+// ── PACE TREND ──
+// Easy and quality runs are different questions, so they get separate lines rather than
+// one zig-zag between them.
+function renderPaceTrendCard(runs){
+  const pts={easy:[],quality:[]};
+  runs.forEach(r=>{const p=_runPaceSecs(r);if(p)pts[_runGroup(r.effort)].push({ds:r.date,v:p});});
+  const all=[...pts.easy,...pts.quality];
+  if(all.length<4)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Pace trend</span></div><div class="empty-state" style="padding:16px 0 0;">Log a few more timed runs to see your pace trend.</div></div>`;
+  const days=_trendDays(all);const backDays=Math.min(84,days-28);
+  const thenDs=_dsAgo(backDays),thenLabel=_monthLabel(thenDs);
+  const td=dk(today());
+  const g=k=>{const now=windowMedian(pts[k],td),then=backDays>=28?windowMedian(pts[k],thenDs):null;return{now,then,d:_trendDelta(now,then,{lowerIsBetter:true,unit:'s/km',fmtD:v=>Math.round(v),thenLabel})};};
+  const E=g('easy'),Q=g('quality');
+  const head=(E.now!=null?E:Q).d;
+  const label=head.dir>0?'↑ Getting quicker':head.dir<0?'↓ Slower lately':'→ Holding steady';
+  const ce=effortStyle('Easy').text,cq=effortStyle('Tempo').text;
+  const tiles=[E.now!=null?_trendTile('Easy &amp; long runs',fmtMS(E.now),'/km',E.d):'',Q.now!=null?_trendTile('Tempo, intervals &amp; races',fmtMS(Q.now),'/km',Q.d):''].join('');
+  return`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Pace trend</span><span class="chart-card-val" style="color:${head.col};">${label}</span></div>
+    <div class="tr-tiles">${tiles}</div>
+    ${trendChart({days,invert:true,fmt:fmtMS,series:[{pts:pts.easy,col:ce},{pts:pts.quality,col:cq}]})}
+    <div class="tr-key"><span><i style="background:${ce};"></i>Easy &amp; long</span><span><i style="background:${cq};"></i>Tempo &amp; races</span><span><i class="dot"></i>single runs</span></div>
+    <div class="tr-note">Higher is faster. Each line is your median pace over the previous 4 weeks, so one hilly run or mistyped time can't throw it off.</div>
+  </div>`;
+}
+
+// ── AEROBIC FITNESS ──
+// Replaces the separate Aerobic HR and Aerobic Efficiency charts, which asked the same
+// question twice. Heart rate alone rises and falls with how fast you happened to run, so
+// the chart shows pace at a fixed heart rate; the HR number sits alongside as context.
+function renderAerobicFitnessCard(runs){
+  const ae=getAerobicEfficiency(runs);
+  if(!ae.ready)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Aerobic fitness</span></div><div class="empty-state" style="padding:16px 0 8px;">Log heart rate on ${6-ae.rows.length} more Easy or Long run${6-ae.rows.length===1?'':'s'} to see this.</div></div>`;
+  const pace=ae.rows.map(r=>({ds:r.date,v:r.paceSecs})),hr=ae.rows.map(r=>({ds:r.date,v:r.hr}));
+  const days=_trendDays(pace);const backDays=Math.min(84,days-28);
+  const thenDs=_dsAgo(backDays),thenLabel=_monthLabel(thenDs),td=dk(today());
+  // Few HR runs in the window? Widen it rather than show nothing.
+  const wm=(p,ds)=>windowMedian(p,ds,28)??windowMedian(p,ds,42);
+  const pNow=wm(pace,td),pThen=backDays>=28?wm(pace,thenDs):null;
+  const hNow=wm(hr,td),hThen=backDays>=28?wm(hr,thenDs):null;
+  const pd=_trendDelta(pNow,pThen,{lowerIsBetter:true,unit:'s/km',fmtD:v=>Math.round(v),thenLabel});
+  const hd=_trendDelta(hNow,hThen,{lowerIsBetter:true,unit:' bpm',fmtD:v=>Math.round(v),same:2,thenLabel});
+  const hdTxt=hd.dir===0?hd:{...hd,txt:hd.txt.replace('better','lower').replace('worse','higher')};
+  const label=pd.dir>0?'↑ Fitter':pd.dir<0?'↓ Dipping':'→ Holding steady';
+  const col='var(--c-green)';
+  return`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Aerobic fitness</span><span class="chart-card-val" style="color:${pd.col};">${label}</span></div>
+    <div class="tr-tiles">
+      ${pNow!=null?_trendTile(`Pace at ${ae.refHR} bpm`,fmtMS(pNow),'/km',pd):''}
+      ${hNow!=null?_trendTile('Easy-run heart rate',Math.round(hNow),' bpm',hdTxt):''}
+    </div>
+    ${trendChart({days,invert:true,fmt:fmtMS,series:[{pts:pace,col}]})}
+    <div class="tr-key"><span><i style="background:${col};"></i>Pace at ${ae.refHR} bpm, 4-week median</span><span><i class="dot" style="background:${col};"></i>single runs</span></div>
+    <div class="tr-note">Each easy or long run is converted to the pace you'd hold at ${ae.refHR} bpm. Higher on the chart means more speed for the same heartbeat, which is aerobic fitness. Heart rate alone moves with how fast you ran, the heat and tiredness, so it's shown as a number, not a chart.</div>
+  </div>`;
+}
+
+// ── VO2MAX & RACE PREDICTIONS ──
+// Roughly how a Garmin does it: every steady run with heart rate gives a VO2max estimate,
+// from the oxygen cost of its pace (Daniels & Gilbert) divided by how hard the heart was
+// working (heart-rate reserve, which tracks %VO2 reserve - Swain & Leutholtz). The
+// estimates are blended over 6 weeks, recent runs weighted most, so the number moves
+// a little with each run. Predictions come from Daniels' VDOT race tables.
+// Absolute level depends on max HR, so it's calibrated to your logged Garmin VO2max, or
+// failing that to a real race result; the run-by-run estimate then supplies the movement.
+function _danielsVO2(v){return -4.60+0.182258*v+0.000104*v*v;}
+function _danielsPct(t){return 0.8+0.1894393*Math.exp(-0.012778*t)+0.2989558*Math.exp(-0.1932605*t);}
+function vdotFromRace(km,secs){const t=secs/60;return _danielsVO2(km*1000/t)/_danielsPct(t);}
+function timeForVdot(vdot,km){
+  let lo=km*1000/500,hi=km*1000/60;
+  for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(_danielsVO2(km*1000/mid)/_danielsPct(mid)>vdot)lo=mid;else hi=mid;}
+  return(lo+hi)/2*60;
+}
+const _RACE_HR_FRAC=km=>km<=6?0.95:km<=12?0.92:km<=25?0.89:0.86;
+function getHrMax(){
+  const p=state.profile||{};
+  if(p.maxHr>=140&&p.maxHr<=230)return{v:+p.maxHr,src:'set by you'};
+  const hrRuns=loadRunData().filter(r=>+r.hr>0);
+  let fromRace=0;
+  hrRuns.filter(r=>_tlEffortKey(r.effort)==='Race'&&+r.km>0).forEach(r=>{fromRace=Math.max(fromRace,r.hr/_RACE_HR_FRAC(+r.km));});
+  const obs=hrRuns.length?Math.max(...hrRuns.map(r=>+r.hr)):0;
+  const age=getAge(),tanaka=age?208-0.7*age:0;
+  if(fromRace)return{v:Math.round(Math.max(fromRace,obs+5)),src:'from your races'};
+  return{v:Math.round(Math.max(obs+10,tanaka||0,obs?0:185)),src:age?'estimated from age':'estimated'};
+}
+function getHrRest(){
+  const m=loadMorningData(),a=_dsAgo(60);
+  const v=Object.keys(m).filter(ds=>ds>=a).map(ds=>+m[ds].rhr).filter(x=>x>30&&x<100);
+  return v.length>=3?{v:Math.round(_median(v)),src:'your mornings'}:{v:55,src:'assumed'};
+}
+function vo2RunEstimates(runs){
+  const mx=getHrMax().v,rest=getHrRest().v;
+  return runs.map(r=>{
+    if(!(+r.hr>0)||!(+r.km>=3)||!r.time||_tlEffortKey(r.effort)==='Intervals')return null;
+    const s=parseTimeToSecs(r.time);if(!s)return null;
+    const pct=(r.hr-rest)/(mx-rest);if(pct<0.45||pct>0.98)return null;
+    const e=3.5+(_danielsVO2(r.km*1000/(s/60))-3.5)/pct;
+    return e>=20&&e<=85?{ds:r.date,v:e,km:+r.km}:null;
+  }).filter(Boolean);
+}
+function _vo2At(ests,ds){
+  const end=new Date(ds+'T12:00:00'),a=dk(addDays(end,-41));
+  const w=ests.filter(e=>e.ds>=a&&e.ds<=ds);if(w.length<3)return null;
+  const med=_median(w.map(e=>e.v));
+  let sw=0,sv=0;
+  w.filter(e=>Math.abs(e.v/med-1)<=0.12).forEach(e=>{const age=(end-new Date(e.ds+'T12:00:00'))/864e5;const wt=Math.exp(-age/14)*Math.min(Math.max(e.km,3),15);sw+=wt;sv+=wt*e.v;});
+  return sw?sv/sw:null;
+}
+let _fmCache=null;
+function getFitnessModel(){
+  const runs=loadRunData();
+  const key=JSON.stringify([runs.length,runs[runs.length-1],getVo2Log().slice(-3),(state.profile||{}).maxHr,dk(today()),getHrRest().v]);
+  if(_fmCache&&_fmCache.key===key)return _fmCache.m;
+  const m=(()=>{
+    const ests=vo2RunEstimates(runs),td=dk(today());
+    const raw=_vo2At(ests,td);if(raw==null)return null;
+    let ratio=1,cal=null;
+    const logs=getVo2Log().slice(-3).map(l=>{const r=_vo2At(ests,l.date);return r?{l,ratio:l.vo2/r}:null;}).filter(Boolean);
+    if(logs.length){ratio=logs.reduce((a,x)=>a+x.ratio,0)/logs.length;const L=logs[logs.length-1].l;cal={type:'garmin',date:L.date,vo2:L.vo2};}
+    else{
+      const races=runs.filter(r=>_tlEffortKey(r.effort)==='Race'&&+r.km>=3&&+r.km<=42.5&&parseTimeToSecs(r.time)>0&&r.date>=_dsAgo(365)).sort((a,b)=>b.date.localeCompare(a.date));
+      for(const r of races){const rv=_vo2At(ests,r.date);if(rv){ratio=vdotFromRace(+r.km,parseTimeToSecs(r.time))/rv;cal={type:'race',date:r.date,km:+r.km};break;}}
+    }
+    ratio=Math.max(0.85,Math.min(1.2,ratio));
+    const series=[];for(let k=25;k>=0;k--){const ds=_dsAgo(k*7);const v=_vo2At(ests,ds);if(v!=null)series.push({ds,v:v*ratio});}
+    const now=raw*ratio,agoRaw=_vo2At(ests,_dsAgo(28)),ago=agoRaw!=null?agoRaw*ratio:null;
+    const preds=PREDICT_DISTS.map(d=>({...d,secs:Math.round(timeForVdot(now,d.km)),agoSecs:ago!=null?Math.round(timeForVdot(ago,d.km)):null}));
+    return{now,ago,cal,series,preds,n:ests.filter(e=>e.ds>=_dsAgo(41)).length,hrMax:getHrMax(),hrRest:getHrRest()};
+  })();
+  _fmCache={key,m};
+  return m;
+}
+function _predDelta(p,steady){
+  if(p.agoSecs==null)return'';
+  const d=p.agoSecs-p.secs;if(steady||Math.abs(d)<5)return`<div class="rp2-d" style="color:var(--text3);">same as 4 weeks ago</div>`;
+  return`<div class="rp2-d" style="color:${d>0?'var(--green)':'var(--red)'};">${d>0?'▼':'▲'} ${fmtMS(Math.abs(d))} in 4 weeks</div>`;
+}
+function renderRacePredictorCard(runs){
+  const m=getFitnessModel();
+  if(!m)return renderRacePredictorCardRiegel(runs);
+  const fmtD=_pbDate;
+  const chg=m.ago!=null?m.now-m.ago:null;
+  const chgHtml=chg==null?'':Math.abs(chg)<0.3?`<span style="color:var(--text3);">steady over 4 weeks</span>`:`<span style="color:${chg>0?'var(--green)':'var(--red)'};">${chg>0?'▲':'▼'} ${Math.abs(chg).toFixed(1)} in 4 weeks</span>`;
+  const calTxt=m.cal?.type==='garmin'?`Calibrated to the Garmin VO2max you logged on ${fmtD(m.cal.date)} (${m.cal.vo2}).`
+    :m.cal?.type==='race'?`Calibrated to your ${fmtKm(m.cal.km)} km race on ${fmtD(m.cal.date)}.`
+    :`Not calibrated yet. Log a race, or your Garmin VO2max in Me → Body &amp; settings, to sharpen it.`;
+  const r=state.race;let goalHtml='';
+  if(r&&+r.km&&r.goalTime&&parseTimeToSecs(r.goalTime)>0&&daysUntil(r.date)>=0){
+    const goal=parseTimeToSecs(r.goalTime),pred=Math.round(timeForVdot(m.now,+r.km)),gap=pred-goal;
+    const need=vdotFromRace(+r.km,goal);
+    goalHtml=`<div class="rp2-goal"><div class="rp2-goal-h">Goal · ${esc(r.name||'Race')}</div>
+      Goal <strong>${esc(r.goalTime)}</strong> · predicted <strong>${fmtDurationFromSecs(pred)}</strong>. ${gap<=0?`<span style="color:var(--green);font-weight:700;">On track, ${fmtDurationFromSecs(-gap)} to spare.</span>`:`<strong>${fmtDurationFromSecs(gap)}</strong> to find, which needs a VO2max of about <strong>${need.toFixed(1)}</strong> (you're at ${m.now.toFixed(1)}).`}</div>`;
+  }
+  return`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Race predictions</span><span class="chart-card-val">updates with every run</span></div>
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+      <div style="font-size:34px;font-weight:800;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;">${m.now.toFixed(1)}</div>
+      <div style="font-size:12.5px;font-weight:700;color:var(--text2);">VO2max estimate<br>${chgHtml}</div>
+    </div>
+    ${m.series.length>=2?trendChart({days:Math.min(182,_trendDays(m.series)),H:96,fmt:v=>v.toFixed(1),series:[{pts:[],line:m.series,col:'var(--c-indigo)'}]}):''}
+    <div class="rp2-grid">
+      ${m.preds.map(p=>`<div class="rp2-tile"><div class="rp2-l">${p.label}</div><div class="rp2-t">${fmtDurationFromSecs(p.secs)}</div><div class="rp2-p">${fmtPace(p.km/p.secs)}</div>${_predDelta(p,chg!=null&&Math.abs(chg)<0.3)}</div>`).join('')}
+    </div>
+    <div class="tr-note">From pace and heart rate on your last ${m.n} run${m.n===1?'':'s'} (max HR ${m.hrMax.v}, ${m.hrMax.src}; resting ${m.hrRest.v}, ${m.hrRest.src}). ${calTxt} Half and marathon times assume the long runs to match.</div>
+    ${goalHtml}
+  </div>`;
+}
+
 // ── TRENDS: RUNNING ANALYSIS ──
 function renderTrendsRunAnalysis(){
   const runs=loadRunData();
@@ -4528,155 +4857,6 @@ function renderTrendsRunAnalysis(){
   let firstNonZero=0;
   while(firstNonZero<weekBuckets.length-1&&weekBuckets[firstNonZero].km===0)firstNonZero++;
   const trimmed=weekBuckets.slice(firstNonZero);
-
-  // 2. Pace progression — individual run dots
-  const paceChart=(()=>{
-    const EFFORT_COL=e=>effortStyle(e).text;
-    const paceRuns=[...withTime].sort((a,b)=>a.date.localeCompare(b.date));
-    if(paceRuns.length<3) return `<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Pace Progression</span></div><div class="empty-state" style="padding:16px 0 0;">Log 3+ timed runs to see pace progression.</div></div>`;
-    const W=320,H=180,PL=48,PR=10,PT=16,PB=26;
-    const chartW=W-PL-PR,chartH=H-PT-PB;
-    // pace in km/s — higher = faster
-    const paceVals=paceRuns.map(r=>r.km/parseTimeToSecs(r.time));
-    const bestP=Math.max(...paceVals);
-    // Work in sec/km for axis math (avoids km/s padding distortion)
-    const secPerKmVals=paceVals.map(p=>Math.round(1/p));
-    // Scale the axis to the normal cluster of runs, not a single extreme outlier (e.g. an
-    // ultra) - otherwise one very slow run stretches the whole range and squashes every
-    // normal-pace run into a thin sliver near the top. Points slower than the visible
-    // range are clamped to the bottom edge (see py()) rather than expanding the axis.
-    const fastestSec=Math.min(...secPerKmVals);
-    const sortedSecs=[...secPerKmVals].sort((a,b)=>a-b);
-    const medianSec=sortedSecs[Math.floor(sortedSecs.length/2)];
-    const inRangeSecs=secPerKmVals.filter(s=>s<=medianSec*1.5);
-    const slowestVisibleSec=inRangeSecs.length?Math.max(...inRangeSecs):Math.max(...secPerKmVals);
-    const padSecs=30;
-    const axisMinSec=fastestSec-padSecs,axisMaxSec=slowestVisibleSec+padSecs;
-    const minP=1/axisMaxSec,maxP=1/Math.max(axisMinSec,1);
-    const rangeP=Math.max(maxP-minP,0.00001);
-    const py=p=>Math.min(PT+((maxP-p)/rangeP)*chartH,PT+chartH);
-    const px=i=>PL+(i/Math.max(paceRuns.length-1,1))*chartW;
-    let svg='';
-    // Y-axis gridlines every 30s in sec/km space
-    const tickStepSec=30;
-    const firstTickSec=Math.ceil(axisMinSec/tickStepSec)*tickStepSec;
-    for(let ts=firstTickSec;ts<=axisMaxSec+1;ts+=tickStepSec){
-      const t=1/ts;
-      const y=py(t);if(y<PT-2||y>PT+chartH+2)continue;
-      svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
-      svg+=`<text x="${(PL-5).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${fmtPace(t)}</text>`;
-    }
-    // Axes
-    svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
-    svg+=`<line x1="${PL}" y1="${(PT+chartH).toFixed(1)}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
-    // Connect dots with a thin line
-    const lineD=`M${px(0).toFixed(1)},${py(paceVals[0]).toFixed(1)} `+paceVals.slice(1).map((_,i)=>`L${px(i+1).toFixed(1)},${py(paceVals[i+1]).toFixed(1)}`).join(' ');
-    svg+=`<path d="${lineD}" fill="none" stroke="var(--text3)" stroke-width="1" opacity="0.3" stroke-linejoin="round"/>`;
-    // Dots coloured by effort
-    paceRuns.forEach((r,i)=>{
-      const p=paceVals[i];
-      const cx=px(i),cy=py(p);
-      const isBest=p===bestP,isLast=i===paceRuns.length-1;
-      const isOffScale=1/p>axisMaxSec;
-      const col=isBest?'var(--text)':EFFORT_COL(r.effort);
-      const radius=isBest?6:isLast?5:4;
-      // An off-scale point (clamped to the bottom edge) gets a hollow ring instead of a
-      // filled dot, plus its real pace always labelled - otherwise it reads as a normal
-      // point sitting exactly on the bottom gridline instead of one that's off the chart.
-      if(isOffScale){
-        svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius}" fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="2,2"/>`;
-        svg+=`<text x="${cx.toFixed(1)}" y="${(cy-radius-5).toFixed(1)}" text-anchor="${i===0?'start':i===paceRuns.length-1?'end':'middle'}" font-size="9" fill="${col}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(p)} ↓</text>`;
-      } else {
-        svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius}" fill="${col}" stroke="var(--surface)" stroke-width="1.5" opacity="0.9"/>`;
-        if(isBest||isLast){
-          const anchor=i===0?'start':i===paceRuns.length-1?'end':'middle';
-          const labelY=cy-(radius+5);
-          svg+=`<text x="${cx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="${isBest?'var(--text)':'var(--text)'}" font-family="-apple-system,sans-serif" font-weight="800">${fmtPace(p)}</text>`;
-        }
-      }
-    });
-    // X-axis: show date on month change
-    let lastMonth=null;
-    paceRuns.forEach((r,i)=>{
-      const d=new Date(r.date+'T12:00:00');
-      const month=d.toLocaleDateString('en-GB',{month:'short'});
-      if(month!==lastMonth){
-        lastMonth=month;
-        const cx=px(i);
-        const anchor=i===0?'start':i===paceRuns.length-1?'end':'middle';
-        svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+16).toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;
-      }
-    });
-    // Format a seconds delta as "1m 19s/km" rather than "79s/km"
-    const fmtDelta=s=>{const m=Math.floor(s/60),sec=s%60;return m>0?(sec>0?`${m}m ${sec}s/km`:`${m}m/km`):`${s}s/km`;};
-    // Effort-aware trend: quality runs (Tempo/Intervals/Race) drive the badge - but a
-    // marathon/ultra "Race" is deliberately paced for endurance, not speed, so it isn't
-    // a real quality-pace signal and would otherwise skew the average against genuinely
-    // fast shorter races. Cap at half-marathon distance for a race to count here.
-    const QUALITY_EFF=new Set(['Tempo','Fartlek','Intervals','Hard','Race']);
-    const EASY_EFF=new Set(['Easy','Recovery','Long Run','Long run','Long']);
-    const qualityR=paceRuns.filter(r=>QUALITY_EFF.has(r.effort)&&!(r.effort==='Race'&&r.km>21.5));
-    const qualityV=qualityR.map(r=>r.km/parseTimeToSecs(r.time));
-    const useQuality=qualityV.length>=3;
-    const trendV=useQuality?qualityV:paceVals;
-    const recentPace=trendV.slice(-3).reduce((a,b)=>a+b,0)/3;
-    const earlyPace=trendV.slice(0,3).reduce((a,b)=>a+b,0)/3;
-    // A tiny difference (within 3%) is normal run-to-run noise, not a real trend - without
-    // this deadband, a 1-3s/km blip got flagged with the same "slowing" arrow as a genuine
-    // regression, just in a less alarming colour, which still reads as more meaningful
-    // than it is.
-    const relDelta=(recentPace-earlyPace)/earlyPace;
-    const DEADBAND=0.03;
-    const improving=relDelta>DEADBAND;
-    const paceRegressing=relDelta<-0.1;
-    const steady=!improving&&!paceRegressing&&Math.abs(relDelta)<=DEADBAND;
-    const recentEasyCount=paceRuns.slice(-3).filter(r=>EASY_EFF.has(r.effort)).length;
-    const easyDominated=!useQuality&&recentEasyCount>=2;
-    const paceCol=improving?'var(--green)':paceRegressing?'var(--red)':(easyDominated||steady)?'var(--text3)':'var(--orange)';
-    const paceLabel=improving?'↑ Getting faster':paceRegressing?'↓ Quality pace dropping':easyDominated?'→ Easy/base work phase':steady?'→ Holding steady':'↓ Pace slowing';
-    // Text analysis
-    const bestIdx=paceVals.indexOf(bestP);
-    const bestRun=paceRuns[bestIdx];
-    const bestDate=new Date(bestRun.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-    const deltaSec=Math.abs(Math.round(1/recentPace)-Math.round(1/earlyPace));
-    let trendLine;
-    if(easyDominated){
-      trendLine=`Recent sessions are mainly easy/long runs — slower pace is intentional base work, not a fitness drop.`;
-    } else if(steady){
-      trendLine=`${useQuality?'Quality run':'Pace'} holding steady — recent avg <strong>${fmtPace(recentPace)}</strong>, basically unchanged from <strong>${fmtPace(earlyPace)}</strong> early on.`;
-    } else if(useQuality){
-      trendLine=`Quality run pace ${improving?'improved':'slowed'} by <strong>${fmtDelta(deltaSec)}</strong> — recent avg <strong>${fmtPace(recentPace)}</strong> vs <strong>${fmtPace(earlyPace)}</strong> early on.`;
-    } else {
-      trendLine=`Pace ${improving?'improved':'slowed'} by <strong>${fmtDelta(deltaSec)}</strong> — recent average <strong>${fmtPace(recentPace)}</strong> vs <strong>${fmtPace(earlyPace)}</strong> early on.`;
-    }
-    // Distance context — longer recent runs explain slower pace
-    const recentAvgKm=paceRuns.slice(-3).reduce((s,r)=>s+(r.km||0),0)/3;
-    const earlyAvgKm=paceRuns.slice(0,3).reduce((s,r)=>s+(r.km||0),0)/3;
-    const distLine=(recentAvgKm>earlyAvgKm*1.2&&!improving&&recentAvgKm>0&&earlyAvgKm>0)?`Recent runs avg <strong>${recentAvgKm.toFixed(1)}km</strong> vs <strong>${earlyAvgKm.toFixed(1)}km</strong> early on — longer distance naturally brings pace down.`:'';
-    const bestLine=`Best run <strong>${fmtPace(bestP)}</strong> on ${bestDate}${bestRun.effort?` · ${bestRun.effort}`:''}`;
-    const effortBuckets={};
-    paceRuns.forEach((r,i)=>{if(r.effort){if(!effortBuckets[r.effort])effortBuckets[r.effort]=[];effortBuckets[r.effort].push(paceVals[i]);}});
-    const effortAvgs=Object.entries(effortBuckets).filter(([,v])=>v.length>=2).map(([e,v])=>({e,avg:v.reduce((a,b)=>a+b,0)/v.length})).sort((a,b)=>b.avg-a.avg);
-    const effortLine=effortAvgs.length>=2?(()=>{const f=effortAvgs[0],s=effortAvgs[effortAvgs.length-1],gap=Math.round(1/s.avg)-Math.round(1/f.avg);return`${f.e} avg <strong>${fmtPace(f.avg)}</strong>, ${fmtDelta(gap)} faster than ${s.e.toLowerCase()}.`;})():'';
-    return `<div class="chart-card">
-      <div class="chart-card-header"><span class="chart-card-title">Pace Progression</span><span class="chart-card-val" style="color:${paceCol};">${paceLabel}</span></div>
-      <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
-      <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Easy').text};"></div>Easy</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Long').text};"></div>Long</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Tempo').text};"></div>Tempo</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Intervals').text};"></div>Intervals</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Race').text};"></div>Race</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:var(--text);border:1px solid var(--border);"></div>Best</div>
-      </div>
-      <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid ${paceCol};">
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;">${trendLine}</div>
-        ${distLine?`<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;">${distLine}</div>`:''}
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;">${bestLine}</div>
-        ${effortLine?`<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;">${effortLine}</div>`:''}
-      </div>
-    </div>`;
-  })();
 
   // 3. Effort balance — donut
   const effortChart=(()=>{
@@ -4777,68 +4957,7 @@ function renderTrendsRunAnalysis(){
     ${runs.length>5?`<button onclick="openRunLogModal()" style="width:100%;margin-top:10px;padding:9px;background:none;border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">View all ${runs.length} runs</button>`:''}
   </div>`;
 
-  // HR Trend — Easy + Long Run only
-  const hrChart=(()=>{
-    const hrRuns=runs.filter(r=>r.hr&&(r.effort==='Easy'||r.effort==='Long Run')).sort((a,b)=>a.date.localeCompare(b.date));
-    if(hrRuns.length<3)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Aerobic HR Trend</span></div><div class="empty-state" style="padding:16px 0 8px;">Log heart rate on 3+ Easy or Long runs to see your aerobic fitness trend.</div></div>`;
-    const W=320,H=160,PL=36,PR=10,PT=14,PB=24;
-    const chartW=W-PL-PR,chartH=H-PT-PB;
-    const hrVals=hrRuns.map(r=>r.hr);
-    const minHR=Math.min(...hrVals)-5,maxHR=Math.max(...hrVals)+5;
-    const rangeHR=Math.max(maxHR-minHR,1);
-    const px=i=>PL+(i/Math.max(hrRuns.length-1,1))*chartW;
-    const py=h=>PT+((maxHR-h)/rangeHR)*chartH;
-    let svg='';
-    // Gridlines
-    const step=Math.ceil(rangeHR/4/5)*5;
-    for(let h=Math.floor(minHR/step)*step;h<=maxHR+step;h+=step){
-      const y=py(h);if(y<PT-4||y>PT+chartH+4)continue;
-      svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
-      svg+=`<text x="${(PL-5).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${h}</text>`;
-    }
-    svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
-    svg+=`<line x1="${PL}" y1="${(PT+chartH).toFixed(1)}" x2="${W-PR}" y2="${(PT+chartH).toFixed(1)}" stroke="var(--text3)" stroke-width="1.5"/>`;
-    // Connecting line
-    const lineD='M'+hrRuns.map((_,i)=>`${px(i).toFixed(1)},${py(hrVals[i]).toFixed(1)}`).join('L');
-    svg+=`<path d="${lineD}" fill="none" stroke="var(--red)" stroke-width="1.5" opacity="0.3" stroke-linejoin="round"/>`;
-    // Dots
-    hrRuns.forEach((r,i)=>{
-      const isLong=r.effort==='Long Run';
-      const x=px(i),y=py(hrVals[i]);
-      svg+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${isLong?effortStyle('Long Run').text:effortStyle('Easy').text}" opacity="0.9"/>`;
-      // X-axis date label every few points
-      if(i===0||i===hrRuns.length-1||(hrRuns.length>6&&i%Math.ceil(hrRuns.length/5)===0)){
-        const d=new Date(r.date+'T12:00:00');
-        svg+=`<text x="${x.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
-      }
-    });
-    // Summary text
-    const recentHR=hrVals.slice(-3).reduce((a,b)=>a+b,0)/Math.min(3,hrVals.length);
-    const earlyHR=hrVals.slice(0,3).reduce((a,b)=>a+b,0)/Math.min(3,hrVals.length);
-    const delta=Math.round(recentHR-earlyHR);
-    const improving=delta<-1;const worsening=delta>1;
-    const trendLabel=improving?`↓ ${Math.abs(delta)}bpm — aerobic base building`:worsening?`↑ ${delta}bpm — monitor closely`:'→ Holding steady';
-    const trendColor=improving?'var(--green)':worsening?'var(--red)':'var(--text3)';
-    const thisMonthRuns=hrRuns.filter(r=>{const d=new Date(r.date+'T12:00:00');return d.getMonth()===new Date().getMonth()&&d.getFullYear()===new Date().getFullYear();});
-    const lastMonthRuns=hrRuns.filter(r=>{const d=new Date(r.date+'T12:00:00');const lm=new Date();lm.setMonth(lm.getMonth()-1);return d.getMonth()===lm.getMonth()&&d.getFullYear()===lm.getFullYear();});
-    const thisAvg=thisMonthRuns.length?Math.round(thisMonthRuns.reduce((a,r)=>a+r.hr,0)/thisMonthRuns.length):null;
-    const lastAvg=lastMonthRuns.length?Math.round(lastMonthRuns.reduce((a,r)=>a+r.hr,0)/lastMonthRuns.length):null;
-    const monthComparison=thisAvg&&lastAvg?`<div style="font-size:12px;color:var(--text2);margin-top:6px;">This month <strong>${thisAvg}bpm</strong> vs last month <strong>${lastAvg}bpm</strong> — ${thisAvg<lastAvg?`♥ ${lastAvg-thisAvg}bpm lower, aerobic efficiency improving`:thisAvg>lastAvg?`♥ ${thisAvg-lastAvg}bpm higher, may need more easy running`:'no change'}</div>`:'';
-    return`<div class="chart-card">
-      <div class="chart-card-header"><span class="chart-card-title">Aerobic HR Trend</span><span class="chart-card-val" style="color:${trendColor};">${trendLabel}</span></div>
-      <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
-      <div style="display:flex;gap:12px;margin-top:8px;">
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Easy').text};"></div>Easy</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Long Run').text};"></div>Long Run</div>
-      </div>
-      <div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.5;">
-        <strong>What this shows:</strong> Your heart rate on Easy and Long runs at a steady effort. As your aerobic fitness improves, your heart works less hard to cover the same distance — so a falling HR trend over weeks and months means you're getting fitter, even if your pace stays the same.
-        ${monthComparison}
-      </div>
-    </div>`;
-  })();
-
-  return renderRunProgressCard()+summary+renderRunPBCard(runs)+paceChart+effortChart+longRunChart+hrChart+renderAerobicEfficiencyCard(runs)+renderRacePredictorCard(runs)+renderWhatMovesCard('Running')+runLog;
+  return renderRunProgressCard()+summary+renderRunPBCard(runs)+renderPaceTrendCard(runs)+renderAerobicFitnessCard(runs)+renderRacePredictorCard(runs)+effortChart+longRunChart+renderWhatMovesCard('Running')+runLog;
 }
 
 // Weeks (of the last 12) that had at least one gym session, trimmed so leading
@@ -5913,23 +6032,75 @@ function renderFitnessFormCard(){
   }else if(!state.race||!state.race.date||daysUntil(state.race.date)<0){
     raceHtml=`<button class="fff-setrace" onclick="openRaceModal()">Add your next race to plan the taper</button>`;
   }
+  const FF_ADVICE={
+    transition:"You've trained less than usual lately, so you're very rested but starting to lose fitness. Ideal in the days before a race; otherwise it's time to build back up.",
+    fresh:"Rested and sharp. A good time to race or to do a hard session.",
+    neutral:"Training and recovery are in balance, so you're holding your fitness steady.",
+    building:"You're carrying the good kind of tiredness from training. This is where fitness gets built; just keep an eye on readiness.",
+    overload:"Fatigue is well ahead of fitness. Take a few easy days before it turns into injury or illness.",
+  };
+  const trendTxt=fitChange==null?'':fitChange>=3?`Fitness is up ${fitChange}% over 6 weeks.`:fitChange<=-3?`Fitness is down ${-fitChange}% over 6 weeks.`:'Fitness has held steady over 6 weeks.';
   return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Fitness, fatigue &amp; form</span><span class="chart-card-val">${plan?'90 days + to race':'90 days'}</span></div>
-    <div class="fff-stats">
-      <div><span>Fitness</span><strong>${Math.round(now.fit)}</strong><em>${fitChange!=null?`${fitChange>=0?'▲':'▼'}${Math.abs(fitChange)}% in 6 weeks`:'6-week load'}</em></div>
+    <div class="chart-card-header"><span class="chart-card-title">Fitness &amp; form</span><span class="chart-card-val">${plan?`${esc(plan.race.name||'Race')} in ${plan.daysToRace} days`:'today'}</span></div>
+    <div class="ff-zone" style="color:${zone.col};">${zone.label}</div>
+    <p class="ff-advice">${FF_ADVICE[zone.key]||zone.blurb} ${trendTxt}</p>
+    ${renderFormGauge(now.form,plan&&!rec?plan.raceMorning.form:null)}
+    <div class="fff-stats" style="margin-top:14px;">
+      <div><span>Fitness</span><strong>${Math.round(now.fit)}</strong><em>${fitChange!=null?`${fitChange>=0?'▲':'▼'} ${Math.abs(fitChange)}% in 6 wks`:'6-week load'}</em></div>
       <div><span>Fatigue</span><strong>${Math.round(now.fat)}</strong><em>last 7 days</em></div>
       <div><span>Form</span><strong style="color:${zone.col};">${now.form>=0?'+':''}${Math.round(now.form)}%</strong><em>${zone.label}</em></div>
     </div>
-    <p class="fff-blurb">${zone.blurb}</p>
+    <div class="rt-block-head" style="margin-top:12px;"><span class="rt-title">Fitness, last 12 weeks</span><span class="rt-sub">${plan&&!rec?'dashed: with the taper':'up is fitter'}</span></div>
+    ${rtFitnessLine(hist.days.slice(-84),plan&&!rec?plan.proj:null)}
     ${renderLoadGauge()}
-    ${rtFffChart(pts,raceIdx)}
-    <div class="rt-key"><span><i class="rt-key-line" style="background:var(--c-indigo);"></i>Fitness</span><span><i class="rt-key-line" style="background:var(--c-orange);"></i>Fatigue</span>${plan?'<span><i class="rt-key-line rt-key-dash"></i>Projected with taper</span>':''}</div>
-    <div class="rt-block-head" style="margin-top:12px;"><span class="rt-title">Form</span><span class="rt-sub">Fitness minus fatigue, as a %</span></div>
-    ${rtFormChart(pts,raceIdx)}
-    <div class="rt-legend fff-zones">${FFF_ZONES.slice(0,4).concat(FFF_ZONES[4]).map(z=>`<span><i style="background:${z.col};"></i>${z.label}</span>`).join('')}</div>
     ${raceHtml}
-    <div class="al-foot">Fitness is your 6-week training load, fatigue your last week's. The zones are coaching convention rather than settled science; use them alongside readiness.</div>
+    <details class="ff-more"><summary>Fitness vs fatigue in detail</summary>
+      ${rtFffChart(pts,raceIdx)}
+      <div class="rt-key"><span><i class="rt-key-line" style="background:var(--c-indigo);"></i>Fitness</span><span><i class="rt-key-line" style="background:var(--c-orange);"></i>Fatigue</span>${plan?'<span><i class="rt-key-line rt-key-dash"></i>Projected with taper</span>':''}</div>
+      <div class="rt-block-head" style="margin-top:12px;"><span class="rt-title">Form</span><span class="rt-sub">Fitness minus fatigue, as a %</span></div>
+      ${rtFormChart(pts,raceIdx)}
+      <div class="rt-legend fff-zones">${FFF_ZONES.map(z=>`<span><i style="background:${z.col};"></i>${z.label}</span>`).join('')}</div>
+    </details>
+    <div class="al-foot"><b>Fitness</b> is your average daily training over the last 6 weeks and <b>fatigue</b> the same over the last week. <b>Form</b> is how far fatigue sits below fitness: Fresh is the place to race from, Building is where you get fitter. The zones are coaching convention rather than settled science, so use them alongside readiness.</div>
   </div>`;
+}
+// Where today's form sits across the five zones, with race morning marked if there's a
+// race coming up. Easier to read at a glance than a form line chart.
+function renderFormGauge(form,raceForm){
+  const MIN=-50,MAX=40;const pos=v=>((Math.max(MIN,Math.min(MAX,v))-MIN)/(MAX-MIN)*100);
+  const zs=[...FFF_ZONES].reverse();const cur=fffZone(form);
+  const segs=zs.map((z,i)=>{const lo=Math.max(z.min,MIN),hi=i<zs.length-1?zs[i+1].min:MAX;
+    return`<div class="ffg-seg${z===cur?' on':''}" style="left:${pos(lo).toFixed(2)}%;width:${(pos(hi)-pos(lo)).toFixed(2)}%;--zc:${z.col};"><span>${z.label}</span></div>`;}).join('');
+  const mark=(v,cls,lbl)=>`<div class="ffg-mark ${cls}" style="left:${pos(v).toFixed(2)}%;"><b>${lbl}</b></div>`;
+  return`<div class="ffg">${mark(form,'today','Today')}<div class="ffg-track">${segs}</div>${raceForm!=null?mark(raceForm,'race','Race day'):''}</div>`;
+}
+// Fitness alone, as one line - the bit of the fitness/fatigue chart that answers "am I
+// getting fitter?" - with the taper projection dashed on to race day.
+function rtFitnessLine(days,proj){
+  if(!days||days.length<2)return'';
+  const all=days.map(d=>({ds:d.ds,v:d.fit})),pj=(proj||[]).map(d=>({ds:d.ds,v:d.fit}));
+  const pts=[...all,...pj];
+  const W=320,H=112,PL=6,PR=40,PT=12,PB=20,cw=W-PL-PR,ch=H-PT-PB;
+  const vals=pts.map(p=>p.v);let lo=Math.min(...vals),hi=Math.max(...vals);const pad=Math.max((hi-lo)*0.2,hi*0.04);lo=Math.max(0,lo-pad);hi+=pad;
+  const t0=new Date(pts[0].ds+'T12:00:00'),span=Math.max(1,(new Date(pts[pts.length-1].ds+'T12:00:00')-t0)/864e5);
+  const x=ds=>PL+((new Date(ds+'T12:00:00')-t0)/864e5)/span*cw,y=v=>PT+(1-(v-lo)/(hi-lo))*ch;
+  const P=a=>a.map(p=>`${x(p.ds).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
+  let g=`<line x1="${PL}" x2="${W-PR}" y1="${PT+ch}" y2="${PT+ch}" stroke="var(--border)"/>`;
+  let lastX=-99;
+  for(let d=new Date(t0.getFullYear(),t0.getMonth()+1,1);dk(d)<=pts[pts.length-1].ds;d=new Date(d.getFullYear(),d.getMonth()+1,1)){const xx=x(dk(d));if(xx-lastX<30)continue;lastX=xx;g+=`<text x="${xx.toFixed(1)}" y="${H-4}" font-size="9.5" font-weight="600" fill="var(--text3)" text-anchor="middle">${d.toLocaleDateString('en-GB',{month:'short'}).slice(0,3)}</text>`;}
+  const gid='ffl-'+(++_rpGradSeq);
+  g+=`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--c-indigo)" stop-opacity="0.3"/><stop offset="1" stop-color="var(--c-indigo)" stop-opacity="0.02"/></linearGradient></defs>`;
+  g+=`<path d="M${x(all[0].ds).toFixed(1)},${PT+ch} L${P(all).split(' ').join(' L')} L${x(all[all.length-1].ds).toFixed(1)},${PT+ch} Z" fill="url(#${gid})"/>`;
+  g+=`<polyline points="${P(all)}" fill="none" stroke="var(--c-indigo)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  const L=all[all.length-1];
+  if(pj.length){
+    g+=`<polyline points="${P([L,...pj])}" fill="none" stroke="var(--c-indigo)" stroke-width="2" stroke-dasharray="4 4" opacity="0.8"/>`;
+    const R=pj[pj.length-1],rx=x(R.ds).toFixed(1);
+    g+=`<line x1="${rx}" x2="${rx}" y1="${PT}" y2="${PT+ch}" stroke="var(--text3)" stroke-dasharray="2 3"/><text x="${(+rx-3).toFixed(1)}" y="${PT+8}" font-size="9.5" font-weight="800" fill="var(--text2)" text-anchor="end">Race</text>`;
+  }
+  g+=`<circle cx="${x(L.ds).toFixed(1)}" cy="${y(L.v).toFixed(1)}" r="4.5" fill="var(--c-indigo)" stroke="var(--surface)" stroke-width="1.5"/>`;
+  g+=`<text x="${W-PR+8}" y="${(y(L.v)+4).toFixed(1)}" font-size="11" font-weight="800" fill="var(--c-indigo)">${Math.round(L.v)}</text>`;
+  return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;font-family:-apple-system,system-ui,sans-serif;">${g}</svg>`;
 }
 
 function renderRecoveryCard(){
@@ -6038,14 +6209,23 @@ function renderActivityLoad(){
 // ── ME PAGE ──
 // All-time bests across every logged type, in one place - distinct from the per-exercise
 // PR Tracker, which only covers gym lifts. Sleep/HRV bests were cut - a body metric
+// ── ME ──
+// Two views: an Overview (who you are as an athlete - the year so far, fitness, the last
+// 12 weeks, races and PBs) that complements Today's data entry, and the existing body,
+// race and settings content.
+let _meTab='overview';
+function meSetTab(t){_meTab=t;renderMe();window.scrollTo({top:0});}
 function renderMe(){
   const el=document.getElementById('me-content');
   const name=state.userName||'';
-  document.getElementById('me-name-heading').textContent=name||'Me';
+  const tabs=`<div class="seg-track me-tabs"><button class="seg-tab${_meTab==='overview'?' active':''}" onclick="meSetTab('overview')">Overview</button><button class="seg-tab${_meTab==='body'?' active':''}" onclick="meSetTab('body')">Body &amp; settings</button></div>`;
+  document.getElementById('me-name-heading').textContent=_meTab==='overview'?'Me':(name||'Me');
+  document.getElementById('me-subhead').textContent=_meTab==='overview'?'Your training at a glance':'Health, race & settings';
+  if(_meTab==='overview'){el.innerHTML=tabs+renderMeOverview();return;}
   const health=loadHealthData();
   const latestW=health.length?health[health.length-1].weight:null;
 
-  el.innerHTML=`
+  el.innerHTML=tabs+`
     ${renderFitnessAgeCard()}
     ${renderWeightSection(health)}
     ${renderBodyFatSection(health)}
@@ -6063,6 +6243,108 @@ function renderMe(){
     </div>
     <div class="gap-md"></div>
   `;
+}
+
+function _meMonthYear(ds){return new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{month:'short',year:'numeric'});}
+function renderMeOverview(){
+  const runs=loadRunData(),gym=loadGymData();
+  if(!runs.length&&!gym.length)return`<div class="chart-card"><div class="empty-state"><strong>Nothing here yet</strong><p>Log a run or a gym session and your overview builds itself.</p></div></div>`;
+  const now=today(),y0=`${now.getFullYear()}-01-01`,mon=dk(getMonday(now));
+  const yr=runs.filter(r=>r.date>=y0),yrGym=gym.filter(s=>s.date>=y0);
+  const km=a=>a.reduce((t,r)=>t+(parseFloat(r.km)||0),0);
+  const yrSecs=yr.reduce((t,r)=>t+parseTimeToSecs(r.time),0)+yrGym.reduce((t,s)=>t+(s.ts&&s.endTs&&s.endTs>s.ts&&s.endTs-s.ts<5*3600e3?(s.endTs-s.ts)/1000:0),0);
+  const first=[...runs,...gym].map(x=>x.date).filter(Boolean).sort()[0];
+  const wkRuns=runs.filter(r=>r.date>=mon),wkGym=gym.filter(s=>s.date>=mon);
+  const nm=state.userName||'';
+  const initials=nm?nm.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase():'';
+  const pic=state.profilePic?`<img src="${state.profilePic}" alt="">`
+    :initials?`<span>${esc(initials)}</span>`
+    :`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  const hero=`<div class="chart-card me-hero">
+    <div class="me-top">
+      <button class="me-avatar" onclick="document.getElementById('avatar-file-input').click()" aria-label="Change profile photo">${pic}<i>✎</i></button>
+      <div style="min-width:0;"><div class="me-name">${esc(nm||'You')}</div><div class="me-since">${first?`Training since ${_meMonthYear(first)}`:''}</div></div>
+    </div>
+    <div class="me-year-h">${now.getFullYear()} so far</div>
+    <div class="me-stats">
+      <div><b>${Math.round(km(yr)).toLocaleString('en-GB')}</b><span>km run</span></div>
+      <div><b>${yr.length}</b><span>runs</span></div>
+      <div><b>${yrGym.length}</b><span>gym sessions</span></div>
+      <div><b>${Math.round(yrSecs/3600)}</b><span>hours</span></div>
+    </div>
+    <div class="me-week"><span>This week</span><b>${fmtKm(km(wkRuns))||0} km</b> · ${wkRuns.length} run${wkRuns.length===1?'':'s'} · ${wkGym.length} gym</div>
+  </div>`;
+  const sec=t=>`<div class="trends-sec">${t}</div>`;
+  return`${hero}
+    ${renderMeSnapshot()}
+    ${sec('Last 12 weeks')}
+    ${renderRunProgressCard()}
+    ${renderTrainingLogCard()}
+    ${sec('Racing')}
+    ${renderMeRaceCard()}
+    ${renderRunPBCard(runs)}
+    ${gym.length?sec('Strength')+renderMeGymCard(gym):''}
+    <div class="me-links">
+      <button onclick="showPage('trends');switchTrendsTab('running')">Running trends →</button>
+      <button onclick="showPage('trends');switchTrendsTab('gym')">Gym trends →</button>
+      <button onclick="showPage('trends');switchTrendsTab('overview')">Recovery &amp; habits →</button>
+    </div>
+    <div class="gap-md"></div>`;
+}
+// Three numbers that sum up current fitness, each opening the card it comes from.
+function renderMeSnapshot(){
+  const fm=getFitnessModel(),hist=getFffHistory(),log=getVo2Log();
+  const tile=(label,val,sub,col,onclick)=>`<button class="me-snap" onclick="${onclick}"><span>${label}</span><b style="${col?`color:${col};`:''}">${val}</b><em>${sub}</em></button>`;
+  const tiles=[];
+  if(fm){const c=fm.ago!=null?fm.now-fm.ago:null;tiles.push(tile('VO2max',fm.now.toFixed(1),c==null?'estimate':Math.abs(c)<0.3?'steady':`${c>0?'▲':'▼'} ${Math.abs(c).toFixed(1)} in 4 wks`,null,"showPage('trends');switchTrendsTab('running')"));}
+  else if(log.length){const L=log[log.length-1];tiles.push(tile('VO2max',L.vo2,'from Garmin',null,"meSetTab('body')"));}
+  else tiles.push(tile('VO2max','–','log runs with HR',null,"showPage('trends');switchTrendsTab('running')"));
+  if(hist&&hist.history){
+    const n=hist.days[hist.days.length-1],z=fffZone(n.form);
+    const ago=hist.days[Math.max(0,hist.days.length-43)],ch=ago&&ago.fit>0?Math.round((n.fit/ago.fit-1)*100):null;
+    tiles.push(tile('Form',z.label,`${n.form>=0?'+':''}${Math.round(n.form)}%`,z.col,"showPage('trends');switchTrendsTab('overview')"));
+    tiles.push(tile('Fitness',Math.round(n.fit),ch==null?'6-week load':`${ch>=0?'▲':'▼'} ${Math.abs(ch)}% in 6 wks`,null,"showPage('trends');switchTrendsTab('overview')"));
+  }
+  return`<div class="me-snaps">${tiles.join('')}</div>`;
+}
+function renderMeRaceCard(){
+  const fm=getFitnessModel(),r=state.race;
+  const upcoming=r&&r.date&&daysUntil(r.date)>=0;
+  let raceHtml='';
+  if(upcoming){
+    const d=daysUntil(r.date),proj=getRaceProjection(),goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
+    const diff=proj&&goal?proj.projSecs-goal:null;
+    raceHtml=`<div class="me-race">
+      <div><div class="me-race-name">${esc(r.name||'Next race')}</div><div class="me-race-meta">${new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}${r.km?` · ${fmtKm(r.km)} km`:''}${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</div></div>
+      <div class="me-race-days"><b>${d}</b><span>day${d===1?'':'s'}</span></div>
+    </div>
+    ${proj?`<div class="me-race-proj">Predicted <b>${proj.projTime}</b>${diff==null?'':Math.abs(diff)<30?' · right on goal':diff<0?` · <span style="color:var(--green);">${fmtDurationFromSecs(-diff)} inside goal</span>`:` · <span style="color:var(--orange);">${fmtDurationFromSecs(diff)} to find</span>`}</div>`:''}`;
+  }
+  const preds=fm?`<div class="me-preds">${fm.preds.map(p=>`<div><span>${p.label}</span><b>${fmtDurationFromSecs(p.secs)}</b></div>`).join('')}</div>`:'';
+  if(!raceHtml&&!preds)return'';
+  return`<div class="chart-card" onclick="showPage('trends');switchTrendsTab('running')" style="cursor:pointer;">
+    <div class="chart-card-header"><span class="chart-card-title">${upcoming?'Next race':'Race predictions'}</span><span style="font-size:11px;color:var(--accent2);font-weight:700;">Details →</span></div>
+    ${raceHtml}
+    ${preds?`${upcoming?'<div class="me-sub-h">Predicted times at today\'s fitness</div>':''}${preds}`:''}
+  </div>`;
+}
+function renderMeGymCard(gym){
+  const since=_dsAgo(83),g=gym.filter(s=>s.date>=since);
+  if(!g.length)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Gym · 12 weeks</span></div><div class="pb-sub">No gym sessions in the last 12 weeks.</div></div>`;
+  const sets=g.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
+  const types={};g.forEach(s=>{const t=s.type||'Gym';types[t]=(types[t]||0)+1;});
+  const last=g[g.length-1];
+  const chips=Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`<span class="me-chip${t==='Legs'?' legs':''}">${esc(t)} <b>${n}</b></span>`).join('');
+  return`<div class="chart-card" onclick="showPage('trends');switchTrendsTab('gym')" style="cursor:pointer;">
+    <div class="chart-card-header"><span class="chart-card-title">Gym · 12 weeks</span><span style="font-size:11px;color:var(--accent2);font-weight:700;">Details →</span></div>
+    <div class="me-stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px;">
+      <div><b>${g.length}</b><span>sessions</span></div>
+      <div><b>${(g.length/12).toFixed(1)}</b><span>per week</span></div>
+      <div><b>${sets}</b><span>working sets</span></div>
+    </div>
+    <div class="me-chips">${chips}</div>
+    <div class="pb-sub" style="margin-top:10px;">Last session: ${esc(last.type||'Gym')} · ${_pbDate(last.date)}</div>
+  </div>`;
 }
 
 // ── FITNESS AGE ──
@@ -6086,6 +6368,7 @@ function openFitnessModal(){
   const log=getVo2Log();
   document.getElementById('fit-vo2-input').value=log.length?log[log.length-1].vo2:'';
   document.getElementById('fit-birthyear-input').value=p.birthYear||'';
+  document.getElementById('fit-maxhr-input').value=p.maxHr||'';
   _fitSex=p.sex||null;
   _renderFitSex();
   openModal('fitness-modal');
@@ -6098,7 +6381,9 @@ function saveFitness(){
   const thisYear=today().getFullYear();
   if(!(by>=thisYear-100&&by<=thisYear-12)){toastMsg('Enter your birth year');return;}
   if(!_fitSex){toastMsg('Choose male or female for the norms');return;}
-  state.profile={...(state.profile||{}),birthYear:by,sex:_fitSex};
+  const mhr=parseInt(document.getElementById('fit-maxhr-input').value);
+  if(!isNaN(mhr)&&(mhr<140||mhr>230)){toastMsg('Max HR looks off - check the number');return;}
+  state.profile={...(state.profile||{}),birthYear:by,sex:_fitSex,maxHr:isNaN(mhr)?null:mhr};
   if(!isNaN(vo2)){
     if(vo2<15||vo2>90){toastMsg('VO2max looks off - check the number');return;}
     const log=getVo2Log().filter(x=>x.date!==dk(today()));
@@ -6529,53 +6814,6 @@ function getAerobicEfficiency(runs){
   const avgP=a=>a.reduce((x,r)=>x+r.paceSecs,0)/a.length;
   return{rows,ready:true,refHR,early:avgP(rows.slice(0,n)),recent:avgP(rows.slice(-n)),n};
 }
-function renderAerobicEfficiencyCard(runs){
-  const ae=getAerobicEfficiency(runs);
-  const fmtS=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
-  if(!ae.ready)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Aerobic Efficiency</span></div><div class="empty-state" style="padding:16px 0 8px;">Log heart rate on ${6-ae.rows.length} more Easy or Long run${6-ae.rows.length===1?'':'s'} to see pace-for-heart-rate.</div></div>`;
-  const rows=ae.rows;
-  const W=320,H=160,PL=40,PR=10,PT=14,PB=24,chartW=W-PL-PR,chartH=H-PT-PB;
-  const vals=rows.map(r=>r.paceSecs);
-  const lo=Math.min(...vals)-10,hi=Math.max(...vals)+10,range=Math.max(hi-lo,1);
-  const px=i=>PL+(i/Math.max(rows.length-1,1))*chartW;
-  const py=v=>PT+((v-lo)/range)*chartH; // faster (lower secs) plots higher
-  let svg='';
-  const step=Math.max(15,Math.ceil(range/4/15)*15);
-  for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step){
-    const y=py(v);
-    svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.8" stroke-dasharray="3,3"/>`;
-    svg+=`<text x="${PL-5}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${fmtS(v)}</text>`;
-  }
-  svg+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+chartH}" stroke="var(--text3)" stroke-width="1.5"/><line x1="${PL}" y1="${PT+chartH}" x2="${W-PR}" y2="${PT+chartH}" stroke="var(--text3)" stroke-width="1.5"/>`;
-  // 5-run rolling average shows the trend through day-to-day noise (heat, hills, fatigue).
-  const roll=vals.map((_,i)=>{const w=vals.slice(Math.max(0,i-4),i+1);return w.reduce((a,b)=>a+b,0)/w.length;});
-  svg+=`<path d="M${roll.map((v,i)=>`${px(i).toFixed(1)},${py(v).toFixed(1)}`).join('L')}" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-  rows.forEach((r,i)=>{
-    svg+=`<circle cx="${px(i).toFixed(1)}" cy="${py(r.paceSecs).toFixed(1)}" r="3.5" fill="${effortStyle(r.effort).text}" opacity="0.55"/>`;
-    const every=Math.ceil(rows.length/5);
-    if(i===0||i===rows.length-1||(rows.length>6&&i%every===0&&rows.length-1-i>=every/2)){
-      const d=new Date(r.date+'T12:00:00');
-      svg+=`<text x="${px(i).toFixed(1)}" y="${H-2}" text-anchor="middle" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif">${d.getDate()}/${d.getMonth()+1}</text>`;
-    }
-  });
-  const delta=Math.round(ae.early-ae.recent); // +ve = faster now
-  const label=delta>=5?`↑ ${delta}s/km faster`:delta<=-5?`↓ ${-delta}s/km slower`:'→ Holding steady';
-  const color=delta>=5?'var(--green)':delta<=-5?'var(--red)':'var(--text3)';
-  return`<div class="chart-card">
-    <div class="chart-card-header"><span class="chart-card-title">Aerobic Efficiency</span><span class="chart-card-val" style="color:${color};">${label}</span></div>
-    <div style="font-size:12px;color:var(--text2);margin:-2px 0 8px;line-height:1.5;">Your pace at <strong>${ae.refHR}bpm</strong>: <strong>${fmtS(ae.recent)}/km</strong> now (last ${ae.n} runs) vs ${fmtS(ae.early)}/km at the start (first ${ae.n}).</div>
-    <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>
-    <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Easy').text};"></div>Easy</div>
-      <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:8px;height:8px;border-radius:50%;background:${effortStyle('Long Run').text};"></div>Long Run</div>
-      <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);"><div style="width:12px;height:3px;border-radius:2px;background:var(--green);"></div>5-run average</div>
-    </div>
-    <div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.5;">
-      <strong>What this shows:</strong> how fast you run for each heartbeat, converted to the pace you'd hold at ${ae.refHR}bpm. Higher on the chart is faster for the same effort, which means fitter. Single runs bounce around with heat, hills and tiredness, so watch the green line.
-    </div>
-  </div>`;
-}
-
 // ── RACE PREDICTOR ──
 // Riegel's formula (T2 = T1 x (D2/D1)^1.06) from your best recent race - the race,
 // not a training run, since tempo runs aren't all-out and would under-predict. Ultras
@@ -6597,7 +6835,7 @@ function getRacePrediction(runs){
   const base=src.r,bs=parseTimeToSecs(base.time);
   return{source:base,fromTempo,preds:PREDICT_DISTS.map(d=>({...d,secs:Math.round(riegel(bs,base.km,d.km))}))};
 }
-function renderRacePredictorCard(runs){
+function renderRacePredictorCardRiegel(runs){
   const pred=getRacePrediction(runs);
   const fmtD=ds=>{const d=new Date(ds+'T12:00:00');return`${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;};
   if(!pred)return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Race Predictor</span></div><div class="empty-state" style="padding:16px 0 8px;">Log a race (or a 5km+ tempo run) in the last few months to see predicted race times.</div></div>`;
@@ -6655,6 +6893,8 @@ function fmtDurationFromSecs(s){
 function getRaceProjection(){
   const r=state.race;
   if(!r||!r.date||!r.km)return null;
+  const fm=getFitnessModel();
+  if(fm){const ps=Math.round(timeForVdot(fm.now,+r.km));return{projSecs:ps,pace:fmtPace(r.km/ps),projTime:fmtDurationFromSecs(ps),basis:'at your current fitness'};}
   const QUALITY=new Set(['Tempo','Fartlek','Intervals','Hard']);
   const runs=loadRunData().filter(x=>x.km&&x.time&&QUALITY.has(x.effort));
   const recent=runs.slice(-6);
@@ -6725,12 +6965,12 @@ function getRaceStatusLines(){
   if(!proj){
     pace={text:'Log a tempo/interval run or two to get a pace comparison.',onTrack:null};
   }else if(!goalSecs){
-    pace={text:`Recent quality pace ${proj.pace}`,onTrack:null};
+    pace={text:proj.basis?`Predicted ${proj.projTime} at current fitness`:`Recent quality pace ${proj.pace}`,onTrack:null};
   }else{
     const diff=proj.projSecs-goalSecs;
-    if(Math.abs(diff)<30){pace={text:`Recent pace right on your ${esc(r.goalTime)} goal`,onTrack:true};}
-    else if(diff<0){pace={text:`Recent pace ahead of goal by ${fmtDurationFromSecs(Math.abs(diff))}`,onTrack:true};}
-    else{pace={text:`Recent pace ${fmtDurationFromSecs(diff)} off goal`,onTrack:false};}
+    if(Math.abs(diff)<30){pace={text:`${proj.basis?'Predicted time':'Recent pace'} right on your ${esc(r.goalTime)} goal`,onTrack:true};}
+    else if(diff<0){pace={text:`${proj.basis?'Predicted time':'Recent pace'} ahead of goal by ${fmtDurationFromSecs(Math.abs(diff))}`,onTrack:true};}
+    else{pace={text:`${proj.basis?'Predicted time':'Recent pace'} ${fmtDurationFromSecs(diff)} off goal`,onTrack:false};}
   }
   return{volume,pace};
 }
@@ -6826,7 +7066,7 @@ function renderRaceSection(){
       else if(diff<0)compareLine=` — ahead of your ${esc(r.goalTime)} goal by ${fmtDurationFromSecs(Math.abs(diff))}`;
       else compareLine=` — ${fmtDurationFromSecs(diff)} off your ${esc(r.goalTime)} goal`;
     }
-    return`<div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">Projected: ${proj.projTime}</strong> at your recent tempo pace (${proj.pace})${compareLine}</div>`;
+    return`<div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.5;"><strong style="color:var(--text);">Projected: ${proj.projTime}</strong> ${proj.basis||`at your recent tempo pace (${proj.pace})`}${compareLine}</div>`;
   })():'';
   const plan=getRaceBuildPlan();
   const planHtml=plan?`<div style="margin-top:10px;padding:10px 12px;background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2);border-radius:8px;">

@@ -1,10 +1,11 @@
-const CACHE = 'tracker-v56';
+const CACHE = 'tracker-v57';
 const ASSETS = [
   '/Weekly-tracker/',
   '/Weekly-tracker/index.html',
   '/Weekly-tracker/manifest.json',
   '/Weekly-tracker/icon-192.png',
   '/Weekly-tracker/icon-512.png',
+  '/Weekly-tracker/apple-touch-icon.png',
   '/Weekly-tracker/fonts/barlow-condensed-600.woff2',
   '/Weekly-tracker/fonts/barlow-condensed-700.woff2',
   '/Weekly-tracker/fonts/barlow-condensed-800.woff2',

@@ -327,6 +327,15 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .chart-card-title{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);}
 .chart-card-val{font-size:13px;font-weight:700;color:var(--text3);}
 .svg-chart{width:100%;overflow:visible;display:block;margin-top:8px;}
+.tr-more{margin:10px 0;}
+.tr-more>summary{list-style:none;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 16px;font-size:14px;font-weight:700;color:var(--text);display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
+.tr-more>summary::-webkit-details-marker{display:none;}
+.tr-more>summary span{font-size:11.5px;font-weight:600;color:var(--text3);}
+.tr-more>summary::after{content:'Show ▾';position:absolute;right:30px;font-size:12px;color:var(--accent2);margin-top:2px;}
+.tr-more[open]>summary::after{content:'Hide ▴';}
+.tr-more>summary{position:relative;}
+.me-moved{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:inherit;cursor:pointer;margin-bottom:10px;padding:13px 16px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:var(--surface);color:var(--text2);font-size:13px;line-height:1.4;}
+.me-moved b{color:var(--text);}
 /* TREND CARDS (pace, aerobic, VO2max) */
 .tr-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
 .tr-tile{background:var(--surface2);border-radius:12px;padding:10px 11px;min-width:0;}
@@ -995,9 +1004,10 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
   <div class="seg-tabs" id="trends-tabs">
     <div class="seg-track">
-      <button class="seg-tab active" data-tab="overview" onclick="switchTrendsTab('overview')">All</button>
+      <button class="seg-tab active" data-tab="overview" onclick="switchTrendsTab('overview')">Overview</button>
       <button class="seg-tab" data-tab="running" onclick="switchTrendsTab('running')">Run</button>
       <button class="seg-tab" data-tab="gym" onclick="switchTrendsTab('gym')">Gym</button>
+      <button class="seg-tab" data-tab="wellness" onclick="switchTrendsTab('wellness')">Wellness</button>
     </div>
   </div>
   <div id="trends-content" class="pad"></div>
@@ -1818,6 +1828,13 @@ function setQuotaTarget(id,n){
 }
 
 // ── PAGE NAV ──
+// Re-render whichever page is open, after something is logged from a modal that can be
+// opened from more than one page.
+function refreshActivePage(){
+  const a=document.querySelector('.page.active');if(!a)return;
+  const id=a.id.replace('page-','');
+  if(id==='today')renderToday();else if(id==='trends')renderTrends();else if(id==='me')renderMe();else if(id==='train')renderTrain();
+}
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -1917,7 +1934,7 @@ function handleAvatarUpload(file){
       state.profilePic=canvas.toDataURL('image/jpeg',0.8);
       saveState();
       renderAvatar();
-      if(document.getElementById('page-me').classList.contains('active'))renderMe();
+      refreshActivePage();
     };
     img.src=e.target.result;
   };
@@ -2134,11 +2151,11 @@ function getCoachBriefing(){
   if(lastW){
     const gap=Math.round((new Date(td+'T12:00:00')-new Date(lastW.date+'T12:00:00'))/864e5);
     const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
-    if(gap>=7)out.push({ic:'⚖️',t:`<b>No weigh-in for ${gap} days.</b>${goalW?` Last ${lastW.weight} kg, goal ${goalW} kg.`:''}`,go:"showPage('me');meSetTab('body')"});
+    if(gap>=7)out.push({ic:'⚖️',t:`<b>No weigh-in for ${gap} days.</b>${goalW?` Last ${lastW.weight} kg, goal ${goalW} kg.`:''}`,go:"showPage('trends');switchTrendsTab('wellness')"});
   }
   const vape=getNicotineSummary();
-  if(vape&&vape.lastGap>=2)out.push({ic:'💨',t:`<b>Nicotine not logged for ${vape.lastGap} days.</b>${vape.trendPct!=null&&vape.trendPct<0?` You were down ${-vape.trendPct}% on the month before.`:''}`,go:"showPage('me');meSetTab('body')"});
-  else if(vape&&vape.trendPct!=null&&vape.trendPct<=-10)out.push({ic:'💨',t:`<b>Puffs down ${-vape.trendPct}%</b> over the last two weeks compared with the two before. Keep chipping away.`,go:"showPage('me');meSetTab('body')"});
+  if(vape&&vape.lastGap>=2)out.push({ic:'💨',t:`<b>Nicotine not logged for ${vape.lastGap} days.</b>${vape.trendPct!=null&&vape.trendPct<0?` You were down ${-vape.trendPct}% on the month before.`:''}`,go:"showPage('trends');switchTrendsTab('wellness')"});
+  else if(vape&&vape.trendPct!=null&&vape.trendPct<=-10)out.push({ic:'💨',t:`<b>Puffs down ${-vape.trendPct}%</b> over the last two weeks compared with the two before. Keep chipping away.`,go:"showPage('trends');switchTrendsTab('wellness')"});
   return out.slice(0,4);
 }
 // Puffs a day: recent 14-day average against the 14 days before.
@@ -4498,6 +4515,7 @@ function renderTrends(){
   const el=document.getElementById('trends-content');
   if(_activeTrendsTab==='running'){el.innerHTML=renderTrendsRunAnalysis();return;}
   if(_activeTrendsTab==='gym'){el.innerHTML=renderPPLBalanceNote()+renderTrendsGymAnalysis();return;}
+  if(_activeTrendsTab==='wellness'){el.innerHTML=renderWellnessTab();return;}
   // Overview
   const now=today();const mon=getMonday(now);
   const weekScore=getWeekScore();
@@ -4545,8 +4563,6 @@ function renderTrends(){
     </div>
     ${sec('Fitness')}
     ${renderFitnessFormCard()}
-    ${sec('Recovery')}
-    ${renderRecoveryCard()}
     ${sec('Consistency')}
     <div class="metric-row">
       <div class="metric-card"><div class="m-label">Habits this week</div><div class="m-val">${weekScore}</div><div class="m-unit">% complete</div></div>
@@ -4554,11 +4570,11 @@ function renderTrends(){
     </div>
     ${streakHtml}
     ${renderWeeklyTrendChart()}
-    ${renderDayOfWeekHeatmap()}
-    ${sec('Insights')}
-    ${renderWhatMovesCard('Body & recovery')}
-    ${renderHabitImpactsCard()}
-    ${renderTimeOfDay()}
+    <details class="tr-more"><summary>More insights<span>day-of-week patterns, habit impacts, best time of day</span></summary>
+      ${renderDayOfWeekHeatmap()}
+      ${renderHabitImpactsCard()}
+      ${renderTimeOfDay()}
+    </details>
     ${sec('Look back')}
     ${renderWeekReviewHistory()}
     ${_yrIsReview()?'':renderYearCard()}
@@ -5100,6 +5116,60 @@ function renderRacePredictorCard(runs){
     <div class="tr-note">From pace and heart rate on your last ${m.n} run${m.n===1?'':'s'} (max HR ${m.hrMax.v}, ${m.hrMax.src}; resting ${m.hrRest.v}, ${m.hrRest.src}). ${calTxt} Half and marathon times assume the long runs to match.</div>
     ${goalHtml}
   </div>`;
+}
+
+// ── TRENDS: WELLNESS ──
+// Sleep, recovery, body composition and nicotine in one place, led by four numbers
+// that answer "how am I doing?" before the detail.
+function _slopePerWeek(pts){
+  if(pts.length<3)return null;
+  const t0=new Date(pts[0].ds+'T12:00:00');
+  const xs=pts.map(p=>(new Date(p.ds+'T12:00:00')-t0)/864e5),ys=pts.map(p=>p.v);
+  const mx=xs.reduce((a,b)=>a+b,0)/xs.length,my=ys.reduce((a,b)=>a+b,0)/ys.length;
+  const num=xs.reduce((a,x,i)=>a+(x-mx)*(ys[i]-my),0),den=xs.reduce((a,x)=>a+(x-mx)**2,0);
+  return den?num/den*7:null;
+}
+function getWellnessSnapshot(){
+  const td=dk(today()),morning=loadMorningData();
+  const avgOf=(k,a,b)=>{const v=Object.keys(morning).filter(d=>d>=a&&d<=b).map(d=>+morning[d][k]).filter(x=>x>0);return v.length?v.reduce((x,y)=>x+y,0)/v.length:null;};
+  const rd=[];for(let i=0;i<7;i++){const r=computeReadiness(_dsAgo(i));if(r.score!=null)rd.push(r.score);}
+  const rdPrev=[];for(let i=7;i<14;i++){const r=computeReadiness(_dsAgo(i));if(r.score!=null)rdPrev.push(r.score);}
+  const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const sleep7=avgOf('sleep',_dsAgo(6),td),sleep28=avgOf('sleep',_dsAgo(34),_dsAgo(7));
+  const H=loadHealthData().filter(h=>h.weight).sort((a,b)=>a.date.localeCompare(b.date));
+  const wPts=H.filter(h=>h.date>=_dsAgo(42)).map(h=>({ds:h.date,v:+h.weight}));
+  const wNow=wPts.length?mean(wPts.slice(-5).map(p=>p.v)):(H.length?+H[H.length-1].weight:null);
+  const wRate=_slopePerWeek(wPts);
+  const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
+  let eta=null;if(goalW&&wNow!=null&&wRate!=null&&wRate<-0.05&&wNow>goalW)eta=Math.ceil((wNow-goalW)/-wRate);
+  return{rd:mean(rd),rdPrev:mean(rdPrev),sleep7,sleep28,wNow,wRate,goalW,eta,lastW:H.length?H[H.length-1]:null,nic:getNicotineSummary()};
+}
+function renderWellnessSnapshot(){
+  const w=getWellnessSnapshot();
+  const tile=(label,val,sub,col)=>`<div class="tr-tile"><div class="tr-tile-l">${label}</div><div class="tr-tile-v">${val}</div><div class="tr-tile-d" style="color:${col||'var(--text3)'};">${sub}</div></div>`;
+  const d=(a,b,unit,lowerBetter,same=1)=>{if(a==null||b==null)return['–','var(--text3)'];const x=a-b;if(Math.abs(x)<same)return['steady','var(--text3)'];const good=lowerBetter?x<0:x>0;return[`${x>0?'▲':'▼'} ${Math.abs(Math.round(x))}${unit}`,good?'var(--green)':'var(--orange)'];};
+  const rdD=d(w.rd,w.rdPrev,' vs last week',false,2),slD=d(w.sleep7,w.sleep28,' vs usual',false,2);
+  const tiles=[
+    tile('Readiness',w.rd!=null?Math.round(w.rd):'–',w.rd!=null?`7-day avg · ${rdD[0]}`:'check in each morning',w.rd!=null?rdD[1]:null),
+    tile('Sleep score',w.sleep7!=null?Math.round(w.sleep7):'–',w.sleep7!=null?`7-day avg · ${slD[0]}`:'no sleep scores yet',w.sleep7!=null?slD[1]:null),
+    tile('Weight',w.wNow!=null?`${w.wNow.toFixed(1)}<span> kg</span>`:'–',w.wRate!=null&&Math.abs(w.wRate)>=0.05?`${w.wRate<0?'▼':'▲'} ${Math.abs(w.wRate).toFixed(1)} kg a week${w.eta?` · ${w.goalW} kg in ~${w.eta} wk${w.eta===1?'':'s'}`:''}`:w.lastW?'holding steady':'log a weigh-in',w.wRate!=null&&w.goalW&&Math.abs(w.wRate)>=0.05?(w.wRate<0?'var(--green)':'var(--orange)'):null),
+    tile('Nicotine',w.nic&&w.nic.recent!=null?`${Math.round(w.nic.recent)}<span> puffs/day</span>`:'–',w.nic&&w.nic.trendPct!=null?`${w.nic.trendPct<=0?'▼':'▲'} ${Math.abs(w.nic.trendPct)}% vs prior 2 wks`:'log puffs to see a trend',w.nic&&w.nic.trendPct!=null?(w.nic.trendPct<=0?'var(--green)':'var(--orange)'):null),
+  ];
+  return`<div class="chart-card"><div class="chart-card-header"><span class="chart-card-title">Wellness snapshot</span><span class="chart-card-val">tap a card below to log</span></div><div class="tr-tiles" style="margin-bottom:0;">${tiles.join('')}</div></div>`;
+}
+function renderWellnessTab(){
+  const health=loadHealthData();
+  const sec=t=>`<div class="trends-sec">${t}</div>`;
+  return`${renderWellnessSnapshot()}
+    ${sec('Sleep &amp; recovery')}
+    ${renderRecoveryCard()||'<div class="chart-card"><div class="empty-state"><strong>No check-ins yet</strong><p>Check in on Today each morning to see sleep, HRV and resting heart rate here.</p></div></div>'}
+    ${sec('Body composition')}
+    ${renderWeightSection(health)}
+    ${sec('Nicotine')}
+    ${renderVapingSection()}
+    ${sec('What moves your recovery')}
+    ${renderWhatMovesCard('Body & recovery')}
+    <div class="gap-md"></div>`;
 }
 
 // ── TRENDS: RUNNING ANALYSIS ──
@@ -6530,18 +6600,16 @@ function meSetTab(t){_meTab=t;renderMe();window.scrollTo({top:0});}
 function renderMe(){
   const el=document.getElementById('me-content');
   const name=state.userName||'';
-  const tabs=`<div class="seg-track me-tabs"><button class="seg-tab${_meTab==='overview'?' active':''}" onclick="meSetTab('overview')">Overview</button><button class="seg-tab${_meTab==='body'?' active':''}" onclick="meSetTab('body')">Body &amp; settings</button></div>`;
+  const tabs=`<div class="seg-track me-tabs"><button class="seg-tab${_meTab==='overview'?' active':''}" onclick="meSetTab('overview')">Overview</button><button class="seg-tab${_meTab==='body'?' active':''}" onclick="meSetTab('body')">Plan &amp; settings</button></div>`;
   document.getElementById('me-name-heading').textContent=_meTab==='overview'?'Me':(name||'Me');
-  document.getElementById('me-subhead').textContent=_meTab==='overview'?'Your training at a glance':'Health, race & settings';
+  document.getElementById('me-subhead').textContent=_meTab==='overview'?'Your training at a glance':'Race, plan, goals & settings';
   if(_meTab==='overview'){el.innerHTML=tabs+renderMeOverview();return;}
   const health=loadHealthData();
   const latestW=health.length?health[health.length-1].weight:null;
 
   el.innerHTML=tabs+`
     ${renderFitnessAgeCard()}
-    ${renderWeightSection(health)}
-    ${renderBodyFatSection(health)}
-    ${renderVapingSection()}
+    <button class="me-moved" onclick="showPage('trends');switchTrendsTab('wellness')"><span>⚖️ 💨</span><span><b>Weight, body fat &amp; nicotine</b> now live in Trends → Wellness, alongside sleep and recovery.</span><span class="brief-go">›</span></button>
     ${renderRaceSection()}
     ${renderWeekPlanSection()}
     ${renderCustomGoalsList()}
@@ -7478,7 +7546,7 @@ function saveGoal(){
   }
   state.customGoals=cg;saveState();
   closeModal('goal-modal');toastMsg(editingGoalId?'Goal updated':'Goal added');haptic('success');
-  renderToday();if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  renderToday();refreshActivePage();
 }
 
 function deleteGoal(){
@@ -7486,7 +7554,7 @@ function deleteGoal(){
   if(!confirm('Delete this goal?'))return;
   state.customGoals=(state.customGoals||[]).filter(g=>g.id!==editingGoalId);
   saveState();closeModal('goal-modal');toastMsg('Goal deleted');
-  renderToday();if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  renderToday();refreshActivePage();
 }
 
 function openHealthModal(){
@@ -7506,7 +7574,7 @@ function saveWeight(){
   data.push({date:dk(today()),weight:w,bodyFat:bf,note,ts:Date.now()});
   saveHealthData(data);
   closeModal('health-modal');toastMsg('Health logged');haptic('success');
-  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  refreshActivePage();
 }
 
 function openBodyCompGoalModal(){
@@ -7522,12 +7590,12 @@ function saveBodyCompGoal(){
   if(!w&&!bf){toastMsg('Set a target weight or body fat %');return;}
   state.bodyCompGoal={weight:w,bodyFat:bf};saveState();
   closeModal('body-comp-goal-modal');toastMsg('Goal saved');haptic('success');
-  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  refreshActivePage();
 }
 function clearBodyCompGoal(){
   if(!confirm('Remove body comp goal?'))return;
   state.bodyCompGoal=null;saveState();closeModal('body-comp-goal-modal');toastMsg('Goal removed');
-  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  refreshActivePage();
 }
 
 let _vapEditTs=null;
@@ -7552,7 +7620,7 @@ function saveVaping(){
   else data.push({date:dk(today()),puffs,mg,note,ts:Date.now()});
   saveVapingData(data);_vapEditTs=null;
   closeModal('vaping-modal');toastMsg(isEdit?'Entry updated':'Logged');haptic('success');
-  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  refreshActivePage();
 }
 
 let raceDist='';
@@ -7591,12 +7659,12 @@ function saveRace(){
   if(!date){toastMsg('Pick a race date');return;}
   state.race={name,date,km,goalTime};saveState();
   closeModal('race-modal');toastMsg('Race saved');haptic('success');
-  renderToday();if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  renderToday();refreshActivePage();
 }
 function clearRace(){
   if(!confirm('Remove race target?'))return;
   state.race=null;saveState();closeModal('race-modal');toastMsg('Race removed');
-  renderToday();if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  renderToday();refreshActivePage();
 }
 
 // ── APPEARANCE ──
@@ -9697,7 +9765,7 @@ function saveRunTarget(val){
   const v=parseFloat(val)||0;
   state.runTarget=v;saveState();
   toastMsg(v>0?`Target: ${v} km/week`:'Target cleared');
-  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  refreshActivePage();
   if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
 function editRunTargetInline(){
@@ -10646,13 +10714,13 @@ function saveWeekPlan(){
     gyms.push(plan[i]==='Run'&&gymEl&&gymEl.value?gymEl.value:null);
   }
   state.weekPlan=plan;state.weekPlanRunType=runTypes;state.weekPlanGym=gyms;_weekPlanDraft=null;saveState();toastMsg('Plan saved');haptic('success');
-  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  refreshActivePage();
   if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
 function clearWeekPlan(){
   if(!confirm('Remove training plan?'))return;
   state.weekPlan=null;_weekPlanDraft=null;saveState();toastMsg('Plan removed');
-  if(document.getElementById('page-me').classList.contains('active'))renderMe();
+  refreshActivePage();
   if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
 // ── EXERCISE LIBRARY & MUSCLE TRACKING ──

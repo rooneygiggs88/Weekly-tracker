@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="91">
+<meta name="app-version" content="92">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -3089,18 +3089,18 @@ function renderHabitsCoachCard(){
 // it; moves are remembered per week.
 const _CAL_DAY=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 function _calSlotsFor(weekOffset){
-  if(weekOffset<=1){
-    const w=getYearGoalWeek(weekOffset);if(!w)return null;
+  if(weekOffset<=1&&getYearGoalWeek(weekOffset)){
+    const w=getYearGoalWeek(weekOffset);
     const pw=w.plan&&w.plan.weeks[0];
     const slots=(weekOffset===0?(w.active||w.open||[]):w.slots).map(x=>({type:x.type,km:Math.round(x.left!=null?x.left:x.km),id:x.id,day:x.day,sub:x.sub,why:x.why,stretched:x.stretched})).filter(x=>x.km>0);
     return{target:w.target,kind:pw?pw.kind:'build',overridden:pw&&pw.overridden,race:w.race,slots,yw:w,coach:w.coach};
   }
   const base=getYearGoalWeek();if(!base||!base.plan)return null;
   const mon=dk(addDays(getMonday(today()),weekOffset*7));
-  const pw=base.plan.weeks.find(x=>x.mon===mon);if(!pw)return null;
+  const pw=[...base.plan.weeks,...(base.plan.after||[])].find(x=>x.mon===mon);if(!pw)return null;
   const g=state.yearRunGoal,full=(YEAR_GOAL_SPLITS[g.runsPerWeek||5]||YEAR_GOAL_SPLITS[5]).map(x=>({...x}));
   const monD=new Date(mon+'T12:00:00'),yEnd=`${g.year}-12-31`,sunD=dk(addDays(monD,6));
-  const fp=_planSlots(weekOffset,monD,mon,sunD<yEnd?sunD:yEnd,{target:pw.target,kind:pw.kind,race:pw.race,longCap:pw.longCap,doneKm:0});
+  const fp=_planSlots(weekOffset,monD,mon,pw.next||sunD<yEnd?sunD:yEnd,{target:pw.target,kind:pw.kind,race:pw.race,longCap:pw.longCap,doneKm:0});
   if(fp)fp.forEach(x=>{if(x.fixedKm!=null)x.fixed=x.fixedKm;});
   const n=Math.max(1,Math.min(full.length,Math.round(full.length*pw.days/7)));
   let sl=fp||full.slice(0,n);
@@ -3483,7 +3483,7 @@ function renderPlanCalendar(){
   const el=document.getElementById('plan-cal-wrap');if(!el)return;
   const g=state.yearRunGoal;if(!g||today().getFullYear()!==g.year){el.innerHTML='';return;}
   const base=getYearGoalWeek();if(!base||!base.plan){el.innerHTML='';return;}
-  const n=_calAll?base.plan.weeks.length:2;
+  const n=_calAll?base.plan.weeks.length+(base.plan.after||[]).length:2;
   const weeks=[];for(let o=0;o<n;o++){const w=getCalendarWeek(o);if(w)weeks.push(w);}
   const kindTxt={race:'Race week',taper:'Taper week',recovery:'Recovery week',build:'Build week'};
   const tmpl0=Array.isArray(state.weekPlan)||planMode()==='coach';
@@ -3507,7 +3507,7 @@ function renderPlanCalendar(){
   el.innerHTML=`<div class="chart-card pc-card"><div class="chart-card-header"><span class="chart-card-title">Plan</span><span class="chart-card-val">tap a run to move or change it</span></div>
     ${renderUsualWeek()}
     ${weeks.map(wk).join('')}
-    <button class="tl-more" onclick="_calAll=!_calAll;renderPlanCalendar()">${_calAll?'Show two weeks':'Show every week to 31 Dec'}</button></div>`;
+    <button class="tl-more" onclick="_calAll=!_calAll;renderPlanCalendar()">${_calAll?'Show two weeks':(base.plan.after||[]).length?'Show every week to your last race':'Show every week to 31 Dec'}</button></div>`;
 }
 // Today's and tomorrow's runs from the calendar, when it has them.
 function getCalendarRunOn(ds){
@@ -10252,6 +10252,15 @@ function getGoalRunKm(g){
   return loadRunData().filter(r=>r.loggedAt&&r.loggedAt>=g.startedAt&&(r.date||'').startsWith(String(g.year))).reduce((a,r)=>a+goalKm(r),0);
 }
 // One-time seed for 2026: 1,610km target, 651km remaining, counting down from first load.
+// Start this year's goal in one tap; runs already logged this year count towards it.
+function startYearGoal(km,e){
+  if(e)e.stopPropagation();
+  const y=today().getFullYear(),old=state.yearRunGoal;
+  if(old&&old.year<y){const op=getYearGoalProgress();state.goalHistory=state.goalHistory||[];state.goalHistory.push({year:old.year,targetKm:old.targetKm,done:op?Math.round(op.done):null});}
+  const logged=loadRunData().filter(r=>r.date.startsWith(String(y))).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  state.yearRunGoal={year:y,targetKm:km,startRemaining:Math.max(0,Math.round(km-logged)),startedAt:Date.now(),runsPerWeek:(old&&old.runsPerWeek)||5,capMode:'stretch'};
+  _cwMemo={};saveState();haptic('success');toastMsg(`${y} goal set: ${km.toLocaleString('en-GB')} km`);renderToday();
+}
 function ensureYearRunGoal(){
   if(state.yearRunGoal||today().getFullYear()!==2026)return;
   state.yearRunGoal={year:2026,targetKm:1610,startRemaining:651,startedAt:Date.now(),runsPerWeek:5};
@@ -10285,6 +10294,20 @@ function renderYearGoalCard(){
   ensureYearRunGoal();
   const nowYear=today().getFullYear();
   const p=getYearGoalProgress();
+  if(p&&!p.isCurrentYear&&p.year<nowYear){
+    // New Year: last year's result and a one-tap goal for this one.
+    const done=Math.round(p.done),hit=done>=p.g.targetKm-0.5;
+    const loggedNow=loadRunData().filter(r=>r.date.startsWith(String(nowYear))).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+    const opt=k=>`<button onclick="startYearGoal(${k},event)"><b>${k.toLocaleString('en-GB')} km</b><span>${k===Math.round(done/10)*10?`about your ${p.year}`:k>done?`+${Math.round((k/done-1)*100)}% on ${p.year}`:''}</span></button>`;
+    const r1=Math.round(done/10)*10,r2=Math.round(done*1.1/10)*10,r3=Math.round(done*1.2/10)*10;
+    wrap.innerHTML=`<div class="year-goal-card">
+      <div class="year-goal-head"><span>${p.year} in the books</span></div>
+      <div style="font-size:15px;line-height:1.5;color:var(--text2);margin-bottom:12px;"><b style="color:var(--text);">${done.toLocaleString('en-GB')} km</b> against a ${p.g.targetKm.toLocaleString('en-GB')} km goal${hit?': done.':`, ${Math.round(p.g.targetKm-done)} short.`} Pick a ${nowYear} goal and the coach picks up straight away${loggedNow>=1?` (the ${fmtKm(loggedNow)} km you've run this year count)`:''}.</div>
+      <div class="np-pick">${opt(r1)}${opt(r2)}${opt(r3)}</div>
+      <button class="tl-more" onclick="openYearGoalModal()">Something else</button>
+    </div>`;
+    return;
+  }
   if(!p||!p.isCurrentYear){
     wrap.innerHTML=`<div class="year-goal-card" onclick="openYearGoalModal()" style="cursor:pointer;">
       <div class="year-goal-head"><span>${nowYear} running goal</span></div>
@@ -10596,8 +10619,12 @@ function _coachWeek(o,mode,monK,td){
   const kind=o.kind||'build';
   const needLong=!doneLong&&kind!=='race'&&R>=8&&!lowAny;
   const weekNo=Math.floor((mon-new Date(mon.getFullYear(),0,1))/(7*864e5));
+  const PH=kind==='build'?weekPhase(monK):null;
   let qSub=kind==='taper'||kind==='race'?'Sharpener':(weekNo%2&&stats.base>=25&&!retAny?'Intervals':'Tempo');
-  const needQ=!doneQ&&!postRace&&!lowAny&&kind!=='recovery'&&R>=6;
+  // The phase shapes the quality: tempo only in base, race-specific in peak.
+  if(PH&&PH.phase==='base')qSub='Tempo';
+  if(PH&&PH.phase==='peak')qSub=PH.short?'Intervals':'Tempo';
+  const needQ=!doneQ&&!postRace&&!lowAny&&kind!=='recovery'&&R>=6&&!(PH&&PH.phase==='base'&&weekNo%2);
   const chosen=new Map();const notes=[];
   const set=(i,sub,why)=>chosen.set(i,{day:i,sub,why});
   const allRunDays=()=>[...S.filter(s=>!s.past).map(s=>s.day),...chosen.keys()];
@@ -10651,7 +10678,7 @@ function _coachWeek(o,mode,monK,td){
     if(needLong&&kind==='build'&&n>=3){
       const wsum=16+(needQ?10:0)+9*Math.max(0,n-1-(needQ?1:0));
       const longEst=R*16/wsum,cap=Math.max(18,stats.longest*1.1);
-      if(longEst>cap*1.05){
+      if(longEst>cap*1.05||(PH&&PH.ultra&&PH.phase==='peak'&&longEst>=16)){
         for(let i=6;i>=1;i--){if(F.includes(i)&&F.includes(i-1)&&longOK(i)&&longOK(i-1)&&!(raceI!=null&&Math.abs(i-raceI)<=2)){b2b=[i-1,i];break;}}
       }
       if(b2b){set(b2b[0],'Long',`${DN(b2b[0])}: day one of a back-to-back. One ${Math.round(longEst)} km run would be well past your recent longest (${Math.round(stats.longest)} km), so it's split over two days.`);
@@ -10758,6 +10785,7 @@ function _coachWeek(o,mode,monK,td){
   const free=mode==='coach'?[0,1,2,3,4,5,6].filter(i=>inR(i)&&ds(i)>=td&&A[i].run).length:null;
   const keyTxt=fut.filter(s=>['Long','B2B','Tempo','Intervals','Sharpener'].includes(s.sub)).map(s=>`${s.sub==='B2B'?'back-to-back':s.sub==='Sharpener'?'race-pace reps':s.sub.toLowerCase()} ${_CAL_DAY[s.day]}`).join(', ');
   const rc=fut.find(s=>s.sub==='Race');
+  if(PH)notes.unshift(`${PH.phase[0].toUpperCase()+PH.phase.slice(1)} phase: ${PH.weeksTo} weeks to ${esc(PH.race.name||'your A race')}${PH.phase==='base'?', so easy volume and light quality':PH.phase==='build'?', so quality every week':PH.ultra?', so race-specific long runs and back-to-backs':', so race-specific sessions'}.`);
   const nF=fut.filter(s=>s.sub!=='Race').length,kmF=Math.round(R+(rc?o.race.km:0));
   let summary=mode==='coach'?`${nF} run${nF===1?'':'s'}${wk===0?' left':''}${state.availCustom?` on ${free} free day${free===1?'':'s'}`:`, ${kmF} km`}${keyTxt?`: ${keyTxt}`:''}${rc?`, then the race ${_CAL_DAY[rc.day]}`:''}${gym.length?`; gym ${gym.map(g=>_CAL_DAY[g.day]).join(', ')}`:''}.`:'';
   if(mode==='manual'){const picks=[...chosen.values()].filter(c=>c.why.startsWith('Coach'));summary=`${fut.filter(s=>s.sub!=='Race').length} run${fut.filter(s=>s.sub!=='Race').length===1?'':'s'}${wk===0?' left':''} from your usual week${keyTxt?`: ${keyTxt}`:''}${rc?`, then the race ${_CAL_DAY[rc.day]}`:''}.${picks.length?` Coach's picks: ${picks.map(c=>`${c.sub==='Sharpener'?'race-pace reps':c.sub.toLowerCase()} ${_CAL_DAY[c.day]}`).join(', ')}.`:''}`;}
@@ -10769,6 +10797,18 @@ function _coachWeek(o,mode,monK,td){
   return{sessions,gym,summary,notes,free:F,mode,rest};
 }
 
+// ── SEASON PHASE ──
+// Where a week sits on the road to your next A race: base (12+ weeks out: easy volume,
+// one light quality session every other week), build (quality every week, alternating),
+// peak (3-5 weeks out: race-specific work, back-to-backs for an ultra), then the plan's
+// own taper, race week and recovery.
+function weekPhase(monK){
+  const A=getRaces().filter(r=>r.priority!=='B'&&r.date>=monK).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  if(!A)return null;
+  const wk=Math.round((getMonday(new Date(A.date+'T12:00:00'))-new Date(monK+'T12:00:00'))/(7*864e5));
+  const ph=wk>=12?'base':wk>=6?'build':wk>=3?'peak':null;
+  return ph?{phase:ph,weeksTo:wk,race:A,ultra:+A.km>43,short:+A.km<=10.5}:null;
+}
 // ══ SESSIONS ══
 // What each session actually is: warm-up, main set and cool-down, with paces from your
 // fitness (Daniels' intensities from your best recent race). Quality sessions rotate
@@ -11130,7 +11170,22 @@ function buildYearPlan(startMon,R,opts){
   let cum=0,finish=null;for(const w of weeks){cum+=w.target;if(cum>=R-1.5&&!finish){finish=dk(addDays(new Date(w.mon+'T12:00:00'),6));}}
   if(finish&&finish>dk(yearEnd))finish=dk(yearEnd);
   if(!finish&&shortfall<=1)finish=dk(yearEnd);
-  return{weeks,base:Math.round(base),cap:isFinite(capW)?Math.round(capW):null,capMode:g.capMode==='stretch'||g.capMode==='goal'?g.capMode:'safe',shortfall:Math.round(shortfall),finish,R};
+  // Past 31 Dec: if a race is beyond the year, keep planning up to it (and its recovery),
+  // from your recent weeks with a gentle build and an easier week every fourth, shaped by
+  // the races. Kept apart from the year's weeks so the goal maths is untouched.
+  const after=[];
+  const lastRace=getRaces().filter(r=>r.date>dk(yearEnd)).map(r=>r.date).sort().pop();
+  if(lastRace&&base>=8){
+    const until=addDays(new Date(lastRace+'T12:00:00'),21),cap2=addDays(yearEnd,7*26);
+    let mon=getMonday(addDays(yearEnd,1));if(dk(mon)<=dk(yearEnd))mon=addDays(mon,7);
+    for(let k=0;mon<=until&&mon<=cap2;mon=addDays(mon,7),k++){
+      const rf=weekRaceInfo(mon,base);
+      const cut=(k+1)%4===0;
+      const tgt=rf?Math.max(base*rf.factor,rf.minKm||0):base*Math.min(1.25,1+0.04*Math.min(k,6))*(cut?0.8:1);
+      after.push({mon:dk(mon),days:7,cap:capW,kind:rf?rf.kind:(cut?'recovery':'build'),note:rf?rf.note:cut?'An easier week to absorb the build.':'Building steadily towards your next race.',race:rf?rf.race:null,longCap:rf?rf.longCap:null,fixed:true,target:Math.round(tgt),next:true});
+    }
+  }
+  return{weeks,after,base:Math.round(base),cap:isFinite(capW)?Math.round(capW):null,capMode:g.capMode==='stretch'||g.capMode==='goal'?g.capMode:'safe',shortfall:Math.round(shortfall),finish,R};
 }// Next week's projection sits behind a button showing its km, so you can watch it shrink
 // as you log runs this week. Opens by default on Sundays (planning night).
 let _ygNextOpen=null; // null = default for the day

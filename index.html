@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="60">
+<meta name="app-version" content="61">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -2541,7 +2541,8 @@ function getCoachBriefing(){
   if(yw&&yw.target>0){
     if(yw.leftKm<=0)out.push({ic:'check',t:`<b>Week's running done:</b> ${fmtKm(yw.weekKm)} of ${Math.round(yw.target)} km.`,go:"showPage('train');switchTrainTab('run')"});
     else{
-      const parts=yw.open.map(x=>`${Math.round(x.left)} ${x.type.toLowerCase()}`);
+      const act=yw.active||yw.open;
+      const parts=act.length===1?[`your ${Math.round(act[0].left)} km ${act[0].type==='Long'?'long run':act[0].type.toLowerCase()+' run'} ${yw.topUp?`plus ${yw.topUp} km on top`:'covers it'}`]:[...act.map(x=>`${Math.round(x.left)} ${x.type.toLowerCase()}`),...(yw.topUp?[`plus ${yw.topUp} km on top of any run`]:[])];
       const why=yw.race&&yw.note&&yw.note.startsWith('Race week')?' Race week, so keep it easy.':yw.race&&yw.target<yw.rawTarget?' Taper week, so less is more.':yw.target<yw.rawTarget?' Capped to keep the build safe.':'';
       out.push({ic:'run',t:`<b>${fmtKm(yw.leftKm)} km left this week</b>${parts.length?`: ${parts.join(', ')}`:''}.${why}`,go:"showPage('train');switchTrainTab('run')"});
     }
@@ -8787,9 +8788,21 @@ function getYearGoalWeek(weekOffset=0){
       rest.forEach(x=>{x.left=rSum?Math.max(0,leftKm-lk)*x.w/rSum:0;});
     }
   }
+  // Runs too small to bother with (under 3 km) fold into the biggest other run; anything
+  // left at zero is optional rather than "a 0 km run".
+  // Your own long-run setting is never changed: if it's the only run big enough, the
+  // leftover is shown as a small top-up for any run instead.
+  let topUp=0;
+  open.forEach(x=>{
+    if(x.left>0.05&&x.left<3){const to=open.filter(y=>y!==x&&y.left>=3&&!y.custom).sort((a,b)=>b.left-a.left)[0];if(to){to.left+=x.left;x.left=0;}else{topUp+=x.left;x.left=0;}}
+  });
+  if(topUp>=3){const to=open.find(x=>x.left===0&&x!==longSlot);if(to){to.left=topUp;topUp=0;}}
+  open.forEach(x=>{x.optional=Math.round(x.left)===0;});
+  const active=open.filter(x=>!x.optional),optional=open.filter(x=>x.optional);
+  topUp=Math.round(topUp);
   if(longSlot&&longSlot.custom&&guard.longCap!=null&&longSlot.left>guard.longCap)
     note=(note?note+' ':'')+`Your ${Math.round(longSlot.left)} km long run is your call, but with the race a week later, ${guard.longCap} km or less would keep your legs fresher.`;
-  return{plan,longKey,longMax,longSlot,target,rawTarget,note,race,base:guard.base,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
+  return{plan,active,optional,topUp,longKey,longMax,longSlot,target,rawTarget,note,race,base:guard.base,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
 }
 // Two guard rails on the catch-up maths. (1) A ramp cap: no more than ~15% above your
 // average of the last four complete weeks, since big jumps in weekly load are the most
@@ -8956,7 +8969,8 @@ function renderYearGoalWeek(){
   const f1=v=>(Math.round(v*10)/10).toLocaleString('en-GB',{maximumFractionDigits:1});
   const done=w.leftKm<=0;
   const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy',Race:'Race'};
-  const segs=w.slots.map(x=>x.run
+  const shown=w.slots.filter(x=>x.run||!x.optional||done);
+  const segs=shown.map(x=>x.run
     ?`<div class="yg-seg done"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${goalKm(x.run)}</div></div>`
     :x===w.longSlot&&!done
       ?`<div class="yg-seg tap" onclick="toggleYearGoalLong(event)" role="button" aria-label="Adjust long run"><div class="yg-seg-type">${lbl[x.type]}${x.custom?' •':' ✎'}</div><div class="yg-seg-km">${Math.round(x.left)}</div></div>`
@@ -8970,14 +8984,17 @@ function renderYearGoalWeek(){
   let left='';
   if(done)left=`<strong style="color:var(--green);">Week done ✓</strong>${w.weekKm-w.target>=1?` ${f1(w.weekKm-w.target)}km over, which lowers every week's target from here.`:''}`;
   else{
-    const groups={};w.open.forEach(x=>{(groups[x.type]=groups[x.type]||[]).push(Math.round(x.left));});
+    const act=w.active||w.open,opt=(w.optional||[]).length;
+    const groups={};act.forEach(x=>{(groups[x.type]=groups[x.type]||[]).push(Math.round(x.left));});
     const parts=['Race','Long','Tempo','Easy'].filter(t=>groups[t]).map(t=>{const a=groups[t];const same=a.every(v=>v===a[0]);return a.length>1&&same?`${a.length} × ${a[0]} ${t.toLowerCase()}`:a.map(v=>`${v} ${t.toLowerCase()}`).join(', ');});
-    left=w.open.length?`${w.open.length} run${w.open.length===1?'':'s'} left: <strong>${parts.join(', ')}</strong>`:`<strong>${f1(w.leftKm)}km</strong> still to go this week. One more run should do it.`;
+    const optTxt=opt?` ${act.length===1?`That covers the rest of the week, so the other ${opt===1?'run is':`${opt} runs are`} optional.`:`The other ${opt===1?'run is':`${opt} runs are`} optional.`}`:'';
+    const tu=w.topUp?`, plus ${w.topUp} km on top of any run`:'';
+    left=act.length?`${act.length===1?'One run left':`${act.length} runs left`}: <strong>${parts.join(', ')}</strong>${tu}.${optTxt}`:`<strong>${f1(w.leftKm)}km</strong> still to go this week. One more run should do it.`;
   }
   return`<div class="yg-week">
     <div class="yg-week-head"><span>This week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span><span><strong>${f1(w.weekKm)}</strong> / ${f1(w.target)} km</span></div>
     <div class="yg-week-bar"><div style="width:${Math.min(100,w.weekKm/w.target*100).toFixed(1)}%;"></div></div>
-    <div class="yg-segs" style="grid-template-columns:repeat(${w.slots.length},1fr);">${segs}</div>
+    <div class="yg-segs" style="grid-template-columns:repeat(${shown.length},1fr);">${segs}</div>
     ${longEdit}
     <div class="yg-week-left">${left}</div>
     ${w.note?`<div class="yg-guard">${w.note}</div>`:''}

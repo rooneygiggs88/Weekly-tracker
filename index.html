@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="67">
+<meta name="app-version" content="68">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -441,6 +441,20 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .rc-p{font-size:13.5px;line-height:1.5;color:var(--text2);margin-top:6px;}
 .rc-p b{color:var(--text);font-weight:600;}
 .rc-use{width:100%;margin-top:12px;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--text);background:none;color:var(--text);font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;}
+.hc-coach{margin-bottom:12px;}
+.hc-coach p{font-size:13.5px;line-height:1.5;color:var(--text2);padding:7px 0;border-bottom:1px solid var(--border);}
+.hc-coach p:last-child{border-bottom:none;}
+.hc-coach b{color:var(--text);}
+.hc-row{display:grid;grid-template-columns:minmax(0,1fr) auto 44px;align-items:center;gap:8px;padding:6px 0;}
+.hc-name{font-size:13px;font-weight:600;min-width:0;display:flex;flex-direction:column;line-height:1.2;}
+.hc-name>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hc-streak{margin-top:1px;font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--ring-habits);}
+.hc-strip{display:grid;grid-template-columns:repeat(14,8px);gap:2px;}
+.hc-strip i{height:16px;border-radius:2px;}
+.hc-strip i.y{background:var(--ring-habits);}
+.hc-strip i.n{background:var(--surface2);}
+.hc-strip i.x{background:transparent;}
+.hc-n{font-family:var(--display);font-weight:800;font-size:15px;text-align:right;font-variant-numeric:tabular-nums;}
 /* QUICK LOG */
 .ql-h{font-size:20px;font-weight:800;letter-spacing:-0.4px;text-align:center;margin-bottom:16px;}
 .ql-big{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
@@ -567,6 +581,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .brief-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin:0 2px 6px;}
 .brief-line{display:flex;align-items:flex-start;gap:10px;width:100%;background:none;border:none;border-top:1px solid var(--border);padding:10px 2px;font-family:inherit;text-align:left;color:var(--text2);cursor:pointer;font-size:13.5px;line-height:1.45;}
 .brief-line:first-of-type{border-top:none;}
+.brief-h+.brief-line{border-top:none;}
 .brief-line b{color:var(--text);}
 .brief-ic{font-size:17px;line-height:1.2;flex-shrink:0;}
 .brief-t{flex:1;}
@@ -2647,6 +2662,89 @@ function renderRunCoachCard(){
     <p class="rc-p"><b>${shape}</b></p>
     <p class="rc-p">${left} ${ctx}</p>
     <button class="rc-use" onclick="useTodaysRun(${P.km},'${effort}')">Fill in the form with ${P.km} km ${tag.toLowerCase()}</button>
+  </div>`;
+}
+
+// ── WELLNESS COACH (Trends > Wellness) ──
+// The Today lines plus the longer view: how sleep compares with your normal, the factor
+// your own data most clearly links to worse mornings, a nicotine target for the week, and
+// a weight plan that fits alongside the running.
+// Only the measures that point the way the finding does (better: readiness and HRV up,
+// resting HR down), so a line never says "helps" next to a number that went the other way.
+function _impactTxt(f){
+  const good=!!f.better,parts=[];
+  if(f.score&&Math.abs(f.score.diff)>=2&&(f.score.diff>0)===good)parts.push(`readiness ${f.score.diff>0?'+':''}${Math.round(f.score.diff)}`);
+  if(f.hrv&&f.hrv.base&&Math.abs(f.hrv.diff/f.hrv.base)>=0.03&&(f.hrv.diff>0)===good)parts.push(`HRV ${f.hrv.diff>0?'+':''}${Math.round(f.hrv.diff/f.hrv.base*100)}%`);
+  if(f.rhr&&Math.abs(f.rhr.diff)>=1&&(f.rhr.diff<0)===good)parts.push(`resting HR ${f.rhr.diff>0?'+':''}${Math.round(f.rhr.diff)} bpm`);
+  return parts.join(', ');
+}
+function getWellnessPageCoach(){
+  const out=[],w=getWellnessSnapshot(),td=dk(today());
+  // Sleep: today's flag if there is one, otherwise the week against your normal.
+  const sl=getSleepCoachLine();
+  if(sl)out.push({ic:'moon',t:sl});
+  else if(w.sleep7!=null&&w.sleep28!=null){
+    const d=Math.round(w.sleep7-w.sleep28);
+    out.push({ic:'moon',t:d>=3?`<b>Sleep is averaging ${Math.round(w.sleep7)} this week</b>, ${d} above your usual. Whatever you've changed, keep it.`
+      :d<=-3?`<b>Sleep is averaging ${Math.round(w.sleep7)} this week</b>, ${-d} below your usual. The quickest fix is the same bedtime every night, even at weekends.`
+      :`<b>Sleep is steady</b> at ${Math.round(w.sleep7)}, in line with your usual.`});
+  }
+  // The factor most clearly linked to worse (or better) mornings.
+  const imps=getHabitImpacts().filter(f=>!f.pending&&f.size!=='none');
+  const bad=imps.filter(f=>!f.better).sort((a,b)=>(a.size==='clear'?0:1)-(b.size==='clear'?0:1))[0];
+  const good=imps.filter(f=>f.better).sort((a,b)=>(a.size==='clear'?0:1)-(b.size==='clear'?0:1))[0];
+  if(bad&&_impactTxt(bad))out.push({ic:'medal',t:`<b>${esc(bad.label)} ${bad.size==='clear'?'costs you':'may cost you'}:</b> mornings after it run ${_impactTxt(bad)}. Worth avoiding the night before anything that matters.`});
+  else if(good&&_impactTxt(good))out.push({ic:'medal',t:`<b>${esc(good.label)} ${good.size==='clear'?'helps':'may help'}:</b> mornings after it run ${_impactTxt(good)}. Protect it.`});
+  // Nicotine: today's target, then the week.
+  const nic=getWellnessCoachLines().filter(l=>l.ic==='wind');
+  nic.forEach(l=>out.push(l));
+  const v=loadVapingData().filter(x=>x.date&&+x.puffs>=0);
+  if(v.length>=7){
+    const byWeek={};v.forEach(x=>{const k=dk(getMonday(new Date(x.date+'T12:00:00')));(byWeek[k]=byWeek[k]||[]).push(+x.puffs);});
+    const avgs=Object.entries(byWeek).filter(([k,a])=>a.length>=4&&k<dk(getMonday(today()))).map(([k,a])=>({k,v:a.reduce((s,y)=>s+y,0)/a.length})).sort((a,b)=>a.v-b.v);
+    if(avgs.length>=2){const best=avgs[0],recent=Object.entries(byWeek).sort((a,b)=>b[0].localeCompare(a[0]))[0];
+      const target=Math.round(Math.min(best.v,recent[1].reduce((s,y)=>s+y,0)/recent[1].length*0.9)/5)*5;
+      const bestTxt=`${Math.round(best.v)} a day, week of ${_pbDate(best.k)}`;
+      out.push({ic:'wind',t:`<b>This week's nicotine goal: average under ${target} a day.</b> ${target<best.v-2?`That would beat your best week so far (${bestTxt}).`:`That matches your best week so far (${bestTxt}).`}`});}
+  }
+  // Weight: what the goal needs at a pace that fits with heavy running.
+  const wl=getWellnessCoachLines().filter(l=>l.ic==='scale');
+  wl.forEach(l=>out.push(l));
+  if(w.goalW&&w.wNow!=null&&w.wNow>w.goalW+0.3){
+    const need=w.wNow-w.goalW,wk12=need/12;
+    out.push({ic:'scale',t:`<b>${need.toFixed(1)} kg to ${w.goalW} kg.</b> Over 12 weeks that's ${wk12.toFixed(2)} kg a week${wk12<=0.5?', gentle enough to keep your running quality':', which is aggressive alongside this much training; 16-20 weeks would be kinder'}. A small daily gap (around ${Math.round(wk12*7700/7/10)*10} kcal) does it; don't cut carbs around long runs.`});
+  }
+  return out;
+}
+function renderWellnessCoachCard(){
+  const lines=getWellnessPageCoach();
+  if(!lines.length)return'';
+  return`<div class="brief-card"><div class="brief-h">Coach</div>${lines.map(l=>`<div class="brief-line" style="cursor:default;"><span class="brief-ic">${svgIcon(l.ic,18)}</span><span class="brief-t">${l.t}</span></div>`).join('')}</div>`;
+}
+
+// ── HABITS COACH CARD (Trends > Overview) ──
+// Each habit's last 14 days as a strip, its streak, and the coaching that goes with it.
+function renderHabitsCoachCard(){
+  const td=dk(today()),gs=goalsActiveOn(td);if(!gs.length)return'';
+  const days=[...Array(14)].map((_,i)=>_dsAgo(13-i));
+  const rows=gs.map(g=>{
+    const marks=days.map(ds=>goalsActiveOn(ds).some(x=>x.id===g.id)?(goalDone(ds,g)?1:0):null);
+    const n=marks.filter(m=>m===1).length,d=marks.filter(m=>m!=null).length;
+    return{g,marks,n,d,st:getGoalStreakInfo(g)};
+  });
+  const strong=rows.filter(r=>r.d>=7).sort((a,b)=>b.n/b.d-a.n/a.d)[0];
+  const weak=rows.filter(r=>r.d>=7).sort((a,b)=>a.n/a.d-b.n/b.d)[0];
+  const coach=[];
+  const head=getHabitCoachLine();if(head)coach.push(head);
+  if(strong&&strong.n/strong.d>=0.7)coach.push(`<b>Strongest:</b> ${esc(strong.g.name)}, ${strong.n} of the last ${strong.d} days.`);
+  if(weak&&weak!==strong&&weak.n/weak.d<=0.4)coach.push(`<b>Needs a hook:</b> ${esc(weak.g.name)} at ${weak.n} of ${weak.d}. Attach it to something fixed (after brushing your teeth, after a run) rather than relying on remembering.`);
+  const imp=getHabitImpacts().filter(f=>!f.pending&&f.size!=='none'&&gs.some(g=>g.name===f.label)&&_impactTxt(f));
+  const best=imp.filter(f=>f.better).sort((a,b)=>(a.size==='clear'?0:1)-(b.size==='clear'?0:1))[0];
+  if(best&&!(head||'').includes(esc(best.label)))coach.push(`<b>Worth protecting:</b> ${esc(best.label)}. Mornings after it run ${_impactTxt(best)}.`);
+  return`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Habits</span><span class="chart-card-val">last 14 days</span></div>
+    ${coach.length?`<div class="hc-coach">${coach.map(c=>`<p>${c}</p>`).join('')}</div>`:''}
+    <div class="hc-rows">${rows.map(r=>`<div class="hc-row"><div class="hc-name"><span>${esc(r.g.name)}</span>${r.st.streak>=2?`<span class="hc-streak">${r.st.streak}d streak</span>`:''}</div><div class="hc-strip">${r.marks.map(m=>`<i class="${m===1?'y':m===0?'n':'x'}"></i>`).join('')}</div><div class="hc-n">${r.n}/${r.d}</div></div>`).join('')}</div>
   </div>`;
 }
 
@@ -5254,6 +5352,7 @@ function renderTrends(){
       <div class="metric-card"><div class="m-label">Consistency</div><div style="font-size:42px;font-weight:800;color:${gradeColor};letter-spacing:-2px;line-height:1;">${gradeNow.grade}</div><div class="m-unit">last 28 days · ${gradeTrend}</div></div>
     </div>
     ${streakHtml}
+    ${renderHabitsCoachCard()}
     ${renderWeeklyTrendChart()}
     <details class="tr-more"><summary>More insights<span>day-of-week patterns, habit impacts, best time of day</span></summary>
       ${renderDayOfWeekHeatmap()}
@@ -5848,6 +5947,7 @@ function renderWellnessTab(){
   const health=loadHealthData();
   const sec=t=>`<div class="trends-sec">${t}</div>`;
   return`${renderWellnessSnapshot()}
+    ${renderWellnessCoachCard()}
     ${sec('Sleep &amp; recovery')}
     ${renderRecoveryCard()||'<div class="chart-card"><div class="empty-state"><strong>No check-ins yet</strong><p>Check in on Today each morning to see sleep, HRV and resting heart rate here.</p></div></div>'}
     ${sec('Body composition')}

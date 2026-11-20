@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="84">
+<meta name="app-version" content="85">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -3003,7 +3003,7 @@ function _calSlotsFor(weekOffset){
   if(weekOffset<=1){
     const w=getYearGoalWeek(weekOffset);if(!w)return null;
     const pw=w.plan&&w.plan.weeks[0];
-    const slots=(weekOffset===0?(w.active||w.open||[]):w.slots).map(x=>({type:x.type,km:Math.round(x.left!=null?x.left:x.km),id:x.id,day:x.day,sub:x.sub,why:x.why})).filter(x=>x.km>0);
+    const slots=(weekOffset===0?(w.active||w.open||[]):w.slots).map(x=>({type:x.type,km:Math.round(x.left!=null?x.left:x.km),id:x.id,day:x.day,sub:x.sub,why:x.why,stretched:x.stretched})).filter(x=>x.km>0);
     return{target:w.target,kind:pw?pw.kind:'build',overridden:pw&&pw.overridden,race:w.race,slots,yw:w,coach:w.coach};
   }
   const base=getYearGoalWeek();if(!base||!base.plan)return null;
@@ -3027,9 +3027,9 @@ function _calSlotsFor(weekOffset){
   const cu=_pinned(sl.filter(x=>!x.fixed),E,Math.max(0,pw.target-fixedKm)),cuKm=cu.reduce((a,x)=>a+(+E[x.id].km),0);
   const rs=sl.filter(x=>!x.fixed&&!cu.includes(x)),rSum=rs.reduce((a,x)=>a+x.w,0);
   sl.forEach(x=>{x.km=x.fixed!=null?x.fixed:cu.includes(x)?+E[x.id].km:rSum?Math.max(0,pw.target-fixedKm-cuKm)*x.w/rSum:0;});
-  const capF=sl.filter(x=>x.fixed==null).map(x=>({x,v:x.km,w:x.w,cap:x.cap,lock:cu.includes(x)}));_capRuns(capF);capF.forEach(c=>{c.x.km=c.v;});
+  const capF=sl.filter(x=>x.fixed==null).map(x=>({x,v:x.km,w:x.w,cap:x.cap,soft:x.cap,hard:x.hard,lock:cu.includes(x)}));const ctF=_capTwoTier(capF);capF.forEach(c=>{c.x.km=c.v;});ctF.stretched.forEach(c=>{c.x.stretched=true;});
   sl.forEach(x=>{x.km=Math.round(x.km);});
-  return{target:pw.target,kind:pw.kind,race:pw.race,slots:sl.filter(x=>x.km>0).map(x=>({type:x.type,km:x.km,id:x.id,day:x.day,sub:x.sub,why:x.why})),coach:fp&&fp._cw||null};
+  return{target:pw.target,kind:pw.kind,race:pw.race,slots:sl.filter(x=>x.km>0).map(x=>({type:x.type,km:x.km,id:x.id,day:x.day,sub:x.sub,why:x.why,stretched:x.stretched})),coach:fp&&fp._cw||null};
 }
 // A week's run edits, carrying over the old long-run-only setting.
 function _weekSlotEdits(monK,slots){
@@ -3122,7 +3122,9 @@ function getCalendarWeek(weekOffset){
   const nextRace=getRaces().find(r=>r.date>=monK);
   const sctx={kind:W.kind,weekNo:Math.floor((mon-new Date(mon.getFullYear(),0,1))/(7*864e5)),raceKm:nextRace?+nextRace.km:null,goalTime:nextRace?nextRace.goalTime:null};
   days.forEach(d=>d.planned.forEach(s=>{
-    if(W.coach&&s.sub&&s.type!=='Race'){const ss=sessionFor(s.sub,s.km,{...sctx,steady:!!(days[d.i+1]&&days[d.i+1].planned.some(x=>x.sub==='B2B'))});s.title=ss.title;s.desc=ss.desc;s.steps=ss.steps;return;}
+    if(W.coach&&s.sub&&s.type!=='Race'){
+      if(s.stretched&&/Easy|Strides|Recovery/.test(s.sub)){const ss=sessionFor('Long',s.km,{...sctx,steady:true});s.title='Long run';s.desc=ss.desc;s.steps=ss.steps;s.why=`Bigger than planned: it's the run that has to carry what's left of the week's km. Keep it all easy${s.km>=20?' and fuel it':''}, or cut it short and let the rest roll into next week.`;return;}
+      const ss=sessionFor(s.sub,s.km,{...sctx,steady:!!(days[d.i+1]&&days[d.i+1].planned.some(x=>x.sub==='B2B'))});s.title=ss.title;s.desc=ss.desc;s.steps=ss.steps;return;}
     if(s.type==='Race'){const r=_calRaceOn(d.ds);s.title=`${esc((r&&r.name)||'Race')}`;s.desc=`${fmtKm(s.km)} km race${r&&r.goalTime?`, goal ${esc(r.goalTime)}`:''}. 10 minutes easy and 4 strides first.`;return;}
     if(firstRunAfterRace){firstRunAfterRace=false;s.title='Recovery jog';s.desc='Very easy and conversational; cut it short if your legs aren\'t ready. Legs first, watch second.';return;}
     if(s.type==='Long'){s.title='Long run';s.desc=build&&s.km>=16?`Conversational; if it feels good, the last 3 km at marathon pace${pace(0.79)?` (${pace(0.79)}/km)`:''}.${s.km>=20?' Fuel every 40 minutes.':''}`:`All conversational${s.km>=20?'; fuel every 40 minutes':''}.`;return;}
@@ -10187,7 +10189,7 @@ function _planSlots(weekOffset,mon,from,to,ctx){
   const monK=dk(mon);
   if(ctx&&(planMode()==='coach'||Array.isArray(state.weekPlan)||(state.weekDays||{})[monK])){
     const cw=coachWeek({weekOffset,mon,from,to,...ctx});
-    const out=cw.sessions.map(x=>({type:x.type,w:x.w,id:x.day,day:x.day,sub:x.sub,why:x.why,fixedKm:x.fixedKm,cap:x.cap}));
+    const out=cw.sessions.map(x=>({type:x.type,w:x.w,id:x.day,day:x.day,sub:x.sub,why:x.why,fixedKm:x.fixedKm,cap:x.cap,hard:x.hard}));
     out._cw=cw;return out;
   }
   if(!Array.isArray(state.weekPlan)&&!(state.weekDays||{})[monK])return null;
@@ -10426,7 +10428,7 @@ function _coachWeek(o,mode,monK,td){
     if(c.sub!=='Easy')return;
     const l=low(c.day);
     if(firstAfter&&!S.some(s=>s.done&&s.day<c.day&&s.sub!=='Race')){c.sub='Recovery';c.why=`First run after the race: very easy, legs first and watch second.`;firstAfter=false;return;}
-    if(['Long','B2B','Race'].includes(typeOn(c.day-1))){c.sub='Recovery';c.why=`The day after the ${typeOn(c.day-1)==='Race'?'race':'long run'}: short and very easy, to get the legs moving.`;return;}
+    if(['Long','B2B','Race'].includes(typeOn(c.day-1))&&[...chosen.values()].filter(x=>!['Race','Shakeout'].includes(x.sub)).length>=2){c.sub='Recovery';c.why=`The day after the ${typeOn(c.day-1)==='Race'?'race':'long run'}: short and very easy, to get the legs moving.`;return;}
     if(raceI!=null&&raceI>c.day&&raceI-c.day<=2){c.sub='Shakeout';c.why=`${raceI-c.day===1?'The day before':'Two days before'} the race: a short shakeout with a few strides keeps the legs ticking over.`;return;}
     if(l&&l.phase==='low'){c.why=`Easy only while you're ${(_LOW[l.reason]||_LOW.tired).lbl}: cut it short if you need to.`;return;}
     if(c.day===tdI&&rk==='recover'){c.sub='Recovery';c.why='Readiness says recover: very easy, or swap it for rest.';return;}
@@ -10465,7 +10467,7 @@ function _coachWeek(o,mode,monK,td){
   // ~1.6 × your normal run, quality sessions at sensible lengths.
   const ez=kind==='race'?Math.max(6,stats.avg*0.9):kind==='taper'?Math.max(8,stats.avg*1.2):Math.max(12,stats.avg*1.6);
   const capOf={Long:Math.max(24,stats.longest*1.2),B2B:Math.max(16,stats.longest*0.8),Tempo:16,Intervals:15,Sharpener:kind==='race'?9:12,Easy:ez,Strides:ez,Recovery:Math.max(6,stats.avg*0.8),Shakeout:5};
-  const sessions=[...S,...chosen.values()].map(s=>({...s,type:_CW_PIPE[s.sub]||'Easy',w:_CW_W[s.sub]??9,cap:s.done||s.sub==='Race'?null:Math.round(capOf[s.sub]||16)})).sort((a,b)=>a.day-b.day);
+  const sessions=[...S,...chosen.values()].map(s=>({...s,type:_CW_PIPE[s.sub]||'Easy',w:_CW_W[s.sub]??9,cap:s.done||s.sub==='Race'?null:Math.round(capOf[s.sub]||16),hard:s.done||s.sub==='Race'?null:Math.round(['Easy','Strides','Long','B2B'].includes(s.sub)?Math.max(capOf[s.sub]||16,capOf.Long):(capOf[s.sub]||16))})).sort((a,b)=>a.day-b.day);
   const fut=sessions.filter(s=>!s.done&&!s.past);
   const free=mode==='coach'?[0,1,2,3,4,5,6].filter(i=>inR(i)&&ds(i)>=td&&A[i].run).length:null;
   const keyTxt=fut.filter(s=>['Long','B2B','Tempo','Intervals','Sharpener'].includes(s.sub)).map(s=>`${s.sub==='B2B'?'back-to-back':s.sub==='Sharpener'?'race-pace reps':s.sub.toLowerCase()} ${_CAL_DAY[s.day]}`).join(', ');
@@ -10538,6 +10540,16 @@ function _capRuns(list){
     room.forEach(x=>{x.v+=spill*x.w/ws;});
   }
   return 0;
+}
+// Normal sizes first; if the week still doesn't fit, runs may stretch up to your proven
+// long-run range. Returns what still doesn't fit and which runs were stretched.
+function _capTwoTier(list){
+  const snap=list.map(c=>c.v);
+  let of=_capRuns(list);
+  if(of<0.5)return{overflow:0,stretched:[]};
+  list.forEach((c,i)=>{c.v=snap[i];c.full=false;c.cap=c.hard||c.cap;});
+  of=_capRuns(list);
+  return{overflow:of,stretched:list.filter(c=>c.soft&&c.v>c.soft+0.5)};
 }
 function usualRunDays(){return Array.isArray(state.weekPlan)?state.weekPlan.filter(t=>t==='Run').length:0;}
 // Week edits used to be keyed by position in a fixed split; with the usual week they're
@@ -10682,8 +10694,11 @@ function getYearGoalWeek(weekOffset=0){
     if(rl&&guard.longCap!=null&&rl.left>guard.longCap){const sp=rl.left-guard.longCap;rl.left=guard.longCap;const o=rest.filter(x=>x!==rl),s2=o.reduce((a,x)=>a+x.w,0);o.forEach(x=>{x.left+=s2?sp*x.w/s2:0;});}
   }
   const overBy=Math.round(cust.reduce((a,x)=>a+x.left,0)-flexKm);
-  const capL=flex.map(x=>({x,v:x.left,w:x.w,cap:x.cap,lock:!!x.custom}));
-  const overflow=Math.round(_capRuns(capL));capL.forEach(c=>{c.x.left=c.v;});
+  const capL=flex.map(x=>({x,v:x.left,w:x.w,cap:x.cap,soft:x.cap,hard:x.hard,lock:!!x.custom}));
+  const ct=_capTwoTier(capL),overflow=Math.round(ct.overflow);capL.forEach(c=>{c.x.left=c.v;});
+  ct.stretched.forEach(c=>{c.x.stretched=true;});
+  if(ct.stretched.length){const st=ct.stretched.map(c=>c.x),rs=_runStats();
+    note=(note?note+' ':'')+`To fit the week, ${st.map(x=>`${x.day!=null?_CW_DAY[x.day]+'\'s':'one'} run is ${Math.round(x.left)} km`).join(' and ')}: bigger than a normal run, ${Math.max(...st.map(x=>x.left))>rs.longest+0.5?`and a little past your longest lately (${Math.round(rs.longest)} km). Your call: run it easy and fuelled, or let some roll into next week.`:`but inside what you've run lately (longest ${Math.round(rs.longest)} km). Fine if you feel good; otherwise let some roll into next week.`}`;}
   // Runs too small to bother with (under 3 km) fold into the biggest other run; anything
   // left at zero is optional rather than "a 0 km run".
   // Your own long-run setting is never changed: if it's the only run big enough, the
@@ -10699,7 +10714,7 @@ function getYearGoalWeek(weekOffset=0){
   const cl=open.find(x=>x.custom&&x.type==='Long'&&x.left>0);
   if(cl&&guard.longCap!=null&&cl.left>guard.longCap)
     note=(note?note+' ':'')+`Your ${Math.round(cl.left)} km long run is your call, but with the race a week later, ${guard.longCap} km or less would keep your legs fresher.`;
-  if(overflow>=2)note=(note?note+' ':'')+`This week's ${Math.round(target)} km is more than ${flex.length===1?'one run':`${flex.length} runs`} can sensibly carry: about ${overflow} km won't fit${planMode()==='coach'?'. Free up another day, or let it':', so it'} roll into the weeks after.`;
+  if(overflow>=2)note=(note?note+' ':'')+`Even at the top of your long-run range, ${flex.length===1?'one run':`${flex.length} runs`} can't carry all of this week's ${Math.round(target)} km: about ${overflow} km won't fit${planMode()==='coach'?'. Free up another day, or let it':', so it'} roll into the weeks after.`;
   if(overBy>=1)note=(note?note+' ':'')+`Your runs add up to ${overBy} km more than this week's ${Math.round(target)} km. That's fine: anything extra comes off the weeks after.`;
   return{plan,active,optional,topUp,longKey,longMax,longSlot,edits:E,mon:monStr,coach:fromPlan&&fromPlan._cw||null,target,rawTarget,note,race,base:guard.base,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
 }

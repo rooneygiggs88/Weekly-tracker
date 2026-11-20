@@ -122,6 +122,17 @@ async function agreements(browser){
     // Coached gym session: belongs to the type, fits the time, starts in the logger
     const gp=planGymSession('Pull');out.gym=!!gp&&gp.rows.length>=2&&gp.mins<=45&&gp.rows.every(r=>{const m=getExerciseMuscles(r.name)||[];return!m.length||m.some(x=>['Back','Biceps'].includes(x));});
     buildGymSession('Push');out.draft=!!(gymDraft&&gymDraft.exercises.length);
+    // Live session: slim bar, warm-ups on the first heavy lift, one coach voice
+    out.bar=!!document.querySelector('.gl-bar');out.live=document.body.classList.contains('gym-live');
+    out.noFill=!/Same as last time/.test(document.getElementById('gym-content').innerText);
+    out.wu=!!(gymDraft.exercises[0]._warmups&&gymDraft.exercises[0]._warmups.length);
+    gymLogWarmups(0);out.wuLogged=gymDraft.exercises[0].sets.filter(x=>x.warmup).length>=2;
+    gymDraft.startedAt=Date.now()-45*60000;renderGymLogger();out.nudge=!!document.querySelector('.gl-nudge');
+    // Progression read from the sets: held -> up, fell away -> hold
+    const up=getLiftTarget({weight:'60',reps:'8'},true,0,[{weight:'60',reps:'8'},{weight:'60',reps:'8'},{weight:'60',reps:'8'}]);
+    const hold=getLiftTarget({weight:'60',reps:'8'},true,0,[{weight:'60',reps:'8'},{weight:'60',reps:'7'},{weight:'60',reps:'6'}]);
+    out.prog={up:up&&up.weight,hold:hold&&hold.weight,ctx:getGymContext().comeback||!!getGymContext().race};
+    gymDiscardSession&&gymDiscardSession(true);
     // Race kit: the plan's splits finish on its target, and race mode renders
     const rp=racePacePlan(state.race);out.race=!!rp&&rp.splits[rp.splits.length-1].t===Math.round(rp.target);
     _rmOpen=true;renderRaceMode();out.rm=/Your race plan/.test(document.getElementById('race-mode').innerText);
@@ -135,6 +146,11 @@ async function agreements(browser){
   check(r.race,'race plan splits don\'t finish on the target');
   check(r.gym,'coach\'s Pull session is empty, too long, or has non-Pull lifts');
   check(r.draft,'starting the coach\'s session didn\'t load the logger');
+  check(r.bar&&r.live,'live session has no slim bar / live mode');
+  check(r.noFill,'"Same as last time" still competes with the coach\'s targets');
+  check(r.wu&&r.wuLogged,'no warm-ups prescribed or logged for the first heavy lift');
+  check(r.nudge,'no time nudge when the session runs long');
+  if(!r.prog.ctx)check(r.prog.up>60&&r.prog.hold===60,`progression from sets wrong: held -> ${r.prog.up}, fell -> ${r.prog.hold}`);
   check(r.rm,'race mode has no race plan');
   check(errors.length===0,`agreements: page errors: ${errors.join(' | ')}`);
   await ctx.close();

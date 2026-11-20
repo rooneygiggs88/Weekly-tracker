@@ -2099,7 +2099,7 @@ function celebrate(){
   const box=document.createElement('div');box.className='confetti';
   const cols=['var(--ring-train)','var(--ring-recover)','var(--ring-habits)','var(--c-gold)','var(--c-pink)'];
   for(let i=0;i<36;i++){const p=document.createElement('i');p.style.cssText=`left:${50+(Math.random()-0.5)*30}%;background:${cols[i%cols.length]};--dx:${(Math.random()-0.5)*320}px;--dy:${-160-Math.random()*240}px;--r:${Math.random()*720-360}deg;animation-delay:${Math.random()*0.12}s;`;box.appendChild(p);}
-  document.body.appendChild(box);haptic('success');setTimeout(()=>box.remove(),1800);
+  document.body.appendChild(box);if(!navigator.userActivation||navigator.userActivation.hasBeenActive)haptic('success');setTimeout(()=>box.remove(),1800);
 }
 
 // The coach briefing: the 2-4 things worth knowing this morning, pulled from every part

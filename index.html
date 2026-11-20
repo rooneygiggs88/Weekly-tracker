@@ -90,7 +90,9 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .nav{position:fixed;bottom:0;left:0;right:0;z-index:100;display:flex;justify-content:space-around;align-items:center;padding:10px 4px 28px;background:var(--nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);}
 .nav-btn{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:9px;font-weight:700;color:var(--text3);padding:6px 14px;border-radius:14px;transition:all 0.2s;letter-spacing:0.04em;text-transform:uppercase;}
 .nav-btn svg{width:22px;height:22px;transition:all 0.2s;}
-.nav-btn.active{color:var(--accent);}
+.nav-btn.active{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);}
+.nav-btn{transition:transform 0.12s,background 0.2s;}
+.nav-btn:active,.ql-tile:active,.brief-line:active,.ring-row:active,.tc-medal:active,.me-snap:active{transform:scale(0.96);}
 .nav-btn.active svg{filter:drop-shadow(0 0 6px rgba(37,99,235,0.6));}
 
 /* PAGES */
@@ -421,6 +423,18 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .me-chip.legs b{color:var(--c-pink);}
 .me-links{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .me-links button{padding:13px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;}
+/* QUICK LOG */
+.ql-h{font-size:20px;font-weight:800;letter-spacing:-0.4px;text-align:center;margin-bottom:16px;}
+.ql-big{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.ql-small{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.ql-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;border-radius:var(--radius-sm);border:1px solid color-mix(in srgb,var(--qc) 35%,var(--border));background:color-mix(in srgb,var(--qc) 10%,var(--surface2));font-family:inherit;color:var(--text);cursor:pointer;text-align:left;transition:transform 0.12s;min-width:0;}
+.ql-tile.big{padding:18px 16px;}
+.ql-ic{font-size:24px;margin-bottom:4px;}
+.ql-tile.big .ql-ic{font-size:30px;}
+.ql-tile b{font-size:15px;font-weight:800;letter-spacing:-0.2px;}
+.ql-tile.big b{font-size:18px;}
+.ql-tile em{font-style:normal;font-size:11px;font-weight:600;color:var(--text3);}
+.ql-more{display:block;width:100%;margin-top:14px;padding:12px;background:none;border:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 /* RACE MODE */
 .rm-card{border-radius:var(--radius);padding:18px;margin-bottom:12px;border:1px solid color-mix(in srgb,var(--c-race) 45%,var(--border));background:linear-gradient(150deg,color-mix(in srgb,var(--c-race) 16%,var(--surface)),var(--surface) 70%);box-shadow:var(--card-shadow);}
 .rm-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
@@ -1059,8 +1073,8 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     Today
   </button>
   <button class="nav-btn" onclick="openTrainPicker()" id="nav-train">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 9h4M18 9h4M2 15h4M18 15h4M6 9h12M6 15h12"/></svg>
-    Train
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Log
   </button>
   <button class="nav-btn" onclick="showPage('trends')" id="nav-trends">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -1543,28 +1557,17 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 <div class="modal-overlay" id="train-picker-modal" onclick="if(event.target===this)closeModal('train-picker-modal')">
   <div class="modal" style="padding:24px 20px 32px;">
     <div class="modal-handle"></div>
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);text-align:center;margin-bottom:20px;">What are you training?</div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="closeModal('train-picker-modal');showPage('train');switchTrainTab('gym')" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;text-align:left;width:100%;">
-        <div style="width:44px;height:44px;border-radius:12px;background:rgba(232,14,14,0.12);border:1px solid rgba(232,14,14,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--c-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M6.5 12h11M4 9.5h2.5M17.5 9.5H20M4 14.5h2.5M17.5 14.5H20"/></svg>
-        </div>
-        <div>
-          <div style="font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px;">Gym</div>
-          <div style="font-size:12px;color:var(--text3);font-weight:600;margin-top:2px;">Log a weights session</div>
-        </div>
-      </button>
-      <button onclick="closeModal('train-picker-modal');showPage('train');switchTrainTab('run')" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;text-align:left;width:100%;">
-        <div style="width:44px;height:44px;border-radius:12px;background:rgba(1,125,146,0.12);border:1px solid rgba(1,125,146,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--c-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 1-2 0 1 1 0 0 1 2 0M7.5 20.5l2.5-7 2 3 1.5-4 3 8M15.5 9c-1.5.5-2.5 1-4 1"/></svg>
-        </div>
-        <div>
-          <div style="font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px;">Run</div>
-          <div style="font-size:12px;color:var(--text3);font-weight:600;margin-top:2px;">Log a run</div>
-        </div>
-      </button>
-      <button onclick="closeModal('train-picker-modal');showPage('train')" style="padding:12px;background:none;border:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;">See all training</button>
+    <div class="ql-h">Log something</div>
+    <div class="ql-big">
+      <button class="ql-tile big" style="--qc:var(--c-teal);" onclick="closeModal('train-picker-modal');showPage('train');switchTrainTab('run')"><span class="ql-ic">🏃</span><b>Run</b><em>distance, time, effort</em></button>
+      <button class="ql-tile big" style="--qc:var(--c-red);" onclick="closeModal('train-picker-modal');showPage('train');switchTrainTab('gym')"><span class="ql-ic">🏋️</span><b>Gym</b><em>a weights session</em></button>
     </div>
+    <div class="ql-small">
+      <button class="ql-tile" style="--qc:var(--ring-recover);" onclick="closeModal('train-picker-modal');openMorningModal()"><span class="ql-ic">☀️</span><b>Check-in</b><em>sleep, HRV, feel</em></button>
+      <button class="ql-tile" style="--qc:var(--c-indigo);" onclick="closeModal('train-picker-modal');openHealthModal()"><span class="ql-ic">⚖️</span><b>Weigh-in</b><em>weight, body fat</em></button>
+      <button class="ql-tile" style="--qc:var(--c-orange);" onclick="closeModal('train-picker-modal');openVapingModal()"><span class="ql-ic">💨</span><b>Nicotine</b><em>today's puffs</em></button>
+    </div>
+    <button onclick="closeModal('train-picker-modal');showPage('train')" class="ql-more">Open the Train page (history, PRs, volume) →</button>
   </div>
 </div>
 
@@ -7716,6 +7719,13 @@ function openHealthModal(){
   setTimeout(()=>document.getElementById('health-weight-input').focus(),300);
 }
 
+// Logging something ticks the habit that tracks logging it (e.g. "Weight and bodyfat
+// logged", "Vape logged"), so it doesn't need doing twice.
+function autoTickHabit(re,ds){
+  ds=ds||dk(today());let n=0;
+  goalsActiveOn(ds).forEach(g=>{if(g.inputStyle==='check'&&re.test(g.name||'')&&!state.data[`${ds}:check:${g.id}`]){state.data[`${ds}:check:${g.id}`]=true;n++;}});
+  if(n)saveState();
+}
 function saveWeight(){
   const w=parseFloat(document.getElementById('health-weight-input').value);
   if(!w||w<20||w>300){toastMsg('Enter a valid weight');return;}
@@ -7723,7 +7733,7 @@ function saveWeight(){
   const note=(document.getElementById('health-note-input').value||'').trim();
   const data=loadHealthData();
   data.push({date:dk(today()),weight:w,bodyFat:bf,note,ts:Date.now()});
-  saveHealthData(data);
+  saveHealthData(data);autoTickHabit(/weigh|weight|body ?fat/i);
   closeModal('health-modal');toastMsg('Health logged');haptic('success');
   refreshActivePage();
 }
@@ -7769,7 +7779,7 @@ function saveVaping(){
   const isEdit=!!_vapEditTs;
   if(isEdit){const idx=data.findIndex(e=>e.ts===_vapEditTs);if(idx>=0)data[idx]={...data[idx],puffs,mg,note};}
   else data.push({date:dk(today()),puffs,mg,note,ts:Date.now()});
-  saveVapingData(data);_vapEditTs=null;
+  saveVapingData(data);if(!isEdit)autoTickHabit(/vape|vaping|nicotine|puff/i);_vapEditTs=null;
   closeModal('vaping-modal');toastMsg(isEdit?'Entry updated':'Logged');haptic('success');
   refreshActivePage();
 }

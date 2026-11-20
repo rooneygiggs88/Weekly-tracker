@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="86">
+<meta name="app-version" content="87">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -3222,7 +3222,7 @@ function renderWeekDays(offset){
       const cls=s?(s.sub==='Race'?'race':s.type==='Long'?'long':s.type==='Tempo'?'tempo':'easy'):A[i].run?'free':'off';
       return`<button class="wd ${cls}" onclick="toggleWeekDay(${offset},${i},event)" aria-label="${DAY_NAMES[i]}: ${A[i].run?'free, tap to mark busy':'busy, tap to mark free'}">${l}</button>`;
     }).join('');
-    return`<div class="wd-row" onclick="event.stopPropagation()"><div class="wd-days">${ch}</div><span class="wd-lbl">${nRun} run${nRun===1?'':'s'} on ${nFree} free day${nFree===1?'':'s'} · <span style="font-weight:500;color:var(--text3);">tap a day you're busy</span>${changed?` · <button class="yg-link" style="margin:0;" onclick="resetWeekDays(${offset},event)">Usual days</button>`:''}</span></div>`;
+    return`<div class="wd-row" onclick="event.stopPropagation()"><div class="wd-days">${ch}</div><span class="wd-lbl" style="font-weight:500;color:var(--text3);">tap a day you're busy${changed?` · <button class="yg-link" style="margin:0;" onclick="resetWeekDays(${offset},event)">Usual days</button>`:''}</span></div>`;
   }
   return`<div class="wd-row" onclick="event.stopPropagation()"><div class="wd-days">${chips}</div><span class="wd-lbl">${n} run${n===1?'':'s'} ${offset===0?'left':''}${changed?` · <button class="yg-link" style="margin:0;" onclick="resetWeekDays(${offset},event)">Back to usual</button>`:''}</span></div>`;
 }
@@ -10992,14 +10992,20 @@ function renderYearGoalWeek(){
     const parts=['Race','Long','Tempo','Easy'].filter(t=>groups[t]).map(t=>{const a=groups[t];const same=a.every(v=>v===a[0]);return a.length>1&&same?`${a.length} × ${a[0]} ${t.toLowerCase()}`:a.map(v=>`${v} ${t.toLowerCase()}`).join(', ');});
     const optTxt=opt?` ${act.length===1?`That covers the rest of the week, so the other ${opt===1?'run is':`${opt} runs are`} optional.`:`The other ${opt===1?'run is':`${opt} runs are`} optional.`}`:'';
     const tu=w.topUp?`, plus ${w.topUp} km on top of any run`:'';
-    left=act.length?`${act.length===1?'One run left':`${act.length} runs left`}: <strong>${parts.join(', ')}</strong>${tu}.${optTxt}`:`<strong>${f1(w.leftKm)}km</strong> still to go this week. One more run should do it.`;
+    if(w.coach&&planMode()==='coach'){
+      const nmT={Long:'long',B2B:'long',Tempo:'tempo',Intervals:'intervals',Sharpener:'race-pace reps',Easy:'easy',Strides:'easy',Recovery:'recovery',Shakeout:'shakeout'};
+      const list=act.filter(x=>x.type!=='Race'&&Math.round(x.left)>0).sort((a,b)=>(a.day??9)-(b.day??9)).map(x=>`${Math.round(x.left)} ${x.stretched?'long':nmT[x.sub]||x.type.toLowerCase()}${x.day!=null?' '+_CAL_DAY[x.day]:''}`);
+      const gd=(w.coach.gym||[]).map(g=>_CAL_DAY[g.day]);
+      left=list.length?`${list.length===1?'One run':`${list.length} runs`} left: <strong>${list.join(', ')}</strong>${tu}.${gd.length?` Gym ${gd.join(' and ')}.`:''}`:`<strong>${f1(w.leftKm)} km</strong> still to go this week.`;
+    }else
+    {left=act.length?`${act.length===1?'One run left':`${act.length} runs left`}: <strong>${parts.join(', ')}</strong>${tu}.${optTxt}`:`<strong>${f1(w.leftKm)}km</strong> still to go this week. One more run should do it.`;}
   }
   return`<div class="yg-week">
     <div class="yg-week-head"><span>This week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span><span><strong>${f1(w.weekKm)}</strong> / ${f1(w.target)} km</span></div>
     <div class="yg-week-bar"><div style="width:${Math.min(100,w.weekKm/w.target*100).toFixed(1)}%;"></div></div>
     <div class="yg-segs" style="grid-template-columns:repeat(${shown.length},1fr);">${segs}</div>
     ${planMode()==='coach'||usualRunDays()||(state.weekDays||{})[w.mon]?renderWeekDays(0):''}
-    ${w.coach&&w.coach.summary&&!done?`<div class="pc-sum" style="margin-top:6px;">${w.coach.summary}</div>`:''}
+
     ${longEdit}
     <div class="yg-week-left">${left}</div>
     ${w.note?`<div class="yg-guard">${w.note}</div>`:''}

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="65">
+<meta name="app-version" content="66">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -2202,6 +2202,8 @@ const ICONS={
   wind:'<path d="M3 8h10a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 12h15a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 16h7"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
   medal:'<circle cx="12" cy="15" r="5.5"/><path d="M8.5 10.5 6 3h4l2 5 2-5h4l-2.5 7.5"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  habits:'<path d="M4 6l1.5 1.5L8 5M4 12l1.5 1.5L8 11M4 18l1.5 1.5L8 17M11 6h9M11 12h9M11 18h9"/>',
 };
 function svgIcon(k,size=20){return`<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]||''}</svg>`;}
 
@@ -2552,17 +2554,84 @@ function getCoachBriefing(){
   const gymGap=lastGym?Math.round((new Date(td+'T12:00:00')-new Date(lastGym+'T12:00:00'))/864e5):null;
   const gymLine=getGymCoachLine();
   if(gymLine)out.push({ic:'dumbbell',t:gymLine,go:"showPage('train');switchTrainTab('gym')"});
-  const health=loadHealthData();const lastW=health.filter(h=>h.weight).slice(-1)[0];
-  if(lastW){
-    const gap=Math.round((new Date(td+'T12:00:00')-new Date(lastW.date+'T12:00:00'))/864e5);
-    const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
-    if(gap>=7)out.push({ic:'scale',t:`<b>No weigh-in for ${gap} days.</b>${goalW?` Last ${lastW.weight} kg, goal ${goalW} kg.`:''}`,go:"showPage('trends');switchTrendsTab('wellness')"});
-  }
-  const vape=getNicotineSummary();
-  if(vape&&vape.lastGap>=2)out.push({ic:'wind',t:`<b>Nicotine not logged for ${vape.lastGap} days.</b>${vape.trendPct!=null&&vape.trendPct<0?` You were down ${-vape.trendPct}% on the month before.`:''}`,go:"showPage('trends');switchTrendsTab('wellness')"});
-  else if(vape&&vape.trendPct!=null&&vape.trendPct<=-10)out.push({ic:'wind',t:`<b>Puffs down ${-vape.trendPct}%</b> over the last two weeks compared with the two before. Keep chipping away.`,go:"showPage('trends');switchTrendsTab('wellness')"});
-  return out.slice(0,4);
+  const sl=getSleepCoachLine();if(sl)out.push({ic:'moon',t:sl,go:"showPage('trends');switchTrendsTab('wellness')"});
+  const hb=getHabitCoachLine();if(hb)out.push({ic:'habits',t:hb,go:"document.getElementById('goal-stack').scrollIntoView({behavior:'smooth',block:'center'})"});
+  getWellnessCoachLines().forEach(l=>out.push({ic:l.ic,t:l.t,go:"showPage('trends');switchTrendsTab('wellness')"}));
+  return out.slice(0,6);
 }
+// ── HABITS COACH ──
+// Reads the time of day, streaks and the last fortnight: where to start in the morning,
+// which streak is on the line tonight, what's slipping, and a perfect day when it lands.
+function getHabitCoachLine(){
+  const td=dk(today()),gs=goalsActiveOn(td);if(!gs.length)return null;
+  const hour=new Date().getHours();
+  const done=gs.filter(g=>goalDone(td,g)),left=gs.filter(g=>!goalDone(td,g));
+  const rate=(g,from,to)=>{let n=0,d=0;for(let i=from;i<to;i++){const ds=_dsAgo(i);if(!goalsActiveOn(ds).some(x=>x.id===g.id))continue;d++;if(goalDone(ds,g))n++;}return{n,d};};
+  const info=gs.map(g=>({g,st:getGoalStreakInfo(g),r14:rate(g,1,15),p14:rate(g,15,29)}));
+  const nm=g=>esc(g.name);
+  if(!left.length){
+    const mon=td.slice(0,7);let perfect=0;for(let i=0;i<31;i++){const ds=_dsAgo(i);if(!ds.startsWith(mon))break;const a=goalsActiveOn(ds);if(a.length&&a.every(x=>goalDone(ds,x)))perfect++;}
+    return`<b>All ${gs.length} habits done.</b> A perfect day${perfect>1?`, your ${perfect}${perfect===2?'nd':perfect===3?'rd':'th'} this month`:''}.`;
+  }
+  const risk=info.filter(x=>!goalDone(td,x.g)&&x.st.atRisk&&x.st.streak>=3).sort((a,b)=>b.st.streak-a.st.streak)[0];
+  const live=info.filter(x=>!goalDone(td,x.g)&&x.st.streak>=3).sort((a,b)=>b.st.streak-a.st.streak)[0];
+  let head;
+  if(risk)head=`<b>${nm(risk.g)} streak on the line:</b> ${risk.st.streak} days, and missing today ends it.`;
+  else if(hour<12&&!done.length){
+    const easiest=info.filter(x=>x.r14.d).sort((a,b)=>b.r14.n/b.r14.d-a.r14.n/a.r14.d)[0];
+    head=`<b>${gs.length} habits today.</b> ${live?`Start with ${nm(live.g)} to keep its ${live.st.streak}-day streak going.`:easiest?`Start with ${nm(easiest.g)}, your most consistent (${easiest.r14.n} of the last ${easiest.r14.d} days).`:''}`;
+  }else if(hour>=18){
+    head=`<b>${left.length} habit${left.length===1?'':'s'} left tonight:</b> ${left.slice(0,3).map(nm).join(', ')}${left.length>3?` and ${left.length-3} more`:''}.${live?` ${nm(live.g)} keeps a ${live.st.streak}-day streak alive.`:''}`;
+  }else{
+    head=`<b>${done.length} of ${gs.length} habits done.</b> Next: ${nm((live&&live.g)||left[0])}.`;
+  }
+  // One extra: something slipping, or a habit that shows up in your recovery.
+  const slip=info.filter(x=>x.r14.d>=10&&x.p14.d>=10&&x.r14.n/x.r14.d<=0.4&&x.p14.n/x.p14.d>=0.6).sort((a,b)=>a.r14.n/a.r14.d-b.r14.n/b.r14.d)[0];
+  if(slip)return head+` ${nm(slip.g)} has slipped to ${slip.r14.n} of the last ${slip.r14.d} days (from ${slip.p14.n}); tie it to something you already do every day.`;
+  const imp=getHabitImpacts().filter(f=>!f.pending&&f.size==='clear'&&f.better&&left.some(g=>g.name===f.label))[0];
+  if(imp){const parts=[];if(imp.hrv&&imp.hrv.base)parts.push(`${Math.round(imp.hrv.diff/imp.hrv.base*100)}% higher HRV`);if(imp.rhr&&imp.rhr.diff<0)parts.push(`${Math.round(-imp.rhr.diff)} bpm lower resting HR`);
+    if(parts.length)return head+` Days you tick ${esc(imp.label)} are followed by mornings with ${parts.join(' and ')}.`;}
+  return head;
+}
+// ── SLEEP COACH ──
+// Only speaks up when last night (or the last few) is worth acting on.
+function getSleepCoachLine(){
+  const m=loadMorningData(),td=dk(today()),y=_dsAgo(1);
+  const t=m[td];if(!t)return null;
+  const sl=+t.sleep||null,hrv=+t.hrv||null;
+  const prevSl=m[y]&&+m[y].sleep||null;
+  const B=getMorningBaselines(td,m);
+  const lowHrv=hrv&&B.hrv&&B.hrv.n>=7&&Math.log(hrv)<B.hrv.mean-B.hrv.sd;
+  if(sl&&sl<60&&prevSl&&prevSl<60)return`<b>Two short nights in a row</b> (sleep ${prevSl}, then ${sl}). Make today easy, skip anything hard, and get to bed 30 minutes earlier tonight.`;
+  if(sl&&sl<55)return`<b>Rough night (sleep score ${sl}).</b> One bad night barely touches fitness; keep today's running easy and get to bed a little earlier.`;
+  if(lowHrv)return`<b>HRV is below your normal range</b> (${hrv} ms). Often stress, alcohol or a hard session; easy today, and see if it bounces back tomorrow.`;
+  return null;
+}
+// ── WELLNESS COACH (weight, nicotine) ──
+function getWellnessCoachLines(){
+  const out=[],td=dk(today()),w=getWellnessSnapshot();
+  const next=getRaces().filter(r=>daysUntil(r.date)>=0)[0],dNext=next?daysUntil(next.date):null;
+  // Nicotine: a concrete target for today, 10% under the recent average.
+  const v=loadVapingData().filter(x=>x.date&&+x.puffs>=0).sort((a,b)=>a.date.localeCompare(b.date));
+  if(v.length){
+    const n=w.nic,todayLog=v.filter(x=>x.date===td).reduce((a,x)=>a+ +x.puffs,0);
+    const last7=v.filter(x=>x.date>=_dsAgo(7)&&x.date<td).map(x=>+x.puffs),avg7=last7.length?last7.reduce((a,b)=>a+b,0)/last7.length:(n&&n.recent)||null;
+    const target=avg7?Math.round(avg7*0.9/5)*5:null;
+    if(n&&n.lastGap>=2)out.push({ic:'wind',t:`<b>Nicotine not logged for ${n.lastGap} days.</b> Your last fortnight averaged ${Math.round(n.recent)} puffs a day${target?`; log today and aim for under ${target}`:''}. What gets counted comes down.`});
+    else if(todayLog&&target)out.push({ic:'wind',t:todayLog<=target?`<b>${todayLog} puffs so far, under today's ${target} target.</b>${n&&n.trendPct<0?` Down ${-n.trendPct}% on the fortnight before.`:''}`:`<b>${todayLog} puffs today, over the ${target} target.</b> No drama: tomorrow's target resets from your average.`});
+    else if(target)out.push({ic:'wind',t:`<b>Today's nicotine target: under ${target} puffs</b>, 10% below your 7-day average of ${Math.round(avg7)}.${n&&n.trendPct!=null?` ${n.trendPct<0?`Down ${-n.trendPct}%`:`Up ${n.trendPct}%`} on the fortnight before.`:''}`});
+  }
+  // Weight: when to weigh in, and what the trend means with the training you're doing.
+  if(w.lastW){
+    const gap=Math.round((new Date(td+'T12:00:00')-new Date(w.lastW.date+'T12:00:00'))/864e5);
+    if(dNext!=null&&dNext<=7)out.push({ic:'scale',t:`<b>Race week: don't chase the scale.</b> Eat normally and add some carbs in the last two days; ${w.wNow!=null?`${w.wNow.toFixed(1)} kg`:'your weight'} will keep till after ${esc(next.name||'the race')}.`});
+    else if(gap>=7)out.push({ic:'scale',t:`<b>No weigh-in for ${gap} days.</b> Weigh in tomorrow, first thing and before breakfast, so it compares like with like.${w.wRate!=null&&w.wRate<-0.05&&w.eta?` The trend is ${Math.abs(w.wRate).toFixed(1)} kg a week down, so ${w.goalW} kg is about ${w.eta} weeks away at this rate.`:''}`});
+    else if(w.wRate!=null&&w.wRate>0.3)out.push({ic:'scale',t:`<b>Up ${w.wRate.toFixed(1)} kg a week lately.</b> Some of that is water and glycogen in heavier training weeks; look at the 2-week trend before changing anything.`});
+    else if(w.wRate!=null&&w.wRate<-0.75)out.push({ic:'scale',t:`<b>Down ${Math.abs(w.wRate).toFixed(1)} kg a week</b>, which is quick alongside this much running. Make sure you're fuelling long runs, or recovery will suffer.`});
+  }
+  return out;
+}
+
 // ── GYM COACH ──
 // Which session is due (the least recent of Push / Pull / Legs, steering off legs when
 // a key run or race is close), what to lift (your last top sets: about 80% after a

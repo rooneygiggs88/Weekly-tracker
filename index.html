@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="77">
+<meta name="app-version" content="78">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -2930,7 +2930,7 @@ function _calSlotsFor(weekOffset){
   sl.forEach((x,i)=>{x.id=i;});
   const E=_weekSlotEdits(mon,sl);
   sl.forEach(x=>{const e=E[x.id];if(e&&e.type&&!x.fixed)x.type=e.type;});
-  const cu=sl.filter(x=>!x.fixed&&E[x.id]&&E[x.id].km!=null),cuKm=cu.reduce((a,x)=>a+(+E[x.id].km),0);
+  const cu=_pinned(sl.filter(x=>!x.fixed),E,Math.max(0,pw.target-fixedKm)),cuKm=cu.reduce((a,x)=>a+(+E[x.id].km),0);
   const rs=sl.filter(x=>!x.fixed&&!cu.includes(x)),rSum=rs.reduce((a,x)=>a+x.w,0);
   sl.forEach(x=>{x.km=Math.round(x.fixed!=null?x.fixed:cu.includes(x)?+E[x.id].km:rSum?Math.max(0,pw.target-fixedKm-cuKm)*x.w/rSum:0);});
   return{target:pw.target,kind:pw.kind,race:pw.race,slots:sl.filter(x=>x.km>0).map(x=>({type:x.type,km:x.km,id:x.id}))};
@@ -2941,6 +2941,18 @@ function _weekSlotEdits(monK,slots){
   const old=(state.weekLongKm||{})[monK];
   if(old!=null&&slots){const L=slots.find(x=>x.type==='Long');if(L&&!E[L.id]){state.weekSlotEdits=state.weekSlotEdits||{};state.weekSlotEdits[monK]={...E,[L.id]:{km:old}};}delete state.weekLongKm[monK];saveState();return(state.weekSlotEdits||{})[monK]||{};}
   return E;
+}
+// The runs whose km you've set. If that's every run left (and there's more than one),
+// the one you set longest ago goes back to sharing what's left, so the run you're
+// changing always moves the others and the week's total holds.
+// Newest edit first: it always holds. Older ones hold only while they still fit in
+// what's left of the week; otherwise they go back to sharing.
+function _pinned(flex,E,limit){
+  const c=flex.filter(x=>E[x.id]&&E[x.id].km!=null).sort((a,b)=>(E[b.id].at||0)-(E[a.id].at||0));
+  const out=[];let sum=0;
+  c.forEach((x,i)=>{const k=+E[x.id].km;if(i===0||sum+k<=limit+0.5){out.push(x);sum+=k;}});
+  if(out.length>=2&&out.length===flex.length)out.pop();
+  return out;
 }
 function _calRaceOn(ds){return getRaces().find(r=>r.date===ds);}
 function getCalendarWeek(weekOffset){
@@ -9861,7 +9873,7 @@ function getYearGoalWeek(weekOffset=0){
   const longKey=dk(mon);
   const longSlot=open.find(x=>x.type==='Long');
   const longMax=Math.max(1,Math.round(leftKm));
-  const cust=flex.filter(x=>E[x.id]&&E[x.id].km!=null);
+  const cust=_pinned(flex,E,flexKm);
   if(cust.length){
     cust.forEach(x=>{x.left=Math.max(0,+E[x.id].km);x.custom=true;});
     const rest=flex.filter(x=>!x.custom),rSum=rest.reduce((a,x)=>a+x.w,0);
@@ -9877,9 +9889,9 @@ function getYearGoalWeek(weekOffset=0){
   // leftover is shown as a small top-up for any run instead.
   let topUp=0;
   open.forEach(x=>{
-    if(!x.custom&&x.left>0.05&&x.left<3){const to=open.filter(y=>y!==x&&y.left>=3&&!y.custom).sort((a,b)=>b.left-a.left)[0];if(to){to.left+=x.left;x.left=0;}else{topUp+=x.left;x.left=0;}}
+    if(!x.custom&&x.type!=='Race'&&x.left>0.05&&x.left<3){const to=open.filter(y=>y!==x&&y.left>=3&&!y.custom&&y.type!=='Race').sort((a,b)=>b.left-a.left)[0];if(to){to.left+=x.left;x.left=0;}else{topUp+=x.left;x.left=0;}}
   });
-  if(topUp>=3){const to=open.find(x=>x.left===0&&!x.custom);if(to){to.left=topUp;topUp=0;}}
+  if(topUp>=3){const to=open.find(x=>x.left===0&&!x.custom&&x.type!=='Race');if(to){to.left=topUp;topUp=0;}}
   open.forEach(x=>{x.optional=Math.round(x.left)===0;});
   const active=open.filter(x=>!x.optional),optional=open.filter(x=>x.optional);
   topUp=Math.round(topUp);
@@ -10047,6 +10059,7 @@ function setSlotEdit(mon,id,patch,e){
   state.weekSlotEdits=state.weekSlotEdits||{};const W=state.weekSlotEdits[mon]=state.weekSlotEdits[mon]||{};
   const cur={...(W[id]||{}),...patch};
   if(cur.km!=null)cur.km=Math.max(0,Math.min(60,Math.round(cur.km)));
+  if(patch.km!=null)cur.at=Date.now();
   W[id]=cur;saveState();haptic('light');refreshPlanViews();
 }
 function resetSlotEdit(mon,id,e){
@@ -10126,7 +10139,7 @@ function renderYearGoalWeek(){
       // long-run stepper to share it out. Nothing is hidden or moved for you.
       if(done)return'';
       const b=w.base||0,runMax=Math.max(12,b*0.3);
-      const big=w.open.filter(x=>x!==w.longSlot&&x.type!=='Race').sort((a,c)=>c.left-a.left)[0];
+      const big=w.open.filter(x=>x!==w.longSlot&&x.type!=='Race'&&x.type!=='Long'&&!x.custom).sort((a,c)=>c.left-a.left)[0];
       if(!big||big.left<=Math.max(runMax,w.longSlot?w.longSlot.left:0)+0.5)return'';
       return`<div class="yg-heavy"><b>One ${big.type.toLowerCase()} run is carrying ${Math.round(big.left)} km.</b> Tap any run to make it longer and share the load, or split it over the days left. Anything you don't run this week rolls into next week's plan.</div>`;
     })()}

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="78">
+<meta name="app-version" content="79">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -2959,9 +2959,14 @@ function getCalendarWeek(weekOffset){
   const W=_calSlotsFor(weekOffset);if(!W)return null;
   const mon=addDays(getMonday(today()),weekOffset*7),monK=dk(mon),td=dk(today());
   const runs=loadRunData();
+  // Your training plan decides the shape: which days you run, which run is the long one
+  // and the tempo, and which days you lift (this week's swaps included). The calendar
+  // only fills in what the plan doesn't say.
   const tmpl=Array.isArray(state.weekPlan)?state.weekPlan:null;
-  const tRun=tmpl?tmpl.map(t=>t==='Run'):[1,1,1,1,1,1,1].map(Boolean);
-  const tType=[0,1,2,3,4,5,6].map(i=>getWeekPlanRunType?getWeekPlanRunType(i):null);
+  const dType=i=>!tmpl?'Run':weekOffset===0?planTypeThisWeek(i):tmpl[i];
+  const tRun=[0,1,2,3,4,5,6].map(i=>dType(i)==='Run');
+  const tType=[0,1,2,3,4,5,6].map(i=>tRun[i]?(weekOffset===0?runTypeThisWeek(i):getWeekPlanRunType(i)):null);
+  const tGym=[0,1,2,3,4,5,6].map(i=>!tmpl?null:weekOffset===0?gymTypeThisWeek(i):GYM_PLAN_TYPES.has(tmpl[i])?tmpl[i]:tmpl[i]==='Run'?getWeekPlanGym(i):null);
   const days=[0,1,2,3,4,5,6].map(i=>{const ds=dk(addDays(mon,i));return{i,ds,past:ds<td,isToday:ds===td,done:runs.filter(r=>r.date===ds),planned:[],gym:null,note:''};});
   // A race last week (on Sunday) or earlier this week sets up recovery days.
   const raceBefore=getRaces().filter(r=>r.date<monK&&r.date>=dk(addDays(mon,-3)))[0];
@@ -2969,6 +2974,7 @@ function getCalendarWeek(weekOffset){
   const open=days.filter(d=>d.ds>=(firstFree?firstFree.ds:'9999'));
   const used=new Map();
   const place=(d,s)=>{d.planned.push(s);used.set(d.i,(used.get(d.i)||0)+1);};
+  const dayAfterRace=d=>!!raceBefore&&d.ds===dk(addDays(new Date(raceBefore.date+'T12:00:00'),1));
   const isRunDay=d=>tRun[d.i]&&!(raceBefore&&d.ds===dk(addDays(new Date(raceBefore.date+'T12:00:00'),1)));
   const raceDay=open.find(d=>_calRaceOn(d.ds)&&W.slots.some(s=>s.type==='Race'));
   // Runs too short to bother with fold into the biggest other run; if they're all tiny
@@ -2984,17 +2990,18 @@ function getCalendarWeek(weekOffset){
   slots.filter(s=>s.type==='Race').forEach(s=>{const d=pick(s,[raceDay||open[open.length-1]].filter(Boolean));if(d){place(d,s);d.note='race';}});
   const rd=days.find(d=>d.note==='race');
   // Long: the last run day (not the race day or the day before it)
-  slots.filter(s=>s.type==='Long').forEach(s=>{const c=open.filter(d=>free(d)&&isRunDay(d)&&!(rd&&Math.abs(d.i-rd.i)<=1)).reverse();const d=pick(s,c.length?c:open.filter(free).reverse());if(d)place(d,s);});
+  slots.filter(s=>s.type==='Long').forEach(s=>{const c=open.filter(d=>free(d)&&isRunDay(d)&&!(rd&&Math.abs(d.i-rd.i)<=1)).sort((a,b)=>(tType[b.i]==='Long')-(tType[a.i]==='Long')||b.i-a.i);const d=pick(s,c.length?c:open.filter(free).reverse());if(d)place(d,s);});
   const ld=days.find(d=>d.planned.some(p=>p.type==='Long'));
   // Tempo: the template's tempo day if it fits, else midweek away from the long run and race
   slots.filter(s=>s.type==='Tempo').forEach(s=>{
     const ok=d=>free(d)&&isRunDay(d)&&!(ld&&Math.abs(d.i-ld.i)<=1)&&!(rd&&rd.i-d.i<=2&&rd.i>=d.i)&&!(raceBefore&&d.i<3);
-    const c=open.filter(ok).sort((a,b)=>(tType[b.i]==='Tempo')-(tType[a.i]==='Tempo')||Math.abs(a.i-2)-Math.abs(b.i-2));
-    const d=pick(s,c.length?c:open.filter(free));if(d)place(d,s);
+    const c=open.filter(ok).sort((a,b)=>['Tempo','Intervals'].includes(tType[b.i])-['Tempo','Intervals'].includes(tType[a.i])||Math.abs(a.i-2)-Math.abs(b.i-2));
+    const rdays=open.filter(d=>free(d)&&isRunDay(d)&&!(ld&&Math.abs(d.i-ld.i)<1)).sort((a,b)=>raceBefore?b.i-a.i:0);
+    const d=pick(s,c.length?c:rdays.length?rdays:open.filter(free));if(d)place(d,s);
   });
   // Easy: remaining run days, then spare days, then doubles
   slots.filter(s=>s.type==='Easy').forEach(s=>{
-    const c=[...open.filter(d=>free(d)&&isRunDay(d)),...open.filter(d=>free(d)&&!(rd&&d.i===rd.i+1)),...open.filter(d=>d!==rd).sort((a,b)=>(used.get(a.i)||0)-(used.get(b.i)||0))];
+    const c=[...open.filter(d=>free(d)&&isRunDay(d)),...open.filter(d=>free(d)&&!(rd&&d.i===rd.i+1)&&!dayAfterRace(d)),...open.filter(d=>d!==rd&&!dayAfterRace(d)).sort((a,b)=>(used.get(a.i)||0)-(used.get(b.i)||0))];
     const d=pick(s,c);if(d)place(d,s);
   });
   // Session detail
@@ -3016,7 +3023,16 @@ function getCalendarWeek(weekOffset){
   const keyIdx=new Set(days.filter(d=>d.planned.some(p=>p.type==='Long'||p.type==='Tempo'||p.type==='Race')).map(d=>d.i));
   const wantGym=W.kind==='race'||W.kind==='taper'?1:2;
   const afterRace=raceBefore?Math.round((new Date(raceBefore.date+'T12:00:00')-mon)/864e5)+1:null;
-  let g=days.filter(d=>d.ds>=td&&d.gym==null&&!keyIdx.has(d.i+1)&&!keyIdx.has(d.i)&&!(recovery&&d.i<3)&&!(afterRace!=null&&d.i<=afterRace)&&!(rd&&d.i===rd.i+1));
+  const planGym=tGym.some(Boolean);
+  const gymLoggedOn=new Set(loadGymData().map(x=>x.date));
+  if(planGym){
+    days.forEach(d=>{
+      const t=tGym[d.i];if(!t||d.ds<td||gymLoggedOn.has(d.ds))return;
+      if(rd&&(d.i===rd.i||d.i===rd.i-1))return;            // never race day or the day before
+      d.gym=(W.kind==='race'||W.kind==='taper')&&t==='Legs'?'Upper body':t;
+    });
+  }
+  let g=planGym?[]:days.filter(d=>d.ds>=td&&d.gym==null&&!keyIdx.has(d.i+1)&&!keyIdx.has(d.i)&&!(recovery&&d.i<3)&&!(afterRace!=null&&d.i<=afterRace)&&!(rd&&d.i===rd.i+1));
   // Spread them out: no two gym days back to back when there's room.
   g=g.filter((d,j,a)=>j===0||d.i-a[j-1].i>1||a.length<=wantGym).slice(0,wantGym);
   const gymDone=loadGymData().filter(x=>x.date>=monK&&x.date<=dk(addDays(mon,6))).length;
@@ -3040,7 +3056,7 @@ function renderPlanCalendar(){
       const done=d.done.map(r=>`<div class="pc-item done"><b>✓ ${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}</b></div>`).join('');
       const plan=d.planned.map(s=>{const sel=_calPick&&_calPick.mon===w.mon&&_calPick.key===s.key;
         return`<div class="pc-item ${s.type.toLowerCase()}${sel?' sel':''}" onclick="calPick('${w.mon}','${s.key}')"><b>${s.km} km ${esc(s.title||s.type)}</b><span>${s.desc||''}</span>${sel?`<div class="pc-move">${_CAL_DAY.map((nm,i)=>w.days[i].past?'':`<button onclick="event.stopPropagation();calMove('${w.mon}','${s.key}',${i})" class="${i===d.i?'on':''}">${nm}</button>`).join('')}</div>${s.id!=null&&s.type!=='Race'?slotEditorHtml(w.mon,s,s.km):''}`:''}</div>`;}).join('');
-      const gym=d.gym?`<div class="pc-item gym"><b>${d.gym}</b><span>${d.gym==='Upper body'?'Short and light, no legs.':'A normal session; legs only if no key run within 48 hours.'}</span></div>`:'';
+      const gym=d.gym?`<div class="pc-item gym"><b>${d.gym}</b><span>${d.gym==='Upper body'?'Short and light, no legs.':GYM_PLAN_TYPES.has(d.gym)?`From your plan.${(W=>W==='race'||W==='taper')(w.kind)?' Keep it short in a '+w.kind+' week.':''}`:'A normal session; legs only if no key run within 48 hours.'}</span></div>`:'';
       const empty=!done&&!plan&&!gym?`<div class="pc-rest">${d.past?'':'Rest'}</div>`:'';
       return`<div class="pc-day${d.isToday?' today':''}${d.past?' past':''}"><div class="pc-d"><b>${_CAL_DAY[d.i]}</b><span>${new Date(d.ds+'T12:00:00').getDate()}</span></div><div class="pc-items">${done}${plan}${gym}${empty}</div></div>`;
     }).join('');
@@ -3090,7 +3106,7 @@ function renderTodayPlanFromCalendar(readiness){
   }
   if(d.gym){
     const due=(getGymCoachLine()||'').replace(/<[^>]+>/g,'');
-    return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">Gym${d.gym==='Upper body'?' · upper body':''}</div>
+    return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">${GYM_PLAN_TYPES.has(d.gym)?esc(d.gym):'Gym'}${d.gym==='Upper body'?' · upper body':''}</div>
       <div class="today-plan-meta">${due||'A normal session.'} ${doneTxt}</div>
       ${adv(rk==='recover'?'Make it mobility instead today.':'')}
       <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('gym')">Start gym session</button>`;

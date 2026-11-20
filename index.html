@@ -471,7 +471,37 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .rm-strip-mid{flex:1;min-width:0;display:flex;flex-direction:column;}
 .rm-strip-mid b{font-family:var(--display);font-weight:800;font-size:20px;text-transform:uppercase;line-height:1.05;}
 .rm-strip-mid span{font-size:12.5px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rm-then{font-size:12px;font-weight:700;color:var(--text3);margin-top:3px;}
+.rm-strip-mid .rm-then{color:var(--text3);font-size:11.5px;}
 .rm-more{display:block;width:100%;margin-top:6px;padding:9px;background:none;border:none;border-top:1px solid var(--border);font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text3);cursor:pointer;}
+/* YEAR PLAN + RACES */
+.yp{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+.yp-sum{font-size:13.5px;line-height:1.5;color:var(--text2);margin-bottom:10px;}
+.yp-sum b{color:var(--text);}
+.yp-list{margin-top:8px;}
+.yp-row{display:grid;grid-template-columns:62px 70px 40px 1fr;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid var(--border);font-size:12px;}
+.yp-row.now{font-weight:700;}
+.yp-wk{font-family:var(--display);font-weight:700;font-size:14px;color:var(--text2);white-space:nowrap;}
+.yp-tag{font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;padding:2px 7px;border-radius:6px;text-align:center;background:var(--surface2);color:var(--text2);}
+.yp-tag.race{background:var(--accent);color:var(--on-accent);}
+.yp-tag.taper{background:color-mix(in srgb,var(--c-teal) 18%,transparent);color:var(--c-teal);}
+.yp-tag.recovery{background:color-mix(in srgb,var(--c-violet) 18%,transparent);color:var(--c-violet);}
+.yp-km{font-family:var(--display);font-weight:800;font-size:20px;text-align:right;font-variant-numeric:tabular-nums;}
+.yp-note{color:var(--text3);line-height:1.35;}
+.yp-foot{font-size:11.5px;color:var(--text3);line-height:1.45;padding-top:10px;border-top:1px solid var(--border);}
+.race-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:none;border:none;border-top:1px solid var(--border);padding:11px 0;font-family:inherit;color:var(--text);text-align:left;cursor:pointer;}
+.race-row b{display:block;font-family:var(--display);font-weight:800;font-size:19px;text-transform:uppercase;}
+.race-row em{font-style:normal;font-size:12px;font-weight:600;color:var(--text3);}
+.race-row-d{font-family:var(--display);font-weight:800;font-size:26px;text-align:center;line-height:1;}
+.race-row-d i{display:block;font-style:normal;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;}
+.yp-ctl{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;}
+.yp-ctl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;}
+.yp-ctl-row>span:first-child{font-family:var(--display);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.yp-seg{display:flex;background:var(--surface);border-radius:8px;padding:2px;flex-shrink:0;}
+.yp-seg button{border:none;background:none;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--text3);padding:6px 9px;border-radius:6px;cursor:pointer;white-space:nowrap;}
+.yp-seg button.on{background:var(--accent);color:var(--on-accent);}
+.yp-what{font-size:12.5px;color:var(--text2);line-height:1.45;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);}
+.yp-what b{color:var(--text);}
 /* TROPHIES */
 .tb-banner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;margin-bottom:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid color-mix(in srgb,var(--c-gold) 45%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--c-gold) 14%,var(--surface)),var(--surface));}
 .tb-medal,.tc-ic{display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--tc) 55%,#fff),var(--tc));box-shadow:0 0 0 3px color-mix(in srgb,var(--tc) 30%,transparent),inset 0 -3px 0 rgba(0,0,0,0.15);}
@@ -1317,7 +1347,7 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
 <div class="modal-overlay" id="race-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>Race Target</h3>
+    <h3 id="race-modal-title">Race</h3>
     <label class="modal-label">Race name</label>
     <input class="modal-input" id="race-name-input" placeholder="e.g. London Marathon">
     <label class="modal-label">Race date</label>
@@ -1330,11 +1360,16 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
       <button class="type-btn" onclick="setRaceDist('42.2')">Marathon</button>
     </div>
     <input class="modal-input" id="race-km-input" type="number" inputmode="decimal" placeholder="Custom km" step="0.1" oninput="updateRacePacePreview()">
+    <label class="modal-label">Priority</label>
+    <div class="type-row" id="race-pri-row">
+      <button class="type-btn" data-pri="A" onclick="setRacePri('A')">A race · full taper</button>
+      <button class="type-btn" data-pri="B" onclick="setRacePri('B')">B race · train through</button>
+    </div>
     <label class="modal-label">Goal time (optional)</label>
     <input class="modal-input" id="race-time-input" type="text" placeholder="mm:ss or h:mm:ss" oninput="updateRacePacePreview()">
     <div id="race-pace-preview" style="font-size:12px;font-weight:700;color:var(--accent2);margin:-8px 0 14px;min-height:16px;"></div>
     <button class="btn-primary" onclick="saveRace()" style="margin-bottom:10px;">Save Race</button>
-    <button class="btn-ghost" style="width:100%;color:var(--red);" onclick="clearRace()">Remove race target</button>
+    <button class="btn-ghost" style="width:100%;color:var(--red);" onclick="clearRace()">Remove this race</button>
     <button class="btn-ghost" style="width:100%;" onclick="closeModal('race-modal')">Cancel</button>
   </div>
 </div>
@@ -2347,8 +2382,10 @@ function renderRaceMode(){
   if(d>10){el.innerHTML='';return;}
   const km=+r.km,goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
   const proj=getRaceProjection();
+  const nx=(state.extraRaces||[]).filter(x=>x.date&&x.date>r.date).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const thenTxt=nx?`Then ${esc(nx.name||`${fmtKm(nx.km)} km`)} on ${new Date(nx.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}`:'';
   if(d>7&&!_rmOpen){
-    el.innerHTML=`<button class="rm-strip" onclick="toggleRaceMode()"><span class="rm-strip-days"><b>${d}</b><i>days</i></span><span class="rm-strip-mid"><b>${esc(r.name||'Race')}</b><span>${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}${proj?` · predicted ${proj.projTime}`:''}</span></span><span class="brief-go">›</span></button>`;
+    el.innerHTML=`<button class="rm-strip" onclick="toggleRaceMode()"><span class="rm-strip-days"><b>${d}</b><i>days</i></span><span class="rm-strip-mid"><b>${esc(r.name||'Race')}</b><span>${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}${proj?` · predicted ${proj.projTime}`:''}</span>${thenTxt?`<span class="rm-then">${thenTxt}</span>`:''}</span><span class="brief-go">›</span></button>`;
     return;
   }
   const pace=goal?goal/km:proj?proj.projSecs/km:null;
@@ -2369,7 +2406,7 @@ function renderRaceMode(){
   const dateTxt=new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
   el.innerHTML=`<div class="rm-card">
     <div class="rm-top">
-      <div><div class="rm-eyebrow">Race mode</div><div class="rm-name">${esc(r.name||'Race')}</div><div class="rm-meta">${dateTxt} · ${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</div></div>
+      <div><div class="rm-eyebrow">Race mode</div><div class="rm-name">${esc(r.name||'Race')}</div><div class="rm-meta">${dateTxt} · ${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</div>${thenTxt?`<div class="rm-then">${thenTxt}</div>`:''}</div>
       <div class="rm-count"><b>${d===0?'Today':d}</b>${d===0?'':`<span>day${d===1?'':'s'}</span>`}</div>
     </div>
     ${pace?`<div class="rm-sub">${goal?'Goal':'Predicted'} pace <b>${fmtMS(pace)}/km</b>${proj&&goal?` · predicted ${proj.projTime}`:''}${plan&&plan.daysToTaper>0?` · taper from ${fmtShortDate(plan.taperStart)}`:''}</div>
@@ -2501,6 +2538,7 @@ function renderTodayBrief(){
 }
 
 function renderToday(){
+  normalizeRaces();
   renderAvatar();
   renderYearGoalCard();
   renderWeekReviewCard();
@@ -7753,6 +7791,16 @@ function getTodayWorkoutSuggestion(){
   return{runType,distKm,paceStr,structure};
 }
 function renderRaceSection(){
+  const ex=(state.extraRaces||[]).map((r,i)=>({r,i})).filter(x=>x.r.date).sort((a,b)=>a.r.date.localeCompare(b.r.date));
+  const list=`<div class="chart-card" style="margin-bottom:10px;">
+    <div class="chart-card-header"><span class="chart-card-title">Also racing</span><span class="chart-card-val">${ex.length?`${ex.length} more`:'just the one'}</span></div>
+    ${ex.map(({r,i})=>`<button class="race-row" onclick="openRaceModal(${i})"><span><b>${esc(r.name||'Race')}</b><em>${new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} · ${fmtKm(r.km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</em></span><span class="race-row-d">${daysUntil(r.date)}<i>days</i></span></button>`).join('')}
+    <button class="tl-more" onclick="openRaceModal('new')">+ Add another race</button>
+    <div class="pb-sub" style="margin-top:8px;">Every race shapes your weekly plan: a taper before it, an easier week after. The soonest one leads on Today.</div>
+  </div>`;
+  return _renderRaceSectionMain()+list;
+}
+function _renderRaceSectionMain(){
   const r=state.race;
   if(!r||!r.date){
     return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Race Target</span></div><div class="empty-state" style="padding:16px 0;"><strong>No race set</strong>Add a target race to see your countdown.</div><button class="btn-secondary" onclick="openRaceModal()" style="margin-top:8px;">Set Race Target</button></div>`;
@@ -7959,8 +8007,16 @@ function saveVaping(){
 }
 
 let raceDist='';
-function openRaceModal(){
-  const r=state.race||{};
+// Which race the modal is editing: 'main' (state.race), an index into extraRaces, or
+// 'new' (added after the next race).
+let _raceEdit='main',_racePri='A';
+function setRacePri(p){_racePri=p;document.querySelectorAll('#race-pri-row .type-btn').forEach(b=>b.classList.toggle('active',b.dataset.pri===p));}
+function openRaceModal(which){
+  _raceEdit=which===undefined?'main':which;
+  if(_raceEdit==='main'&&state.race&&state.race.date&&daysUntil(state.race.date)<0&&_raceFinished(state.race))_raceEdit='new';
+  const r=_raceEdit==='new'?{}:_raceEdit==='main'?(state.race||{}):((state.extraRaces||[])[_raceEdit]||{});
+  document.getElementById('race-modal-title').textContent=_raceEdit==='new'?'Add a race':'Race';
+  setRacePri(r.priority==='B'?'B':'A');
   document.getElementById('race-name-input').value=r.name||'';
   document.getElementById('race-date-input').value=r.date||'';
   document.getElementById('race-km-input').value=r.km||'';
@@ -7992,13 +8048,25 @@ function saveRace(){
   const km=parseFloat(document.getElementById('race-km-input').value)||0;
   const goalTime=(document.getElementById('race-time-input').value||'').trim();
   if(!date){toastMsg('Pick a race date');return;}
-  state.race={name,date,km,goalTime};saveState();
+  const rr={name,date,km,goalTime,priority:_racePri};
+  if(_raceEdit==='main')state.race=rr;
+  else if(_raceEdit==='new'){
+    // The soonest race is always the "next race"; the rest queue behind it.
+    if(!state.race||!state.race.date||_raceFinished(state.race)){if(state.race&&state.race.date){state.pastRaces=state.pastRaces||[];state.pastRaces.push(state.race);}state.race=rr;}
+    else if(date<state.race.date){state.extraRaces=[state.race,...(state.extraRaces||[])];state.race=rr;}
+    else state.extraRaces=[...(state.extraRaces||[]),rr];
+  }else{state.extraRaces[_raceEdit]=rr;}
+  state.extraRaces=(state.extraRaces||[]).sort((a,b)=>a.date.localeCompare(b.date));
+  saveState();
   closeModal('race-modal');toastMsg('Race saved');haptic('success');
   renderToday();refreshActivePage();
 }
 function clearRace(){
-  if(!confirm('Remove race target?'))return;
-  state.race=null;saveState();closeModal('race-modal');toastMsg('Race removed');
+  if(_raceEdit==='new'){closeModal('race-modal');return;}
+  if(!confirm('Remove this race?'))return;
+  if(_raceEdit==='main'){state.race=null;const ex=(state.extraRaces||[]).sort((a,b)=>a.date.localeCompare(b.date));if(ex.length)state.race=ex.shift();state.extraRaces=ex;}
+  else state.extraRaces.splice(_raceEdit,1);
+  saveState();closeModal('race-modal');toastMsg('Race removed');
   renderToday();refreshActivePage();
 }
 
@@ -8521,7 +8589,58 @@ function renderYearGoalCard(){
       <div><div class="year-goal-stat-val">${p.perWeekNeeded!=null?Math.round(p.perWeekNeeded):'–'}</div><div class="year-goal-stat-lbl">km/week needed</div></div>
       <div><div class="year-goal-stat-val">${p.daysLeft?(p.remaining/p.daysLeft).toFixed(1):'–'}</div><div class="year-goal-stat-lbl">km/day needed</div></div>
     </div>`}
-    ${projLine?`<div class="year-goal-proj">${projLine}</div>`:''}
+    ${(()=>{const pb=complete?'':renderYearPlanBlock();return pb||(projLine?`<div class="year-goal-proj">${projLine}</div>`:'');})()}
+  </div>`;
+}
+// The plan in words, with the week-by-week breakdown behind a button.
+let _ygPlanOpen=false;
+function setPlanCap(m,e){if(e)e.stopPropagation();state.yearRunGoal.capMode=m;saveState();renderYearGoalCard();haptic('light');}
+function setRacePriority(date,p,e){
+  if(e)e.stopPropagation();
+  [state.race,...(state.extraRaces||[])].forEach(r=>{if(r&&r.date===date)r.priority=p;});
+  saveState();renderYearGoalCard();haptic('light');
+}
+// What each lever would do to the shortfall, worked out by re-running the plan.
+function whatIfPlans(){
+  const g=state.yearRunGoal,w=getYearGoalWeek();if(!w)return'';
+  const races=[state.race,...(state.extraRaces||[])].filter(r=>r&&r.date&&daysUntil(r.date)>=0);
+  const run=fn=>{const saveCap=g.capMode,saveP=races.map(r=>r.priority);fn();const P=buildYearPlan(getMonday(today()),w.plan.R);g.capMode=saveCap;races.forEach((r,i)=>{r.priority=saveP[i];});return P.shortfall;};
+  const opts=[];
+  if(g.capMode!=='stretch')opts.push(['Stretch build limit',run(()=>{g.capMode='stretch';})]);
+  if(races.some(r=>r.priority!=='B'))opts.push(['All races as B',run(()=>{races.forEach(r=>{r.priority='B';});})]);
+  if(g.capMode!=='stretch'&&races.some(r=>r.priority!=='B'))opts.push(['Both',run(()=>{g.capMode='stretch';races.forEach(r=>{r.priority='B';});})]);
+  if(!opts.length)return'';
+  return`<b>What would close it:</b> ${opts.map(([l,sf])=>`${l}: ${sf<=1?'<span style="color:var(--green);font-weight:700;">goal met</span>':`${sf} km short`}`).join(' · ')}.`;
+}
+function toggleYearPlan(e){if(e)e.stopPropagation();_ygPlanOpen=!_ygPlanOpen;renderYearGoalCard();haptic('light');}
+function renderYearPlanBlock(){
+  const w=getYearGoalWeek();if(!w||!w.plan)return'';
+  const P=w.plan,g=state.yearRunGoal;
+  const races=getRaces().filter(r=>daysUntil(r.date)>=0&&r.date<=`${g.year}-12-31`);
+  const fixed=P.weeks.filter(x=>x.fixed),build=P.weeks.filter(x=>!x.fixed);
+  const fmtD=ds=>new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const raceTxt=races.length?races.map(r=>esc(r.name||`${fmtKm(r.km)} km`)).join(' and '):'';
+  const maxBuild=build.length?Math.max(...build.map(x=>x.target)):0;
+  let summary;
+  if(P.shortfall<=1){
+    summary=`${raceTxt?`The ${fixed.length} race-shaped week${fixed.length===1?'':'s'} around ${raceTxt} ${fixed.length===1?'is':'are'} planned lighter, and`:'The'} km you still need are spread over ${build.length} other week${build.length===1?'':'s'}${maxBuild?` of up to ${maxBuild} km`:''}. That reaches ${g.targetKm.toLocaleString('en-GB')} km by <b>${fmtD(P.finish)}</b>.`;
+  }else{
+    summary=`Even with every build week at the safe cap of ${P.cap} km, the plan reaches about <b>${(g.targetKm-P.shortfall).toLocaleString('en-GB')} km</b>, ${P.shortfall} km short. Closing that would mean weeks bigger than your body is used to, so it's worth deciding now: push the cap a little, or settle for a strong ${(g.targetKm-P.shortfall).toLocaleString('en-GB')}.`;
+  }
+  const tag={race:'Race',taper:'Taper',recovery:'Recovery',build:'Build'};
+  const rows=P.weeks.map((x,i)=>`<div class="yp-row${i===0?' now':''}"><span class="yp-wk">${fmtD(x.mon)}${i===0?' · now':''}</span><span class="yp-tag ${x.kind}">${tag[x.kind]||'Build'}</span><span class="yp-km">${x.target}</span><span class="yp-note">${x.note}</span></div>`).join('');
+  const upRaces=getRaces().filter(r=>daysUntil(r.date)>=0&&r.date<=`${g.year}-12-31`);
+  const what=P.shortfall>1?whatIfPlans():null;
+  const controls=`<div class="yp-ctl">
+    <div class="yp-ctl-row"><span>Build limit</span><span class="yp-seg"><button class="${P.capMode==='safe'?'on':''}" onclick="setPlanCap('safe',event)">Safe +15%</button><button class="${P.capMode==='stretch'?'on':''}" onclick="setPlanCap('stretch',event)">Stretch +25%</button></span></div>
+    ${upRaces.map(r=>`<div class="yp-ctl-row"><span>${esc(r.name||`${fmtKm(r.km)} km`)}</span><span class="yp-seg"><button class="${r.priority!=='B'?'on':''}" onclick="setRacePriority('${r.date}','A',event)">A · taper</button><button class="${r.priority==='B'?'on':''}" onclick="setRacePriority('${r.date}','B',event)">B · train through</button></span></div>`).join('')}
+    ${what?`<div class="yp-what">${what}</div>`:''}
+  </div>`;
+  return`<div class="yp" onclick="event.stopPropagation()">
+    <div class="yp-sum">${summary}</div>
+    ${controls}
+    <button class="yg-next-btn" onclick="toggleYearPlan(event)" aria-expanded="${_ygPlanOpen}"><span>Plan to 31 Dec</span><span>${P.weeks.length} weeks <span class="yg-next-chev${_ygPlanOpen?' open':''}">▾</span></span></button>
+    ${_ygPlanOpen?`<div class="yp-list">${rows}<div class="yp-foot">Race weeks are set as a share of your recent ${P.base} km weeks. Build weeks share out the rest, up to ${P.cap??'–'} km. Each week locks in on Monday; whatever you run more or less moves the rest of the plan.</div></div>`:''}
   </div>`;
 }
 let _yearGoalRuns=5;
@@ -8563,11 +8682,12 @@ function getYearGoalWeek(weekOffset=0){
   const weekKm=weekRuns.reduce((a,r)=>a+goalKm(r),0);
   const remainingAtStart=Math.max(0,g.startRemaining-getGoalRunKm(g))+weekKm;
   const rawTarget=Math.round(remainingAtStart*daysThisWeek/daysLeft);
-  const guard=weekGuardRails(mon,daysThisWeek);
-  let target=rawTarget,note=null,race=null;
-  if(guard.taper!=null&&guard.taper<target){target=guard.taper;note=guard.taperNote;}
-  else if(guard.cap!=null&&guard.cap<target){target=guard.cap;note=guard.capNote;}
-  if(guard.race)race=guard.race;
+  // The week's number is this week's slot in the plan to 31 Dec (buildYearPlan), so
+  // tapers, race weeks and recovery are planned for rather than caught up afterwards.
+  const plan=buildYearPlan(mon,remainingAtStart);
+  const pw=plan.weeks[0]||{target:rawTarget,note:'',race:null,longCap:null};
+  const guard={longCap:pw.longCap,base:plan.base};
+  let target=pw.target,note=pw.fixed||pw.capped?pw.note:null,race=pw.race;
   // Slots for this week, scaled to the target.
   const runs=g.runsPerWeek||5;
   const full=YEAR_GOAL_SPLITS[runs]||YEAR_GOAL_SPLITS[5];
@@ -8622,7 +8742,7 @@ function getYearGoalWeek(weekOffset=0){
   }
   if(longSlot&&longSlot.custom&&guard.longCap!=null&&longSlot.left>guard.longCap)
     note=(note?note+' ':'')+`Your ${Math.round(longSlot.left)} km long run is your call, but with the race a week later, ${guard.longCap} km or less would keep your legs fresher.`;
-  return{longKey,longMax,longSlot,target,rawTarget,note,race,base:guard.base,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
+  return{plan,longKey,longMax,longSlot,target,rawTarget,note,race,base:guard.base,weekKm,leftKm,slots,open,daysThisWeek,extraRuns:Math.max(0,weekRuns.length-slots.length)};
 }
 // Two guard rails on the catch-up maths. (1) A ramp cap: no more than ~15% above your
 // average of the last four complete weeks, since big jumps in weekly load are the most
@@ -8634,34 +8754,107 @@ function _weekKmBefore(mon,n){
   for(let w=1;w<=n;w++){const a=dk(addDays(mon,-7*w)),b=dk(addDays(mon,-7*w+6));t+=runs.filter(r=>r.date>=a&&r.date<=b).reduce((s,r)=>s+(parseFloat(r.km)||0),0);}
   return t/n;
 }
-function weekGuardRails(mon,daysThisWeek=7){
-  const thisMon=getMonday(today());
-  // Base from the four complete weeks before *this* week, so next week's preview doesn't
-  // count a half-finished week.
-  const base=_weekKmBefore(thisMon,4);
-  const out={base:Math.round(base),cap:null,taper:null,longCap:null,race:null};
-  if(base>=8){
-    out.cap=Math.round((base*1.15+2)*daysThisWeek/7);
-    out.capNote=`Capped at ${out.cap} km, about 15% above your recent ${Math.round(base)} km weeks. Bigger jumps are where running injuries come from.`;
-  }
-  const r=state.race;
-  if(r&&r.date&&+r.km>0){
-    const rd=new Date(r.date+'T12:00:00');
-    const weeksTo=Math.round((getMonday(rd)-getMonday(mon))/(7*864e5));
-    const km=+r.km;
-    const F=km<=10.5?[0.6,0.9]:km<=25?[0.55,0.75,0.9]:[0.45,0.65,0.8,0.9];
-    if(weeksTo>=0&&weeksTo<F.length&&base>=8){
-      out.taper=Math.round(Math.max(base*F[weeksTo],weeksTo===0?km+6:0));
-      const nm=esc(r.name||'your race');
-      out.taperNote=weeksTo===0?`Race week: ${nm} is on ${rd.toLocaleDateString('en-GB',{weekday:'long'})}, so the rest of the week is short and easy.`
-        :`Taper: ${nm} is ${weeksTo===1?'next week':`in ${weeksTo} weeks`}, so this week is trimmed to ${out.taper} km.`;
-      out.race={km,inWeek:weeksTo===0,weeksTo};
-      if(weeksTo===1)out.longCap=km<=10.5?16:km<=25?18:28;
+// ── RACES ──
+// state.race stays "the next race" (everything race-related on Today and in Trends
+// reads it); state.extraRaces holds the ones after it. Once a race is done (result
+// logged, or two days have passed) the next one steps up automatically.
+function _raceOk(r){return r&&r.date&&+r.km>0;}
+function _raceFinished(r){
+  if(!r||!r.date)return true;const d=daysUntil(r.date);if(d>=0)return false;
+  return d<=-2||loadRunData().some(x=>x.date===r.date&&_tlEffortKey(x.effort)==='Race');
+}
+function normalizeRaces(){
+  const extra=(state.extraRaces||[]).filter(r=>r&&r.date);
+  let changed=false;
+  if((!state.race||_raceFinished(state.race))&&extra.length){
+    extra.sort((a,b)=>a.date.localeCompare(b.date));
+    const nextIdx=extra.findIndex(r=>!_raceFinished(r));
+    if(nextIdx>=0){
+      if(state.race&&state.race.date){state.pastRaces=state.pastRaces||[];state.pastRaces.push(state.race);}
+      state.race=extra.splice(nextIdx,1)[0];changed=true;
     }
   }
-  return out;
+  const kept=extra.filter(r=>!_raceFinished(r));
+  if(kept.length!==extra.length)changed=true;
+  if(changed){state.extraRaces=kept;saveState();}
 }
-// Next week's projection sits behind a button showing its km, so you can watch it shrink
+// Every race that can shape training: upcoming ones plus any in the last three weeks
+// (for recovery), soonest first.
+function getRaces(){
+  const all=[state.race,...(state.extraRaces||[]),...(state.pastRaces||[])].filter(_raceOk);
+  const seen=new Set();
+  return all.filter(r=>{const k=r.date+'|'+r.km;if(seen.has(k))return false;seen.add(k);return daysUntil(r.date)>=-21;}).sort((a,b)=>a.date.localeCompare(b.date));
+}
+// How each race shapes the week starting `mon`: tapers before it (more weeks, and a
+// deeper cut, for longer races - the taper meta-analysis found 40-60% over 1-3 weeks
+// worked best), the race week itself, and an easier week after it.
+// A races get the full taper; B races ("train through") only a lighter race week and,
+// for anything longer than a 10K, a lighter week after.
+const RACE_TAPER=(km,pri)=>pri==='B'?[0.8]:km<=10.5?[0.6,0.9]:km<=25?[0.55,0.75,0.9]:[0.45,0.65,0.8,0.9];
+const RACE_RECOVERY=(km,pri)=>pri==='B'?(km<=10.5?[]:[0.9]):km<=10.5?[0.9]:km<=25?[0.8]:km<=43?[0.6,0.8]:[0.5,0.7,0.85];
+function weekRaceInfo(mon,base){
+  let best=null;
+  getRaces().forEach(r=>{
+    const km=+r.km,rd=new Date(r.date+'T12:00:00');
+    const w=Math.round((getMonday(rd)-getMonday(mon))/(7*864e5));
+    const nm=esc(r.name||`${fmtKm(km)} km race`);
+    let f=null,kind=null,note=null;
+    const pri=r.priority==='B'?'B':'A';
+    if(w>=0){const F=RACE_TAPER(km,pri);if(w<F.length){f=F[w];kind=w===0?'race':'taper';
+      note=w===0?`Race week: ${nm} on ${rd.toLocaleDateString('en-GB',{weekday:'long'})}${pri==='B'?', trained through':''}.`:`Taper for ${nm}, ${w===1?'next week':`in ${w} weeks`}.`;}}
+    else{const Rc=RACE_RECOVERY(km,pri),i=-w-1;if(i<Rc.length){f=Rc[i];kind='recovery';note=`Recovery after ${nm}.`;}}
+    if(f==null)return;
+    const info={factor:f,kind,note,race:{km,name:r.name,inWeek:w===0,weeksTo:w},longCap:w===1&&pri==='A'?(km<=10.5?16:km<=25?18:28):null,minKm:w===0?km+6:0};
+    if(!best||f<best.factor||(f===best.factor&&kind==='race')){
+      // keep the deepest cut, but remember a race in the same week and any long-run cap
+      const prev=best;best=info;
+      if(prev){if(prev.race.inWeek&&!best.race.inWeek){best.race=prev.race;best.minKm=prev.minKm;}if(prev.longCap&&!best.longCap)best.longCap=prev.longCap;best.note=best.note+' '+prev.note;}
+    }else{if(info.race.inWeek){best.race=info.race;best.minKm=Math.max(best.minKm,info.minKm);}if(info.longCap&&!best.longCap)best.longCap=info.longCap;best.note=best.note+' '+info.note;}
+  });
+  return best;
+}
+// ── PLAN TO 31 DECEMBER ──
+// Every week from `startMon` to the end of the year. Race-shaped weeks (tapers, race
+// weeks, recovery) are fixed first as a share of your recent normal week. The km still
+// needed are then spread over the other weeks by days, but never above the safe cap
+// (~15% over your last four weeks) - any week that hits the cap passes the rest on.
+// If it still doesn't fit, the shortfall is reported rather than hidden.
+function buildYearPlan(startMon,R){
+  const g=state.yearRunGoal;
+  const thisMon=getMonday(today());
+  const base=_weekKmBefore(thisMon,4);
+  const capPct=g.capMode==='stretch'?0.25:0.15;
+  const capW=base>=8?base*(1+capPct)+2:Infinity;
+  const goalStart=new Date(g.startedAt);goalStart.setHours(0,0,0,0);
+  const yearEnd=new Date(g.year,11,31);
+  const days=(a,b)=>Math.round((b-a)/864e5)+1;
+  const weeks=[];
+  for(let mon=new Date(startMon);mon<=yearEnd;mon=addDays(mon,7)){
+    const ws=goalStart>mon?goalStart:mon,sun=addDays(mon,6),we=sun<yearEnd?sun:yearEnd;
+    const n=days(ws,we);if(n<=0)continue;
+    const cap=capW*n/7;
+    const rf=base>=8?weekRaceInfo(mon,base):null;
+    const w={mon:dk(mon),days:n,cap,kind:'build',note:'',race:null,longCap:null,fixed:false,target:0};
+    if(rf){w.fixed=true;w.kind=rf.kind;w.note=rf.note;w.race=rf.race;w.longCap=rf.longCap;w.target=Math.min(cap,Math.max(base*rf.factor*n/7,rf.minKm));}
+    weeks.push(w);
+  }
+  let left=Math.max(0,R-weeks.filter(w=>w.fixed).reduce((a,w)=>a+w.target,0));
+  let open=weeks.filter(w=>!w.fixed);
+  for(let guard=0;guard<20&&open.length&&left>0.01;guard++){
+    const dsum=open.reduce((a,w)=>a+w.days,0);const next=[];let spill=0;
+    open.forEach(w=>{const share=left*w.days/dsum;if(w.target+share>=w.cap){spill+=w.target+share-w.cap;w.target=w.cap;w.capped=true;}else{w.target+=share;next.push(w);}});
+    left=spill;open=next;
+  }
+  const shortfall=Math.max(0,R-weeks.reduce((a,w)=>a+w.target,0));
+  weeks.forEach(w=>{
+    w.target=Math.round(w.target);
+    if(!w.fixed)w.note=w.capped?`Capped at ${Math.round(w.cap)} km, about ${Math.round(capPct*100)}% above your recent ${Math.round(base)} km weeks.`:w.target>base*1.03?'Build week, making up what the race weeks don\'t run.':'Steady week.';
+  });
+  // When the goal is reached: the end of the week where the running total crosses R.
+  let cum=0,finish=null;for(const w of weeks){cum+=w.target;if(cum>=R-0.5&&!finish){finish=dk(addDays(new Date(w.mon+'T12:00:00'),6));}}
+  if(finish&&finish>dk(yearEnd))finish=dk(yearEnd);
+  return{weeks,base:Math.round(base),cap:isFinite(capW)?Math.round(capW):null,capMode:g.capMode==='stretch'?'stretch':'safe',shortfall:Math.round(shortfall),finish,R};
+}// Next week's projection sits behind a button showing its km, so you can watch it shrink
 // as you log runs this week. Opens by default on Sundays (planning night).
 let _ygNextOpen=null; // null = default for the day
 function toggleYearGoalNext(e){

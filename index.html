@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="81">
+<meta name="app-version" content="82">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -482,6 +482,17 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .pc-shape i{flex:1;background:var(--c-easy);border-radius:2px;opacity:0.75;}
 .pc-shape i.done{background:var(--green);opacity:1;}
 .pc-shape i.race{background:var(--c-race);opacity:1;}
+.wd-row{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:6px 10px;margin:8px 0 2px;}
+.wd-days{display:flex;gap:4px;}
+.wd{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;font-family:var(--display);font-weight:800;font-size:13px;border:1.5px solid var(--border);background:transparent;color:var(--text3);padding:0;cursor:pointer;}
+.wd.easy{background:var(--c-easy);border-color:var(--c-easy);color:#0d0d0d;}
+.wd.tempo{background:var(--c-tempo);border-color:var(--c-tempo);color:#0d0d0d;}
+.wd.long{background:var(--c-long);border-color:var(--c-long);color:#0d0d0d;}
+.wd.off{border-style:dashed;}
+.wd.ran{background:color-mix(in srgb,var(--green) 22%,transparent);border-color:transparent;color:var(--green);cursor:default;}
+.wd.ran i{display:none;}
+.wd.gone{opacity:0.35;border-color:transparent;cursor:default;}
+.wd-lbl{font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;}
 .uw{margin:2px 0 16px;padding:12px;border-radius:12px;background:var(--surface2);}
 .uw-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px;}
 .uw-h span{font-family:var(--display);font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:0.04em;}
@@ -3004,9 +3015,10 @@ function getCalendarWeek(weekOffset){
   // and the tempo, and which days you lift (this week's swaps included). The calendar
   // only fills in what the plan doesn't say.
   const tmpl=Array.isArray(state.weekPlan)?state.weekPlan:null;
-  const dType=i=>!tmpl?'Run':weekOffset===0?planTypeThisWeek(i):tmpl[i];
+  const wdo=(state.weekDays||{})[monK]||{};
+  const dType=i=>wdo[i]!==undefined?(wdo[i]==='Rest'?'Rest':'Run'):!tmpl?'Run':weekOffset===0?planTypeThisWeek(i):tmpl[i];
   const tRun=[0,1,2,3,4,5,6].map(i=>dType(i)==='Run');
-  const tType=[0,1,2,3,4,5,6].map(i=>tRun[i]?(weekOffset===0?runTypeThisWeek(i):getWeekPlanRunType(i)):null);
+  const tType=[0,1,2,3,4,5,6].map(i=>tRun[i]?(wdo[i]!==undefined?wdo[i]:weekOffset===0?runTypeThisWeek(i):getWeekPlanRunType(i)):null);
   const rawG=i=>tmpl?(tmpl[i]==='Run'?(state.weekPlanGym||[])[i]:tmpl[i]):null;
   const ovT=i=>{const o=weekOffset===0?getPlanOverride():null;return o&&o.types&&o.types[i]!=null;};
   const tGym=[0,1,2,3,4,5,6].map(i=>!tmpl?null:_isAutoGym(rawG(i))&&!ovT(i)?'Gym':weekOffset===0?gymTypeThisWeek(i):GYM_PLAN_TYPES.has(tmpl[i])?tmpl[i]:tmpl[i]==='Run'?getWeekPlanGym(i):null);
@@ -3088,6 +3100,44 @@ function getCalendarWeek(weekOffset){
   return{mon:monK,weekOffset,kind:W.kind,target:W.target,days,raceBefore};
 }
 let _calPick=null,_calAll=false;
+// ── THIS WEEK'S RUN DAYS ──
+// Your usual week is the default; any week can have its own run days. Tap a day to add a
+// run (it takes the usual week's type for that day, or easy) or drop it. The week's km
+// re-split over whatever days you've got, and the calendar and coach follow.
+function toggleWeekDay(offset,i,e){
+  if(e)e.stopPropagation();
+  const mon=dk(addDays(getMonday(today()),offset*7));
+  state.weekDays=state.weekDays||{};const o=state.weekDays[mon]=state.weekDays[mon]||{};
+  const cur=weekDayRun(offset,mon,i);
+  const usual=Array.isArray(state.weekPlan)&&state.weekPlan[i]==='Run'?getWeekPlanRunType(i):null;
+  const next=cur?null:(usual||'Easy');
+  if((next||null)===(usual||null))delete o[i];else o[i]=next||'Rest';
+  if(!next&&state.weekSlotEdits&&state.weekSlotEdits[mon])delete state.weekSlotEdits[mon][i];
+  if(!Object.keys(o).length)delete state.weekDays[mon];
+  saveState();haptic('light');refreshPlanViews();
+}
+function resetWeekDays(offset,e){
+  if(e)e.stopPropagation();
+  const mon=dk(addDays(getMonday(today()),offset*7));
+  if(state.weekDays)delete state.weekDays[mon];
+  saveState();haptic('light');refreshPlanViews();
+}
+function renderWeekDays(offset){
+  if(!state.yearRunGoal)return'';
+  const mon=addDays(getMonday(today()),offset*7),monK=dk(mon),td=dk(today());
+  const runs=loadRunData();
+  const nm=['M','T','W','T','F','S','S'];
+  let n=0;
+  const chips=nm.map((l,i)=>{
+    const ds=dk(addDays(mon,i)),rt=weekDayRun(offset,monK,i),ran=runs.some(r=>r.date===ds);
+    const past=ds<td;if(rt&&!past)n++;
+    const cls=rt?(rt==='Long'?'long':['Tempo','Intervals'].includes(rt)?'tempo':'easy'):'off';
+    return past?`<span class="wd ${ran?'ran':'gone'}">${l}${ran?'<i>✓</i>':''}</span>`
+      :`<button class="wd ${cls}" onclick="toggleWeekDay(${offset},${i},event)" aria-label="${DAY_NAMES[i]}: ${rt?rt+' run, tap to drop':'no run, tap to add'}">${l}</button>`;
+  }).join('');
+  const changed=(state.weekDays||{})[monK];
+  return`<div class="wd-row" onclick="event.stopPropagation()"><div class="wd-days">${chips}</div><span class="wd-lbl">${n} run${n===1?'':'s'} ${offset===0?'left':''}${changed?` · <button class="yg-link" style="margin:0;" onclick="resetWeekDays(${offset},event)">Back to usual</button>`:''}</span></div>`;
+}
 // ── YOUR USUAL WEEK ──
 // The one place you say how your week goes: which days you run (and what kind), lift
 // (a set session or "coach picks"), or rest. The coach does the rest: distances from
@@ -3207,7 +3257,7 @@ function renderPlanCalendar(){
       const empty=!done&&!plan&&!gym?`<div class="pc-rest">${d.past?'':'Rest'}</div>`:'';
       return`<div class="pc-day${d.isToday?' today':''}${d.past?' past':''}"><div class="pc-d"><b>${_CAL_DAY[d.i]}</b><span>${new Date(d.ds+'T12:00:00').getDate()}</span></div><div class="pc-items">${done}${plan}${gym}${empty}</div></div>`;
     }).join('');
-    return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${shape}${reshaped?`<button onclick="promoteUsualWeek(${w.weekOffset})">Make this my usual week</button>`:''}${moved?`<button onclick="calReset('${w.mon}')">Reset moves</button>`:''}</div>${rows}</div>`;
+    return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${shape}${reshaped?`<button onclick="promoteUsualWeek(${w.weekOffset})">Make this my usual week</button>`:''}${moved?`<button onclick="calReset('${w.mon}')">Reset moves</button>`:''}</div>${renderWeekDays(w.weekOffset)}${rows}</div>`;
   };
   el.innerHTML=`<div class="chart-card pc-card"><div class="chart-card-header"><span class="chart-card-title">Plan</span><span class="chart-card-val">tap a run to move or change it</span></div>
     ${renderUsualWeek()}
@@ -9960,13 +10010,23 @@ const YEAR_GOAL_SPLITS={
 // Only the days inside [from, to] count (a goal started mid-week, the last days of the
 // year). Null without a usual week, and the old runs-per-week split is used instead.
 const _SLOT_W={Long:16,Tempo:10,Easy:9};
-function _planSlots(weekOffset,mon,from,to){
+// A week's run on day i: that week's own setting if you've changed it (state.weekDays,
+// keyed by Monday), otherwise the usual week (with this week's readiness swaps).
+// Returns the run type, or null for no run.
+function weekDayRun(weekOffset,monK,i){
+  const o=(state.weekDays||{})[monK];
+  if(o&&o[i]!==undefined)return o[i]==='Rest'?null:o[i];
   if(!Array.isArray(state.weekPlan))return null;
+  const t=weekOffset===0?planTypeThisWeek(i):state.weekPlan[i];if(t!=='Run')return null;
+  return weekOffset===0?runTypeThisWeek(i):getWeekPlanRunType(i);
+}
+function _planSlots(weekOffset,mon,from,to){
+  const monK=dk(mon);
+  if(!Array.isArray(state.weekPlan)&&!(state.weekDays||{})[monK])return null;
   const out=[];
   for(let i=0;i<7;i++){
     const ds=dk(addDays(mon,i));if(ds<from||ds>to)continue;
-    const t=weekOffset===0?planTypeThisWeek(i):state.weekPlan[i];if(t!=='Run')continue;
-    const rt=weekOffset===0?runTypeThisWeek(i):getWeekPlanRunType(i);
+    const rt=weekDayRun(weekOffset,monK,i);if(!rt)continue;
     const type=rt==='Long'?'Long':['Tempo','Intervals'].includes(rt)?'Tempo':'Easy';
     out.push({type,w:_SLOT_W[type],id:i,day:i});
   }
@@ -10346,6 +10406,7 @@ function renderYearGoalWeek(){
     <div class="yg-week-head"><span>This week${w.daysThisWeek<7?` (${w.daysThisWeek} days)`:''}</span><span><strong>${f1(w.weekKm)}</strong> / ${f1(w.target)} km</span></div>
     <div class="yg-week-bar"><div style="width:${Math.min(100,w.weekKm/w.target*100).toFixed(1)}%;"></div></div>
     <div class="yg-segs" style="grid-template-columns:repeat(${shown.length},1fr);">${segs}</div>
+    ${usualRunDays()||(state.weekDays||{})[w.mon]?renderWeekDays(0):''}
     ${longEdit}
     <div class="yg-week-left">${left}</div>
     ${w.note?`<div class="yg-guard">${w.note}</div>`:''}

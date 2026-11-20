@@ -322,6 +322,37 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .chart-card-title{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);}
 .chart-card-val{font-size:13px;font-weight:700;color:var(--text3);}
 .svg-chart{width:100%;overflow:visible;display:block;margin-top:8px;}
+/* PERSONAL BESTS */
+.pb-banner{border-color:color-mix(in srgb,var(--c-gold) 45%,var(--border));background:linear-gradient(180deg,color-mix(in srgb,var(--c-gold) 12%,var(--surface)),var(--surface));}
+.pb-eyebrow{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--c-gold);}
+.pb-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);}
+.pb-row:last-of-type{border-bottom:none;}
+.pb-sub{font-size:12px;font-weight:600;color:var(--text3);margin-top:2px;}
+.pb-val{font-size:20px;font-weight:800;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;}
+.pb-new{padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;margin-left:6px;vertical-align:2px;background:color-mix(in srgb,var(--c-gold) 16%,transparent);color:var(--c-gold);}
+/* TRAINING LOG */
+.tl-chips{display:flex;gap:6px;margin-bottom:12px;}
+.tl-chip{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+.tl-chip.on{border-color:var(--c-teal);color:var(--c-teal);background:color-mix(in srgb,var(--c-teal) 10%,transparent);}
+.tl-grid{display:grid;grid-template-columns:42px repeat(7,minmax(0,1fr)) 46px;align-items:center;row-gap:4px;}
+.tl-head{font-size:10px;font-weight:800;color:var(--text3);text-align:center;}
+.tl-wk{font-size:10.5px;font-weight:600;color:var(--text3);}
+.tl-wk.cur{color:var(--text);font-weight:800;}
+.tl-cell{min-height:44px;display:flex;align-items:center;justify-content:center;gap:2px;min-width:0;}
+.tl-cell.busy{flex-direction:column;padding:3px 0;}
+.tl-empty{width:4px;height:4px;border-radius:50%;background:var(--border);}
+.tl-run,.tl-gym{border:none;padding:0;font-family:inherit;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.tl-run{border-radius:50%;color:var(--on-text);}
+.tl-gym{border-radius:6px;background:var(--surface2);border:1.5px solid var(--text3);color:var(--text2);box-sizing:border-box;}
+.tl-gym.legs{background:var(--c-pink);border-color:var(--c-pink);color:var(--on-text);}
+i.tl-gym{display:inline-block;border-radius:3px;}
+.tl-tot{text-align:right;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;}
+.tl-tot b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;}
+.tl-tot span{font-size:10px;font-weight:700;color:var(--text3);}
+.tl-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:11.5px;font-weight:600;color:var(--text3);}
+.tl-legend span{display:flex;align-items:center;gap:5px;}
+.tl-legend i{display:inline-block;width:9px;height:9px;}
+.tl-more{width:100%;margin-top:12px;padding:9px;background:none;border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
 
 /* STREAK LIST */
 
@@ -1244,6 +1275,16 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
   </div>
 </div>
 
+<div class="modal-overlay" id="gym-summary-modal" onclick="if(event.target===this)closeModal('gym-summary-modal')">
+  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column;">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-shrink:0;">
+      <h3 style="margin:0;" id="gym-summary-title">Gym session</h3>
+      <button onclick="closeModal('gym-summary-modal')" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:0;" aria-label="Close">×</button>
+    </div>
+    <div id="gym-summary-body" style="overflow-y:auto;flex:1;"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="run-log-modal" onclick="if(event.target===this)closeModal('run-log-modal')">
   <div class="modal" style="max-height:80vh;display:flex;flex-direction:column;">
     <div class="modal-handle"></div>
@@ -3455,11 +3496,11 @@ function renderRunSection(){
     const ds=dk(date);
     const isFuture=date>now;
     const isActive=ds===_runLogDate;
-    const hasRun=runs.some(r=>r.date===ds);
+    const dayRun=runs.filter(r=>r.date===ds).pop();const hasRun=!!dayRun;
     return`<button onclick="selectRunDay('${ds}')" ${isFuture?'disabled':''} style="flex:1;padding:8px 2px;border-radius:8px;border:2px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'rgba(37,99,235,0.15)':'var(--surface2)'};color:${isFuture?'var(--text3)':isActive?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:11px;font-weight:800;cursor:${isFuture?'default':'pointer'};opacity:${isFuture?0.3:1};transition:all 0.15s;position:relative;">
       <div style="font-size:8px;font-weight:800;text-transform:uppercase;color:inherit;margin-bottom:2px;">${d}</div>
       <div style="font-size:13px;font-weight:800;">${date.getDate()}</div>
-      ${hasRun&&!isFuture?`<div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--green);"></div>`:''}
+      ${hasRun&&!isFuture?`<div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:${effortStyle(_tlEffortKey(dayRun.effort)).text};"></div>`:''}
     </button>`;
   }).join('');
   const weekNavHtml=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -3486,7 +3527,7 @@ function renderRunSection(){
     }).join('')}
   </div>`:'';
   el.innerHTML=`
-  ${dayRuns.length?renderRunDebriefCard(dayRuns[dayRuns.length-1]):''}
+  ${dayRuns.length?renderRunPBBanner(dayRuns[dayRuns.length-1])+renderRunDebriefCard(dayRuns[dayRuns.length-1]):''}
   <div class="run-input-card">
     ${weekNavHtml}
     <div style="display:flex;gap:4px;margin-bottom:16px;">${dayBtns}</div>
@@ -4120,6 +4161,8 @@ function renderTrends(){
       <div class="metric-card"><div class="m-label">Readiness</div><div class="m-val" style="color:${rdAvg!=null?rdState(rdAvg).col:'var(--text3)'};">${rdAvg??'–'}</div><div class="m-unit">${rdAvg!=null?`7-day average · ${rdState(rdAvg).label}`:'no check-ins this week'}</div></div>
       <div class="metric-card"><div class="m-label">Fitness</div><div class="m-val">${fNow?Math.round(fNow.fit):'–'}</div><div class="m-unit">${fChg!=null?`<span style="color:${fChg>=0?'var(--green)':'var(--red)'};">${fChg>=0?'+':''}${fChg}%</span> in 6 weeks`:'building history'}</div></div>
     </div>
+    ${sec('Training log')}
+    ${renderTrainingLogCard()}
     ${sec('Fitness')}
     ${renderFitnessFormCard()}
     ${sec('Recovery')}
@@ -4227,6 +4270,195 @@ function renderRunProgressCard(){
     <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">Past ${RP_WEEKS} weeks${sel.runs?` · ${sel.runs} run${sel.runs===1?'':'s'} in the selected week`:''}</div>
     <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;font-family:-apple-system,system-ui,sans-serif;">${g}</svg>
   </div>`;
+}
+
+// ── RUNNING PBs ──
+// We only store a total time per run (no GPS splits), so a PB is a whole-run time. A run
+// counts for a distance if it is at least that long and no more than 10% over; its time
+// is scaled to the exact distance by pace, so a 5.3 km run is judged as a 5.00 km one.
+const PB_DISTS=[
+  {key:'5k',label:'5K',km:5},
+  {key:'10k',label:'10K',km:10},
+  {key:'half',label:'Half marathon',km:21.0975},
+  {key:'full',label:'Marathon',km:42.195,optional:true},
+];
+function _pbScaled(r,km){
+  const rk=parseFloat(r.km)||0,s=parseTimeToSecs(r.time);
+  if(!s||rk<km||rk>km*1.1)return null;
+  return s*km/rk;
+}
+// Per distance: qualifying runs fastest first, each {run, idx, secs}. Plus runs by length.
+function getRunPBs(runs){
+  runs=runs||loadRunData();
+  const out={};
+  PB_DISTS.forEach(d=>{
+    out[d.key]=runs.map((r,idx)=>({run:r,idx,secs:_pbScaled(r,d.km)}))
+      .filter(x=>x.secs)
+      .sort((a,b)=>a.secs-b.secs||a.run.date.localeCompare(b.run.date));
+  });
+  out.longest=runs.map((r,idx)=>({run:r,idx,km:parseFloat(r.km)||0}))
+    .filter(x=>x.km>0).sort((a,b)=>b.km-a.km||a.run.date.localeCompare(b.run.date));
+  return out;
+}
+// The single best thing a run achieved, for the trophy banner: top 3 at a PB distance, or
+// top 3 longest. A podium in a field of two is no podium, so 2nd/3rd only count once
+// there are at least 5 runs in that category.
+function getRunAchievement(run){
+  if(!run)return null;
+  const pbs=getRunPBs();const ord=['','','2nd','3rd'];
+  const wins=[];
+  PB_DISTS.forEach(d=>{
+    const list=pbs[d.key];const i=list.findIndex(x=>x.run===run||(x.run.date===run.date&&x.run.loggedAt===run.loggedAt&&x.run.km===run.km));
+    if(i<0||i>2||(i>0&&list.length<5))return;
+    const me=list[i];
+    let sub;
+    if(i===0)sub=list.length>1?`${fmtDurationFromSecs(Math.round(me.secs))} · beats your old best by ${fmtDurationFromSecs(Math.round(list[1].secs-me.secs))}`:`${fmtDurationFromSecs(Math.round(me.secs))} · your first ${d.label} on record`;
+    else sub=`${fmtDurationFromSecs(Math.round(me.secs))} · ${fmtDurationFromSecs(Math.round(me.secs-list[0].secs))} off your PB from ${_pbDate(list[0].run.date)}`;
+    wins.push({rank:i+1,head:i===0?`New ${d.label} PB`:`${ord[i+1]} fastest ${d.label}`,sub});
+  });
+  const L=pbs.longest;const li=L.findIndex(x=>x.run===run||(x.run.date===run.date&&x.run.loggedAt===run.loggedAt&&x.run.km===run.km));
+  if(li>=0&&li<=2&&(li===0?L.length>1:L.length>=5)){
+    wins.push({rank:li+1,head:li===0?'Longest run yet':`${ord[li+1]} longest run`,sub:li===0?`${fmtKm(L[0].km)} km · ${fmtKm(L[0].km-L[1].km)} km further than before`:`${fmtKm(L[li].km)} km · longest is ${fmtKm(L[0].km)} km`});
+  }
+  if(!wins.length)return null;
+  wins.sort((a,b)=>a.rank-b.rank);
+  return{...wins[0],also:wins.slice(1).map(w=>w.head)};
+}
+function _pbDate(ds){return new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+function renderRunPBBanner(run){
+  const a=getRunAchievement(run);
+  if(!a)return'';
+  return`<div class="chart-card pb-banner">
+    <div style="display:flex;gap:14px;align-items:center;">
+      <div style="font-size:32px;line-height:1;">🏆</div>
+      <div style="min-width:0;">
+        <div class="pb-eyebrow">${run.date===dk(today())?"Today's run":_pbDate(run.date)}</div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:-0.4px;margin-top:2px;">${esc(a.head)}</div>
+        <div style="font-size:12.5px;font-weight:600;color:var(--text2);margin-top:3px;">${esc(a.sub)}</div>
+        ${a.also.length?`<div style="font-size:11.5px;font-weight:700;color:var(--text3);margin-top:4px;">Also: ${esc(a.also.join(' · '))}</div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+function renderRunPBCard(runs){
+  const pbs=getRunPBs(runs);
+  if(!pbs.longest.length)return'';
+  const recent=dk(addDays(today(),-14));
+  const newPill=`<span class="pb-new">New</span>`;
+  const row=(label,sub,val,valSub,idx,isNew)=>`<div class="pb-row"${idx!=null?` onclick="openRunEdit(${idx})" style="cursor:pointer;"`:''}>
+    <div><div style="font-weight:800;font-size:15px;">${label}${isNew?newPill:''}</div><div class="pb-sub">${sub}</div></div>
+    <div style="text-align:right;"><div class="pb-val"${val==='—'?' style="color:var(--text3);"':''}>${val}</div><div class="pb-sub">${valSub}</div></div>
+  </div>`;
+  const longestKm=pbs.longest[0].km;
+  const rows=PB_DISTS.map(d=>{
+    const best=pbs[d.key][0];
+    if(!best){
+      if(d.optional)return'';
+      return row(d.label,'Not run yet','—',longestKm<d.km?`longest so far ${fmtKm(longestKm)} km`:'no run in the 10% window',null,false);
+    }
+    return row(d.label,`${_pbDate(best.run.date)}${best.run.effort?' · '+esc(best.run.effort):''}`,fmtDurationFromSecs(Math.round(best.secs)),fmtPace(d.km/best.secs).replace('/km','')+'/km',best.idx,best.run.date>=recent&&pbs[d.key].length>1);
+  }).join('');
+  const L=pbs.longest[0];
+  const longRow=row('Longest run',`${_pbDate(L.run.date)}${L.run.effort?' · '+esc(L.run.effort):''}`,`${fmtKm(L.km)} km`,L.run.time||'',L.idx,L.run.date>=recent&&pbs.longest.length>1);
+  return`<div class="chart-card">
+    <div class="chart-card-header"><span class="chart-card-title">Personal Bests</span><span class="chart-card-val">whole-run times</span></div>
+    ${rows}${longRow}
+    <div style="font-size:11px;color:var(--text3);font-weight:600;margin-top:10px;line-height:1.4;">A run counts if it's the distance or up to 10% over; its time is scaled to the exact distance by pace.</div>
+  </div>`;
+}
+
+// ── TRAINING LOG ──
+// Strava-style calendar of runs and gym sessions, one row per Monday-Sunday week. Runs are
+// circles sized by km and coloured by effort; gym sessions are fixed-size rounded squares
+// lettered by type, with Legs filled in because it's the session that collides with running.
+let _tlFilter='all';
+let _tlWeeks=4;
+const TL_GYM_LETTER={Push:'P',Pull:'Pu',Legs:'L',Core:'C',Custom:'Cu',Makeup:'M'};
+function tlSetFilter(f){_tlFilter=f;haptic('light');_tlRerender();}
+function tlToggleWeeks(){_tlWeeks=_tlWeeks===4?12:4;_tlRerender();}
+function _tlRerender(){document.querySelectorAll('.tl-card').forEach(c=>{c.outerHTML=renderTrainingLogCard();});}
+function _tlEffortKey(e){
+  const s=(e||'').toLowerCase();
+  if(s.includes('long'))return'Long Run';
+  if(s.includes('interval')||s==='hard')return'Intervals';
+  if(s.includes('tempo')||s.includes('fartlek'))return'Tempo';
+  if(s.includes('race'))return'Race';
+  if(s.includes('recovery'))return'Recovery';
+  return'Easy';
+}
+function renderTrainingLogCard(){
+  const runs=loadRunData(),gym=loadGymData();
+  if(!runs.length&&!gym.length)return'';
+  const showRun=_tlFilter!=='gym',showGym=_tlFilter!=='run';
+  const now=today(),todayStr=dk(now),mon0=getMonday(now);
+  const usedEfforts=new Set();let usedGym=false,usedLegs=false;
+  let rows='';
+  for(let w=_tlWeeks-1;w>=0;w--){
+    const mon=addDays(mon0,-w*7);const cur=w===0;
+    let km=0,gymN=0,cells='';
+    for(let d=0;d<7;d++){
+      const ds=dk(addDays(mon,d));
+      const dr=showRun?runs.map((r,idx)=>({r,idx})).filter(x=>x.r.date===ds):[];
+      const dg=showGym?gym.map((s,idx)=>({s,idx})).filter(x=>x.s.date===ds):[];
+      dr.forEach(x=>{km+=parseFloat(x.r.km)||0;});gymN+=dg.length;
+      const n=dr.length+dg.length;
+      if(!n){cells+=`<div class="tl-cell">${ds>todayStr?'':'<span class="tl-empty"></span>'}</div>`;continue;}
+      const busy=n>1;
+      let inner='';
+      dr.forEach(x=>{
+        const k=parseFloat(x.r.km)||0;const ek=_tlEffortKey(x.r.effort);usedEfforts.add(ek);
+        const sz=Math.round(Math.min(busy?22:34,(busy?14:14)+k*(busy?0.6:1.1)));
+        inner+=`<button class="tl-run" onclick="openRunEdit(${x.idx})" style="width:${sz}px;height:${sz}px;background:${effortStyle(ek).text};font-size:${sz>=26?11:9}px;" aria-label="${esc(fmtKm(k))} km ${esc(x.r.effort||'run')}">${Math.round(k)}</button>`;
+      });
+      dg.forEach(x=>{
+        const t=x.s.type||'Gym';const legs=t==='Legs';usedGym=true;if(legs)usedLegs=true;
+        const sz=busy?17:24;
+        inner+=`<button class="tl-gym${legs?' legs':''}" onclick="openGymSummary(${x.idx})" style="width:${sz}px;height:${sz}px;font-size:${busy?8:10}px;" aria-label="${esc(t)} session">${TL_GYM_LETTER[t]||'G'}</button>`;
+      });
+      cells+=`<div class="tl-cell${busy?' busy':''}">${inner}</div>`;
+    }
+    const kmTxt=Math.round(km*10)/10;
+    const total=_tlFilter==='run'?`<b>${kmTxt}</b>`
+      :_tlFilter==='gym'?`<b>${gymN}</b>`
+      :`<b>${kmTxt}</b>${gymN?`<span>${gymN} gym</span>`:''}`;
+    rows+=`<div class="tl-wk${cur?' cur':''}">${mon.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>${cells}<div class="tl-tot">${total}</div>`;
+  }
+  const chip=(f,l)=>`<button class="tl-chip${_tlFilter===f?' on':''}" onclick="tlSetFilter('${f}')">${l}</button>`;
+  const EFF_ORDER=['Easy','Recovery','Long Run','Tempo','Intervals','Race'];
+  const legend=[...EFF_ORDER.filter(e=>usedEfforts.has(e)).map(e=>`<span><i style="background:${effortStyle(e).text};border-radius:50%;"></i>${e}</span>`),
+    usedGym?`<span><i class="tl-gym" style="width:10px;height:10px;"></i>Gym</span>`:'',
+    usedLegs?`<span><i class="tl-gym legs" style="width:10px;height:10px;"></i>Legs</span>`:''].join('');
+  return`<div class="chart-card tl-card">
+    <div class="chart-card-header" style="margin-bottom:12px;"><span class="chart-card-title">Training Log</span><span class="chart-card-val">tap to open</span></div>
+    <div class="tl-chips">${chip('all','All')}${chip('run','Run')}${chip('gym','Gym')}</div>
+    <div class="tl-grid">
+      <div></div>${'MTWTFSS'.split('').map(d=>`<div class="tl-head">${d}</div>`).join('')}<div class="tl-head" style="text-align:right;">${_tlFilter==='gym'?'GYM':'KM'}</div>
+      ${rows}
+    </div>
+    ${legend?`<div class="tl-legend">${legend}</div>`:''}
+    <button class="tl-more" onclick="tlToggleWeeks()">${_tlWeeks===4?'Show 12 weeks':'Show 4 weeks'}</button>
+  </div>`;
+}
+// Read-only summary of one gym session (there is no per-session view elsewhere).
+function openGymSummary(idx){
+  const s=loadGymData()[idx];if(!s)return;
+  const body=document.getElementById('gym-summary-body');
+  const exs=(s.exercises||[]);
+  const work=e=>(e.sets||[]).filter(x=>!x.warmup);
+  const totalSets=exs.reduce((a,e)=>a+work(e).length,0);
+  const mins=s.ts&&s.endTs&&s.endTs>s.ts?Math.round((s.endTs-s.ts)/60000):null;
+  const topSet=e=>{
+    const ws=work(e);if(!ws.length)return'';
+    const best=ws.slice().sort((a,b)=>(parseFloat(b.weight)||0)-(parseFloat(a.weight)||0)||(parseFloat(b.reps)||0)-(parseFloat(a.reps)||0))[0];
+    const w=parseFloat(best.weight)||0;
+    return w?`${esc(String(best.weight))}kg × ${esc(String(best.reps||'?'))}`:`${esc(String(best.reps||'?'))} reps`;
+  };
+  document.getElementById('gym-summary-title').textContent=`${s.type||'Gym'} session`;
+  body.innerHTML=`
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px;">${new Date(s.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})} · ${totalSets} working set${totalSets===1?'':'s'}${mins&&mins<300?` · ${mins} min`:''}</div>
+    ${exs.map(e=>`<div class="pb-row"><div><div style="font-weight:800;font-size:14.5px;">${esc(e.name)}</div><div class="pb-sub">${work(e).length} set${work(e).length===1?'':'s'}</div></div><div style="text-align:right;"><div style="font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;">${topSet(e)}</div><div class="pb-sub">top set</div></div></div>`).join('')||'<div class="pb-sub">No exercises recorded.</div>'}
+    ${s.notes?`<div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);font-size:13px;color:var(--text2);">${esc(s.notes)}</div>`:''}`;
+  openModal('gym-summary-modal');
 }
 
 // ── TRENDS: RUNNING ANALYSIS ──
@@ -4606,7 +4838,7 @@ function renderTrendsRunAnalysis(){
     </div>`;
   })();
 
-  return renderRunProgressCard()+summary+paceChart+effortChart+longRunChart+hrChart+renderAerobicEfficiencyCard(runs)+renderRacePredictorCard(runs)+renderWhatMovesCard('Running')+runLog;
+  return renderRunProgressCard()+summary+renderRunPBCard(runs)+paceChart+effortChart+longRunChart+hrChart+renderAerobicEfficiencyCard(runs)+renderRacePredictorCard(runs)+renderWhatMovesCard('Running')+runLog;
 }
 
 // Weeks (of the last 12) that had at least one gym session, trimmed so leading
@@ -9675,6 +9907,8 @@ function renderTodayDebrief(){
   const ds=dk(today());
   const out=[];let tomorrow=null;
   const run=loadRunData().filter(r=>r.date===ds).pop();
+  const ach=run?getRunAchievement(run):null;
+  if(ach)out.push({col:'var(--c-gold)',head:`🏆 ${esc(ach.head)}`,text:ach.sub});
   if(run){const d=getRunDebrief(run);if(d){out.push({col:d.col,head:d.head,text:(d.lines.find(l=>l.text!==d.tomorrow)||{}).text||''});tomorrow=d.tomorrow;}}
   const gym=loadGymData().filter(s=>s.date===ds).pop();
   if(gym){const v=getSessionVerdict(gym);if(v){out.push({col:!v.compared?'var(--st-ready)':v.up*2>=v.compared?'var(--st-go)':'var(--st-ready)',head:`${esc(gym.type||'Gym')}: ${v.compared?`${v.up} of ${v.compared} lifts up${v.prs?`, ${v.prs} PR${v.prs===1?'':'s'}`:''}`:'baseline set'}`,text:''});tomorrow=tomorrow||v.tomorrow;}}

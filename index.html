@@ -410,6 +410,26 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .me-chip.legs b{color:var(--c-pink);}
 .me-links{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .me-links button{padding:13px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;}
+/* TROPHIES */
+.tb-banner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;margin-bottom:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid color-mix(in srgb,var(--c-gold) 45%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--c-gold) 14%,var(--surface)),var(--surface));}
+.tb-medal,.tc-ic{display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--tc) 55%,#fff),var(--tc));box-shadow:0 0 0 3px color-mix(in srgb,var(--tc) 30%,transparent),inset 0 -3px 0 rgba(0,0,0,0.15);}
+.tb-medal{width:46px;height:46px;font-size:22px;flex-shrink:0;}
+.tb-text{flex:1;min-width:0;display:flex;flex-direction:column;}
+.tb-eyebrow{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--c-gold);}
+.tb-text b{font-size:16px;font-weight:800;letter-spacing:-0.3px;margin-top:1px;}
+.tb-text span:last-child{font-size:12px;font-weight:600;color:var(--text2);}
+.tc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 6px;}
+.tc-medal{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;padding:4px 0;font-family:inherit;cursor:pointer;color:var(--text);min-width:0;}
+.tc-ic{width:50px;height:50px;font-size:23px;}
+.tc-n{font-size:10.5px;font-weight:700;line-height:1.2;text-align:center;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.tc-medal.locked .tc-ic{background:var(--surface2);box-shadow:inset 0 0 0 1.5px var(--border);filter:grayscale(1);opacity:0.55;}
+.tc-medal.locked .tc-n{color:var(--text3);}
+.tc-next{display:flex;align-items:center;gap:10px;padding:6px 0;}
+.tc-next-ic{font-size:20px;width:28px;text-align:center;}
+.tc-next-top{display:flex;justify-content:space-between;gap:8px;font-size:13px;}
+.tc-next-top span{font-size:11.5px;font-weight:600;color:var(--text3);white-space:nowrap;}
+.tc-bar{height:6px;border-radius:3px;background:var(--surface2);margin-top:5px;overflow:hidden;}
+.tc-bar div{height:100%;border-radius:3px;}
 /* TODAY RINGS + BRIEFING */
 .rings-card{display:flex;align-items:center;gap:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;box-shadow:var(--card-shadow);}
 .rings-card.closed{border-color:color-mix(in srgb,var(--ring-habits) 40%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--ring-train) 8%,var(--surface)),color-mix(in srgb,var(--ring-recover) 8%,var(--surface)));}
@@ -925,6 +945,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
     </div>
     <div class="today-greet" id="today-habits"></div>
     <div id="today-rings"></div>
+    <div id="trophy-banner"></div>
     <div id="readiness-hero"></div>
     <div class="today-plan-cell" id="today-plan-cell"></div>
     <div class="goal-stack" id="goal-stack"></div>
@@ -1902,6 +1923,122 @@ function handleAvatarUpload(file){
   };
   reader.readAsDataURL(file);
 }
+// ── TROPHY CABINET ──
+// Every trophy is worked out from data already logged (nothing extra is stored apart from
+// which ones you've already been shown), so history counts the moment this ships. Each
+// returns {earned date or null, progress 0-1, a progress label}.
+// Km run this year that predate the run log (the year goal is seeded with your real
+// total, so it knows); counted so year totals match the goal card.
+function getYearKmOffset(){
+  const p=state.yearRunGoal&&getYearGoalProgress();if(!p||!p.isCurrentYear)return 0;
+  const yr=String(p.year);const logged=loadRunData().filter(r=>r.date.startsWith(yr)).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
+  return Math.max(0,p.done-logged);
+}
+function _weeklyKmMap(runs){const m={};runs.forEach(r=>{const k=dk(getMonday(new Date(r.date+'T12:00:00')));m[k]=(m[k]||0)+(parseFloat(r.km)||0);});return m;}
+function _firstDateReaching(items,target,val){let t=0;for(const it of items){t+=val(it);if(t>=target)return it.date;}return null;}
+function getTrophies(){
+  const runs=loadRunData().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const gym=loadGymData().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const morning=loadMorningData();const mDates=Object.keys(morning).sort();
+  const km=r=>parseFloat(r.km)||0;
+  const yr=String(today().getFullYear()),yRuns=runs.filter(r=>r.date.startsWith(yr));
+  const yOff=getYearKmOffset();
+  const yKm=yRuns.reduce((a,r)=>a+km(r),0)+yOff;
+  const yItems=yOff>0?[{date:yRuns[0]?yRuns[0].date:dk(today()),km:yOff},...yRuns]:yRuns;
+  const T=[];
+  const add=(cat,id,ic,name,desc,earned,prog,progLbl,tier)=>T.push({cat,id,ic,name,desc,earned,prog:earned?1:Math.max(0,Math.min(0.999,prog||0)),progLbl,tier:tier||'bronze'});
+  // Distance this year
+  [[100,'bronze'],[250,'bronze'],[500,'silver'],[1000,'gold'],[1500,'gold'],[2000,'plat']].forEach(([k,t])=>
+    add('Distance',`yr${k}`,'🛣️',`${k.toLocaleString('en-GB')} km in ${yr}`,`Run ${k.toLocaleString('en-GB')} km in a calendar year.`,_firstDateReaching(yItems,k,km),yKm/k,`${Math.round(yKm).toLocaleString('en-GB')} / ${k.toLocaleString('en-GB')} km`,t));
+  // Single-run distances
+  const longest=runs.reduce((a,r)=>Math.max(a,km(r)),0);
+  const firstOver=k=>{const r=runs.find(x=>km(x)>=k);return r?r.date:null;};
+  [[10,'10K','🔟','bronze'],[21.0975,'Half marathon','🥈','silver'],[30,'30 km run','💪','silver'],[42.195,'Marathon','🏅','gold'],[50,'Ultra: 50 km','⛰️','gold'],[80,'Ultra: 80 km+','🦾','plat']].forEach(([k,n,ic,t])=>
+    add('Distance',`one${k}`,ic,n,`Cover ${k>=42?k.toFixed(k%1?1:0):fmtKm(k)} km in a single run.`,firstOver(k-0.05),longest/k,`longest ${fmtKm(longest)} km`,t));
+  // Biggest week
+  const wk=_weeklyKmMap(runs);const wkEntries=Object.entries(wk).sort((a,b)=>a[0].localeCompare(b[0]));const bestWk=Math.max(0,...Object.values(wk));
+  [[40,'bronze'],[60,'silver'],[80,'gold'],[100,'plat']].forEach(([k,t])=>{const e=wkEntries.find(([,v])=>v>=k);
+    add('Volume',`wk${k}`,'📈',`${k} km week`,`Run ${k} km in one Monday-to-Sunday week.`,e?dk(addDays(new Date(e[0]+'T12:00:00'),6))>dk(today())?dk(today()):dk(addDays(new Date(e[0]+'T12:00:00'),6)):null,bestWk/k,`best ${Math.round(bestWk)} km`,t);});
+  // Racing
+  const races=runs.filter(r=>_tlEffortKey(r.effort)==='Race');
+  [[1,'First race','🎽','bronze'],[5,'Five races','🏁','silver'],[10,'Ten races','🏆','gold']].forEach(([n,nm,ic,t])=>
+    add('Racing',`race${n}`,ic,nm,`Finish ${n===1?'a race':n+' races'}.`,races[n-1]?races[n-1].date:null,races.length/n,`${races.length} / ${n}`,t));
+  const pbs=getRunPBs(runs);const pbDates=PB_DISTS.map(d=>pbs[d.key][0]).filter(Boolean).map(x=>x.run.date).sort();
+  add('Racing','pb','⚡','PB set','Hold a personal best at 5K, 10K, half or marathon.',pbDates[0]||null,0,'log a timed run at a PB distance','silver');
+  // Consistency
+  let bestRunStreak=0,cur=0,streakDate=null;const wkSet=new Set(wkEntries.filter(([,v])=>v>0).map(([k])=>k));
+  const runsPerWeek={};runs.forEach(r=>{const k=dk(getMonday(new Date(r.date+'T12:00:00')));runsPerWeek[k]=(runsPerWeek[k]||0)+1;});
+  const firstMon=runs.length?getMonday(new Date(runs[0].date+'T12:00:00')):null;const streakHits={};
+  if(firstMon)for(let m=new Date(firstMon);m<=today();m=addDays(m,7)){const k=dk(m);if((runsPerWeek[k]||0)>=3){cur++;if(cur>bestRunStreak)bestRunStreak=cur;[4,8,12].forEach(n=>{if(cur===n&&!streakHits[n])streakHits[n]=dk(addDays(m,6))>dk(today())?dk(today()):dk(addDays(m,6));});}else if(dk(m)!==dk(getMonday(today())))cur=0;}
+  [[4,'bronze'],[8,'silver'],[12,'gold']].forEach(([n,t])=>add('Consistency',`rs${n}`,'🔁',`${n} weeks of 3+ runs`,`Run at least three times a week, ${n} weeks in a row.`,streakHits[n]||null,bestRunStreak/n,`best ${bestRunStreak} in a row`,t));
+  [[7,'bronze'],[30,'silver'],[100,'gold']].forEach(([n,t])=>add('Consistency',`ci${n}`,'☀️',`${n} morning check-ins`,`Log ${n} readiness check-ins.`,mDates[n-1]||null,mDates.length/n,`${mDates.length} / ${n}`,t));
+  // Early bird / night owl
+  const early=runs.filter(r=>r.startTime&&r.startTime<'07:00'),late=runs.filter(r=>r.startTime&&r.startTime>='20:00');
+  add('Consistency','early','🌅','Early bird','Ten runs started before 7am.',early[9]?early[9].date:null,early.length/10,`${early.length} / 10`,'bronze');
+  add('Consistency','owl','🌙','Night owl','Ten runs started after 8pm.',late[9]?late[9].date:null,late.length/10,`${late.length} / 10`,'bronze');
+  // Strength
+  [[10,'bronze'],[25,'silver'],[50,'gold'],[100,'plat']].forEach(([n,t])=>add('Strength',`gym${n}`,'🏋️',`${n} gym sessions`,`Log ${n} gym sessions.`,gym[n-1]?gym[n-1].date:null,gym.length/n,`${gym.length} / ${n}`,t));
+  const legs=gym.filter(g=>g.type==='Legs');
+  add('Strength','legs','🦵',"Didn't skip leg day",'Ten leg sessions.',legs[9]?legs[9].date:null,legs.length/10,`${legs.length} / 10`,'silver');
+  // Wellness
+  const vape=loadVapingData().filter(x=>x.date&&+x.puffs>=0).sort((a,b)=>a.date.localeCompare(b.date));
+  if(vape.length>=7){
+    const base=vape.slice(0,14).reduce((a,x)=>a+ +x.puffs,0)/Math.min(14,vape.length);
+    const roll=vape.map((x,i)=>{const w=vape.slice(Math.max(0,i-6),i+1);return{date:x.date,avg:w.reduce((a,y)=>a+ +y.puffs,0)/w.length,n:w.length};});
+    const nowAvg=roll[roll.length-1].avg;
+    [[25,'silver'],[50,'gold'],[75,'plat']].forEach(([pc,t])=>{const hit=roll.find(x=>x.n>=7&&x.avg<=base*(1-pc/100));
+      add('Wellness',`vape${pc}`,'💨',`Nicotine down ${pc}%`,`A 7-day average of puffs ${pc}% below where you started.`,hit?hit.date:null,base>0?(1-nowAvg/base)/(pc/100):0,`now ${Math.max(0,Math.round((1-nowAvg/base)*100))}% down`,t);});
+  }
+  const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
+  if(goalW){const h=loadHealthData().filter(x=>x.weight).sort((a,b)=>a.date.localeCompare(b.date));const hit=h.find(x=>x.weight<=goalW);const lastW=h.length?h[h.length-1].weight:null;
+    add('Wellness','weight','🎯',`Hit ${goalW} kg`,'Reach your goal weight.',hit?hit.date:null,lastW&&h.length?Math.max(0,1-(lastW-goalW)/Math.max(1,h[0].weight-goalW)):0,lastW?`now ${lastW} kg`:'log a weigh-in','gold');}
+  // Habits: perfect days
+  const days=[];const start=new Date((mDates[0]||runs[0]?.date||dk(today()))+'T12:00:00');
+  for(let d=new Date(Math.min(start,addDays(today(),-200)));d<=today();d=addDays(d,1)){const ds=dk(d),gs=goalsActiveOn(ds);if(gs.length>=3&&gs.every(g=>goalDone(ds,g)))days.push(ds);}
+  [[1,'bronze'],[7,'silver'],[30,'gold']].forEach(([n,t])=>add('Habits',`perfect${n}`,'✨',n===1?'Perfect day':`${n} perfect days`,`Tick every habit in a day${n>1?`, ${n} times`:''}.`,days[n-1]||null,days.length/n,`${days.length} / ${n}`,t));
+  return T;
+}
+const TROPHY_TIER_COL={bronze:'#c98a4b',silver:'#9aa7b8',gold:'#e0b43a',plat:'#7fd6e8'};
+// Newly earned since you last looked; the first time ever, everything already earned is
+// marked seen quietly rather than celebrated all at once.
+function getNewTrophies(){
+  const earned=getTrophies().filter(t=>t.earned);
+  let seen=null;try{seen=JSON.parse(localStorage.getItem('trophies_seen_v1')||'null');}catch(e){}
+  if(!seen){try{localStorage.setItem('trophies_seen_v1',JSON.stringify(earned.map(t=>t.id)));}catch(e){}return[];}
+  return earned.filter(t=>!seen.includes(t.id));
+}
+function markTrophiesSeen(){try{localStorage.setItem('trophies_seen_v1',JSON.stringify(getTrophies().filter(t=>t.earned).map(t=>t.id)));}catch(e){}}
+function renderTrophyBanner(){
+  const el=document.getElementById('trophy-banner');if(!el)return;
+  const nw=getNewTrophies();
+  if(!nw.length){el.innerHTML='';return;}
+  const t=nw[nw.length-1];
+  el.innerHTML=`<button class="tb-banner" onclick="markTrophiesSeen();showPage('me');meSetTab('overview');setTimeout(()=>{const c=document.getElementById('trophy-cabinet');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});},80)">
+    <span class="tb-medal" style="--tc:${TROPHY_TIER_COL[t.tier]};">${t.ic}</span>
+    <span class="tb-text"><span class="tb-eyebrow">New trophy${nw.length>1?` · ${nw.length} new`:''}</span><b>${esc(t.name)}</b><span>${esc(t.desc)}</span></span>
+    <span class="brief-go">›</span></button>`;
+  _celebrateOnce('trophy-'+nw.map(x=>x.id).join(','));
+}
+let _tcOpen=false;
+function toggleTrophyCabinet(){_tcOpen=!_tcOpen;const c=document.getElementById('trophy-cabinet');if(c)c.outerHTML=renderTrophyCabinet();}
+function showTrophy(id){
+  const t=getTrophies().find(x=>x.id===id);if(!t)return;
+  toastMsg(t.earned?`${t.ic} ${t.name}: earned ${_pbDate(t.earned)}`:`${t.ic} ${t.name}: ${t.progLbl}`);
+}
+function renderTrophyCabinet(){
+  const T=getTrophies();const earned=T.filter(t=>t.earned).sort((a,b)=>b.earned.localeCompare(a.earned));
+  const next=T.filter(t=>!t.earned&&t.prog>0).sort((a,b)=>b.prog-a.prog).slice(0,3);
+  const medal=t=>`<button class="tc-medal${t.earned?'':' locked'}" style="--tc:${TROPHY_TIER_COL[t.tier]};" onclick="showTrophy('${t.id}')" aria-label="${esc(t.name)}"><span class="tc-ic">${t.ic}</span><span class="tc-n">${esc(t.name)}</span></button>`;
+  const shown=_tcOpen?[...earned,...T.filter(t=>!t.earned)]:earned.slice(0,8);
+  markTrophiesSeen();
+  return`<div class="chart-card" id="trophy-cabinet">
+    <div class="chart-card-header"><span class="chart-card-title">Trophy cabinet</span><span class="chart-card-val">${earned.length} of ${T.length}</span></div>
+    ${earned.length?`<div class="tc-grid">${shown.map(medal).join('')}</div>`:'<div class="pb-sub">Your first trophies are a run or two away.</div>'}
+    ${next.length?`<div class="me-sub-h">Next up</div>${next.map(t=>`<div class="tc-next"><span class="tc-next-ic">${t.ic}</span><div style="flex:1;min-width:0;"><div class="tc-next-top"><b>${esc(t.name)}</b><span>${esc(t.progLbl)}</span></div><div class="tc-bar"><div style="width:${(t.prog*100).toFixed(0)}%;background:${TROPHY_TIER_COL[t.tier]};"></div></div></div></div>`).join('')}`:''}
+    <button class="tl-more" onclick="toggleTrophyCabinet()">${_tcOpen?'Show fewer':`See all ${T.length} trophies`}</button>
+  </div>`;
+}
+
 // ── TODAY: RINGS + COACH BRIEFING ──
 // Three rings that close over the day and week: Train (this week's running km against
 // the taper-aware target, or planned gym sessions if there's no running target),
@@ -2045,8 +2182,8 @@ function renderToday(){
   const habitsEl=document.getElementById('today-habits');
   const readiness=viewingToday?computeReadiness():null;
   renderReadinessHero(readiness,baseMonday);
-  if(viewingToday){renderTodayRings(readiness);renderTodayBrief();}
-  else{['today-rings','today-brief'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
+  if(viewingToday){renderTodayRings(readiness);renderTodayBrief();renderTrophyBanner();}
+  else{['today-rings','today-brief','trophy-banner'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});}
   const alertsEl=document.getElementById('alerts-slot');
   if(alertsEl)alertsEl.innerHTML=viewingToday?renderAnomalyAlerts():'';
   const nudgeEl=document.getElementById('rest-day-nudge');
@@ -6442,7 +6579,7 @@ function renderMeOverview(){
     </div>
     <div class="me-year-h">${now.getFullYear()} so far</div>
     <div class="me-stats">
-      <div><b>${Math.round(km(yr)).toLocaleString('en-GB')}</b><span>km run</span></div>
+      <div><b>${Math.round(km(yr)+getYearKmOffset()).toLocaleString('en-GB')}</b><span>km run</span></div>
       <div><b>${yr.length}</b><span>runs</span></div>
       <div><b>${yrGym.length}</b><span>gym sessions</span></div>
       <div><b>${Math.round(yrSecs/3600)}</b><span>hours</span></div>
@@ -6458,6 +6595,8 @@ function renderMeOverview(){
     ${sec('Racing')}
     ${renderMeRaceCard()}
     ${renderRunPBCard(runs)}
+    ${sec('Trophies')}
+    ${renderTrophyCabinet()}
     ${gym.length?sec('Strength')+renderMeGymCard(gym):''}
     <div class="me-links">
       <button onclick="showPage('trends');switchTrendsTab('running')">Running trends →</button>

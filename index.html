@@ -14,6 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
+<meta name="app-version" content="60">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -506,6 +507,10 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yp-ctl-row:first-child{flex-wrap:wrap;}
 .yp-seg button.goal:not(.on){color:var(--text);}
 .yp-risk{margin-top:8px;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid color-mix(in srgb,var(--orange) 35%,transparent);font-size:12.5px;line-height:1.45;color:var(--text2);}
+.yp-hint{font-size:11.5px;color:var(--text3);line-height:1.4;margin-top:6px;}
+.upd-bar{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:200;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:var(--on-accent);font-family:inherit;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:fadeUp 0.3s;}
+.upd-bar b{font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:0.04em;}
+.upd-bar span{font-size:13px;font-weight:700;}
 .yp-what{font-size:12.5px;color:var(--text2);line-height:1.45;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);}
 .yp-what b{color:var(--text);}
 /* TROPHIES */
@@ -2042,6 +2047,36 @@ function setQuotaTarget(id,n){
 }
 
 // ── PAGE NAV ──
+// ── UPDATES ──
+// iPhone keeps a home-screen app alive in the background and GitHub Pages lets the page
+// be cached for ten minutes, so a new release could take a while to appear. Whenever the
+// app comes to the front (and every five minutes while open) it fetches the live page,
+// bypassing every cache, and compares the app-version tag. If it's newer, a bar offers
+// the update; tapping it loads the new version under a fresh URL so no cache can serve
+// the old one.
+const APP_VERSION=(document.querySelector('meta[name="app-version"]')||{}).content||'0';
+let _updChecking=false,_updLast=0;
+async function checkForUpdate(force){
+  if(_updChecking||(!force&&Date.now()-_updLast<60e3)||location.protocol==='file:')return;
+  _updChecking=true;_updLast=Date.now();
+  try{
+    const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;
+    const m=(await r.text()).match(/<meta name="app-version" content="([^"]+)"/);
+    if(m&&m[1]!==APP_VERSION&&+m[1]>+APP_VERSION)showUpdateBar(m[1]);
+  }catch(e){}finally{_updChecking=false;}
+}
+function showUpdateBar(v){
+  if(document.getElementById('upd-bar'))return;
+  const b=document.createElement('button');b.id='upd-bar';b.className='upd-bar';
+  b.innerHTML='<b>New version ready</b><span>Tap to update</span>';
+  b.onclick=()=>{location.replace(location.pathname+'?v='+v);};
+  document.body.appendChild(b);
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkForUpdate();});
+setInterval(()=>{if(document.visibilityState==='visible')checkForUpdate(true);},5*60e3);
+setTimeout(()=>checkForUpdate(true),4000);
+
 // Re-render whichever page is open, after something is logged from a modal that can be
 // opened from more than one page.
 function refreshActivePage(){
@@ -8645,6 +8680,7 @@ function renderYearPlanBlock(){
   const controls=`<div class="yp-ctl">
     <div class="yp-ctl-row"><span>Build limit</span><span class="yp-seg"><button class="${P.capMode==='safe'?'on':''}" onclick="setPlanCap('safe',event)">Safe +15%</button><button class="${P.capMode==='stretch'?'on':''}" onclick="setPlanCap('stretch',event)">Stretch +25%</button><button class="${P.capMode==='goal'?'on goal':'goal'}" onclick="setPlanCap('goal',event)">Meet the goal</button></span></div>
     ${upRaces.map(r=>`<div class="yp-ctl-row"><span>${esc(r.name||`${fmtKm(r.km)} km`)}</span><span class="yp-seg"><button class="${r.priority!=='B'?'on':''}" onclick="setRacePriority('${r.date}','A',event)">A · taper</button><button class="${r.priority==='B'?'on':''}" onclick="setRacePriority('${r.date}','B',event)">B · train through</button></span></div>`).join('')}
+    <div class="yp-hint">The build limit changes this week and the build weeks. Race, taper and recovery weeks${P.weeks[1]&&P.weeks[1].fixed?', like next week,':''} stay as set; switch a race between A and B to change those.</div>
     ${what?`<div class="yp-what">${what}</div>`:''}
   </div>`;
   return`<div class="yp" onclick="event.stopPropagation()">

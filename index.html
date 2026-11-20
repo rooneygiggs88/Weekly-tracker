@@ -463,6 +463,15 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .rm-after>span:nth-child(2){flex:1;display:flex;flex-direction:column;font-size:12.5px;color:var(--text2);}
 .rm-after b{font-size:15px;color:var(--text);}
 .rm-flag{font-size:26px;}
+.rm-strip{display:flex;align-items:center;gap:14px;width:100%;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;margin-bottom:12px;padding:12px 16px 12px 20px;border-radius:var(--radius);border:none;background:var(--surface);position:relative;overflow:hidden;}
+.rm-strip::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:repeating-linear-gradient(180deg,var(--accent) 0 8px,transparent 8px 13px);}
+.rm-strip-days{display:flex;flex-direction:column;align-items:center;line-height:1;}
+.rm-strip-days b{font-family:var(--display);font-weight:800;font-size:34px;}
+.rm-strip-days i{font-style:normal;font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.rm-strip-mid{flex:1;min-width:0;display:flex;flex-direction:column;}
+.rm-strip-mid b{font-family:var(--display);font-weight:800;font-size:20px;text-transform:uppercase;line-height:1.05;}
+.rm-strip-mid span{font-size:12.5px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rm-more{display:block;width:100%;margin-top:6px;padding:9px;background:none;border:none;border-top:1px solid var(--border);font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text3);cursor:pointer;}
 /* TROPHIES */
 .tb-banner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;margin-bottom:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid color-mix(in srgb,var(--c-gold) 45%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--c-gold) 14%,var(--surface)),var(--surface));}
 .tb-medal,.tc-ic{display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--tc) 55%,#fff),var(--tc));box-shadow:0 0 0 3px color-mix(in srgb,var(--tc) 30%,transparent),inset 0 -3px 0 rgba(0,0,0,0.15);}
@@ -2313,6 +2322,11 @@ const RACE_CHECKLIST=[
   {id:'breakfast',d:0,t:'Breakfast 2 to 3 hours before the start'},
   {id:'warmup',d:0,t:'10 minutes easy plus 4 strides before the gun'},
 ];
+// The card grows as the race gets closer: a slim strip until a week out (tap to open),
+// then the full card, with the checklist showing only what's due in the next two days.
+let _rmOpen=false,_rmAllChecks=false;
+function toggleRaceMode(){_rmOpen=!_rmOpen;haptic('light');renderRaceMode();}
+function toggleRaceChecksAll(){_rmAllChecks=!_rmAllChecks;renderRaceMode();}
 function toggleRaceCheck(id){
   const r=state.race;if(!r)return;
   state.raceChecks=state.raceChecks||{};const k=r.date;
@@ -2333,6 +2347,10 @@ function renderRaceMode(){
   if(d>10){el.innerHTML='';return;}
   const km=+r.km,goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
   const proj=getRaceProjection();
+  if(d>7&&!_rmOpen){
+    el.innerHTML=`<button class="rm-strip" onclick="toggleRaceMode()"><span class="rm-strip-days"><b>${d}</b><i>days</i></span><span class="rm-strip-mid"><b>${esc(r.name||'Race')}</b><span>${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}${proj?` · predicted ${proj.projTime}`:''}</span></span><span class="brief-go">›</span></button>`;
+    return;
+  }
   const pace=goal?goal/km:proj?proj.projSecs/km:null;
   const whole=Math.floor(km);
   const splits=pace?Array.from({length:whole},(_,i)=>i+1).map(k=>`<div class="rm-split"><span>${k}</span><b>${fmtDurationFromSecs(Math.round(pace*k))}</b></div>`).join('')+(km-whole>0.05?`<div class="rm-split fin"><span>${fmtKm(km)}</span><b>${fmtDurationFromSecs(Math.round(pace*km))}</b></div>`:''):'';
@@ -2344,8 +2362,9 @@ function renderRaceMode(){
       :`You're predicted ${fmtDurationFromSecs(-gap)} inside the goal. Start on goal pace and use the last third to find out how much is in there.`;
   }
   const checks=(state.raceChecks||{})[r.date]||{};
-  const items=RACE_CHECKLIST;
-  const doneN=items.filter(c=>checks[c.id]).length;
+  const all=RACE_CHECKLIST,doneN=all.filter(c=>checks[c.id]).length;
+  const due=all.filter(c=>c.d>=d-2);
+  const items=_rmAllChecks||!due.length?all:due;
   const plan=getRaceTaperPlan();
   const dateTxt=new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
   el.innerHTML=`<div class="rm-card">
@@ -2356,8 +2375,10 @@ function renderRaceMode(){
     ${pace?`<div class="rm-sub">${goal?'Goal':'Predicted'} pace <b>${fmtMS(pace)}/km</b>${proj&&goal?` · predicted ${proj.projTime}`:''}${plan&&plan.daysToTaper>0?` · taper from ${fmtShortDate(plan.taperStart)}`:''}</div>
     <div class="rm-splits">${splits}</div>`:''}
     ${paceTip?`<div class="rm-tip">${paceTip}</div>`:''}
-    <div class="rm-sub" style="margin-top:12px;">Race-week checklist <b>${doneN}/${items.length}</b></div>
+    <div class="rm-sub" style="margin-top:12px;">Race-week checklist <b>${doneN}/${all.length}</b></div>
     ${items.map(c=>`<button class="rm-check${checks[c.id]?' done':''}" onclick="toggleRaceCheck('${c.id}')"><span class="rm-box">${checks[c.id]?'✓':''}</span><span>${c.t}</span>${c.d===d?'<em>today</em>':c.d<d?`<em class="later">${c.d===0?'race day':c.d===1?'day before':`${c.d} days out`}</em>`:''}</button>`).join('')}
+    ${items.length<all.length||_rmAllChecks?`<button class="rm-more" onclick="toggleRaceChecksAll()">${_rmAllChecks?'Show what is due now':`Show all ${all.length}`}</button>`:''}
+    ${d>7?`<button class="rm-more" onclick="toggleRaceMode()">Collapse</button>`:''}
   </div>`;
 }
 
@@ -2431,7 +2452,7 @@ function getCoachBriefing(){
   const r=state.race;
   if(r&&r.date){
     const d=daysUntil(r.date);
-    if(d>=0&&d<=42){
+    if(d>10&&d<=42){
       const proj=getRaceProjection();const goal=r.goalTime?parseTimeToSecs(r.goalTime):0;
       let t=d===0?`<b>Race day: ${esc(r.name||'your race')}.</b> Trust the taper.`:`<b>${esc(r.name||'Race')} in ${d} day${d===1?'':'s'}.</b>`;
       if(d>0&&proj){const diff=goal?proj.projSecs-goal:null;t+=` Predicted ${proj.projTime}${diff==null?'':Math.abs(diff)<30?', right on your goal':diff<0?`, ${fmtDurationFromSecs(-diff)} inside your goal`:`, ${fmtDurationFromSecs(diff)} off your goal`}.`;}

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="92">
+<meta name="app-version" content="93">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -991,6 +991,17 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .today-dbl-order{margin-top:6px;}
 .today-plan-sub{font-size:13px;font-weight:700;letter-spacing:0;color:var(--text2);}
 .today-plan-cta{margin-top:12px;}
+.tp-gymstart{display:block;width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
+.cg{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--surface2);}
+.cg-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
+.cg-h span{font-family:var(--display);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);}
+.cg-h b{font-size:12.5px;color:var(--text2);}
+.cg-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--border);font-size:13.5px;}
+.cg-row span{font-weight:600;color:var(--text);}
+.cg-row em{display:block;font-style:normal;font-size:11px;color:var(--accent2);font-weight:600;}
+.cg-row b{font-family:var(--display);font-weight:800;font-size:15px;white-space:nowrap;}
+.cg-more{font-size:12px;color:var(--text3);padding-top:4px;}
+.cg-note{margin-top:7px;font-size:12px;line-height:1.45;color:var(--text2);}
 .tp-steps{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
 .tp-steps div{display:grid;grid-template-columns:78px 1fr;gap:8px;font-size:13px;line-height:1.4;}
 .tp-steps b{font-family:var(--display);font-weight:800;font-size:12.5px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text3);padding-top:1px;}
@@ -3585,12 +3596,21 @@ function renderTodayPlanFromCalendar(readiness){
       ${run.why?`<div class="tp-why"><b>Why today:</b> ${run.why}</div>`:''}
       <div id="tp-wx"></div>
       ${adv(rTxt)}
-      ${d.gym?`<div class="today-plan-meta" style="margin-top:6px;"><b>Plus ${esc((d.gym==='Gym'?_coachGymType():d.gym).toLowerCase())}</b>${d.gym==='Gym'?' (the coach\'s pick)':''}: ${d.gym==='Upper body'?'short and light, no legs.':'keep legs light with a key run close.'}</div>`:''}
+      ${d.gym?(()=>{const gt=GYM_PLAN_TYPES.has(d.gym)?d.gym:_coachGymType(),pv=renderCoachGymPreview(gt,true);
+        return pv?`<div class="today-plan-meta" style="margin-top:10px;"><b>Plus ${esc(gt.toLowerCase())}</b>${d.gymWhy?`: ${d.gymWhy.replace(/^\w+day: \w+, /,'').replace(/^\w+day: /,'')}`:''}</div>${pv}<button class="tp-gymstart" onclick="showPage('train');switchTrainTab('gym');setTimeout(()=>buildGymSession('${gt}'),80)">Start the gym session</button>`
+          :`<div class="today-plan-meta" style="margin-top:6px;"><b>Plus ${esc(gt.toLowerCase())}</b>: ${d.gym==='Upper body'?'short and light, no legs.':'keep legs light with a key run close.'}</div>`;})():''}
       <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('run');setTimeout(()=>useTodaysRun(${run.km},'${effort}'),80)">Log this run</button>
       <div class="tp-acts"><button onclick="moveTodayRun(event)">Move to tomorrow</button><button onclick="openN100(event)">Not 100%?</button></div>
       ${n100Html()}${(setTimeout(fillTodayWx,0),'')}`;
   }
   if(d.gym){
+    const gt=GYM_PLAN_TYPES.has(d.gym)?d.gym:_coachGymType(),prev=renderCoachGymPreview(gt,true);
+    if(prev)return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">${esc(gt)}${d.gym==='Upper body'?' · upper body':''}</div>
+      ${prev}
+      ${d.gymWhy?`<div class="tp-why"><b>Why today:</b> ${d.gymWhy}</div>`:''}
+      ${adv(rk==='recover'?'Make it mobility instead today.':'')}
+      <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('gym');setTimeout(()=>buildGymSession('${gt}'),80)">Start this session</button>
+      <div class="tp-acts"><button onclick="openN100(event)">Not 100%?</button></div>${n100Html()}`;
     const due=(getGymCoachLine()||'').replace(/<[^>]+>/g,'');
     return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">${d.gym==='Gym'?esc(_coachGymType()):GYM_PLAN_TYPES.has(d.gym)?esc(d.gym):'Gym'}${d.gym==='Upper body'?' · upper body':''}</div>
       <div class="today-plan-meta">${due||'A normal session.'} ${doneTxt}</div>
@@ -4769,9 +4789,9 @@ function renderGymTypeSelector(){
   const planCardHtml=showPlanCard?`<div class="chart-card" style="margin-bottom:10px;">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:2px;">On the plan today</div>
       <div style="font-size:24px;font-weight:800;letter-spacing:-0.8px;margin-bottom:10px;">${esc(planType)}</div>
-      ${renderPlanExercisePreview(planType)}
+      ${planGymSession(planType)?renderCoachGymPreview(planType):renderPlanExercisePreview(planType)}
       <div style="display:flex;gap:8px;margin-top:12px;">
-        <button class="btn-primary" style="flex:1;" onclick="gymStartPlanType('${planType}')">Start ${esc(planType)}</button>
+        <button class="btn-primary" style="flex:1;" onclick="${planGymSession(planType)?`buildGymSession('${planType}')`:`gymStartPlanType('${planType}')`}">${planGymSession(planType)?'Start the coach\'s session':`Start ${esc(planType)}`}</button>
         <button onclick="gymPlanSuperset()" title="Superset mode" style="padding:0 16px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;">⚡</button>
       </div>
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair</div>`:''}
@@ -13254,6 +13274,52 @@ function renderGymBriefCard(type){
 
 // 3 + 4. Build today's session: last session of this type, with set counts adjusted for the
 // race phase, readiness and tomorrow's run, plus an exercise for any muscle running short.
+// ── THE COACH'S GYM SESSION ──
+// The session written for you: your regular lifts for this session type (the ones in at
+// least two of the last three) plus whatever you did last time, heaviest
+// first, with a target for each from your progression (about 80% after a long break,
+// held in race week, lighter on a Recover morning), plus a filler for any muscle that's
+// short this week. Sized to about 40 minutes from your rest times (30 in race and taper
+// weeks) by trimming sets, then the last exercise.
+function planGymSession(type){
+  if(!['Push','Pull','Legs','Core','Custom'].includes(type))return null;
+  const sessions=loadGymData(),same=sessions.filter(s=>s.type===type).slice(-3);
+  if(!same.length)return null;
+  const freq={},order=[];
+  same.forEach((s,si)=>(s.exercises||[]).forEach(e=>{const n=_resolveExName(e.name)||e.name;if(!n)return;const key=n.toLowerCase();
+    if(!freq[key]){freq[key]={name:n,count:0,last:-1};order.push(key);}if(freq[key].last!==si){freq[key].count++;freq[key].last=si;}}));
+  // Only lifts that belong to the session (no overhead press on a Pull day).
+  const fits=n=>{const want=GC_TYPE_MUSCLES[type];if(!want)return true;const m=getExerciseMuscles(n)||[];return!m.length||m.some(x=>want.includes(x));};
+  const picks=order.map(k=>freq[k]).filter(x=>(x.count>=2||x.last===same.length-1)&&fits(x.name)).slice(0,7);
+  if(!picks.length)order.slice(0,4).forEach(k=>picks.push(freq[k]));
+  const k=_gcReadyKey(),phase=getGymRacePhase(),taper=phase&&phase.key==='taper',ctx=getGymContext();
+  const rows=picks.map(pk=>{
+    const last=getLastExSets(pk.name,sessions)||[],hasW=last.some(x=>parseFloat(x.weight||0)>0),top=_gcTopLast(last);
+    let n=last.filter(x=>!x.warmup&&!x.technique).length||3;
+    if(taper)n=Math.max(1,Math.round(n/2));else if(k==='recover')n=Math.max(1,n-1);
+    return{name:pk.name,sets:Math.min(4,n),tgt:top?getLiftTarget(top,hasW,0):null,rest:getExRestSecs(pk.name)||90,w:top?parseFloat(top.weight||0):0};
+  }).sort((a,b)=>b.w-a.w);
+  if(!taper&&k!=='recover')getGymMuscleGaps(type,rows.map(r=>r.name)).forEach(g=>{if(g.ex&&!rows.some(r=>r.name===g.ex))rows.push({name:g.ex,sets:Math.min(3,Math.max(2,g.short)),tgt:null,rest:getExRestSecs(g.ex)||75,w:0,why:`${g.muscle} is short this week`});});
+  const budget=taper||ctx.race?30:40;
+  const mins=()=>rows.reduce((a,r)=>a+r.sets*(r.rest+40),0)/60+6;
+  let guard=0;
+  while(mins()>budget&&rows.length>2&&guard++<20){const r=rows.slice(1).sort((a,b)=>b.sets-a.sets)[0];if(r.sets>2)r.sets--;else rows.pop();}
+  const notes=[];
+  if(ctx.comeback)notes.push(`${ctx.layoff} days since the gym: about 80% of your last weights for 8–10 reps. Muscle comes back fast; tendons are slower.`);
+  else if(ctx.race)notes.push(`${esc(ctx.race.name||'Race')} in ${ctx.dRace} days: hold your weights, nothing to failure.`);
+  if(taper)notes.push('Taper: half the sets.');else if(k==='recover')notes.push('Readiness says recover: one set fewer per lift, technique first.');
+  return{type,rows,mins:Math.round(mins()),notes};
+}
+function renderCoachGymPreview(type,compact){
+  const P=planGymSession(type);if(!P)return'';
+  const rows=compact?P.rows.slice(0,4):P.rows;
+  return`<div class="cg">
+    <div class="cg-h"><span>Coach's session</span><b>${esc(type)} · about ${P.mins} min</b></div>
+    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.why?`<em>${esc(r.why)}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
+    ${compact&&P.rows.length>4?`<div class="cg-more">+ ${P.rows.length-4} more</div>`:''}
+    ${P.notes.map(n=>`<div class="cg-note">${n}</div>`).join('')}
+  </div>`;
+}
 function canBuildGymSession(type){return['Push','Pull','Legs','Core','Custom'].includes(type)&&loadGymData().some(s=>s.type===type);}
 function buildGymSession(type){
   type=type||_gymPickedType;
@@ -13265,6 +13331,15 @@ function buildGymSession(type){
   const clash=getGymRunClash(type);
   const taper=phase&&phase.key==='taper';
   const trimLegs=!!(clash&&clash.level==='warn');
+  const P=planGymSession(type);
+  if(P){
+    const exercises=P.rows.map(r=>({name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why}));
+    _gymFocusIdx=null;_gymShowAllEx=false;gymKpResetTarget();
+    gymDraft={type,exercises,startedAt:Date.now()};
+    renderGymLogger();
+    toastMsg(`The coach's ${type}: ${exercises.length} exercises, about ${P.mins} min`,3000);haptic('light');
+    return;
+  }
   const seen=new Set();
   const exercises=(lastSame.exercises||[]).filter(e=>{const n=(e.name||'').toLowerCase();if(!n||seen.has(n))return false;seen.add(n);return true;}).map(e=>{
     let n=(e.sets||[]).filter(x=>!x.warmup&&!x.technique).length||3;

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="80">
+<meta name="app-version" content="81">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -202,6 +202,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .yg-seg.done.tap .yg-seg-type{color:var(--green);}
 .yg-seg.tap.opt{border-style:dashed;border-color:var(--border);}
 .yg-seg.tap.opt .yg-seg-type{color:var(--text3);}
+.yg-seg.missed{opacity:0.45;border-style:dashed;}
+.yg-seg.missed .yg-seg-km{font-size:12px;font-weight:700;color:var(--text3);padding-top:6px;}
 .yg-seg.sel{background:var(--surface2);border-color:var(--accent);}
 .yg-edit{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--surface2);display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:700;color:var(--text2);}
 .yg-edit-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
@@ -3069,7 +3071,7 @@ function getCalendarWeek(weekOffset){
   const keyIdx=new Set(days.filter(d=>d.planned.some(p=>p.type==='Long'||p.type==='Tempo'||p.type==='Race')).map(d=>d.i));
   const wantGym=W.kind==='race'||W.kind==='taper'?1:2;
   const afterRace=raceBefore?Math.round((new Date(raceBefore.date+'T12:00:00')-mon)/864e5)+1:null;
-  const planGym=tGym.some(Boolean);
+  const planGym=!!tmpl||tGym.some(Boolean);
   const gymLoggedOn=new Set(loadGymData().map(x=>x.date));
   if(planGym){
     days.forEach(d=>{
@@ -10057,11 +10059,31 @@ function getYearGoalWeek(weekOffset=0){
   const extra=[];
   const rdw=r=>(new Date(r.date+'T12:00:00').getDay()+6)%7;
   const near=(c,r)=>c.sort((a,b)=>(a.day!=null?Math.abs(a.day-rdw(r)):0)-(b.day!=null?Math.abs(b.day-rdw(r)):0))[0];
-  weekRuns.forEach(r=>{const sl=near(slots.filter(x=>!x.run&&x.type===slotType(r.effort,r)),r);if(sl)sl.run=r;else extra.push(r);});
-  extra.forEach(r=>{const sl=near(slots.filter(x=>!x.run),r);if(sl)sl.run=r;});
+  const td0=dk(today()),dayDs=i=>dk(addDays(mon,i));
+  let bonus=[];
+  if(fromPlan){
+    // Your usual week: a run fills its own day. A run on a day you didn't plan fills a
+    // planned day you've already missed (the nearest, same type first); otherwise it's a
+    // bonus run that counts towards the km but never takes a day still to come.
+    const rest=[];
+    weekRuns.forEach(r=>{const sl=slots.find(x=>!x.run&&x.day===rdw(r));if(sl)sl.run=r;else rest.push(r);});
+    rest.forEach(r=>{
+      const past=slots.filter(x=>!x.run&&x.day!=null&&dayDs(x.day)<td0&&x.type!=='Race');
+      const sl=near(past.filter(x=>x.type===slotType(r.effort,r)),r)||near(past,r);
+      if(sl)sl.run=r;else bonus.push(r);
+    });
+    // A planned day that's gone by without a run is missed: its km move to the days left.
+    slots.forEach(x=>{if(!x.run&&x.day!=null&&dayDs(x.day)<td0)x.missed=true;});
+  }else{
+    weekRuns.forEach(r=>{const sl=near(slots.filter(x=>!x.run&&x.type===slotType(r.effort,r)),r);if(sl)sl.run=r;else extra.push(r);});
+    extra.forEach(r=>{const sl=near(slots.filter(x=>!x.run),r);if(sl)sl.run=r;});
+  }
   slots.forEach(x=>{if(x.run)x.runType=x.run===longR&&x.type==='Long'?'Long':slotType(x.run.effort,x.run);});
   // Re-split what's left of the week over the open slots.
-  const open=slots.filter(x=>!x.run);
+  // Bonus runs show alongside the planned ones, in day order.
+  bonus.forEach((r,k)=>slots.push({type:'Easy',w:0,id:'b'+k,day:rdw(r),run:r,bonus:true,runType:slotType(r.effort,r)}));
+  if(fromPlan)slots.sort((a,b)=>(a.day??9)-(b.day??9));
+  const open=slots.filter(x=>!x.run&&!x.missed);
   const leftKm=Math.max(0,target-weekKm);
   const fixed=open.filter(x=>x.fixedKm!=null),flex=open.filter(x=>x.fixedKm==null);
   fixed.forEach(x=>{x.left=x.fixedKm;});
@@ -10301,8 +10323,10 @@ function renderYearGoalWeek(){
   const done=w.leftKm<=0;
   const lbl={Long:'Long',Tempo:'Tempo',Easy:'Easy',Race:'Race'};
   const shown=w.slots;
-  const segs=shown.map(x=>x.run
-    ?`<div class="yg-seg done tap" onclick="openRunEditFor('${x.run.date}',${x.run.loggedAt||0},${+x.run.km},event)" role="button" aria-label="Edit this run"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${goalKm(x.run)}</div></div>`
+  const segs=shown.map(x=>x.missed&&!done
+    ?`<div class="yg-seg missed"><div class="yg-seg-type">${lbl[x.type]}</div><div class="yg-seg-km">missed</div></div>`
+    :x.run
+    ?`<div class="yg-seg done tap${x.bonus?' bonus':''}" onclick="openRunEditFor('${x.run.date}',${x.run.loggedAt||0},${+x.run.km},event)" role="button" aria-label="Edit this run"><div class="yg-seg-type">${lbl[x.runType||x.type]} ✓</div><div class="yg-seg-km">${goalKm(x.run)}</div></div>`
     :!done&&x.type!=='Race'
       ?`<div class="yg-seg tap${_ygEdit===x.id?' sel':''}${x.optional?' opt':''}" onclick="toggleYearGoalSlot(${x.id},event)" role="button" aria-label="Edit this run"><div class="yg-seg-type">${lbl[x.type]}${x.custom?' •':''}</div><div class="yg-seg-km">${x.custom&&Math.round(x.left)===0?'skip':x.optional?'–':Math.round(x.left)}</div></div>`
       :`<div class="yg-seg"><div class="yg-seg-type">${lbl[x.type]}</div><div class="yg-seg-km">${done?'–':Math.round(x.left)}</div></div>`).join('');

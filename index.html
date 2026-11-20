@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="69">
+<meta name="app-version" content="70">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -435,6 +435,13 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .wr-next-runs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;}
 .wr-next-runs span{padding:3px 9px;border-radius:20px;background:var(--surface);font-size:12px;font-weight:700;}
 .wr-next p{font-size:12.5px;line-height:1.45;color:var(--text2);}
+.rc-wx{margin-top:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--surface2);}
+.rc-wx-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;}
+.rc-wx-h span{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;color:var(--text3);width:100%;}
+.rc-wx-h b{font-family:var(--display);font-weight:800;font-size:26px;line-height:1;}
+.rc-wx-h em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--text2);}
+.rc-wx p{font-size:13px;line-height:1.45;color:var(--text2);margin-top:6px;}
+.rc-wx-set{margin-top:10px;width:100%;padding:10px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 .rc-card{position:relative;overflow:hidden;}
 .rc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent);}
 .rc-eyebrow{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
@@ -2592,6 +2599,69 @@ function getCoachBriefing(){
   getWellnessCoachLines().forEach(l=>out.push({ic:l.ic,t:l.t,go:"showPage('trends');switchTrendsTab('wellness')"}));
   return out.slice(0,6);
 }
+// ── WEATHER FOR TODAY'S RUN ──
+// Open-Meteo (free, no key) forecast for the hour you usually run, turned into pace and
+// kit advice. Heat uses the runner's temperature + dew point rule of thumb (in °F: under
+// 100 no change, rising to about 8-10% slower by 170-180); wind and cold change what to
+// wear and how to judge pace rather than the targets. Cached for an hour.
+function _typicalRunHour(){
+  const hs=loadRunData().map(r=>r.startTime).filter(Boolean).map(t=>+t.slice(0,2)).filter(h=>h>=4&&h<=22).sort((a,b)=>a-b);
+  return hs.length?hs[Math.floor(hs.length/2)]:18;
+}
+function _heatSlowPct(tC,dpC){
+  const s=(tC*9/5+32)+(dpC*9/5+32);
+  const T=[[100,0],[110,0.5],[120,1],[130,2],[140,3],[150,4.5],[160,6],[170,8],[180,10]];
+  if(s<=100)return 0;
+  for(let i=1;i<T.length;i++)if(s<=T[i][0]){const[a,pa]=T[i-1],[b,pb]=T[i];return pa+(pb-pa)*(s-a)/(b-a);}
+  return 12;
+}
+async function getRunWeather(){
+  const loc=state.weatherLoc;if(!loc)return null;
+  let cache=null;try{cache=JSON.parse(localStorage.getItem('wx_cache_v1')||'null');}catch(e){}
+  if(!cache||cache.lat!==loc.lat||cache.lon!==loc.lon||Date.now()-cache.t>3600e3){
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&hourly=temperature_2m,apparent_temperature,dew_point_2m,wind_speed_10m,precipitation_probability&forecast_days=2&timezone=auto`;
+    const r=await fetch(u);if(!r.ok)throw new Error('weather');
+    cache={t:Date.now(),lat:loc.lat,lon:loc.lon,data:await r.json()};
+    try{localStorage.setItem('wx_cache_v1',JSON.stringify(cache));}catch(e){}
+  }
+  const h=cache.data.hourly;if(!h||!h.time)return null;
+  const now=new Date(),typ=_typicalRunHour();
+  const hour=now.getHours()>=typ?Math.min(22,now.getHours()+1):typ;
+  const key=`${dk(today())}T${String(hour).padStart(2,'0')}:00`;
+  const i=h.time.indexOf(key);if(i<0)return null;
+  return{hour,t:h.temperature_2m[i],feels:h.apparent_temperature[i],dp:h.dew_point_2m[i],wind:h.wind_speed_10m[i],rain:h.precipitation_probability[i]};
+}
+function weatherAdvice(w){
+  if(!w)return null;
+  const heat=_heatSlowPct(w.t,w.dp);
+  const tips=[];
+  if(heat>=1)tips.push(`warm and humid for running: allow about ${Math.round(heat)}% slower, roughly ${Math.round(330*heat/100)} s/km on easy pace, and drink before you go`);
+  if(w.feels<=2)tips.push(w.feels<=-2?'properly cold: gloves, a hat and a long-sleeve layer; the first 10 minutes will feel slow':'cold: gloves and a long-sleeve layer; you can shed them later');
+  else if(w.feels>=8&&w.feels<=14&&heat<1)tips.push('near-perfect running weather');
+  if(w.wind>=25)tips.push(`windy (${Math.round(w.wind)} km/h): run out into it and back with it, and judge the headwind stretches by effort, not pace`);
+  else if(w.wind>=15)tips.push('a breeze: expect the headwind sections to read 5-10 s/km slow');
+  if(w.rain>=60)tips.push(`rain likely (${w.rain}%): a cap and something to change into`);
+  return{heat,text:tips.length?tips.join('; ')+'.':'No weather adjustments needed.'};
+}
+function fillRunWeather(){
+  const el=document.getElementById('rc-wx');if(!el)return;
+  if(!state.weatherLoc){el.innerHTML=`<button class="rc-wx-set" onclick="setWeatherLocation()">Add the weather for your run</button>`;return;}
+  getRunWeather().then(w=>{
+    if(!w){el.innerHTML='';return;}
+    const a=weatherAdvice(w);
+    el.innerHTML=`<div class="rc-wx"><div class="rc-wx-h"><span>${String(w.hour).padStart(2,'0')}:00 · ${esc(state.weatherLoc.name||'here')}</span><b>${Math.round(w.t)}°C</b><em>feels ${Math.round(w.feels)}° · wind ${Math.round(w.wind)} km/h · rain ${w.rain}%</em></div><p>${a.text.charAt(0).toUpperCase()+a.text.slice(1)}</p></div>`;
+    // Heat moves the pace targets themselves.
+    if(a.heat>=1)document.querySelectorAll('.rc-pace').forEach(p=>{const [f,sl]=(p.dataset.secs||'').split(',').map(Number);if(f&&sl)p.textContent=`${fmtMS(f*(1+a.heat/100))}–${fmtMS(sl*(1+a.heat/100))}/km (heat-adjusted)`;});
+  }).catch(()=>{el.innerHTML='<div class="rc-wx"><p>Weather unavailable right now.</p></div>';});
+}
+function setWeatherLocation(){
+  const done=(lat,lon,name)=>{state.weatherLoc={lat:Math.round(lat*100)/100,lon:Math.round(lon*100)/100,name};saveState();try{localStorage.removeItem('wx_cache_v1');}catch(e){}fillRunWeather();};
+  const byTown=()=>{const q=prompt('Your town, for the running forecast:');if(!q)return;
+    fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1`).then(r=>r.json()).then(j=>{const g=j.results&&j.results[0];if(!g){toastMsg('Town not found');return;}done(g.latitude,g.longitude,g.name);}).catch(()=>toastMsg('Could not look that up'));};
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>done(p.coords.latitude,p.coords.longitude,'your location'),byTown,{timeout:8000,maximumAge:3600e3});
+  else byTown();
+}
+
 // ── TODAY'S RUN (Run page) ──
 // The coach's view of the week turned into today's run: which one, how far, how fast
 // (from race fitness: Daniels' training intensities) and at what heart rate (from your
@@ -2639,7 +2709,7 @@ function renderRunCoachCard(){
   let paceTxt='',hrTxt='';
   if(fm){
     const slow=_paceAtPct(fm.vdot,zone[0]),fast=_paceAtPct(fm.vdot,zone[1]);
-    paceTxt=`${fmtMS(fast)}–${fmtMS(slow)}/km`;
+    paceTxt=`<span class="rc-pace" data-secs="${fast},${slow}">${fmtMS(fast)}–${fmtMS(slow)}/km</span>`;
     const mx=fm.hrMax.v,rest=fm.hrRest.v;
     hrTxt=P.type==='Tempo'?`${Math.round(rest+hrr[0]*(mx-rest))}–${Math.round(rest+hrr[1]*(mx-rest))} bpm`:`under ${Math.round(rest+hrr[1]*(mx-rest))} bpm`;
   }
@@ -2667,6 +2737,7 @@ function renderRunCoachCard(){
     <div class="rc-big">${P.km} km <span>${tag}</span></div>
     ${paceTxt?`<div class="rc-chips"><span><i>Pace</i>${paceTxt}</span>${hrTxt?`<span><i>Heart rate</i>${hrTxt}</span>`:''}</div>`:''}
     <p class="rc-p"><b>${shape}</b></p>
+    <div id="rc-wx"></div>
     <p class="rc-p">${left} ${ctx}</p>
     <button class="rc-use" onclick="useTodaysRun(${P.km},'${effort}')">Fill in the form with ${P.km} km ${tag.toLowerCase()}</button>
   </div>`;
@@ -4895,6 +4966,7 @@ function renderRunSection(){
     </div></div>`:''}
 `;
   selectedEffort='';
+  if(document.getElementById('rc-wx'))fillRunWeather();
 }
 let _runLogDate=null;
 let _runWeekOffset=0;

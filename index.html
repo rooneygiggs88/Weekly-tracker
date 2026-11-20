@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Tracker</title>
-<meta name="theme-color" content="#f4f4f8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b0b11" media="(prefers-color-scheme: dark)">
+<title>Form</title>
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0c0b" media="(prefers-color-scheme: dark)">
 <script>
 // Applied before first paint so an explicit Light/Dark choice never flashes the other theme.
 // "System" (no saved choice) leaves data-theme unset and the OS setting decides.
-(function(){try{var t=localStorage.getItem('theme_pref');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);var c=t==='dark'?'#0b0b11':'#f4f4f8';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content',c);});}}catch(e){}})();
+(function(){try{var t=localStorage.getItem('theme_pref');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);var c=t==='dark'?'#0c0c0b':'#f2efe7';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content',c);});}}catch(e){}})();
 </script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Tracker">
+<meta name="apple-mobile-web-app-title" content="Form">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -2337,7 +2338,7 @@ async function shareWeek(monStr){
   S.trophies.slice(0,2).forEach(t=>hl.push(`Trophy: ${t.name}`));
   x.font=F(700,34);let hx=80;const hy=1205;
   hl.slice(0,3).forEach(t=>{const w=x.measureText(t).width+44;if(hx+w>W-80)return;x.fillStyle='rgba(255,255,255,0.1)';x.beginPath();x.roundRect(hx,hy-46,w,64,32);x.fill();x.fillStyle='#fff';x.fillText(t,hx+22,hy-2);hx+=w+14;});
-  x.fillStyle=VOLT;x.font=D(800,34);x.fillText('TRACKER',80,H-60);
+  x.fillStyle=VOLT;x.font=D(800,34);x.fillText('FORM.',80,H-60);
   const blob=await new Promise(r=>c.toBlob(r,'image/png'));if(!blob){toastMsg('Could not make the image');return;}
   const file=new File([blob],`week-${monStr}.png`,{type:'image/png'});
   try{
@@ -8082,7 +8083,7 @@ function setThemePref(t){
   if(t==='system')root.removeAttribute('data-theme');else root.setAttribute('data-theme',t);
   document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{
     const isDarkMeta=(m.getAttribute('media')||'').includes('dark');
-    m.setAttribute('content',t==='system'?(isDarkMeta?'#0b0b11':'#f4f4f8'):(t==='dark'?'#0b0b11':'#f4f4f8'));
+    m.setAttribute('content',t==='system'?(isDarkMeta?'#0c0c0b':'#f2efe7'):(t==='dark'?'#0c0c0b':'#f2efe7'));
   });
   document.querySelectorAll('#theme-seg .seg-tab').forEach(b=>b.classList.toggle('active',b.dataset.themePref===t));
   haptic('light');

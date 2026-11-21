@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="99">
+<meta name="app-version" content="100">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -2080,7 +2080,8 @@ function today(){return new Date();}
 function tint(col,pct){return`color-mix(in srgb, ${col} ${pct}%, transparent)`;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function fmtPace(kmPerSec){if(!kmPerSec||!isFinite(kmPerSec))return'—';const s=Math.round(1/kmPerSec);const m=Math.floor(s/60);const ss=s%60;return`${m}:${String(ss).padStart(2,'0')}/km`;}
-function parseTimeToSecs(t){if(!t)return 0;const p=t.split(':').map(Number);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return 0;}
+function normTime(t){t=String(t||'').trim();return /^\d+([.,]\d{1,2}){1,2}$/.test(t)?t.replace(/[.,]/g,':'):t;}
+function parseTimeToSecs(t){if(!t)return 0;t=normTime(t);const p=t.split(':').map(Number);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return 0;}
 function toastMsg(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 // Same toast, but with an inline action button and a longer default duration so
 // there's time to actually notice and tap it.
@@ -6340,7 +6341,7 @@ function saveRun(){
   const hrEl=document.getElementById('run-hr');
   const effortCont=document.getElementById('effort-container');
   const km=parseFloat(kmEl.value)||0;
-  const time=(timeEl.value||'').trim();
+  const time=normTime(timeEl.value);
   const startTimeVal=(startEl.value||'').trim();
   const hr=parseInt(hrEl.value)||0;
   const ERR='var(--red)';
@@ -12823,7 +12824,7 @@ function saveRunEdit(){
   if(idx<0||idx>=runs.length)return;
   const r=runs[idx];
   r.km=parseFloat(document.getElementById('run-edit-km').value)||r.km||null;
-  r.time=document.getElementById('run-edit-time').value.trim()||r.time||null;
+  r.time=normTime(document.getElementById('run-edit-time').value)||r.time||null;
   r.effort=document.getElementById('run-edit-effort').value||r.effort||null;
   r.hr=parseInt(document.getElementById('run-edit-hr').value)||null;
   r.note=document.getElementById('run-edit-note').value.trim()||null;

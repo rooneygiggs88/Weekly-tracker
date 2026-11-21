@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="96">
+<meta name="app-version" content="97">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -574,7 +574,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .rc-chips i{font-style:normal;font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);}
 .rc-p{font-size:13.5px;line-height:1.5;color:var(--text2);margin-top:6px;}
 .rc-p b{color:var(--text);font-weight:600;}
-.rc-use{width:100%;margin-top:12px;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--text);background:none;color:var(--text);font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;}
+.rc-use{width:100%;margin-top:12px;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;}
 .hc-coach{margin-bottom:12px;}
 .hc-coach p{font-size:13.5px;line-height:1.5;color:var(--text2);padding:7px 0;border-bottom:1px solid var(--border);}
 .hc-coach p:last-child{border-bottom:none;}
@@ -761,7 +761,7 @@ i.tl-gym{display:inline-block;border-radius:3px;}
 .tl-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:11.5px;font-weight:600;color:var(--text3);}
 .tl-legend span{display:flex;align-items:center;gap:5px;}
 .tl-legend i{display:inline-block;width:9px;height:9px;}
-.tl-more{width:100%;margin-top:12px;padding:9px;background:none;border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.tl-more{width:100%;margin-top:12px;padding:10px;background:var(--surface2);border:none;border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
 
 /* STREAK LIST */
 
@@ -794,7 +794,7 @@ i.tl-gym{display:inline-block;border-radius:3px;}
 .modal{background:var(--surface);border-radius:28px 28px 0 0;border:1px solid var(--border);border-bottom:none;padding:8px 24px 48px;width:100%;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1);max-height:90vh;overflow-y:auto;}
 .modal-overlay.open .modal{transform:translateY(0);}
 .modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 24px;}
-.modal h3{font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:20px;}
+.modal h3{font-family:var(--display);font-size:32px;font-weight:800;line-height:0.95;letter-spacing:-0.2px;text-transform:uppercase;margin-bottom:18px;}
 .modal-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px;display:block;}
 input,textarea,select{user-select:text;-webkit-user-select:text;}
 .modal-input{width:100%;box-sizing:border-box;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text);font-family:inherit;font-size:16px;font-weight:600;outline:none;margin-bottom:16px;transition:border-color 0.15s;}
@@ -1280,7 +1280,7 @@ body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
 .lift-target b{color:var(--lt);}
 .lift-target span{font-size:11.5px;font-weight:600;color:var(--text2);}
 
-.rd-cta-2{width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--accent2);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;}
+.rd-cta-2{width:100%;margin-top:8px;padding:12px;border-radius:14px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;}
 .bf-head,.bf-row{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:8px;align-items:center;}
 .bf-head{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:6px;}
 .bf-head span{text-align:center;}
@@ -1297,7 +1297,7 @@ body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
 .fa-side span{font-size:11.5px;color:var(--text3);}
 .fa-delta{font-size:12.5px;font-weight:600;color:var(--text2);margin-top:8px;}
 
-.yr-card{cursor:pointer;background:linear-gradient(135deg,color-mix(in srgb,var(--c-indigo) 10%,var(--surface)),var(--surface) 60%);}
+.yr-card{cursor:pointer;}
 .yr-open{color:var(--accent2);}
 .yr-teaser{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .yr-teaser>div{display:flex;flex-direction:column;}
@@ -1911,7 +1911,6 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
     <div class="checkin-modal-label">Morning check-in</div>
     <h3 style="margin:2px 0 6px;">How are you this morning?</h3>
     <p class="checkin-intro">Sleep and HRV are on your Garmin Morning Report. Resting HR is on the heart rate glance.</p>
-    <button type="button" class="checkin-paste" onclick="pasteFromShortcut()">Paste from Shortcut</button>
 
     <div class="checkin-row-head"><span>Sleep score</span><span class="checkin-val" id="checkin-sleep-val">–</span></div>
     <div class="checkin-slider-track" id="checkin-slider-track">
@@ -3073,7 +3072,7 @@ function renderRunCoachCard(){
       <div class="rc-eyebrow">Today's run${P.ranToday.length?' · already ran today':''}</div>
       <div class="rc-big">${P.km} km <span>${esc(P.title||P.type)}</span></div>
       ${hrTxt?`<div class="rc-chips"><span><i>Heart rate</i>${hrTxt}</span></div>`:''}
-      <div class="tp-steps">${P.steps.map(x=>`<div><b>${x.l}</b><span>${x.d}</span></div>`).join('')}</div>
+      ${_tpSteps(P.steps)}
       ${P.why?`<p class="rc-p" style="margin-top:10px;"><b>Why today:</b> ${P.why}</p>`:''}
       ${easyDay&&hard?`<p class="rc-p"><b>Readiness says ${esc(rd.state.label.toLowerCase())}:</b> run it all easy today; the coach will move the quality to a better day once you log this morning's check-in.</p>`:''}
       <div id="rc-wx"></div>
@@ -3535,7 +3534,7 @@ function renderUsualWeek(){
     return`<div class="uw">${sw}
       <div class="uw-h"><span>The coach's week</span></div>
       <div class="uw-row">${chips}</div>
-      ${cw&&cw.coach?`<div class="pc-sum" style="margin-top:9px;">${[cw.coach.summary,...cw.coach.notes].filter(Boolean).join(' ')}</div>`:''}
+      ${cw&&cw.coach&&cw.coach.notes.length?`<div class="pc-sum" style="margin-top:9px;">${cw.coach.notes.join(' ')}</div>`:''}
       <div class="uw-foot">Runs, distances, sessions, gym and rest days, all decided for you from your goal, races, fitness and how this week's going, and re-planned as you log, miss or swap. Each one says why in the plan below.</div>
       <div class="uw-limits">${lim.length?`Your limits: no running ${lim.join(', ')}. `:''}<button class="yg-link" style="margin:0;" onclick="_uwLimits=true;_uwSel=null;renderPlanCalendar();event.stopPropagation()">${availCustom()?'Change your limits':'Days you can never train?'}</button>${availCustom()?` · <button class="yg-link" style="margin:0;" onclick="resetAvail(event)">Remove them</button>`:''}</div>
     </div>`;
@@ -3706,7 +3705,7 @@ function renderTodayPlanFromCalendar(readiness){
       :rk==='go'?(run.type==='Tempo'?'A good day for the tempo: hit the paces.':'Feeling good; still keep easy runs easy.'):rk==='ready'?'A normal day: run it as written.':'';
     return`<div class="today-plan-lbl">Today's plan</div>
       <div class="today-plan-type">${run.km} km ${esc(run.title||run.type)}</div>
-      ${run.steps&&run.steps.length?`<div class="tp-steps">${run.steps.map(x=>`<div><b>${x.l}</b><span>${x.d}</span></div>`).join('')}</div>${doneTxt?`<div class="today-plan-meta">${doneTxt}</div>`:''}`
+      ${run.steps&&run.steps.length?`${_tpSteps(run.steps)}${doneTxt?`<div class="today-plan-meta">${doneTxt}</div>`:''}`
         :`<div class="today-plan-meta">${run.desc||''}${paceTxt?` <b>Pace ${paceTxt}.</b>`:''}${doneTxt?` ${doneTxt}`:''}</div>`}
       ${run.why?`<div class="tp-why"><b>Why today:</b> ${run.why}</div>`:''}
       <div id="tp-wx"></div>
@@ -6192,7 +6191,7 @@ function renderRunSection(){
     ${_runLogDate===dk(now)?renderRunEffortSuggestion():''}
     <div id="effort-container" style="border-radius:10px;border:1px solid transparent;padding:3px;margin:-3px;transition:border-color 0.2s;">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
-        ${['Easy','Tempo','Intervals','Race','Long Run','Recovery'].map(e=>`<button onclick="pickEffort('${e}')" id="eff-${e.replace(' ','-')}" style="padding:8px 6px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
+        ${['Easy','Tempo','Intervals','Race','Long Run','Recovery'].map(e=>`<button onclick="pickEffort('${e}')" id="eff-${e.replace(' ','-')}" style="padding:9px 6px;border-radius:20px;border:1px solid transparent;background:var(--surface2);color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${e}</button>`).join('')}
       </div>
     </div>
     <div style="height:12px;"></div>
@@ -6233,9 +6232,9 @@ function selectEffort(e){
   selectedEffort=e===selectedEffort?'':e;
   document.querySelectorAll('[id^="eff-"]').forEach(b=>{
     const a=b.id===`eff-${selectedEffort.replace(' ','-')}`;
-    b.style.background=a?'var(--accent)':'transparent';
+    b.style.background=a?'var(--accent)':'var(--surface2)';
     b.style.color=a?'var(--on-accent)':'var(--text2)';
-    b.style.borderColor=a?'var(--accent)':'var(--border)';
+    b.style.borderColor=a?'var(--accent)':'transparent';
   });
   if(selectedEffort){const c=document.getElementById('effort-container');if(c)c.style.borderColor='transparent';}
 }
@@ -7465,7 +7464,7 @@ function getWellnessSnapshot(){
   const sleep7=avgOf('sleep',_dsAgo(6),td),sleep28=avgOf('sleep',_dsAgo(34),_dsAgo(7));
   const H=loadHealthData().filter(h=>h.weight).sort((a,b)=>a.date.localeCompare(b.date));
   const wPts=H.filter(h=>h.date>=_dsAgo(42)).map(h=>({ds:h.date,v:+h.weight}));
-  const wNow=wPts.length?mean(wPts.slice(-5).map(p=>p.v)):(H.length?+H[H.length-1].weight:null);
+  const wNow=H.length?+H[H.length-1].weight:null;
   const wRate=_slopePerWeek(wPts);
   const goalW=state.bodyCompGoal&&state.bodyCompGoal.weight;
   let eta=null;if(goalW&&wNow!=null&&wRate!=null&&wRate<-0.05&&wNow>goalW)eta=Math.ceil((wNow-goalW)/-wRate);
@@ -8418,7 +8417,7 @@ function openYearReview(){
   const rdLine=y.mornings?`${[...RD_STATES].map(s=>y.states[s.key]?`<span class="yr-st"><i style="background:${s.col};"></i>${s.label} ${y.states[s.key]}</span>`:'').join('')}`:'';
   const imp=y.impacts.slice(0,2).map(f=>`<strong>${esc(f.label)}</strong>: ${f.better?'better':'worse'} mornings after`).join(' · ');
   document.getElementById('year-review-content').innerHTML=`
-    <div class="checkin-modal-label">Your year in Tracker</div>
+    <div class="checkin-modal-label">Your year</div>
     <h3 class="yr-title">${y.year}${_yrIsReview()?' in review':' so far'}</h3>
     ${sec('Running',Math.round(y.km+getYearKmOffset()).toLocaleString('en-GB'),' km',[`${y.runs} runs logged here${hrs?`, about ${hrs} hours on your feet`:''}${getYearKmOffset()>=1?`, plus ${Math.round(getYearKmOffset())} km from before you started logging`:''}.`,fmtLongest,fmtFast,goal])}
     ${sec('Lifting',y.gym,' sessions',[`${y.sets.toLocaleString('en-GB')} working sets, ${Math.round(y.volume/1000).toLocaleString('en-GB')} tonnes moved.`,y.prs?`<strong>${y.prs}</strong> new personal bests.`:'',y.topLifts.length?`Heaviest: ${y.topLifts.map(([n,w])=>`${esc(n)} ${w}kg`).join(' · ')}.`:''])}
@@ -9219,12 +9218,12 @@ function renderBodyCompGoalInner(health){
       line=`You're ${Math.abs(proj.gap).toFixed(1)}${unit} away from your ${goal[field]}${unit} target, and currently moving away from it at ${Math.abs(r.weeklyRate).toFixed(2)}${unit}/week (recent avg ${r.now.toFixed(1)}${unit}) — you'd need to reverse that trend to make progress.`;
       col='var(--orange)';
     }
-    rows.push(`<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.06em;margin-bottom:3px;">Target: ${goal[field]}${unit}</div><div style="font-size:13px;font-weight:700;color:${col};line-height:1.5;">${line}</div></div>`);
+    rows.push(`<div class="ins-line" style="--c:${col};">Target ${goal[field]}${unit}<span>${line}</span></div>`);
   });
   return`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${rows.length?'8px':'0'};">
       <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">Goal</span>${editBtn}
     </div>
-    ${rows.length?rows.join(''):'<div style="font-size:13px;color:var(--text3);">Log a weight or body fat entry to start projecting toward your goal.</div>'}`;
+    ${rows.length?`<div class="ins-list" style="border-top:none;margin-top:0;">${rows.join('')}</div>`:'<div style="font-size:13px;color:var(--text3);">Log a weight or body fat entry to start projecting toward your goal.</div>'}`;
 }
 
 function renderBodyCompCard(health){
@@ -9236,7 +9235,7 @@ function renderBodyCompCard(health){
   const wAvg7=withW.length>1?rollingRate(withW,'weight',parseDate(withW[withW.length-1].date)).now:null;
   const bAvg7=withBf.length>1?rollingRate(withBf,'bodyFat',parseDate(withBf[withBf.length-1].date)).now:null;
   if(!latestW&&!latestBf){
-    return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div>
+    return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Body Composition</span><button onclick="openHealthModal()" style="padding:6px 14px;border-radius:16px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button></div><div class="empty-state" style="padding:20px 0;"><strong>No data logged</strong>Tap + Log to start tracking.</div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">${renderBodyCompGoalInner(health)}</div>
     </div>`;
   }
@@ -9254,9 +9253,9 @@ function renderBodyCompCard(health){
     const pathD=pts.map((p,i)=>`${i===0?'M':'L'}${px(i).toFixed(1)},${py(p[1]).toFixed(1)}`).join(' ');
     // Y axis ticks (5, up from 3) - finer gridlines make small moves easier to read off
     let svg='';
-    for(let i=0;i<=4;i++){const v=axMx-i*(rng/4);const y=PT+i*(cH/4);svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+cW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;svg+=`<text x="${(PL-3).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${v.toFixed(1)}</text>`;}
+    for(let i=0;i<=4;i++){const v=axMx-i*(rng/4);const y=PT+i*(cH/4);svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+cW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;if(i%4===0)svg+=`<text x="${(PL-3).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${v.toFixed(1)}</text>`;}
     // Date labels first and last
-    const fmt=d=>{const dt=new Date(d+'T12:00:00');return`${dt.getDate()}/${dt.getMonth()+1}`;};
+    const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}).replace('Sept','Sep');
     svg+=`<text x="${PL}" y="${H-2}" text-anchor="start" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${fmt(pts[0][0])}</text>`;
     svg+=`<text x="${PL+cW}" y="${H-2}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="-apple-system,sans-serif">${fmt(pts[pts.length-1][0])}</text>`;
     // Line + start dot/label + end dot/label - labeling both ends makes the actual
@@ -9277,14 +9276,14 @@ function renderBodyCompCard(health){
   const wPts=smoothedPts(withW,'weight');
   const bPts=smoothedPts(withBf,'bodyFat');
   const chart=`<div style="margin-top:10px;">
-    ${wPts.length>=2?`<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Weight</div>${sparkline(wPts,'var(--c-red)','kg')}</div>`:''}
+    ${wPts.length>=2?`<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Weight</div>${sparkline(wPts,'var(--text2)','kg')}</div>`:''}
     ${bPts.length>=2?`<div><div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Body Fat</div>${sparkline(bPts,'var(--c-indigo)','%')}</div>`:''}
   </div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);margin-bottom:12px;padding-bottom:12px;">
       <div>${latestW?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestW.weight}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;">kg</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Weight</div>${wAvg7!=null?`<div style="font-size:12px;font-weight:700;color:var(--text2);margin-top:3px;">7-day avg ${wAvg7.toFixed(1)}kg</div>`:''}`:'<div style="font-size:13px;color:var(--text3);">No weight yet</div>'}</div>
       <div style="text-align:right;">${latestBf?`<div style="font-size:34px;font-weight:800;letter-spacing:-2px;line-height:1;">${latestBf.bodyFat}<span style="font-size:15px;color:var(--text2);font-weight:600;margin-left:2px;">%</span></div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:0.08em;margin-top:4px;">Body Fat</div>${bAvg7!=null?`<div style="font-size:12px;font-weight:700;color:var(--text2);margin-top:3px;">7-day avg ${bAvg7.toFixed(1)}%</div>`:''}`:'<div style="font-size:13px;color:var(--text3);">No body fat yet</div>'}
-        <button onclick="openHealthModal()" style="margin-top:6px;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
+        <button onclick="openHealthModal()" style="margin-top:6px;padding:5px 12px;border-radius:14px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
       </div>
     </div>
     ${chart}
@@ -9425,28 +9424,28 @@ function renderVapingSection(){
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header">
       <span class="chart-card-title">Nicotine</span>
-      <button onclick="openVapingModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
+      <button onclick="openVapingModal()" style="padding:6px 14px;border-radius:16px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Log</button>
     </div>
     ${data.length?`
-      <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">This Week</div>
+      ${state.nicPlan?'':`<div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">This week</div>
         <div style="display:flex;gap:28px;flex-wrap:wrap;">
-          <div><div style="font-size:26px;font-weight:800;letter-spacing:-1px;">${totalPuffs7}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs this week</div></div>
-          ${totalNic7>0?`<div><div style="font-size:26px;font-weight:800;letter-spacing:-1px;">~${(totalNic7/CIG_PER_MG).toFixed(1)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">cig equiv this week</div></div>`:''}
+          <div><div style="font-family:var(--display);font-size:32px;font-weight:800;line-height:1;">${totalPuffs7}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs this week</div></div>
+          ${totalNic7>0?`<div><div style="font-family:var(--display);font-size:32px;font-weight:800;line-height:1;">~${(totalNic7/CIG_PER_MG).toFixed(1)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">cig equiv this week</div></div>`:''}
         </div>
-      </div>
+      </div>`}
       ${last?`<div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;">
         <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">${lastLabel}</div>
         <div style="display:flex;gap:28px;flex-wrap:wrap;margin-bottom:${latestCigEquiv!==null?'10px':'0'};">
-          <div><div style="font-size:26px;font-weight:800;letter-spacing:-1px;">${last.puffs||0}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs</div></div>
-          ${latestCigEquiv!==null?`<div><div style="font-size:26px;font-weight:800;letter-spacing:-1px;">~${latestCigEquiv.toFixed(1)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">cig equiv</div></div>`:''}
+          <div><div style="font-family:var(--display);font-size:32px;font-weight:800;line-height:1;">${last.puffs||0}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">puffs</div></div>
+          ${latestCigEquiv!==null?`<div><div style="font-family:var(--display);font-size:32px;font-weight:800;line-height:1;">~${latestCigEquiv.toFixed(1)}</div><div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;">cig equiv</div></div>`:''}
         </div>
         ${latestCigEquiv!==null?`<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;"><span>0</span><span>← nicotine / day →</span><span>40 mg</span></div>
         <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;"><div style="height:100%;width:${cigBarPct.toFixed(1)}%;border-radius:4px;background:linear-gradient(90deg,var(--green) 0%,var(--orange) 50%,var(--red) 100%);background-size:300% 100%;background-position:${cigBarPct.toFixed(1)}% 0%;transition:width 0.4s;"></div></div>`:``}
       </div>`:''}
-      ${(vapOverallLine||vapWeekLine)?`<div style="margin:0 0 10px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);">
-        ${vapOverallLine?`<div style="font-size:13px;font-weight:700;color:${vapOverallCol};line-height:1.5;${vapWeekLine?'margin-bottom:8px;':''}">${vapOverallLine}</div>`:''}
-        ${vapWeekLine?`<div style="font-size:12px;font-weight:600;color:${vapWeekCol};line-height:1.5;">${vapWeekLine}</div>`:''}
+      ${(vapOverallLine||(vapWeekLine&&!state.nicPlan))?`<div style="margin:0 0 10px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);">
+        ${vapOverallLine?`<div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.5;${vapWeekLine&&!state.nicPlan?'margin-bottom:8px;':''}">${vapOverallLine}</div>`:''}
+        ${vapWeekLine&&!state.nicPlan?`<div style="font-size:12px;font-weight:600;color:${vapWeekCol};line-height:1.5;">${vapWeekLine}</div>`:''}
       </div>`:''}
       ${renderVapingChart(data)}
       <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px;">
@@ -9820,9 +9819,9 @@ function _renderRaceSectionMain(){
   })():'';
   const _yw=state.yearRunGoal&&getYearGoalWeek(),_pw=_yw&&_yw.plan&&_yw.plan.weeks[0];
   const plan=_yw?{phase:({race:'Race week',taper:'Taper week',recovery:'Recovery week',build:'Build week'})[_pw?_pw.kind:'build']||'This week',thisWeekKm:Math.round(_yw.weekKm*10)/10,targetKm:Math.round(_yw.target),baseline:_pw?Math.round(_yw.base||0):0,weeksToRace:0,fromPlan:true}:getRaceBuildPlan();
-  const planHtml=plan?`<div style="margin-top:10px;padding:10px 12px;background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2);border-radius:8px;">
+  const planHtml=plan?`<div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-      <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);">${esc(plan.phase)} · this week's target</span>
+      <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);">${esc(plan.phase)} · this week's target</span>
       <span style="font-size:13px;font-weight:800;color:${plan.thisWeekKm>=plan.targetKm?'var(--green)':'var(--text)'};">${plan.thisWeekKm} / ${plan.targetKm}km</span>
     </div>
     <div style="font-size:11px;color:var(--text3);">${plan.fromPlan?`From your plan to 31 Dec, against your recent ${plan.baseline} km weeks`:`Based on your ${plan.baseline}km/wk average`}${plan.weeksToRace>0?` · ${plan.weeksToRace} week${plan.weeksToRace===1?'':'s'} out`:''}</div>
@@ -9853,7 +9852,7 @@ function renderCustomGoalsList(){
     ${editable?`<button onclick="openGoalModal('${esc(g.id)}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Edit</button>`:`<span style="font-size:10px;font-weight:700;color:var(--text3);padding:3px 8px;border-radius:8px;background:var(--surface2);flex-shrink:0;">Built-in</span>`}
   </div>`;
   return`<div class="chart-card" style="margin-bottom:10px;">
-    <div class="chart-card-header"><span class="chart-card-title">Goals</span><button onclick="openGoalModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button></div>
+    <div class="chart-card-header"><span class="chart-card-title">Goals</span><button onclick="openGoalModal()" style="padding:6px 14px;border-radius:16px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button></div>
     ${allG.map(g=>row(g,!!(state.customGoals||[]).find(c=>c.id===g.id))).join('')}
   </div>`;
 }
@@ -9924,6 +9923,7 @@ function deleteGoal(){
 
 function openHealthModal(){
   document.getElementById('health-weight-input').value='';
+  {const H=loadHealthData().filter(h=>h.weight);if(H.length)document.getElementById('health-weight-input').placeholder=`Last: ${H[H.length-1].weight}`;}
   document.getElementById('health-bodyfat-input').value='';
   document.getElementById('health-note-input').value='';
   openModal('health-modal');
@@ -11061,6 +11061,13 @@ function _coachWeek(o,mode,monK,td){
   return{sessions,gym,summary,notes,free:F,mode,rest};
 }
 
+// A session's steps; a one-step run (an easy 10 km) just needs its pace, since the title
+// already says the distance and the type.
+function _tpSteps(steps){
+  if(!steps||!steps.length)return'';
+  if(steps.length===1){const m=/at (.+)$/.exec(steps[0].d||'');if(m)return`<div class="tp-steps"><div><b>Pace</b><span>${m[1]}</span></div></div>`;}
+  return`<div class="tp-steps">${steps.map(x=>`<div><b>${x.l}</b><span>${x.d}</span></div>`).join('')}</div>`;
+}
 // ── SEASON PHASE ──
 // Where a week sits on the road to your next A race: base (12+ weeks out: easy volume,
 // one light quality session every other week), build (quality every week, alternating),
@@ -12829,7 +12836,7 @@ function openCompareModal(){
   const gym=loadGymData();
   if(gym.length<2){toastMsg('Need at least 2 sessions');return;}
   const recent=gym.slice(-20).reverse();
-  const opts=recent.map((s,i)=>`<option value="${gym.length-1-(i)}">${s.date} · ${esc(s.type||'Workout')}</option>`).join('');
+  const opts=recent.map((s,i)=>`<option value="${gym.length-1-(i)}">${new Date(s.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} · ${esc(s.type||'Workout')}</option>`).join('');
   document.getElementById('compare-a').innerHTML=opts;
   document.getElementById('compare-b').innerHTML=opts;
   // default B to second session
@@ -13145,7 +13152,7 @@ function openSessionDetail(sessionIdx){
   const workSets=(s.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(ss=>!ss.warmup).length,0);
   const vol=(s.exercises||[]).reduce((t,e)=>(e.sets||[]).filter(ss=>!ss.warmup).reduce((tt,ss)=>tt+(parseFloat(ss.weight||0)*parseFloat(ss.reps||0)),t),0);
   let html=`<h3>${esc(s.type||'Workout')}</h3>
-  <div style="font-size:13px;color:var(--text3);font-weight:600;margin-bottom:16px;">${s.date} · ${workSets} sets · ${vol?Math.round(vol)+'kg vol':''}</div>
+  <div style="font-size:13px;color:var(--text3);font-weight:600;margin-bottom:16px;">${new Date(s.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} · ${workSets} sets${vol?` · ${Math.round(vol).toLocaleString('en-GB')} kg lifted`:''}</div>
   ${(s.exercises||[]).map(e=>{
     const sets=e.sets||[];
     return`<div style="margin-bottom:14px;"><div style="font-size:14px;font-weight:800;margin-bottom:8px;">${esc(e.name)}</div>
@@ -13153,14 +13160,14 @@ function openSessionDetail(sessionIdx){
         <span style="font-size:10px;font-weight:800;color:${ss.warmup?'var(--orange)':ss.technique?'var(--c-purple)':'var(--text3)'};min-width:20px;">${ss.warmup?'W':ss.technique?'T':si+1}</span>
         <span style="font-size:14px;font-weight:700;">${ss.weight?ss.weight+'kg':'—'}</span>
         <span style="font-size:13px;color:var(--text2);">× ${ss.reps||'?'}</span>
-        ${ss.warmup?`<span style="font-size:10px;color:var(--orange);font-weight:700;margin-left:auto;">Warmup</span>`:ss.technique?`<span style="font-size:10px;color:var(--c-purple);font-weight:700;margin-left:auto;">Technique</span>`:''}
+        ${ss.warmup?`<span style="font-size:10px;color:var(--orange);font-weight:700;margin-left:auto;">Warm-up</span>`:ss.technique?`<span style="font-size:10px;color:var(--c-purple);font-weight:700;margin-left:auto;">Technique</span>`:''}
       </div>`).join('')}
     </div>`;
   }).join('')}
   <div style="margin-top:8px;">
     <label class="modal-label">Session Notes</label>
     <textarea class="modal-input" id="session-notes-input" placeholder="Add notes…" rows="3" style="resize:vertical;">${esc(s.notes||'')}</textarea>
-    <button class="btn-secondary" onclick="saveSessionNotes(${sessionIdx})">Save Notes</button>
+    <button class="btn-secondary" onclick="saveSessionNotes(${sessionIdx})">Save notes</button>
   </div>`;
   document.getElementById('session-detail-content').innerHTML=html;
   openModal('session-detail-modal');
@@ -14038,7 +14045,7 @@ function _oldRenderWeekPlanSection(){
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header">
       <span class="chart-card-title">Training Plan</span>
-      <button onclick="toggleWeekPlanEditor()" id="wplan-edit-btn" style="padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">${plan?'Edit':'Set Plan'}</button>
+      <button onclick="toggleWeekPlanEditor()" id="wplan-edit-btn" style="padding:5px 12px;border-radius:14px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">${plan?'Edit':'Set Plan'}</button>
     </div>
     ${plan?`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">${summary}</div>`:`<div style="font-size:13px;color:var(--text3);padding:4px 0 8px;">No plan set. Tap Set Plan to assign workout types to each day.</div>`}
     ${(()=>{const c=getTemplateConflicts();return c.length?`<div class="plan-checks"><div class="plan-checks-h">Plan check</div>${c.map(x=>`<p>${esc(x.text)}</p>`).join('')}</div>`:(plan?`<div class="plan-checks ok">Plan check: no clashes between runs and leg days.${legsByRunning()?' Legs are covered by running, so the gym rotation is Push/Pull.':''}</div>`:'');})()}
@@ -14429,7 +14436,7 @@ function renderExerciseLibrary(){
     <div class="chart-card" style="margin-bottom:10px;">
       <div class="chart-card-header">
         <span class="chart-card-title">Exercise Library</span>
-        <button onclick="openLibraryAddEx()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button>
+        <button onclick="openLibraryAddEx()" style="padding:6px 14px;border-radius:16px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button>
       </div>
       <input id="lib-search" class="modal-input" placeholder="Search exercises…" style="margin-bottom:12px;" oninput="renderExerciseLibrary()" value="${esc(searchVal)}">
       ${sections||`<div style="font-size:13px;color:var(--text3);padding:12px 0;">No exercises found.</div>`}

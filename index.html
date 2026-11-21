@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="98">
+<meta name="app-version" content="99">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -7184,7 +7184,7 @@ function openGymSummary(idx){
   const exs=(s.exercises||[]);
   const work=e=>(e.sets||[]).filter(x=>!x.warmup);
   const totalSets=exs.reduce((a,e)=>a+work(e).length,0);
-  const mins=s.ts&&s.endTs&&s.endTs>s.ts?Math.round((s.endTs-s.ts)/60000):null;
+  const _m=s.ts&&s.endTs&&s.endTs>s.ts?Math.round((s.endTs-s.ts)/60000):null,mins=_m>=10&&_m<=180?_m:null; // a session saved after the fact has no real duration
   const topSet=e=>{
     const ws=work(e);if(!ws.length)return'';
     const best=ws.slice().sort((a,b)=>(parseFloat(b.weight)||0)-(parseFloat(a.weight)||0)||(parseFloat(b.reps)||0)-(parseFloat(a.reps)||0))[0];
@@ -9001,7 +9001,7 @@ function renderMeOverview(){
   const now=today(),y0=`${now.getFullYear()}-01-01`,mon=dk(getMonday(now));
   const yr=runs.filter(r=>r.date>=y0),yrGym=gym.filter(s=>s.date>=y0);
   const km=a=>a.reduce((t,r)=>t+(parseFloat(r.km)||0),0);
-  const yrSecs=yr.reduce((t,r)=>t+parseTimeToSecs(r.time),0)+yrGym.reduce((t,s)=>t+(s.ts&&s.endTs&&s.endTs>s.ts&&s.endTs-s.ts<5*3600e3?(s.endTs-s.ts)/1000:0),0);
+  const yrSecs=yr.reduce((t,r)=>t+parseTimeToSecs(r.time),0)+yrGym.reduce((t,s)=>t+(s.ts&&s.endTs&&s.endTs-s.ts>=600e3&&s.endTs-s.ts<5*3600e3?(s.endTs-s.ts)/1000:0),0);
   const first=[...runs,...gym].map(x=>x.date).filter(Boolean).sort()[0];
   const wkRuns=runs.filter(r=>r.date>=mon),wkGym=gym.filter(s=>s.date>=mon);
   const nm=state.userName||'';

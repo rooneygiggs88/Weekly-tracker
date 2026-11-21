@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="104">
+<meta name="app-version" content="105">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -2805,6 +2805,8 @@ function renderRaceMode(){
   if(!r||!r.date||!(+r.km>0)){el.innerHTML=rep;return;}
   const d=daysUntil(r.date);
   const runs=loadRunData();
+  // Raced and logged it today: the report, not the pre-race plan.
+  if(d===0&&rep){el.innerHTML=rep;return;}
   if(d<0){
     const logged=runs.some(x=>x.date===r.date);
     el.innerHTML=d>=-3&&!logged?`<button class="rm-after" onclick="showPage('train');switchTrainTab('run');selectRunDay('${r.date}');setTimeout(()=>selectEffort('Race'),60)"><span class="rm-flag">${svgIcon('flag',26)}</span><span><b>How did ${esc(r.name||'the race')} go?</b><span>Log your result and your predictions, PBs and trophies update.</span></span><span class="brief-go">›</span></button>`:'';
@@ -3092,7 +3094,7 @@ function renderRunCoachCard(){
       ${P.why?`<p class="rc-p" style="margin-top:10px;"><b>Why today:</b> ${P.why}</p>`:''}
       ${easyDay&&hard?`<p class="rc-p"><b>Readiness says ${esc(rd.state.label.toLowerCase())}:</b> run it all easy today; the coach will move the quality to a better day once you log this morning's check-in.</p>`:''}
       <div id="rc-wx"></div>
-      <p class="rc-p">${left} ${coachWeekAdvice(P.yw,false).trim()}</p>
+      <p class="rc-p">${left}</p>
       <button class="rc-use" onclick="useTodaysRun(${P.km},'${effort}')">Fill in the form with ${P.km} km ${esc((P.title||'run').toLowerCase())}</button>
     </div>`;
   }
@@ -3798,9 +3800,10 @@ function getRunDebriefPlanLines(run){
     const w1=yw.plan&&yw.plan.weeks[1];
     out.push(`Week done: ${fmtKm(yw.weekKm)} of ${Math.round(yw.target)} km.${w1?` Next week: ${w1.target} km${w1.kind==='race'?', race week':w1.kind==='taper'?', a taper':''}.`:''}`);
   }else{
-    const act=yw.active||yw.open||[];
-    const parts=act.map(x=>`${Math.round(x.left)} ${x.type==='Long'?'long':x.type.toLowerCase()}`);
-    out.push(`That leaves ${fmtKm(yw.leftKm)} km this week${parts.length?`: ${parts.join(', ')}`:''}.`);
+    // What's left, as the plan has it: "19 km to go: Sunday's 19 km long run."
+    const cw=getCalendarWeek(0),td=dk(today());
+    const rest=cw?cw.days.filter(d=>d.ds>td).flatMap(d=>(d.planned||[]).filter(x=>x.km&&x.type!=='Race').map(x=>`${DAY_NAMES[d.i]}'s ${x.km} km ${(x.title||x.type).toLowerCase().replace(/^easy$/,'easy run').replace(/^long$/,'long run')}`)):[];
+    out.push(`${fmtKm(yw.leftKm)} km to go this week${rest.length?`: ${rest.length>1?rest.slice(0,-1).join(', ')+' and '+rest[rest.length-1]:rest[0]}`:''}.`);
   }
   const p=getYearGoalProgress();
   if(p&&p.isCurrentYear&&p.remaining>0)out.push(`${Math.round(p.done).toLocaleString('en-GB')} km on the year; ${Math.round(p.remaining)} to go.`);
@@ -6837,7 +6840,7 @@ function renderPRs(){
         ${entries.map(([name,ex],i)=>{
           const isBW=ex.type==='bodyweight';
           return`
-          <div style="padding:12px 16px;${i<entries.length-1?'border-bottom:1px solid var(--border);':''}">
+          <div onclick="openLiftChart(${JSON.stringify(name).replace(/"/g,'&quot;')})" style="cursor:pointer;padding:12px 16px;${i<entries.length-1?'border-bottom:1px solid var(--border);':''}">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
@@ -11740,7 +11743,7 @@ function buildWeekReview(mon){
   let focus='';
   const weakHabit=habits.filter(h=>h.days>=4).sort((a,b)=>a.done/a.days-b.done/b.days)[0];
   if(rec.lowSleep>=3)focus=`Sleep was under 65 on ${rec.lowSleep} nights. Aim for earlier nights, especially before tempo and long runs.`;
-  else if(runHit===false)focus=`Running was ${(runTarget-km).toFixed(1)}km short. That's spread over the rest of the year, so next week's target is a bit higher.`;
+  else if(runHit===false){const nk=(getCalendarWeek(1)||{}).kind;focus=`Running was ${(runTarget-km).toFixed(1)} km short. ${nk==='race'||nk==='taper'||nk==='recovery'?`Next week is ${nk==='race'?'a race week':nk==='taper'?'a taper':'a recovery week'}, so it isn't made up there: it's spread over the weeks after.`:'That\'s spread over the rest of the year, so the coming weeks are a bit bigger.'}`;}
   else if(!gymHit)focus=`Gym was ${gymTarget-gymWk.length} session${gymTarget-gymWk.length===1?'':'s'} short. Pick the days now so they happen.`;
   else if(weakHabit&&weakHabit.done/weakHabit.days<0.5)focus=`${weakHabit.name} was ${weakHabit.done}/${weakHabit.days}. One to tighten up.`;
   else focus='No weak spots. Do the same again.';
@@ -11755,10 +11758,14 @@ function renderWeekReviewBody(r,{showNext}={}){
   if(showNext&&g&&g.year===r.mon.getFullYear()){const p=getYearGoalProgress();if(p)goalLine=` · ${f1(p.remaining)}km to go`;}
   let nextHtml='';
   if(showNext){
-    const w=getYearGoalWeek(1);
-    nextHtml=`<div class="wr-sec"><div class="wr-sec-h">Next week</div>
-      ${w&&w.target>0?`<div class="wr-line"><strong>${f1(w.target)}km:</strong> ${['Long','Tempo','Easy'].map(t=>{const a=w.slots.filter(x=>x.type===t).map(x=>Math.round(x.left));return a.length?`${t} ${a.join(' · ')}`:'';}).filter(Boolean).join(' &nbsp;|&nbsp; ')}</div>`:''}
-      <div class="wr-line">Gym: ${r.gymTarget} sessions</div></div>`;
+    // Next week as the coach has planned it, the same days the Plan card shows.
+    const cw=getCalendarWeek(1);
+    const runs=cw?cw.days.flatMap(d=>(d.planned||[]).filter(x=>x.km).map(x=>`${_CAL_DAY[d.i]} ${x.type==='Race'?esc(x.title||'race'):`${x.km} km ${(x.title||x.type).toLowerCase()}`}`)):[];
+    const gyms=cw?cw.days.filter(d=>d.gym).map(d=>`${_CAL_DAY[d.i]} ${String(d.gym).toLowerCase()}`):[];
+    const tot=cw?Math.round(cw.days.reduce((a,d)=>a+(d.planned||[]).reduce((b,x)=>b+(+x.km||0),0),0)):0;
+    nextHtml=`<div class="wr-sec"><div class="wr-sec-h">Next week${cw&&cw.kind?` · ${({race:'race week',taper:'taper',recovery:'recovery week',build:'build week'})[cw.kind]||''}`:''}</div>
+      ${runs.length?`<div class="wr-line"><strong>${tot} km:</strong> ${runs.join(' · ')}</div>`:''}
+      <div class="wr-line">Gym: ${gyms.length?gyms.join(' · '):'none planned'}</div></div>`;
   }
   return`<div class="wr-verdict">${r.verdict}</div>
     <div class="wr-sec"><div class="wr-sec-h">Running</div>
@@ -13436,6 +13443,48 @@ const GC_READY_LINE={
   pace:'Leave 2–3 reps in the tank on every set and skip PR attempts.',
   recover:'Low readiness: technique work at about 90% of usual weights, or swap for mobility.'};
 function _gcE1rm(w,r){return r===1?w:w*(1+r/30);}
+// ── A LIFT OVER TIME ──
+// Tap a lift in PRs: its best set per session (estimated 1-rep max as the line, top weight
+// as dots), each PR marked, and what the coach would have you lift next time.
+function openLiftChart(name){
+  const nl=name.toLowerCase(),pts=[];
+  loadGymData().forEach(s=>(s.exercises||[]).forEach(e=>{if(!e.name||e.name.toLowerCase()!==nl)return;
+    const ws=(e.sets||[]).filter(x=>!x.warmup&&!x.technique&&+x.reps>0);if(!ws.length)return;
+    const top=ws.reduce((b,x)=>(+x.weight||0)>(+b.weight||0)?x:b,ws[0]);
+    const best=Math.max(...ws.map(x=>_gcE1rm(+x.weight||0,+x.reps)));
+    pts.push({ds:s.date,w:+top.weight||0,r:+top.reps,e:Math.round(best*10)/10,sets:ws.length});}));
+  pts.sort((a,b)=>a.ds.localeCompare(b.ds));
+  if(!pts.length){toastMsg('No sessions logged for this lift yet');return;}
+  const bw=pts.every(p=>!p.w),val=p=>bw?p.r:p.e;
+  let pb=-1;pts.forEach(p=>{p.pr=val(p)>pb;if(p.pr)pb=val(p);});
+  const W=330,H=170,PL=30,PR=10,PT=12,PB=22,cw=W-PL-PR,ch=H-PT-PB;
+  const vs=pts.map(val),mn=Math.min(...vs),mx=Math.max(...vs),pad=(mx-mn)*0.15||2,lo=mn-pad,hi=mx+pad;
+  const x=i=>PL+(pts.length===1?cw/2:i/(pts.length-1)*cw),y=v=>PT+(hi-v)/(hi-lo)*ch;
+  const fmt=ds=>new Date(ds+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}).replace('Sept','Sep');
+  let g=`<line x1="${PL}" y1="${y(mx)}" x2="${W-PR}" y2="${y(mx)}" stroke="var(--border)" stroke-dasharray="3 3"/>`;
+  g+=`<text x="${PL-4}" y="${y(mx)+3}" text-anchor="end" font-size="9" fill="var(--text3)">${Math.round(mx)}</text><text x="${PL-4}" y="${y(mn)+3}" text-anchor="end" font-size="9" fill="var(--text3)">${Math.round(mn)}</text>`;
+  g+=`<path d="${pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(val(p)).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--text2)" stroke-width="2" stroke-linejoin="round"/>`;
+  pts.forEach((p,i)=>{g+=`<circle cx="${x(i).toFixed(1)}" cy="${y(val(p)).toFixed(1)}" r="${p.pr?4.5:3}" fill="${p.pr?'var(--accent)':'var(--surface2)'}" stroke="${p.pr?'var(--text)':'var(--text3)'}" stroke-width="1.5"/>`;});
+  g+=`<text x="${PL}" y="${H-4}" font-size="9" fill="var(--text3)">${fmt(pts[0].ds)}</text><text x="${W-PR}" y="${H-4}" text-anchor="end" font-size="9" fill="var(--text3)">${fmt(pts[pts.length-1].ds)}</text>`;
+  const last=pts[pts.length-1],first=pts[0],sessions=loadGymData();
+  const lastSets=getLastExSets(name,sessions)||[],top=_gcTopLast(lastSets);
+  const tgt=top?getLiftTarget(top,lastSets.some(z=>+z.weight>0),0,lastSets):null;
+  const chg=pts.length>1?Math.round((val(last)/val(first)-1)*100):null;
+  const prs=pts.filter(p=>p.pr).length;
+  document.getElementById('session-detail-content').innerHTML=`
+    <h3>${esc(name)}</h3>
+    <div class="gf-stats" style="margin-bottom:12px;">
+      <div><b>${bw?pb:Math.round(pb)}</b><i>${bw?'best reps':'best e1RM kg'}</i></div>
+      <div><b>${prs}</b><i>PR${prs===1?'':'s'}</i></div>
+      <div><b>${chg==null?'–':(chg>0?'+':'')+chg+'%'}</b><i>since ${fmt(first.ds)}</i></div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;">${g}</svg>
+    <div class="np-foot" style="margin:4px 0 12px;">${bw?'Most reps in a set':'Best set each session as an estimated one-rep max'}; highlighted dots are PRs.</div>
+    ${tgt?`<div class="gx-tgt" style="--lt:${tgt.col};margin-top:0;"><div class="gx-tgt-l"><i>Next time · ${esc(tgt.tag)}</i><b>${tgt.weight!=null?`${+tgt.weight}<small>kg</small> × ${tgt.reps}`:`${tgt.reps}<small> reps</small>`}</b></div>${tgt.note?`<span>${tgt.note}</span>`:''}</div>`:''}
+    <div class="ins-list">${pts.slice(-6).reverse().map(p=>`<div class="ins-line" style="--c:${p.pr?'var(--accent)':'var(--border)'};">${fmt(p.ds)} · ${bw?`${p.r} reps`:`${p.w} kg × ${p.r}`}${p.pr?' · PR':''}<span>${p.sets} working set${p.sets===1?'':'s'}${bw?'':` · e1RM ${p.e} kg`}</span></div>`).join('')}</div>
+    <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('session-detail-modal')">Close</button>`;
+  openModal('session-detail-modal');
+}
 function _gcRound(w){return Math.round(w/2.5)*2.5;}
 function _gcDaysUntil(ds){return Math.round((new Date(ds+'T12:00:00')-new Date(dk(today())+'T12:00:00'))/864e5);}
 function _gcRunName(rt){return rt==='Long'?'long run':(rt||'run').toLowerCase();}

@@ -139,7 +139,7 @@ async function agreements(browser){
     gymFinishNiggle('Shoulder');
     document.querySelector('#gym-finish-content .gf-eff button:nth-child(2)').click();
     const saved=loadGymData();out.fin={n:saved.length-before,effort:saved[saved.length-1].effort,nig:(saved[saved.length-1].niggles||[]).join(),live:document.body.classList.contains('gym-live')};
-    buildGymSession('Push');
+    buildGymSession('Push');showPage('today');out.resume=!!document.querySelector('#gym-resume .gr-bar');showPage('train');switchTrainTab('gym');
     // Race kit: the plan's splits finish on its target, and race mode renders
     const rp=racePacePlan(state.race);out.race=!!rp&&rp.splits[rp.splits.length-1].t===Math.round(rp.target);
     _rmOpen=true;renderRaceMode();out.rm=/Your race plan/.test(document.getElementById('race-mode').innerText);
@@ -158,6 +158,7 @@ async function agreements(browser){
   check(r.wu&&r.wuLogged,'no warm-ups prescribed or logged for the first heavy lift');
   check(r.nudge,'no time nudge when the session runs long');
   check(r.finSheet,'no finish sheet');
+  check(r.resume,'no resume bar on Today for a session in progress');
   check(r.fin.n===1&&r.fin.effort==='Solid'&&r.fin.nig==='Shoulder'&&!r.fin.live,`finish didn't save in one tap: ${JSON.stringify(r.fin)}`);
   if(!r.prog.ctx)check(r.prog.up>60&&r.prog.hold===60,`progression from sets wrong: held -> ${r.prog.up}, fell -> ${r.prog.hold}`);
   check(r.rm,'race mode has no race plan');

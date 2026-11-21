@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="97">
+<meta name="app-version" content="98">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1395,6 +1395,13 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
 .ql-tile.big b{font-size:26px;}
 .tb-text b{font-size:22px;text-transform:uppercase;}
 
+.gr-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0 0 12px;padding:14px 16px;border:none;border-radius:var(--radius);background:var(--surface);color:var(--text);cursor:pointer;text-align:left;position:relative;overflow:hidden;}
+.gr-bar::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent);}
+.gr-bar span{display:flex;flex-direction:column;}
+.gr-bar i{font-style:normal;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.gr-bar b{font-family:var(--display);font-weight:800;font-size:28px;line-height:1;}
+.gr-bar small{font-size:15px;color:var(--text3);}
+.gr-bar em{font-style:normal;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:0.06em;text-transform:uppercase;padding:10px 16px;border-radius:var(--radius-sm);background:var(--accent);color:var(--on-accent);}
 /* Secondary actions: tone, no outline */
 .btn-secondary{border-color:transparent;}
 .ins-list{display:flex;flex-direction:column;margin-top:8px;border-top:1px solid var(--border);}
@@ -1487,6 +1494,7 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
       </div>
     </div>
     <div class="today-greet" id="today-habits"></div>
+    <div id="gym-resume"></div>
     <div id="today-rings"></div>
     <div id="trophy-banner"></div>
     <div id="race-mode"></div>
@@ -4283,8 +4291,18 @@ function renderTodayBrief(){
   el.innerHTML=lines.length?`<div class="brief-card"><div class="brief-h">Coach</div>${lines.map(l=>`<button class="brief-line" onclick="${l.go}"><span class="brief-ic">${svgIcon(l.ic,18)}</span><span class="brief-t">${l.t}</span><span class="brief-go">›</span></button>`).join('')}</div>`:'';
 }
 
+// A gym session left running (via "Leave for now", or the app closed mid-session) gets
+// one tap back in from Today, rather than a hunt through Log > Gym.
+function renderGymResume(){
+  const el=document.getElementById('gym-resume');if(!el)return;
+  if(!gymDraft||!gymDraft.exercises||!gymDraft.exercises.length){el.innerHTML='';return;}
+  const sp=gymSetProgress(),mins=gymElapsedMins();
+  if(mins>360){el.innerHTML='';return;}
+  el.innerHTML=`<button class="gr-bar" onclick="showPage('train');switchTrainTab('gym')"><span><i>${esc(gymDraft.type)} in progress</i><b>${mins}<small> min</small> · ${sp.done}<small>${sp.plan?'/'+sp.plan:''} sets</small></b></span><em>Resume</em></button>`;
+}
 function renderToday(){
   normalizeRaces();
+  renderGymResume();
   renderAvatar();
   renderYearGoalCard();
   renderWeekReviewCard();

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="100">
+<meta name="app-version" content="101">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -991,6 +991,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .today-dbl-order{margin-top:6px;}
 .today-plan-sub{font-size:13px;font-weight:700;letter-spacing:0;color:var(--text2);}
 .today-plan-cta{margin-top:12px;}
+.tp-gymskip{display:block;width:100%;margin-top:4px;padding:8px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
 .tp-gymstart{display:block;width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
 .gn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
 .gf-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:6px;}
@@ -3680,6 +3681,17 @@ function n100Html(){
     <div class="uw-ed-row"><span>Then</span><span class="uw-opts">${o('ret','gentle','Ease back in')}${o('ret','normal','Straight back')}</span></div>
     <button class="today-plan-cta" onclick="applyN100(event)">Ease the plan</button></div>`;
 }
+// No time for the gym today: just today, not a Not-100% block. The coach refits the
+// session into the rest of the week if a day suits, otherwise it waits for next week.
+function skipTodayGym(e){
+  if(e)e.stopPropagation();
+  const td=dk(today());state.gymSkip=state.gymSkip||{};state.gymSkip[td]=true;
+  Object.keys(state.gymSkip).forEach(k=>{if(k<dk(addDays(today(),-14)))delete state.gymSkip[k];});
+  _cwMemo={};saveState();haptic('light');refreshPlanViews();
+  const cw=getCalendarWeek(0),nx=cw&&cw.days.find(d=>d.ds>td&&d.gym);
+  toastUndo(nx?`Gym moved to ${DAY_NAMES[nx.i]}`:'Gym skipped: picks up next week','undoSkipGym()');
+}
+function undoSkipGym(){if(state.gymSkip)delete state.gymSkip[dk(today())];_cwMemo={};saveState();refreshPlanViews();}
 // Move today's run to tomorrow (or the next day this week).
 function moveTodayRun(e){
   if(e)e.stopPropagation();
@@ -3720,7 +3732,7 @@ function renderTodayPlanFromCalendar(readiness){
       <div id="tp-wx"></div>
       ${adv(rTxt)}
       ${d.gym?(()=>{const gt=GYM_PLAN_TYPES.has(d.gym)?d.gym:_coachGymType(),pv=renderCoachGymPreview(gt,true);
-        return pv?`<div class="today-plan-meta" style="margin-top:10px;"><b>Plus ${esc(gt.toLowerCase())}</b>${d.gymWhy?`: ${d.gymWhy.replace(/^\w+day: \w+, /,'').replace(/^\w+day: /,'')}`:''}</div>${pv}<button class="tp-gymstart" onclick="showPage('train');switchTrainTab('gym');setTimeout(()=>buildGymSession('${gt}'),80)">Start the gym session</button>`
+        return pv?`<div class="today-plan-meta" style="margin-top:10px;"><b>Plus ${esc(gt.toLowerCase())}</b>${d.gymWhy?`: ${d.gymWhy.replace(/^\w+day: \w+, /,'').replace(/^\w+day: /,'')}`:''}</div>${pv}<button class="tp-gymstart" onclick="showPage('train');switchTrainTab('gym');setTimeout(()=>buildGymSession('${gt}'),80)">Start the gym session</button><button class="tp-gymskip" onclick="skipTodayGym(event)">No time for the gym today</button>`
           :`<div class="today-plan-meta" style="margin-top:6px;"><b>Plus ${esc(gt.toLowerCase())}</b>: ${d.gym==='Upper body'?'short and light, no legs.':'keep legs light with a key run close.'}</div>`;})():''}
       <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('run');setTimeout(()=>useTodaysRun(${run.km},'${effort}'),80)">Log this run</button>
       <div class="tp-acts"><button onclick="moveTodayRun(event)">Move to tomorrow</button><button onclick="openN100(event)">Not 100%?</button></div>
@@ -3733,7 +3745,7 @@ function renderTodayPlanFromCalendar(readiness){
       ${d.gymWhy?`<div class="tp-why"><b>Why today:</b> ${d.gymWhy}</div>`:''}
       ${adv(rk==='recover'?'Make it mobility instead today.':'')}
       <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('gym');setTimeout(()=>buildGymSession('${gt}'),80)">Start this session</button>
-      <div class="tp-acts"><button onclick="openN100(event)">Not 100%?</button></div>${n100Html()}`;
+      <div class="tp-acts"><button onclick="skipTodayGym(event)">Skip today</button><button onclick="openN100(event)">Not 100%?</button></div>${n100Html()}`;
     const due=(getGymCoachLine()||'').replace(/<[^>]+>/g,'');
     return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">${d.gym==='Gym'?esc(_coachGymType()):GYM_PLAN_TYPES.has(d.gym)?esc(d.gym):'Gym'}${d.gym==='Upper body'?' · upper body':''}</div>
       <div class="today-plan-meta">${due||'A normal session.'} ${doneTxt}</div>
@@ -11037,7 +11049,7 @@ function _coachWeek(o,mode,monK,td){
     const restC=[0,1,2,3,4,5,6].filter(i=>inR(i)&&ds(i)>=td&&!runOn(i));
     const hadRest=[0,1,2,3,4,5,6].some(i=>inR(i)&&ds(i)<td&&!byDay(i).length&&!loggedGym.has(ds(i)));
     const restDay=auto&&!hadRest&&restC.length?restC.sort((a,b)=>((/Long|B2B|Race/.test(typeOn(b-1)||'')||(b===0&&prevKey.includes(-1)))?1:0)-((/Long|B2B|Race/.test(typeOn(a-1)||'')||(a===0&&prevKey.includes(-1)))?1:0))[0]:null;
-    const cand=[0,1,2,3,4,5,6].filter(i=>inR(i)&&ds(i)>=td&&A[i].gym&&i!==restDay&&!loggedGym.has(ds(i))&&!key.has(i)&&ds(i)!==afterRaceDay&&!(raceI!=null&&(i===raceI||i===raceI-1)));
+    const cand=[0,1,2,3,4,5,6].filter(i=>inR(i)&&ds(i)>=td&&A[i].gym&&!(state.gymSkip||{})[ds(i)]&&i!==restDay&&!loggedGym.has(ds(i))&&!key.has(i)&&ds(i)!==afterRaceDay&&!(raceI!=null&&(i===raceI||i===raceI-1)));
     if(restDay!=null)rest.push(restDay);
     const upperOn=i=>kind==='taper'||kind==='race'||key.has(i+1);
     const score=i=>(runOn(i)?0:2)+(upperOn(i)?0:1)+Math.min(3,gapTo(i,gym.map(g=>g.day)));

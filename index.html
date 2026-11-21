@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="101">
+<meta name="app-version" content="102">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -470,6 +470,11 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .np-big span{font-size:13px;font-weight:700;color:var(--text3);}
 .np-bar{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-top:8px;}
 .np-bar div{height:100%;border-radius:4px;}
+.np-bar i{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1px;border-radius:2px;background:var(--text);}
+.np-vs{display:flex;justify-content:space-between;margin-top:10px;font-size:13px;font-weight:600;color:var(--text2);}
+.np-vs b{font-family:var(--display);font-size:20px;font-weight:800;color:var(--text);}
+.np-wk.fut b{color:var(--text3);font-weight:700;}
+.np-wk.now em{color:var(--on-accent)!important;opacity:0.85;}
 .np-ladder{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px;margin-top:12px;}
 .np-wk{padding:6px 7px;border-radius:9px;background:var(--surface2);display:flex;flex-direction:column;}
 .np-wk.now{background:var(--accent);}
@@ -4011,13 +4016,19 @@ function renderNicPlanCard(){
   return`<div class="chart-card np-card">
     <div class="chart-card-header"><span class="chart-card-title">Nicotine plan</span><span class="chart-card-val">${weeksLeft} week${weeksLeft===1?'':'s'} to ${_pbDate(p.quit)}</span></div>
     <div class="np-big"><b>${p.target}</b><span>mg of nicotine a day this week</span></div>
-    <div class="np-bar"><div style="width:${pct.toFixed(0)}%;background:${on===false?'var(--orange)':'var(--green)'};"></div></div>
-    <p class="np-p">${puffLine} ${p.wk?`This week so far: <b>${_r1(p.wk.avg)} mg a day</b>, ${on?'on target':'above target'}.`:'Log today\'s puffs and strength to start the week.'} Next week's target is set from this week's actual, so every day under it brings the next step down.</p>
+    ${p.wk?(()=>{const mx=Math.max(p.wk.avg,p.target)*1.15||1;return`<div class="np-vs"><span>This week so far <b style="color:${on?'var(--green)':'var(--orange)'};">${_r1(p.wk.avg)}</b></span><span>target <b>${p.target}</b></span></div>
+    <div class="np-bar" style="position:relative;"><div style="width:${(p.wk.avg/mx*100).toFixed(0)}%;background:${on?'var(--green)':'var(--orange)'};"></div><i style="left:${(p.target/mx*100).toFixed(0)}%;"></i></div>`;})():''}
+    <p class="np-p">${puffLine} ${p.wk?(on?'You\'re under this week\'s target.':`You're ${_r1(p.wk.avg-p.target)} mg a day over this week's target.`):'Log today\'s puffs and strength to start the week.'} Each Monday the next target is set from what you actually averaged the week before, so the closer you get this week, the lower the next step.</p>
     ${step?`<p class="np-p">${step}</p>`:''}
     ${projTxt?`<p class="np-p">${projTxt}</p>`:''}
     ${p.costPerWeek>0?`<p class="np-p">Saved so far: <b>£${p.saved.toFixed(0)}</b>, against £${p.costPerWeek.toFixed(0)} a week at the start.</p>`:''}
-    <div class="np-ladder">${p.weeks.map(w=>`<div class="np-wk${w.mon===dk(getMonday(today()))?' now':''}"><span>${_pbDate(w.mon)}</span><b>${w.lock!=null?w.lock:'–'}</b><em>${w.act!=null&&w.mon<dk(getMonday(today()))?(w.lock!=null&&w.act<=w.lock+0.05?'✓ ':'')+w.act:''}</em></div>`).join('')}</div>
-    <div class="np-foot">mg a day: target above, actual below. Starting point ${p.startDose} mg${p.startMg?` at ${p.startMg} mg strength`:''}.</div>
+    <div class="np-ladder">${(()=>{const curMon=dk(getMonday(today())),fut=p.weeks.filter(w=>w.mon>curMon).length;let k=0;return p.weeks.map(w=>{
+      const now=w.mon===curMon,future=w.mon>curMon;
+      const tgt=w.lock!=null?w.lock:future?`~${_r1(p.target*(1-(++k)/(fut+1)))}`:'–';
+      const act=now?(p.wk?_r1(p.wk.avg):null):w.act;
+      const ok=act!=null&&w.lock!=null&&act<=w.lock+0.05;
+      return`<div class="np-wk${now?' now':''}${future?' fut':''}"><span>${_pbDate(w.mon)}</span><b>${tgt}</b><em style="${act!=null&&!ok?'color:var(--orange);':''}">${act!=null?(ok?'✓ ':'')+act:''}</em></div>`;}).join('');})()}</div>
+    <div class="np-foot">mg a day. Big number: the target. Small number: what you actually averaged. Weeks ahead (~) are a guide from here to zero; each is fixed on its Monday from the week before. Started at ${p.startDose} mg${p.startMg?` on ${p.startMg} mg strength`:''}.</div>
     <button class="tl-more" onclick="endNicPlan()">End plan</button>
   </div>`;
 }

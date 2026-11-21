@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="103">
+<meta name="app-version" content="104">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -472,6 +472,7 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .np-bar div{height:100%;border-radius:4px;}
 .np-bar i{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1px;border-radius:2px;background:var(--text);}
 .np-vs{display:flex;justify-content:space-between;margin-top:10px;font-size:13px;font-weight:600;color:var(--text2);}
+.np-vs b small{font-size:12px;color:var(--text3);}
 .np-vs b{font-family:var(--display);font-size:20px;font-weight:800;color:var(--text);}
 .np-wk.fut b{color:var(--text3);font-weight:700;}
 .np-wk.now em{color:var(--on-accent)!important;opacity:0.85;}
@@ -4005,6 +4006,11 @@ function renderNicPlanCard(){
   const weeksLeft=Math.max(1,Math.ceil((new Date(p.quit+'T12:00:00')-getMonday(today()))/(7*864e5)));
   // Everything in puffs at your current strength, which is what you can actually count.
   const PF=v=>p.mg?Math.round(v/(p.mg*_NIC_K)/5)*5:_r1(v);
+  // A week where you changed strength can't be summed as puffs at one strength (three days
+  // at 6 mg would show as double at 3 mg), so this week's progress is shown in mg instead.
+  const curMon=dk(getMonday(today()));
+  const mixed=new Set(loadVapingData().filter(x=>x.date>=curMon&&+x.mg>0).map(x=>+x.mg)).size>1;
+  const PW=v=>mixed?`${_r1(v)}<small> mg</small>`:PF(v);
   const puffLine=p.mg?`That's ${p.target} mg of nicotine${p.mg>3?`, or about ${p.puffsAt(p.mg/2)} puffs if you switch to ${p.mg/2} mg`:''}.`:'Log your strength with your puffs to see this as puffs.';
   const step=p.mg&&p.mg>3&&p.wkPuffs?`<b>Easiest win:</b> dropping to ${p.mg/2} mg at your current ${Math.round(p.wkPuffs.avg)} puffs would take you to about ${_r1(p.wkPuffs.avg*(p.mg/2)*_NIC_K)} mg a day, without changing the habit at all.`:'';
   let projTxt='';
@@ -4018,9 +4024,9 @@ function renderNicPlanCard(){
   return`<div class="chart-card np-card">
     <div class="chart-card-header"><span class="chart-card-title">Nicotine plan</span><span class="chart-card-val">${weeksLeft} week${weeksLeft===1?'':'s'} to ${_pbDate(p.quit)}</span></div>
     ${p.mg?`<div class="np-big"><b>${p.puffsAt(p.mg)}</b><span>puffs a day this week, at ${p.mg} mg</span></div>`:`<div class="np-big"><b>${p.target}</b><span>mg of nicotine a day this week</span></div>`}
-    ${p.wk?(()=>{const mx=Math.max(p.wk.avg,p.target)*1.15||1;return`<div class="np-vs"><span>This week so far <b style="color:${on?'var(--green)':'var(--orange)'};">${PF(p.wk.avg)}</b></span><span>target <b>${PF(p.target)}</b></span></div>
+    ${p.wk?(()=>{const mx=Math.max(p.wk.avg,p.target)*1.15||1;return`<div class="np-vs"><span>This week so far <b style="color:${on?'var(--green)':'var(--orange)'};">${PW(p.wk.avg)}</b></span><span>target <b>${PW(p.target)}</b></span></div>${mixed?`<div class="np-foot" style="margin-top:4px;">You changed strength this week, so this week is shown as nicotine (mg). Puff targets are at ${p.mg} mg from here.</div>`:''}
     <div class="np-bar" style="position:relative;"><div style="width:${(p.wk.avg/mx*100).toFixed(0)}%;background:${on?'var(--green)':'var(--orange)'};"></div><i style="left:${(p.target/mx*100).toFixed(0)}%;"></i></div>`;})():''}
-    <p class="np-p">${puffLine} ${p.wk?(on?'You\'re under this week\'s target.':`You're about ${PF(p.wk.avg-p.target)} puffs a day over this week's target.`):'Log today\'s puffs and strength to start the week.'} Each Monday the next target is set from what you actually averaged the week before, so the closer you get this week, the lower the next step.</p>
+    <p class="np-p">${puffLine} ${p.wk?(on?'You\'re under this week\'s target.':mixed?`You're ${_r1(p.wk.avg-p.target)} mg a day over this week's target.`:`You're about ${PF(p.wk.avg-p.target)} puffs a day over this week's target.`):'Log today\'s puffs and strength to start the week.'} Each Monday the next target is set from what you actually averaged the week before, so the closer you get this week, the lower the next step.</p>
     ${step?`<p class="np-p">${step}</p>`:''}
     ${projTxt?`<p class="np-p">${projTxt}</p>`:''}
     ${p.costPerWeek>0?`<p class="np-p">Saved so far: <b>£${p.saved.toFixed(0)}</b>, against £${p.costPerWeek.toFixed(0)} a week at the start.</p>`:''}
@@ -4028,7 +4034,7 @@ function renderNicPlanCard(){
       const now=w.mon===curMon,future=w.mon>curMon;
       const tgtV=w.lock!=null?w.lock:future?p.target*(1-(++k)/(fut+1)):null;
       const tgt=tgtV==null?'–':(future&&w.lock==null?'~':'')+PF(tgtV);
-      const actV=now?(p.wk?p.wk.avg:null):w.act,act=actV!=null?PF(actV):null;
+      const actV=now?(p.wk?p.wk.avg:null):w.act,act=actV!=null?(now&&mixed?_r1(actV)+' mg':PF(actV)):null;
       const ok=actV!=null&&w.lock!=null&&actV<=w.lock+0.05;
       return`<div class="np-wk${now?' now':''}${future?' fut':''}"><span>${_pbDate(w.mon)}</span><b>${tgt}</b><em style="${act!=null&&!ok?'color:var(--orange);':''}">${act!=null?(ok?'✓ ':'')+act:''}</em></div>`;}).join('');})()}</div>
     <div class="np-foot">${p.mg?`Puffs a day at ${p.mg} mg`:'mg a day'}. Big number: the target. Small number: what you actually averaged. Weeks ahead (~) are a guide from here to zero; each is fixed on its Monday from the week before. Started at ${p.startDose} mg${p.startMg?` on ${p.startMg} mg strength`:''}.</div>

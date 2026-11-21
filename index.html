@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="95">
+<meta name="app-version" content="96">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -863,8 +863,8 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .week-plan-day{display:flex;flex-direction:column;align-items:center;gap:4px;}
 .week-plan-day-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);}
 .week-plan-pill{width:100%;padding:6px 2px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.week-plan-pill.active-push{background:rgba(232,14,14,0.15);border-color:rgba(232,14,14,0.4);color:var(--c-red);}
-.week-plan-pill.active-pull{background:color-mix(in srgb,var(--accent) 15%,transparent);border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent2);}
+.week-plan-pill.active-push{background:color-mix(in srgb,var(--c-indigo) 16%,transparent);border-color:transparent;color:var(--c-indigo);}
+.week-plan-pill.active-pull{background:color-mix(in srgb,var(--c-pink) 14%,transparent);border-color:transparent;color:var(--c-pink);}
 .week-plan-pill.active-legs{background:rgba(8,132,91,0.15);border-color:rgba(8,132,91,0.4);color:var(--green);}
 .week-plan-pill.active-core{background:rgba(144,109,1,0.15);border-color:rgba(144,109,1,0.4);color:var(--c-gold);}
 .week-plan-pill.active-custom{background:rgba(131,78,250,0.15);border-color:rgba(131,78,250,0.4);color:var(--c-purple);}
@@ -1395,6 +1395,13 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
 .ql-tile.big b{font-size:26px;}
 .tb-text b{font-size:22px;text-transform:uppercase;}
 
+/* Secondary actions: tone, no outline */
+.btn-secondary{border-color:transparent;}
+.ins-list{display:flex;flex-direction:column;margin-top:8px;border-top:1px solid var(--border);}
+.ins-line{position:relative;padding:10px 0 10px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;line-height:1.4;color:var(--text);}
+.ins-line::before{content:'';position:absolute;left:2px;top:15px;width:8px;height:8px;border-radius:50%;background:var(--c);}
+.ins-line:last-child{border-bottom:none;}
+.ins-line span{display:block;font-size:12px;font-weight:500;color:var(--text3);margin-top:2px;}
 /* Volt: the one signature colour */
 .nav{border-top:none;}
 .nav-btn{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;}
@@ -1647,7 +1654,7 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
 <div class="modal-overlay" id="compare-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>Compare Sessions</h3>
+    <h3>Compare sessions</h3>
     <label class="modal-label">Session A</label>
     <select class="modal-input" id="compare-a" style="appearance:auto;"></select>
     <label class="modal-label">Session B</label>
@@ -4406,7 +4413,7 @@ function renderToday(){
   // Week strip
   const stripEl=document.getElementById('week-strip');
   stripEl.innerHTML='';
-  const planTypeColor={Push:'var(--c-red)',Pull:'var(--accent2)',Legs:'var(--green)',Core:'var(--c-gold)',Custom:'var(--c-purple)',Run:'var(--c-teal)'};
+  const planTypeColor={Push:'var(--c-indigo)',Pull:'var(--c-pink)',Legs:'var(--green)',Core:'var(--c-gold)',Custom:'var(--c-purple)',Run:'var(--c-teal)'};
   ['M','T','W','T','F','S','S'].forEach((lbl,i)=>{
     const d=addDays(baseMonday,i);
     const dds=dk(d);
@@ -4916,8 +4923,8 @@ function renderGymTypeSelector(){
       <div class="today-plan-type" style="margin-bottom:6px;">${esc(planType)}</div>
       ${planGymSession(planType)?renderCoachGymPreview(planType):renderPlanExercisePreview(planType)}
       <div style="display:flex;gap:8px;margin-top:12px;">
-        <button class="btn-primary" style="flex:1;" onclick="${planGymSession(planType)?`buildGymSession('${planType}')`:`gymStartPlanType('${planType}')`}">${planGymSession(planType)?'Start the coach\'s session':`Start ${esc(planType)}`}</button>
-        <button onclick="gymPlanSuperset()" title="Superset mode" style="padding:0 16px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--display);letter-spacing:0.04em;">SS</button>
+        <button class="btn-primary" style="flex:1;" onclick="${planGymSession(planType)?`buildGymSession('${planType}')`:`gymStartPlanType('${planType}')`}">${planGymSession(planType)?'Start session':`Start ${esc(planType)}`}</button>
+        <button onclick="gymPlanSuperset()" title="Superset mode" style="padding:0 16px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--display);letter-spacing:0.04em;font-size:12px;line-height:1.05;">SUPER<br>SET</button>
       </div>
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair</div>`:''}
       ${!_gymSupersetMode&&!planGymSession(planType)&&canBuildGymSession(planType)?`<button class="btn-secondary gc-build" style="width:100%;margin-top:8px;" onclick="buildGymSession('${planType}')">Build today's ${esc(planType)}<span>last session's lifts, with today's targets</span></button>`:''}
@@ -6197,13 +6204,12 @@ function renderRunSection(){
     <label>Notes (optional)</label>
     <input class="run-field" type="text" id="run-note" placeholder="How did it feel?">
     <div style="height:16px;"></div>
-    <button class="btn-primary" onclick="saveRun()">Save Run</button>
+    <button class="btn-primary" onclick="saveRun()">Save run</button>
   </div>
-  ${renderRunProgressCard()}
   ${last?`<div class="chart-card" onclick="showPage('trends');switchTrendsTab('running');" style="cursor:pointer;">
     <div class="chart-card-header"><span class="chart-card-title">Last Run</span><span style="font-size:11px;color:var(--accent2);font-weight:700;">View all →</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div><div style="font-size:22px;font-weight:800;letter-spacing:-1px;">${last.km?fmtKm(last.km)+'<span style="font-size:14px;font-weight:600;margin-left:2px;">km</span>':last.time||'—'}</div><div style="font-size:12px;color:var(--text3);margin-top:3px;">${last.date}${last.effort?' · '+last.effort:''}</div></div>
+      <div><div style="font-size:22px;font-weight:800;letter-spacing:-1px;">${last.km?fmtKm(last.km)+'<span style="font-size:14px;font-weight:600;margin-left:2px;">km</span>':last.time||'—'}</div><div style="font-size:12px;color:var(--text3);margin-top:3px;">${new Date(last.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}${last.effort?' · '+esc(last.effort):''}</div></div>
       ${last.km&&last.time?`<div style="text-align:right;"><div style="font-size:18px;font-weight:800;color:var(--accent2);">${fmtPace(last.km/parseTimeToSecs(last.time))}</div><div style="font-size:11px;color:var(--text3);">avg pace</div></div>`:''}
     </div></div>`:''}
 `;
@@ -6368,7 +6374,7 @@ function renderTrainHistory(){
   const all=[...gymData.map((s,i)=>({...s,_t:'gym',_idx:i})),...runData.map((r,i)=>({...r,_t:'run',_idx:i}))]
     .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(!all.length){el.innerHTML=`<div class="empty-state"><strong>No history yet</strong>Log a session to see it here.</div>`;return;}
-  const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare Sessions</button>`:'';
+  const compareBtn=gymCount>=2?`<button class="btn-secondary" onclick="openCompareModal()" style="margin-bottom:10px;">Compare sessions</button>`:'';
   const rows=all.map((e,ri)=>{
     const id=`${e._t}-${e._idx}-${e.date}`;
     const expanded=_expandedHistoryId===id;
@@ -6420,7 +6426,7 @@ function renderTrainHistory(){
         <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleHistoryRow('${id}')">
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              ${sessionTypeTag('Run')}
+              ${e.effort?'':sessionTypeTag('Run')}
               ${e.effort?`<span style="padding:3px 9px;border-radius:20px;background:${effortStyle(e.effort).bg};font-size:11px;font-weight:700;color:${effortStyle(e.effort).text};">${esc(e.effort)}</span>`:''}
               <span style="font-size:12px;color:var(--text3);">${dateLabel}</span>
             </div>
@@ -6789,7 +6795,7 @@ function renderPRs(){
               </div>
               <div style="text-align:right;flex-shrink:0;">
                 <div style="display:flex;align-items:baseline;justify-content:flex-end;">
-                  <div style="font-size:22px;font-weight:800;color:var(--green);line-height:1;">${isBW?`${ex.pb.reps} reps`:`${ex.pb.weight}kg`}</div>
+                  <div style="font-family:var(--display);font-size:28px;font-weight:800;color:var(--text);line-height:1;">${isBW?`${ex.pb.reps}<span style="font-size:14px;color:var(--text3);"> reps</span>`:`${ex.pb.weight}<span style="font-size:14px;color:var(--text3);">kg</span>`}</div>
                   ${trendArrow(ex.trendDelta)}
                 </div>
                 <div style="font-size:11px;color:var(--text3);margin-top:2px;">${isBW?fmtD(ex.pb.date):`× ${ex.pb.reps} reps · ${fmtD(ex.pb.date)}`}</div>
@@ -6859,7 +6865,7 @@ function renderTrends(){
   const streakHtml=streak>0?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--orange);"><div style="font-size:13px;font-weight:700;color:var(--text);">${streak} week${streak>1?'s':''} running — every weekly session target hit</div></div>`:'';
 
   const vsAvg=getWeekVsAverage();
-  const vsAvgLine=(field,pct)=>pct==null?'':`<span style="color:${pct>=0?'var(--green)':'var(--red)'};">${pct>=0?'+':''}${pct}% vs your ${field} avg</span>`;
+  const vsAvgLine=(field,pct)=>pct==null?'':pct<=-100?`<span style="color:var(--text3);">none yet this week</span>`:`<span style="color:${pct>=0?'var(--green)':'var(--text3)'};">${pct>=0?'+':''}${pct}% vs your ${field} avg${pct<0?' so far':''}</span>`;
   // Headline numbers first: this week's training, readiness and fitness. Then sections
   // grouped by the question each answers.
   const rdWeek=[];for(let i=0;i<7;i++){const r=computeReadiness(dk(addDays(now,-i)));if(r.score!=null)rdWeek.push(r.score);}
@@ -6978,7 +6984,7 @@ function renderRunProgressCard(){
   wk.forEach((w,i)=>{g+=`<rect x="${(x(i)-slot/2).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}" fill="transparent" style="cursor:pointer" onclick="rpSelect(${i})"><title>${w.km.toFixed(1)} km</title></rect>`;});
 
   return`<div class="chart-card rp-card">
-    <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;margin-bottom:12px;">${title}</div>
+    <div class="chart-card-header" style="margin-bottom:12px;"><span class="chart-card-title">${title}</span></div>
     <div style="display:grid;grid-template-columns:repeat(3,auto);justify-content:start;gap:24px;margin-bottom:18px;">
       ${stat('Distance',sel.km?fmtKm(sel.km):'0','km')}${stat('Time',timeStr)}${stat('Pace',sel.pace?fmtPace(sel.pace).replace('/km',''):'—',sel.pace?'/km':'')}
     </div>
@@ -7594,15 +7600,12 @@ function renderTrendsRunAnalysis(){
         <svg width="140" height="140" viewBox="0 0 140 140" style="flex-shrink:0;">
           <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--border)" stroke-width="${stroke}"/>
           ${arcs}
-          <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="22" font-weight="800" fill="var(--text)" font-family="-apple-system,sans-serif">${total}</text>
-          <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--text3)" font-family="-apple-system,sans-serif">RUNS</text>
+          <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="22" font-weight="800" fill="var(--text)" font-family="var(--display)">${Math.round(total).toLocaleString('en-GB')}</text>
+          <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--text3)" font-family="var(--display)" letter-spacing="1">KM</text>
         </svg>
         <div style="flex:1;padding-left:16px;">${legend}</div>
       </div>
-      <div style="padding:8px 10px;border-radius:8px;background:${tint(balance.col,9)};border:1px solid ${tint(balance.col,27)};margin-top:4px;">
-        <div style="font-size:11px;font-weight:700;color:${balance.col};line-height:1.4;">${balance.msg}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px;">Aim for ~80% easy, 20% quality</div>
-      </div>
+      <div class="ins-list"><div class="ins-line" style="--c:${balance.col};">${balance.msg.replace(/ ✓$/,'')}<span>Aim for about 80% easy, 20% quality</span></div></div>
     </div>`;
   })();
 
@@ -7664,7 +7667,7 @@ function renderTrendsRunAnalysis(){
     ${runs.length>5?`<button onclick="openRunLogModal()" style="width:100%;margin-top:10px;padding:9px;background:none;border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">View all ${runs.length} runs</button>`:''}
   </div>`;
 
-  return renderRunTrendsCoach(runs)+paceInsightHtml()+renderRunProgressCard()+summary+renderRunPBCard(runs)+renderPaceTrendCard(runs)+renderAerobicFitnessCard(runs)+renderRacePredictorCard(runs)+effortChart+longRunChart+renderWhatMovesCard('Running')+runLog;
+  return renderRunTrendsCoach(runs)+paceInsightHtml()+renderRunProgressCard()+summary+renderPaceTrendCard(runs)+renderAerobicFitnessCard(runs)+renderRacePredictorCard(runs)+effortChart+longRunChart+renderWhatMovesCard('Running')+runLog;
 }
 
 // Weeks (of the last 12) that had at least one gym session, trimmed so leading
@@ -7710,8 +7713,8 @@ function renderMuscleBalanceCard(gym,weekCount){
       :ppRatio>1.0
         ?{msg:`Push:pull ${ppStr}:1 — slightly more pushing than pulling. Add 1–2 more pull sets`,col:'var(--orange)'}
         :ppRatio<0.55
-          ?{msg:`Push:pull ${ppStr}:1 — you're pulling significantly more than pushing. Great for shoulder health ✓`,col:'var(--green)'}
-          :{msg:`Push:pull ${ppStr}:1 — well balanced ✓`,col:'var(--green)'};
+          ?{msg:`Push:pull ${ppStr}:1 — you're pulling significantly more than pushing. Great for shoulder health`,col:'var(--green)'}
+          :{msg:`Push:pull ${ppStr}:1 — well balanced`,col:'var(--green)'};
   // Upper / lower split
   const upperSets=pushSets+pullSets+(muscleTotals.Core||0);
   const lowerSets=(muscleTotals.Legs||0)+(muscleTotals.Hamstrings||0);
@@ -7725,7 +7728,7 @@ function renderMuscleBalanceCard(gym,weekCount){
       ?{msg:`Upper:lower split ${upperPct}%:${lowerPct}% — leg volume very low. Aim for 25–30% lower`,col:'var(--orange)'}
       :lowerPct<25
         ?{msg:`Upper:lower split ${upperPct}%:${lowerPct}% — could do with more leg work`,col:'var(--text3)'}
-        :{msg:`Upper:lower split ${upperPct}%:${lowerPct}% — solid balance ✓`,col:'var(--green)'};
+        :{msg:`Upper:lower split ${upperPct}%:${lowerPct}% — solid balance`,col:'var(--green)'};
   // Biceps : triceps
   const bicSets=muscleTotals.Biceps||0;
   const triSets=muscleTotals.Triceps||0;
@@ -7759,7 +7762,7 @@ function renderMuscleBalanceCard(gym,weekCount){
   if(biTriMsg)focusParts.push(bicSets>triSets?'Triceps':'Biceps');
   if(ppRatio!==null&&ppRatio>1.0)focusParts.push('Pulling');
   const focusSuggestion=focusParts.length?`Next session focus: ${focusParts.join(' + ')}`:null;
-  const insightPill=(msg,col)=>`<div style="padding:8px 10px;border-radius:8px;background:${tint(col,9)};border:1px solid ${tint(col,27)};"><div style="font-size:11px;font-weight:700;color:${col};">${msg}</div></div>`;
+  const insightPill=(msg,col)=>`<div class="ins-line" style="--c:${col};">${msg}</div>`;
   return `<div class="chart-card">
     <div class="chart-card-header"><span class="chart-card-title">Muscle Balance</span></div>
     <div style="display:flex;align-items:center;padding:8px 0;">
@@ -7771,14 +7774,14 @@ function renderMuscleBalanceCard(gym,weekCount){
       </svg>
       <div style="flex:1;padding-left:14px;">${legend}</div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+    <div class="ins-list">
       ${insightPill(ppMsg.msg,ppMsg.col)}
-      ${insightPill(ulMsg.msg,ulMsg.col)}
+      ${legsByRunning()?'':insightPill(ulMsg.msg,ulMsg.col)}
       ${biTriMsg?insightPill(biTriMsg.msg,biTriMsg.col):''}
       ${qhMsg?insightPill(qhMsg.msg,qhMsg.col):''}
       ${freqMsg?insightPill(freqMsg.msg,freqMsg.col):''}
       ${notHitThisWeek.length>0&&twGymSessions.length>0?insightPill(`Not hit this week: ${notHitThisWeek.join(', ')}`, 'var(--text3)'):''}
-      ${focusSuggestion?`<div style="padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--accent) 8%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);"><div style="font-size:11px;font-weight:700;color:var(--accent2);">→ ${focusSuggestion}</div></div>`:''}
+      ${focusSuggestion&&!planGymSession(_coachGymType())?insightPill(focusSuggestion,'var(--text)'):''}
     </div>
   </div>`;
 }
@@ -7838,7 +7841,7 @@ function renderTrendsGymAnalysis(){
       const col=isBest?'var(--green)':color;
       svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${isBest||isLast?5:3}" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
       {const anchor=i===0?'start':i===pts.length-1?'end':'middle';const labelCol=isBest?'var(--green)':isLast?'var(--text)':'var(--text3)';svg+=`<text x="${cx.toFixed(1)}" y="${(cy-9).toFixed(1)}" text-anchor="${anchor}" font-size="8.5" fill="${labelCol}" font-family="-apple-system,sans-serif" font-weight="${isBest||isLast?'800':'700'}">${Math.round(p.y)}</text>`;}
-      svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${i===0?'start':i===pts.length-1?'end':'middle'}" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${p.x}</text>`;
+      if(pts.length<=8||(pts.length-1-i)%2===0)svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${i===0?'start':i===pts.length-1?'end':'middle'}" font-size="7.5" fill="var(--text3)" font-family="-apple-system,sans-serif" font-weight="600">${p.x}</text>`;
     });
     return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;height:${H}px;overflow:visible;">${svg}</svg>`;
   }
@@ -7943,9 +7946,7 @@ function renderGymEffortBalance(gym){
       </svg>
       <div style="flex:1;padding-left:16px;">${legend}</div>
     </div>
-    <div style="padding:8px 10px;border-radius:8px;background:${tint(balance.col,9)};border:1px solid ${tint(balance.col,27)};margin-top:4px;">
-      <div style="font-size:11px;font-weight:700;color:${balance.col};line-height:1.4;">${balance.msg}</div>
-    </div>
+    <div class="ins-list"><div class="ins-line" style="--c:${balance.col};">${balance.msg.replace(/ ✓$/,'')}</div></div>
   </div>`;
 }
 
@@ -8065,10 +8066,11 @@ function renderWeeklyTrendChart(){
   const pts=pcts.map((p,i)=>`${((i/(n-1))*W).toFixed(1)},${(H-p/100*(H-8)).toFixed(1)}`).join(' ');
   const avgY=(H-avg/100*(H-8)).toFixed(1);
   // Axis month labels — show month name when month changes
+  let _lastAx=-99;
   const axisLabels=validWeeks.map((w,i)=>{
     if(i===0||w.mon.getMonth()!==validWeeks[i-1].mon.getMonth()){
-      const x=(i/(n-1))*W;
-      return`<text x="${x.toFixed(1)}" y="${H+18}" fill="var(--text3)" font-size="9" font-family="-apple-system,sans-serif">${w.mon.toLocaleDateString('en-GB',{month:'short'})}</text>`;
+      const x=(i/(n-1))*W;if(x-_lastAx<26)return'';_lastAx=x;
+      return`<text x="${x.toFixed(1)}" y="${H+18}" fill="var(--text3)" font-size="9" font-family="-apple-system,sans-serif">${w.mon.toLocaleDateString('en-GB',{month:'short'}).replace('Sept','Sep')}</text>`;
     }return'';
   }).join('');
   // Filter pills
@@ -8959,7 +8961,7 @@ function renderMe(){
 
   el.innerHTML=tabs+`
     ${renderFitnessAgeCard()}
-    <button class="me-moved" onclick="showPage('trends');switchTrendsTab('wellness')"><span>${svgIcon('scale',22)}</span><span><b>Weight, body fat &amp; nicotine</b> now live in Trends → Wellness, alongside sleep and recovery.</span><span class="brief-go">›</span></button>
+
     ${renderRaceSection()}
     ${renderWeekPlanSection()}
     ${renderCustomGoalsList()}
@@ -9008,7 +9010,6 @@ function renderMeOverview(){
   return`${hero}
     ${renderMeSnapshot()}
     ${sec('Last 12 weeks')}
-    ${renderRunProgressCard()}
     ${renderTrainingLogCard()}
     ${sec('Racing')}
     ${renderMeRaceCard()}
@@ -9370,7 +9371,7 @@ function vapingEntryDateLabel(dateStr){
   if(dateStr===todayStr)return'today';
   if(dateStr===yestStr)return'yesterday';
   const dt=new Date(dateStr+'T12:00:00');
-  return`${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;
+  return dt.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
 }
 function renderVapingSection(){
   const data=loadVapingData();
@@ -9507,12 +9508,12 @@ function renderVapingChart(data){
   // Cig equiv rolling avg line (dashed orange, right axis)
   const cigLine=rollingCig.map((v,i)=>`${i===0?'M':'L'}${px(i).toFixed(1)},${pyCig(v).toFixed(1)}`).join(' ');
   svg+=`<path d="${cigLine}" fill="none" stroke="var(--c-rust)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4,3"/>`;
-  // X labels on month change
-  let lastMonth=null;
+  // X labels on month change, skipping one that would sit on top of the last
+  let lastMonth=null,_vxLast=null;
   sorted.forEach((e,i)=>{
     const d=new Date(e.date+'T12:00:00');
-    const month=d.toLocaleDateString('en-GB',{month:'short'});
-    if(month!==lastMonth){lastMonth=month;const cx=px(i);const anchor=i===0?'start':i===sorted.length-1?'end':'middle';svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${anchor}" font-size="8" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;}
+    const month=d.toLocaleDateString('en-GB',{month:'short'}).replace('Sept','Sep');
+    if(month!==lastMonth){lastMonth=month;const cx=px(i);if(cx-(_vxLast??-99)<24)return;_vxLast=cx;const anchor=i===0?'start':i===sorted.length-1?'end':'middle';svg+=`<text x="${cx.toFixed(1)}" y="${(PT+chartH+14).toFixed(1)}" text-anchor="${anchor}" font-size="8" fill="var(--text2)" font-family="-apple-system,sans-serif" font-weight="700">${month}</text>`;}
   });
   const recentAvg=rolling[rolling.length-1];
   const earlyAvg=rolling[0];
@@ -9829,11 +9830,11 @@ function _renderRaceSectionMain(){
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">Race Target</span><button onclick="openRaceModal()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Edit</button></div>
     <div style="font-size:14px;font-weight:800;margin-bottom:4px;">${esc(r.name||'Race')}</div>
-    <div style="font-size:36px;font-weight:800;letter-spacing:-2px;color:${days<=14?'var(--red)':days<=42?'var(--orange)':'var(--text)'};">${days>=0?days:'Past'}<span style="font-size:16px;color:var(--text2);font-weight:600;"> days</span></div>
-    <div style="font-size:13px;color:var(--text3);margin-top:4px;">${r.date}${r.km?' · '+fmtKm(r.km)+'km':''}</div>
+    <div style="font-family:var(--display);font-size:56px;font-weight:800;line-height:0.9;color:var(--text);">${days>=0?days:'Past'}<span style="font-size:20px;color:var(--text3);font-weight:700;"> ${days===1?'day':'days'}</span></div>
+    <div style="font-size:13px;color:var(--text3);margin-top:6px;">${new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}${r.km?' · '+fmtKm(r.km)+' km':''}</div>
     ${(r.goalTime||goalPace)?`<div style="display:flex;gap:8px;margin-top:10px;">
-      ${r.goalTime?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:color-mix(in srgb,var(--accent) 10%,transparent);padding:4px 10px;border-radius:10px;">Goal time: ${esc(r.goalTime)}</span>`:''}
-      ${goalPace?`<span style="font-size:11px;font-weight:700;color:var(--accent2);background:color-mix(in srgb,var(--accent) 10%,transparent);padding:4px 10px;border-radius:10px;">Goal pace: ${goalPace}</span>`:''}
+      ${r.goalTime?`<span style="font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);padding:5px 10px;border-radius:10px;">Goal ${esc(r.goalTime)}</span>`:''}
+      ${goalPace?`<span style="font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);padding:5px 10px;border-radius:10px;">${goalPace}</span>`:''}
     </div>`:''}
     ${projHtml}
     ${planHtml}
@@ -10373,16 +10374,16 @@ function renderMonthlyHistory(){
         <span style="font-size:12px;font-weight:700;color:${pct>=80?'var(--green)':pct>=50?'var(--accent2)':'var(--text3)'};">${pct}% goals</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
-        <div style="text-align:center;background:var(--surface2);border-radius:6px;padding:6px 4px;">
-          <div style="font-size:16px;font-weight:800;">${mGym.length}</div>
+        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 4px;">
+          <div style="font-family:var(--display);font-size:22px;font-weight:800;line-height:1.05;">${mGym.length}</div>
           <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:1px;">Gym</div>
         </div>
-        <div style="text-align:center;background:var(--surface2);border-radius:6px;padding:6px 4px;">
-          <div style="font-size:16px;font-weight:800;">${km.toFixed(0)}<span style="font-size:10px;font-weight:600;margin-left:1px;">km</span></div>
+        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 4px;">
+          <div style="font-family:var(--display);font-size:22px;font-weight:800;line-height:1.05;">${km.toFixed(0)}<span style="font-size:10px;font-weight:600;margin-left:1px;">km</span></div>
           <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:1px;">Run</div>
         </div>
-        <div style="text-align:center;background:var(--surface2);border-radius:6px;padding:6px 4px;overflow:hidden;">
-          <div style="font-size:16px;font-weight:800;">${bestLiftDisplay}</div>
+        <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:8px 4px;overflow:hidden;">
+          <div style="font-family:var(--display);font-size:22px;font-weight:800;line-height:1.05;">${bestLiftDisplay}</div>
           <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(bestLiftLabel)}</div>
         </div>
       </div>
@@ -12554,7 +12555,7 @@ function renderReadinessHero(r,baseMonday){
       <button class="rd-cta" onclick="openMorningModal()">Check in for today</button>
       <button class="rd-cta-2" onclick="openBackfillModal()">Fill in ${missed.length} missed morning${missed.length===1?'':'s'}</button>`:`<div class="rd-card rd-empty" style="--st:var(--accent);">
       <div class="rd-head"><span class="rd-eyebrow">Readiness</span>${info}</div>
-      <div class="rd-empty-title">Morning check-in</div>
+      <div class="rd-empty-title">Morning check&#8209;in</div>
       <div class="rd-empty-desc">Sleep score and HRV from your Garmin Morning Report, resting HR if you have it, and how you feel. About 15 seconds.</div>
       <button class="rd-cta" onclick="openMorningModal()">Check in</button>
       ${load&&load.g!=null?`<div class="rd-loadline">Training load: <strong>${esc(load.value)}</strong>${load.delta?` (${esc(load.delta)} vs your 4-week normal)`:''}</div>`:''}
@@ -14011,21 +14012,21 @@ function renderWeekPlanSection(){
     return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">${availCustom()?'Days you can train':'Your plan'}</span></div>
       <div class="uw-row" style="margin-bottom:10px;">${row}</div>
       <p style="font-size:13px;line-height:1.5;color:var(--text2);margin:0 0 10px;">${availCustom()?'The coach plans each week around these days. Change them on the Plan card on Today.':'No limits set: the coach plans every day of the week for you, rest days included. If there are days you can never train, add them on the Plan card on Today.'}</p>
-      <button class="btn-primary" style="width:100%;" onclick="openUsualWeek()">Edit on Today</button></div>`;
+      <button class="btn-secondary" style="width:100%;" onclick="openUsualWeek()">Edit on Today</button></div>`;
   }
   const has=Array.isArray(state.weekPlan);
   const row=has?nm.map((n,i)=>{const u=_uwDay(i);const m=u.run?(u.run==='Intervals'?'Ints':u.run):u.gym||'Rest';return`<div class="uw-chip ${u.run?u.run.toLowerCase():u.gym?'gym':'rest'}" style="cursor:default;"><span>${n}</span><b>${m}</b><em>${u.run&&u.gym?'+ '+(u.gym==='Gym'?'gym':u.gym.toLowerCase()):''}</em></div>`;}).join(''):'';
   return`<div class="chart-card" style="margin-bottom:10px;"><div class="chart-card-header"><span class="chart-card-title">Your usual week</span></div>
     ${has?`<div class="uw-row" style="margin-bottom:10px;">${row}</div>`:''}
     <p style="font-size:13px;line-height:1.5;color:var(--text2);margin:0 0 10px;">Your week now lives on the Plan card on Today: set your run days, long and tempo days and gym days there, and the coach plans the distances around them.</p>
-    <button class="btn-primary" style="width:100%;" onclick="openUsualWeek()">Edit on Today</button></div>`;
+    <button class="btn-secondary" style="width:100%;" onclick="openUsualWeek()">Edit on Today</button></div>`;
 }
 function openUsualWeek(){showPage('today');_uwSel=null;setTimeout(()=>{const e=document.getElementById('plan-cal-wrap');if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},120);}
 function _oldRenderWeekPlanSection(){
   const plan=state.weekPlan;
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};
-  const planColor={Push:'var(--c-red)',Pull:'var(--accent2)',Legs:'var(--green)',Core:'var(--c-gold)',Custom:'var(--c-purple)',Run:'var(--c-teal)'};
+  const planColor={Push:'var(--c-indigo)',Pull:'var(--c-pink)',Legs:'var(--green)',Core:'var(--c-gold)',Custom:'var(--c-purple)',Run:'var(--c-teal)'};
   const planShort={Push:'PSH',Pull:'PLL',Legs:'LEG',Core:'COR',Custom:'CST',Run:'RUN',Rest:'—',Off:'—'};
   const runTypeShort={Easy:'EZY',Tempo:'TMP',Long:'LNG',Intervals:'INT',Race:'RCE'};
   const summary=plan?days.map((d,i)=>{
@@ -14257,11 +14258,11 @@ function renderVolumeTab(){
   const run=loadRunData();
 
   const periods=[
-    {id:'week',label:'This Week'},
-    {id:'lastweek',label:'Last Week'},
-    {id:'4weeks',label:'4 Weeks'},
-    {id:'8weeks',label:'8 Weeks'},
-    {id:'all',label:'All Time'},
+    {id:'week',label:'This week'},
+    {id:'lastweek',label:'Last week'},
+    {id:'4weeks',label:'4 weeks'},
+    {id:'8weeks',label:'8 weeks'},
+    {id:'all',label:'All time'},
   ];
 
   // Compute date range for selected period + equivalent previous period
@@ -14623,8 +14624,8 @@ function renderMuscleVolume(){
 
 // ── Session type colour map ──
 const SESSION_TYPE_COL={
-  Push:{bg:'rgba(232,14,14,0.12)',border:'rgba(232,14,14,0.35)',text:'var(--c-red)'},
-  Pull:{bg:'color-mix(in srgb,var(--accent) 12%,transparent)',border:'color-mix(in srgb,var(--accent) 35%,transparent)',text:'var(--accent2)'},
+  Push:{bg:'color-mix(in srgb,var(--c-indigo) 16%,transparent)',border:'transparent',text:'var(--c-indigo)'},
+  Pull:{bg:'color-mix(in srgb,var(--c-pink) 14%,transparent)',border:'transparent',text:'var(--c-pink)'},
   Legs:{bg:'rgba(8,132,91,0.12)',border:'rgba(8,132,91,0.35)',text:'var(--green)'},
   Core:{bg:'rgba(144,109,1,0.12)',border:'rgba(144,109,1,0.35)',text:'var(--c-gold)'},
   Custom:{bg:'rgba(131,78,250,0.12)',border:'rgba(131,78,250,0.35)',text:'var(--c-purple)'},
@@ -14632,7 +14633,7 @@ const SESSION_TYPE_COL={
 };
 function sessionTypeTag(type){
   const c=SESSION_TYPE_COL[type]||{bg:'rgba(128,128,168,0.12)',border:'rgba(128,128,168,0.3)',text:'var(--text2)'};
-  return`<span style="display:inline-block;padding:3px 9px;border-radius:20px;background:${c.bg};border:1px solid ${c.border};color:${c.text};font-size:11px;font-weight:800;">${esc(type)}</span>`;
+  return`<span style="display:inline-block;padding:3px 9px;border-radius:20px;background:${c.bg};color:${c.text};font-size:11px;font-weight:800;">${esc(type)}</span>`;
 }
 // ── PATCH train subhead to show today's plan ──
 function updateTrainSubhead(){

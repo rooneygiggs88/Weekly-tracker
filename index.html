@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="94">
+<meta name="app-version" content="95">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -294,8 +294,8 @@ body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',Arial,sans-seri
 .train-header p{font-size:14px;color:var(--text2);font-weight:600;}
 .train-tabs{display:flex;gap:8px;padding:16px 24px;overflow-x:auto;scrollbar-width:none;}
 .train-tabs::-webkit-scrollbar{display:none;}
-.train-tab{flex-shrink:0;padding:8px 18px;border-radius:24px;border:1px solid var(--border);background:var(--surface);font-family:inherit;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.15s;}
-.train-tab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 35%,transparent);}
+.train-tab{flex-shrink:0;padding:8px 18px;border-radius:24px;border:1px solid transparent;background:var(--surface);font-family:inherit;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.15s;}
+.train-tab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
 
 /* Trends page tabs - a single segmented control rather than separate pill buttons,
    since there are always exactly 3 fixed options (unlike Train's tab row). */
@@ -846,7 +846,7 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .anomaly-banner.alert-gym{background:rgba(194,80,0,0.1);border:1px solid rgba(194,80,0,0.3);}
 .anomaly-banner.alert-score{background:rgba(232,14,14,0.1);border:1px solid rgba(232,14,14,0.3);}
 .anomaly-banner.alert-backup{background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);}
-.anomaly-banner-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
+.anomaly-banner-icon{width:8px;height:8px;border-radius:50%;background:var(--orange);flex-shrink:0;margin-top:7px;}
 .anomaly-banner-body{flex:1;}
 .anomaly-banner-title{font-size:13px;font-weight:800;margin-bottom:2px;}
 .anomaly-banner-desc{font-size:12px;font-weight:500;opacity:0.8;}
@@ -992,23 +992,118 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .today-plan-sub{font-size:13px;font-weight:700;letter-spacing:0;color:var(--text2);}
 .today-plan-cta{margin-top:12px;}
 .tp-gymstart{display:block;width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
-.gl-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 10px;border-radius:12px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);backdrop-filter:blur(8px);}
-.gl-l{display:flex;flex-direction:column;min-width:0;flex:1;}
-.gl-l b{font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;line-height:1.1;}
-.gl-l span{font-size:12px;color:var(--text2);font-weight:600;}
-.gl-m{font-family:var(--display);font-weight:800;font-size:15px;color:var(--text2);}
-.gl-menu{border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:10px;width:38px;height:34px;font-size:18px;cursor:pointer;}
-.gl-pop{display:flex;flex-direction:column;gap:6px;margin:-4px 0 10px;padding:8px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);}
-.gl-pop button{text-align:left;padding:10px 12px;border-radius:9px;border:none;background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
-.gl-pop button.danger{color:var(--red);}
-.gl-nudge{margin:-2px 0 10px;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.45;color:var(--text2);background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid color-mix(in srgb,var(--orange) 30%,transparent);}
-.gw{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;padding:8px 10px;border-radius:9px;background:color-mix(in srgb,var(--orange) 9%,transparent);border:1px solid color-mix(in srgb,var(--orange) 28%,transparent);font-size:12.5px;line-height:1.4;color:var(--text2);}
-.gw b{color:var(--text);margin-right:4px;}
-.gw button{flex-shrink:0;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
 .gn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
-.gn-row button{padding:7px 12px;border-radius:18px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.gf-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:6px;}
+.gf-stats>div{display:flex;flex-direction:column;}
+.gf-stats>div+div{border-left:1px solid var(--border);padding-left:14px;}
+.gf-stats b{font-family:var(--display);font-weight:800;font-size:40px;line-height:0.95;font-variant-numeric:tabular-nums;}
+.gf-stats i{font-style:normal;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.gf-eff{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;}
+.gf-eff button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;border:none;border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);cursor:pointer;text-align:left;font-family:inherit;}
+.gf-eff button:active{background:var(--accent);color:var(--on-accent);}
+.gf-eff b{font-family:var(--display);font-weight:800;font-size:24px;text-transform:uppercase;letter-spacing:0.02em;line-height:1;}
+.gf-eff span{font-size:12.5px;font-weight:600;color:var(--text3);}
+.gn-row button{padding:8px 13px;border-radius:18px;border:none;background:var(--surface2);color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 .gn-row button.on{background:var(--orange);border-color:var(--orange);color:#0d0d0d;}
-body.gym-live #page-train .train-header{display:none;}
+body.gym-live #page-train .train-header,body.gym-live #train-tabs,body.gym-live .nav{display:none;}
+/* Gym live, in the Trackside language: a timing board at the top, the exercise as a
+   headline, the target as the big number, sets as a results list. Tone, not outlines;
+   volt only for "this is the thing" (the set you're on, Log set, the progress bar). */
+body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
+.gl-bar{position:sticky;top:0;z-index:20;display:flex;align-items:flex-end;gap:16px;padding:14px 16px 16px;margin:12px 0 14px;border-radius:var(--radius);background:var(--surface);border:none;backdrop-filter:none;overflow:hidden;}
+.gl-l,.gl-m{display:flex;flex-direction:column;min-width:0;}
+.gl-l{flex:1;}
+.gl-l i,.gl-m i,.gx-tgt i,.kp i,.gw i,.rest-next i,.gl-eyebrow{font-style:normal;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.gl-l b,.gl-m b{font-family:var(--display);font-weight:800;font-size:40px;line-height:0.9;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;color:var(--text);}
+.gl-l small,.gl-m small,.gx-tgt small,.gs small,.kp small{font-family:var(--display);font-weight:700;font-size:0.5em;color:var(--text3);letter-spacing:0;margin-left:2px;}
+.gl-m{align-items:flex-end;}
+.gl-menu{align-self:center;border:none;background:var(--surface2);color:var(--text);border-radius:12px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.gl-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--surface2);}
+.gl-prog i{display:block;height:100%;background:var(--accent);transition:width 0.3s;}
+.gl-pop{display:flex;flex-direction:column;gap:0;margin:-6px 0 14px;padding:4px 14px;border-radius:var(--radius);background:var(--surface);border:none;}
+.gl-pop button{text-align:left;padding:13px 0;border:none;border-radius:0;background:none;color:var(--text);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;}
+.gl-pop button+button{border-top:1px solid var(--border);}
+.gl-pop button.danger{color:var(--red);}
+.gl-nudge{margin:-4px 0 14px;padding:11px 14px 11px 16px;border-radius:var(--radius-sm);font-size:13px;line-height:1.45;color:var(--text);background:var(--surface);border:none;position:relative;overflow:hidden;}
+.gl-nudge::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--orange);}
+.gl-eyebrow{text-align:center;margin-bottom:10px;}
+.gl-text{display:block;width:100%;padding:12px;border:none;background:none;color:var(--text2);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:center;}
+.gl-notes{display:block;width:100%;box-sizing:border-box;margin:4px 0 12px;padding:12px 14px;border:none;border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;font-size:15px;resize:vertical;}
+.gx{background:var(--surface);border-radius:var(--radius);padding:18px 16px 16px;margin-bottom:10px;}
+.gx-head{display:flex;align-items:flex-start;gap:8px;}
+.gx-name{flex:1;min-width:0;width:100%;border:none;background:none;padding:0;margin:0;color:var(--text);font-family:var(--display);font-weight:800;font-size:34px;line-height:0.95;text-transform:uppercase;letter-spacing:-0.2px;outline:none;text-overflow:ellipsis;}
+.gx-name{cursor:text;overflow-wrap:anywhere;}
+.gx-in{font-size:26px;text-transform:none;background:var(--surface2);border-radius:10px;padding:6px 10px;}
+.gx-x{flex-shrink:0;width:32px;height:32px;border:none;border-radius:10px;background:var(--surface2);color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.gx-meta{font-size:13px;font-weight:600;color:var(--text2);line-height:1.45;margin-top:6px;}
+.gx-meta em{font-style:normal;font-weight:700;}
+.gx-tgt{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px 12px;margin:14px 0 4px;padding:14px 0 12px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.gx-tgt-l{flex:1;display:flex;flex-direction:column;}
+.gx-tgt-l i{color:var(--lt);}
+.gx-tgt-l b,.gx-tgt-r b{font-family:var(--display);font-weight:800;font-size:46px;line-height:0.9;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;}
+.gx-tgt-r{display:flex;flex-direction:column;align-items:flex-end;}
+.gx-tgt-r b{font-size:32px;color:var(--text2);}
+.gx-tgt>span{flex-basis:100%;font-size:12.5px;font-weight:600;color:var(--text2);line-height:1.4;margin-top:6px;}
+.gw{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:12px 0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;}
+.gw>div{display:flex;flex-direction:column;min-width:0;}
+.gw span{font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);font-variant-numeric:tabular-nums;}
+.gw span em{font-style:normal;color:var(--text3);margin:0 6px;}
+.gw button{flex-shrink:0;padding:9px 12px;border-radius:10px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.gs-list{margin:8px 0 0;}
+.gs{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;position:relative;}
+.gs-n{width:28px;height:28px;flex-shrink:0;border-radius:8px;border:none;background:var(--surface2);color:var(--text3);font-family:var(--display);font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+.gs-t{flex:1;min-width:0;display:flex;flex-direction:column;}
+.gs-t b{font-family:var(--display);font-weight:800;font-size:24px;line-height:1;font-variant-numeric:tabular-nums;color:var(--text);}
+.gs-t span{font-size:12px;font-weight:600;color:var(--text3);margin-top:3px;}
+.gs-t em{font-style:normal;font-weight:700;}
+.gs-t em.up{color:var(--green);}
+.gs-t em.pr{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:0.06em;color:var(--on-accent);background:var(--accent);padding:1px 6px;border-radius:5px;}
+.gs-x{flex-shrink:0;border:none;background:none;color:var(--text3);padding:6px;cursor:pointer;display:flex;}
+.gs.done .gs-n{background:color-mix(in srgb,var(--green) 18%,var(--surface2));color:var(--green);}
+.gs.wu .gs-n{color:var(--orange);}
+.gs.wu .gs-t b,.gs.tq .gs-t b{color:var(--text2);font-size:20px;}
+.gs.tq .gs-n{color:var(--c-purple);}
+.gs.on{background:var(--surface2);margin:0 -16px;padding:12px 16px;border-bottom-color:transparent;}
+.gs.on::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent);}
+.gs.on .gs-n{background:var(--accent);color:var(--on-accent);}
+.gs.on .gs-t b{font-size:30px;}
+.gs.on .gs-t span{color:var(--text2);}
+.gs.todo .gs-t b{color:var(--text3);font-size:20px;}
+.gs.todo .gs-x{visibility:hidden;}
+.kp{margin-top:4px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);}
+.kp-read{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.kp-read>div{display:flex;flex-direction:column;gap:4px;}
+.kp-read b{font-family:var(--display);font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums;color:var(--text);}
+.kp-w b{background:var(--surface);border-radius:10px;padding:8px 10px;text-align:center;}
+.kp-r>div{display:flex;align-items:center;gap:6px;}
+.kp-r b{flex:1;text-align:center;background:var(--surface);border-radius:10px;padding:8px 0;}
+.kp-r button{width:38px;height:56px;flex-shrink:0;border:none;border-radius:10px;background:var(--surface);color:var(--text2);font-family:var(--display);font-size:24px;font-weight:800;cursor:pointer;}
+.kp-pad{display:grid;grid-template-columns:1fr 1fr 1fr 76px;gap:6px;}
+.kp-pad button{background:var(--surface);border:none;border-radius:10px;font-family:var(--display);font-size:26px;font-weight:700;color:var(--text);cursor:pointer;padding:10px 0;display:flex;align-items:center;justify-content:center;}
+.kp-pad button:active{background:var(--border);}
+.kp-pad .kp-log{grid-row:span 4;background:var(--accent);color:var(--on-accent);font-weight:800;font-size:22px;letter-spacing:0.06em;text-transform:uppercase;line-height:1.05;}
+.plate-calc{background:none!important;border:none!important;padding:12px 2px 0!important;margin-top:0!important;}
+.plate-calc-title{font-family:var(--display);font-weight:700;font-size:13px!important;letter-spacing:0.08em;color:var(--text3);}
+.gx-next{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:14px;padding:13px;border:none;border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;}
+.gc-score{gap:0!important;background:var(--surface);border-radius:var(--radius);padding:14px 4px;margin-bottom:12px!important;}
+.gc-score>div{background:none!important;border:none!important;border-radius:0!important;text-align:center;padding:0 6px!important;}
+.gc-score>div+div{border-left:1px solid var(--border)!important;}
+.gc-score b{font-family:var(--display)!important;font-size:26px!important;}
+.gc-score span{font-family:var(--display);font-weight:700;font-size:11.5px!important;letter-spacing:0.08em!important;}
+.gc-callit{border:none!important;background:var(--surface2)!important;border-radius:var(--radius-sm)!important;padding:11px 12px!important;font-size:13px!important;margin:0 0 10px!important;}
+.gc-callit.strong{box-shadow:inset 4px 0 0 var(--st-pace);}
+.gc-callit button{border:none!important;background:var(--surface)!important;color:var(--text)!important;}
+.rest-ring-time{font-family:var(--display);font-weight:800;font-size:84px;letter-spacing:-1px;font-variant-numeric:tabular-nums;}
+.rest-ring-unit{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.1em;}
+.rest-overlay-label{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:0.1em;}
+.rest-btn{border:none;background:var(--surface2);color:var(--text);font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;padding:13px 30px;}
+.rest-go{background:var(--accent);color:var(--on-accent);font-size:22px;padding:15px 52px;}
+.rest-overlay.rest-done .rest-ring-time{color:var(--accent);}
+.rest-next{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-height:20px;margin-top:-8px;padding:0 24px;}
+.rest-next b{font-family:var(--display);font-weight:800;font-size:30px;line-height:1;color:var(--text);}
+.rest-next span{font-size:13px;font-weight:600;color:var(--text2);}
+:root:not([data-theme="dark"]) .rest-overlay.rest-done .rest-ring-time{color:var(--green);}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rest-overlay.rest-done .rest-ring-time{color:var(--accent);}}
 .cg{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--surface2);}
 .cg-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
 .cg-h span{font-family:var(--display);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);}
@@ -1840,14 +1935,8 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
   </div>
 </div>
 
-<div class="modal-overlay" id="gym-save-modal">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <h3>Save session?</h3>
-    <p style="color:var(--text2);font-size:14px;margin-bottom:20px;">This will save your session to your training log.</p>
-    <button class="btn-primary" onclick="closeModal('gym-save-modal');saveGymSession();" style="margin-bottom:10px;">Save Session</button>
-    <button class="btn-ghost" style="width:100%;" onclick="closeModal('gym-save-modal')">Go back</button>
-  </div>
+<div class="modal-overlay" id="gym-save-modal" onclick="if(event.target===this)closeModal('gym-save-modal')">
+  <div class="modal" id="gym-finish-content"></div>
 </div>
 
 <div class="modal-overlay" id="gym-effort-modal">
@@ -1936,12 +2025,13 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
     <div class="rest-ring-time" id="rest-ring-time">3:00</div>
     <div class="rest-ring-unit" id="rest-ring-unit">remaining</div>
   </div>
+  <div class="rest-next" id="rest-next"></div>
   <div class="rest-overlay-actions" id="rest-overlay-actions-counting">
-    <button class="rest-btn" onclick="restTimerAdd(30)">+30s</button>
-    <button class="rest-btn rest-btn-skip" onclick="restTimerSkip()">Skip</button>
+    <button class="rest-btn" onclick="restTimerAdd(30)">+30 sec</button>
+    <button class="rest-btn" onclick="restTimerSkip()">Skip</button>
   </div>
   <div class="rest-overlay-actions" id="rest-overlay-actions-done" style="display:none;">
-    <button class="rest-btn" style="background:rgba(8,132,91,0.2);border-color:rgba(8,132,91,0.5);color:var(--c-green);font-size:18px;padding:14px 48px;" onclick="restStop()">Let's go</button>
+    <button class="rest-btn rest-go" onclick="restStop()">Let's go</button>
   </div>
 </div>
 
@@ -1993,7 +2083,7 @@ function celebratePR(prs){
   if(!el)return;
   const lines=prs.map(p=>`<div style="font-size:15px;font-weight:800;margin-top:2px;">${esc(p.name)} — ${p.detail}</div>`).join('');
   el.innerHTML=`<div class="pr-celebration-card" onclick="dismissPRCelebration()">
-    <div style="font-size:28px;line-height:1;">🎉</div>
+    <div style="line-height:1;">${svgIcon('medal',30)}</div>
     <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85;margin-top:4px;">${prs.length>1?'New PRs!':'New PR!'}</div>
     ${lines}
   </div>`;
@@ -2161,9 +2251,9 @@ function streakChipHtml(g,ds){
   const info=getGoalStreakInfo(g);
   if(!info.streak)return'';
   const isToday=ds===dk(today());
-  if(isToday&&info.atRisk)return`<div class="goal-streak at-risk">🔥 ${info.streak} · last chance today</div>`;
-  if(isToday&&info.skipUsed)return`<div class="goal-streak">🔥 ${info.streak} <span class="goal-streak-note">· skip used</span></div>`;
-  return`<div class="goal-streak">🔥 ${info.streak}</div>`;
+  if(isToday&&info.atRisk)return`<div class="goal-streak at-risk">${info.streak}-day streak · last chance today</div>`;
+  if(isToday&&info.skipUsed)return`<div class="goal-streak">${info.streak}-day streak <span class="goal-streak-note">· skip used</span></div>`;
+  return`<div class="goal-streak">${info.streak}-day streak</div>`;
 }
 function getTodayScore(){const d=dk(today());const gs=goalsActiveOn(d);if(!gs.length)return 0;return Math.round(gs.filter(g=>goalDone(d,g)).length/gs.length*100);}
 function getDayScore(ds){const gs=goalsActiveOn(ds);if(!gs.length)return 0;return Math.round(gs.filter(g=>goalDone(ds,g)).length/gs.length*100);}
@@ -4601,7 +4691,8 @@ function _setRestDoneState(){
 
 function startRestTimer(secs,label){
   restStop();
-  document.getElementById('rest-overlay-label').textContent=label||'Rest Timer';
+  document.getElementById('rest-overlay-label').textContent=label||'Rest';
+  const nx=document.getElementById('rest-next');if(nx)nx.innerHTML=gymRestNext();
   restTotal=secs;
   restEndsAt=Date.now()+secs*1000;
   document.getElementById('rest-ring-time').textContent='';
@@ -4626,7 +4717,21 @@ function updateRestDisplay(){
   const arc=document.getElementById('rest-ring-arc');
   arc.style.strokeDasharray=REST_CIRC.toFixed(1);
   arc.style.strokeDashoffset=((1-pct)*REST_CIRC).toFixed(1);
-  arc.style.stroke=pct>0.5?'var(--c-green)':pct>0.2?'var(--c-orange)':'var(--c-red)';
+  arc.style.stroke=pct>0.2?'var(--accent)':'var(--c-orange)';
+}
+// Under the rest clock: what the next set is, so you can load the bar while you wait.
+function gymRestNext(){
+  if(!gymDraft)return'';
+  const i=_gymFocusIdx!=null?_gymFocusIdx:0,ex=gymDraft.exercises[i];if(!ex)return'';
+  const ws=_gcWorking(ex);
+  if(ex._planSets&&ws.length>=ex._planSets){
+    const nx=gymDraft.exercises.find((e,j)=>j>i&&!e._completed);
+    return nx?`<i>Next up</i><b>${esc(nx.name)}</b>`:`<i>That's the plan done</i>`;
+  }
+  const lastSets=getLastExSets(ex.name,loadGymData());
+  const tmp={...ex,sets:[...ex.sets.filter(x=>gymSetFilled(x,ex.name)),{weight:'',reps:'',warmup:false}]};
+  const t=getSetTarget(tmp,tmp.sets.length-1,lastSets,0);
+  return`<i>Set ${ws.length+1}${ex._planSets?` of ${ex._planSets}`:''}</i><b>${t&&t.reps?(t.weight!=null?`${+t.weight} kg × ${t.reps}`:`${t.reps} reps`):esc(ex.name)}</b>${t&&t.why?`<span>${esc(t.why)}</span>`:''}`;
 }
 function restTimerAdd(s){
   if(!restEndsAt)return;
@@ -4665,7 +4770,7 @@ function renderPlateCalc(weightKg){
   const w=parseFloat(weightKg);if(!w||w<=20)return'';
   const plates=calcPlates(w);if(!plates.length)return'';
   const platesHtml=plates.map(p=>`<div class="plate" style="background:${PLATE_COLORS[p]||'var(--surface2)'};color:${p>=20?'white':'var(--bg)'};border:2px solid ${PLATE_COLORS[p]||'var(--border)'};">${p}</div>`).join('');
-  return`<div class="plate-calc"><div class="plate-calc-title">Each side — ${w}kg total</div><div class="plate-row">${platesHtml}</div></div>`;
+  return`<div class="plate-calc"><div class="plate-calc-title">Each side for ${w} kg</div><div class="plate-row">${platesHtml}</div></div>`;
 }
 
 // ── TRAIN ──
@@ -4807,15 +4912,15 @@ function renderGymTypeSelector(){
   const hasPrev=sessions.length>0;
   const isMakeup=_gymPickedType==='Makeup';
   const planCardHtml=showPlanCard?`<div class="chart-card" style="margin-bottom:10px;">
-      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:2px;">On the plan today</div>
-      <div style="font-size:24px;font-weight:800;letter-spacing:-0.8px;margin-bottom:10px;">${esc(planType)}</div>
+      <div class="today-plan-lbl">On the plan today</div>
+      <div class="today-plan-type" style="margin-bottom:6px;">${esc(planType)}</div>
       ${planGymSession(planType)?renderCoachGymPreview(planType):renderPlanExercisePreview(planType)}
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button class="btn-primary" style="flex:1;" onclick="${planGymSession(planType)?`buildGymSession('${planType}')`:`gymStartPlanType('${planType}')`}">${planGymSession(planType)?'Start the coach\'s session':`Start ${esc(planType)}`}</button>
-        <button onclick="gymPlanSuperset()" title="Superset mode" style="padding:0 16px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;">⚡</button>
+        <button onclick="gymPlanSuperset()" title="Superset mode" style="padding:0 16px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--display);letter-spacing:0.04em;">SS</button>
       </div>
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair</div>`:''}
-      ${!_gymSupersetMode&&canBuildGymSession(planType)?`<button class="btn-secondary gc-build" style="width:100%;margin-top:8px;" onclick="buildGymSession('${planType}')">Build today's ${esc(planType)}<span>last session's lifts, with today's targets</span></button>`:''}
+      ${!_gymSupersetMode&&!planGymSession(planType)&&canBuildGymSession(planType)?`<button class="btn-secondary gc-build" style="width:100%;margin-top:8px;" onclick="buildGymSession('${planType}')">Build today's ${esc(planType)}<span>last session's lifts, with today's targets</span></button>`:''}
     </div>
     <button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="gymShowOtherTypes()">Or something else</button>`:'';
   const gridCardHtml=showPlanCard?'':`<div class="chart-card" style="margin-bottom:10px;">
@@ -4825,11 +4930,11 @@ function renderGymTypeSelector(){
         ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent)'):'var(--border)'};background:${_gymPickedType===t?(t==='Makeup'?'rgba(210,153,34,0.15)':'color-mix(in srgb,var(--accent) 15%,transparent)'):'var(--surface2)'};color:${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent2)'):'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
       </div>
       ${isMakeup?`<div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.5;padding:8px 12px;background:rgba(210,153,34,0.08);border-radius:var(--radius-xs);border:1px solid rgba(210,153,34,0.2);">Loads Push, Pull${state.makeupIncludeLegs?' &amp; Legs':''} exercises not yet done this week</div>
-      <button onclick="gymToggleMakeupLegs()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${state.makeupIncludeLegs?'var(--amber)':'var(--border)'};background:${state.makeupIncludeLegs?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${state.makeupIncludeLegs?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;transition:all 0.15s;">Include legs? ${state.makeupIncludeLegs?'— ON':'— OFF'}</button>`:`<button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">⚡ Superset mode${_gymSupersetMode?' — ON':''}</button>
+      <button onclick="gymToggleMakeupLegs()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${state.makeupIncludeLegs?'var(--amber)':'var(--border)'};background:${state.makeupIncludeLegs?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${state.makeupIncludeLegs?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;transition:all 0.15s;">Include legs? ${state.makeupIncludeLegs?'— ON':'— OFF'}</button>`:`<button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">Superset mode${_gymSupersetMode?' — ON':''}</button>
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair · Push, Pull &amp; Legs only</div>`:''}`}
-      ${!_gymSupersetMode&&canBuildGymSession(_gymPickedType)?`<button class="btn-secondary gc-build" style="width:100%;margin-bottom:10px;" onclick="buildGymSession()">Build today's ${esc(_gymPickedType)}<span>last session's lifts, with today's targets</span></button>`:''}
+      ${!_gymSupersetMode&&canBuildGymSession(_gymPickedType)?`<button class="btn-secondary gc-build" style="width:100%;margin-bottom:10px;" onclick="buildGymSession()">${planGymSession(_gymPickedType)?`The coach's ${esc(_gymPickedType)}<span>about ${planGymSession(_gymPickedType).mins} min, with today's targets</span>`:`Build today's ${esc(_gymPickedType)}<span>last session's lifts, with today's targets</span>`}</button>`:''}
       ${hasPrev&&!isMakeup?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
-      <button class="btn-primary" style="width:100%;${isMakeup?'background:var(--amber);border-color:var(--amber);':''}" onclick="confirmGymSession()">${isMakeup?'Build Makeup session →':_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`⚡ Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>
+      <button class="btn-primary" style="width:100%;${isMakeup?'background:var(--amber);border-color:var(--amber);':''}" onclick="confirmGymSession()">${isMakeup?'Build Makeup session →':_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>
     </div>`;
   el.innerHTML=`${planCardHtml}${gridCardHtml}${renderGymBriefCard(_gymPickedType)}`;
 }
@@ -4930,9 +5035,9 @@ function startGymTimer(){
   if(_gymTimerInterval)clearInterval(_gymTimerInterval);
   _gymTimerInterval=setInterval(()=>{
     const el=document.getElementById('gym-session-elapsed');
-    if(el&&gymDraft)el.textContent=gymElapsed();
+    if(el&&gymDraft)el.textContent=gymElapsedMins();
     else{clearInterval(_gymTimerInterval);_gymTimerInterval=null;}
-  },30000);
+  },15000);
 }
 
 function renderGymLogger(){
@@ -4942,16 +5047,18 @@ function renderGymLogger(){
   const lastSame=sessions.filter(s=>s.type===gymDraft.type).slice(-1)[0];
   const prog=loadGymProg();
   document.body.classList.add('gym-live');
-  const doneEx=gymDraft.exercises.filter(x=>x._completed).length,totEx=gymDraft.exercises.length;
+  const sp=gymSetProgress();
   const bar=`<div class="gl-bar">
-    <div class="gl-l"><b>${esc(gymDraft.type)}</b><span><span id="gym-session-elapsed">${gymElapsed()}</span>${gymDraft.planMins?` of ~${gymDraft.planMins} min`:''}</span></div>
-    <div class="gl-m">${doneEx}/${totEx} done</div>
-    <button class="gl-menu" onclick="gymToggleMenu(event)" aria-label="Session menu">⋯</button>
+    <div class="gl-l"><i>${esc(gymDraft.type)}</i><b><span id="gym-session-elapsed">${gymElapsedMins()}</span><small>${gymDraft.planMins?`/${gymDraft.planMins} min`:' min'}</small></b></div>
+    <div class="gl-m"><i>Sets</i><b>${sp.done}<small>${sp.plan?`/${sp.plan}`:''}</small></b></div>
+    <button class="gl-menu" onclick="gymToggleMenu(event)" aria-label="Session menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+    <div class="gl-prog"><i style="width:${sp.plan?Math.min(100,Math.round(sp.done/sp.plan*100)):0}%"></i></div>
   </div>
   ${_gymMenu?`<div class="gl-pop" onclick="event.stopPropagation()">
     <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
     ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${lastSame.date})</button>`:''}
     <button onclick="_gymMenu=false;gymAddEx()">Add an exercise</button>
+    <button onclick="_gymMenu=false;showPage('today')">Leave for now (it'll be here in Log)</button>
     <button class="danger" onclick="_gymMenu=false;openModal('gym-discard-modal')">Discard session</button>
   </div>`:''}
   ${gymTimeNudge()}`;
@@ -4965,15 +5072,19 @@ function renderGymLogger(){
     </div>
   ${gymDraft.superset?renderSupersetExercisesHtml(lastSame,prog,sessions):renderGymFocusFlow(lastSame,prog,sessions)}
   ${renderGymScoreboard()}
-  <button class="btn-secondary" onclick="gymAddEx()" style="margin-bottom:10px;">+ Add Exercise</button>
-  <label class="modal-label" style="display:block;margin-bottom:6px;">Session Notes (optional)</label>
-  <textarea id="gym-notes-field" class="modal-input" placeholder="How did it feel?" rows="2" style="resize:vertical;margin-bottom:10px;" oninput="gymDraft.notes=this.value;saveGymDraft();">${esc(gymDraft.notes||'')}</textarea>
-  <button class="btn-primary" onclick="openModal('gym-save-modal')" style="margin-bottom:8px;">Save Session</button>
-  <button class="btn-ghost" style="width:100%;" onclick="openModal('gym-discard-modal')">Discard session</button>`;
+  <textarea id="gym-notes-field" class="gl-notes" placeholder="Notes (optional)" rows="2" oninput="gymDraft.notes=this.value;saveGymDraft();">${esc(gymDraft.notes||'')}</textarea>
+  <button class="btn-primary" onclick="openGymFinish()" style="margin-bottom:8px;">Finish session</button>`;
   startGymTimer();
   startGymPersist();
 }
 function gymSetType(t){gymDraft.type=t;renderGymLogger();}
+// Minutes on the clock, and working sets done against the plan, for the live bar.
+function gymElapsedMins(){return gymDraft&&gymDraft.startedAt?Math.max(0,Math.floor((Date.now()-gymDraft.startedAt)/60000)):0;}
+function gymSetProgress(){
+  let done=0,plan=0;
+  (gymDraft?gymDraft.exercises:[]).forEach(ex=>{const n=_gcWorking(ex).length;done+=n;plan+=Math.max(n,ex._completed?n:(ex._planSets||0));});
+  return{done,plan};
+}
 // Log the prescribed warm-ups in one tap (kept as warm-ups, so they never count as work).
 function gymLogWarmups(i){
   const ex=gymDraft&&gymDraft.exercises[i];if(!ex||!ex._warmups)return;
@@ -5295,7 +5406,7 @@ function renderSupersetExercisesHtml(lastSame,prog,sessions){
     const exA=gymDraft.exercises[iA];
     const exB=iB!==null?gymDraft.exercises[iB]:null;
     return`<div style="border:1px solid rgba(210,153,34,0.3);border-radius:12px;padding:14px;margin-bottom:12px;background:rgba(210,153,34,0.04);">
-      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--amber);margin-bottom:10px;">⚡ Superset ${pi+1}</div>
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--amber);margin-bottom:10px;">Superset ${pi+1}</div>
       <div style="border-left:3px solid var(--accent);padding-left:12px;margin-bottom:8px;position:relative;">
         <div style="position:absolute;left:-11px;top:12px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">A</div>
         ${renderExBlock(exA,iA,lastSame,prog,sessions,true)}
@@ -5304,7 +5415,7 @@ function renderSupersetExercisesHtml(lastSame,prog,sessions){
         <div style="position:absolute;left:-11px;top:12px;width:18px;height:18px;border-radius:50%;background:var(--green);color:white;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">B</div>
         ${renderExBlock(exB,iB,lastSame,prog,sessions,true)}
       </div>`:''}
-      <button onclick="startRestTimer(90)" style="width:100%;padding:10px;background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.3);border-radius:var(--radius-xs);color:var(--amber);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;">⏱ Rest 90s — after completing both</button>
+      <button onclick="startRestTimer(90)" style="width:100%;padding:10px;background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.3);border-radius:var(--radius-xs);color:var(--amber);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;">Rest 90s after both</button>
     </div>`;
   }).join('');
   const soloBlocks=soloIdx.map(i=>renderExBlock(gymDraft.exercises[i],i,lastSame,prog,sessions,false)).join('');
@@ -5332,22 +5443,20 @@ function renderCollapsedExCard(ex,i){
 // exercise?" is the only way back into the normal editable card (see gymEditCompletedExercise).
 function renderCompletedExCard(ex,i){
   const realSets=(ex.sets||[]).filter(s=>gymSetFilled(s,ex.name));
-  const summary=realSets.map(s=>`${parseFloat(s.weight||0)>0?`${s.weight}kg×${s.reps}`:`${s.reps} reps`}${s.warmup?' (W)':s.technique?' (T)':''}`).join(' · ')||'No sets logged';
-  return`<div class="chart-card" style="margin-bottom:10px;padding:14px 16px;background:rgba(8,132,91,0.08);border:1px solid rgba(8,132,91,0.3);" id="ex-block-${i}">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-      <div style="width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;">✓</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(ex.name||'Exercise')}</div>
-        <div style="font-size:11px;color:var(--green);font-weight:700;">Exercise complete</div>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">${summary}</div>
-    <button onclick="gymEditCompletedExercise(${i})" style="width:100%;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;">Edit completed exercise?</button>
+  const summary=realSets.map(s=>`${parseFloat(s.weight||0)>0?`${+s.weight} kg × ${s.reps}`:`${s.reps} reps`}${s.warmup?' (warm-up)':s.technique?' (technique)':''}`).join(' · ')||'No sets logged';
+  return`<div class="gx" id="ex-block-${i}">
+    <div class="gl-eyebrow" style="text-align:left;color:var(--green);margin-bottom:2px;">Done</div>
+    <div class="gx-name" style="padding:0;">${esc(ex.name||'Exercise')}</div>
+    <div class="gx-meta" style="margin:6px 0 12px;">${summary}</div>
+    <button class="gl-text" style="text-align:left;padding:0;" onclick="gymEditCompletedExercise(${i})">Add or change a set</button>
   </div>`;
 }
 function gymCompleteExercise(i){
   const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
   ex._completed=true;
+  // Straight on to the next exercise you haven't finished.
+  const exs=gymDraft.exercises,nx=[...exs.keys()].slice(i+1).concat([...exs.keys()].slice(0,i)).find(j=>!exs[j]._completed);
+  if(nx!=null&&!gymDraft.superset)_gymFocusIdx=nx;
   gymKpResetTarget();
   renderGymLogger();
   haptic('success');
@@ -5456,6 +5565,66 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
   const lastDate=focusMode?getLastExDate(ex.name,gymSessions):null;
   const lastDateStr=lastDate?new Date(lastDate+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null;
   const trend=focusMode?getExerciseTrend(ex.name):null;
+  if(focusMode){
+    const kgx=(w,r)=>parseFloat(w||0)>0?`${+w} × ${r}`:`${r} reps`;
+    const meta=[pb>0?`PB ${pb} kg`:pbReps>0?`PB ${pbReps} reps`:'',
+      lastSets.length?`last ${lastDateStr?lastDateStr+': ':''}${lastSets.map(x=>kgx(x.weight,x.reps)).join(', ')}`:'',
+      trend&&trend.label!=='Building baseline'?`<em style="color:${trend.col};">${trend.label.toLowerCase()}</em>`:''].filter(Boolean).join(' · ');
+    const tw=liftT?(targetWeight!=null?`${+targetWeight}<small>kg</small> × ${liftT.reps}`:`${targetReps}<small> reps</small>`):'';
+    return`<div class="gx" id="ex-block-${i}">
+    <div class="gx-head">
+      ${ex._renaming||!ex.name?`<input class="gx-name gx-in" value="${esc(ex.name||'')}" placeholder="Exercise name" oninput="gymSetExName(${i},this.value)" onblur="gymDraft.exercises[${i}]._renaming=false;renderGymLogger()" onfocus="gymSetActiveEx(${i})" list="exs-${i}">`:`<div class="gx-name" onclick="gymDraft.exercises[${i}]._renaming=true;renderGymLogger();setTimeout(()=>{const x=document.querySelector('#ex-block-${i} .gx-in');if(x){x.focus();x.select();}},30)">${esc(ex.name)}</div>`}
+      <datalist id="exs-${i}">${sugg.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+      <button class="gx-x" onclick="gymRemoveEx(${i})" aria-label="Remove exercise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    ${meta?`<div class="gx-meta">${meta}</div>`:''}
+    ${ex._why?`<div class="gx-meta" style="color:var(--st-pace);">Added to the plan: ${esc(ex._why)}</div>`:''}
+    ${liftT||ex._planSets?`<div class="gx-tgt" style="--lt:${liftT?liftT.col:'var(--text3)'};">
+      <div class="gx-tgt-l"><i>${liftT?`Target · ${liftT.tag}`:'Plan'}</i>${tw?`<b>${tw}</b>`:''}</div>
+      ${ex._planSets?`<div class="gx-tgt-r"><b>${ex._planSets}</b><i>set${ex._planSets===1?'':'s'}</i></div>`:''}
+      ${liftT&&liftT.note?`<span>${liftT.note}</span>`:''}
+    </div>`:''}
+    ${ex._warmups&&ex._warmups.length&&!(ex.sets||[]).some(s=>gymSetFilled(s,ex.name))?`<div class="gw"><div><i>Warm up first</i><span>${ex._warmups.map(([w,r])=>`${w} × ${r}`).join('<em>·</em>')}</span></div><button onclick="gymLogWarmups(${i})">Log them</button></div>`:''}
+    ${(()=>{
+      const setTgt=getSetTarget(ex,gymKpCurrentSi(i,ex),lastSets,pb);
+      const draft=gymKpSyncDraft(i,ex,setTgt);
+      const activeSi=draft.si,callIt=getCallIt(ex,lastSets);
+      let wn=0;
+      const rows=(ex.sets||[]).map((s,si)=>{
+        const hasData=gymSetFilled(s,ex.name),isWorking=!s.warmup&&!s.technique,isActive=si===activeSi;
+        if(isWorking)wn++;
+        const ghost=isWorking?(lastSets[wn-1]||null):null;
+        const lbl=s.warmup?'W':s.technique?'T':wn;
+        let main,sub='',cls='gs';
+        if(hasData){
+          cls+=s.warmup?' wu':s.technique?' tq':' done';
+          main=parseFloat(s.weight||0)>0?`${+s.weight}<small>kg</small> × ${s.reps}`:`${s.reps}<small> reps</small>`;
+          if(s._pr)sub='<em class="pr">PR</em>';
+          else if(ghost&&isWorking){const gw=parseFloat(ghost.weight||0),gr=parseFloat(ghost.reps||0),w=parseFloat(s.weight||0),r=parseFloat(s.reps||0);
+            if(w>gw||(w===gw&&r>gr))sub=`<em class="up">beat ${kgx(ghost.weight,ghost.reps)}</em>`;}
+        }else if(isActive){
+          cls+=' on';
+          main=setTgt&&setTgt.reps?(setTgt.weight!=null?`${+setTgt.weight}<small>kg</small> × ${setTgt.reps}`:`${setTgt.reps}<small> reps</small>`):'Next set';
+          sub=setTgt&&setTgt.why?esc(setTgt.why):ghost?`last time ${kgx(ghost.weight,ghost.reps)}`:'';
+        }else{
+          cls+=' todo';main=ghost?kgx(ghost.weight,ghost.reps):'&nbsp;';sub=ghost?'last time':'';
+        }
+        return`<div class="${cls}" onclick="gymKpSelectSet(${i},${si})">
+          <button class="gs-n" onclick="event.stopPropagation();gymCycleSetFlag(${i},${si})" title="${s.warmup?'Warm-up':s.technique?'Technique set':'Tap to mark as a warm-up'}">${hasData&&isWorking?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>':lbl}</button>
+          <div class="gs-t"><b>${main}</b>${sub?`<span>${sub}</span>`:''}</div>
+          <button class="gs-x" onclick="event.stopPropagation();gymRemoveSet(${i},${si})" aria-label="Remove set"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>`;
+      }).join('');
+      const last=gymDraft.exercises.findIndex((e,j)=>j!==i&&!e._completed)===-1;
+      return`<div class="gs-list">${rows}</div>
+        <button class="gl-text" style="margin:2px 0 10px;" onclick="gymAddSet(${i})">Add a set</button>
+        ${callIt?`<div class="gc-callit${callIt.strong?' strong':''}"><span>${esc(callIt.text)}</span><button onclick="gymCompleteExercise(${i})">Done with it</button></div>`:''}
+        ${renderGymKeypad(draft)}
+        ${renderPlateCalc(parseFloat(draft.weight)||0)}
+        <button class="gx-next" onclick="gymCompleteExercise(${i})">${last?'Done with this one':'Next exercise'}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>`;
+    })()}
+  </div>`;
+  }
   return`<div class="chart-card" style="margin-bottom:10px;" id="ex-block-${i}">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
       <div style="width:22px;height:22px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text3);flex-shrink:0;">${i+1}</div>
@@ -5663,29 +5832,18 @@ function gymKpLogSet(){
 function renderGymKeypad(draft){
   const w=draft.weight||'';
   const r=draft.reps||0;
-  const btnStyle='background:var(--surface);border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:18px;font-weight:700;color:var(--text);cursor:pointer;padding:12px 0;';
-  const digit=d=>`<button onclick="gymKpDigit('${d}')" style="${btnStyle}">${d}</button>`;
-  return`<div style="margin-top:4px;padding:12px;background:var(--surface2);border-radius:var(--radius-xs);">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <div>
-        <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Weight</div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:24px;font-weight:800;">${w||'0'}<span style="font-size:13px;color:var(--text3);font-weight:600;margin-left:2px;">kg</span></div>
-      </div>
-      <div>
-        <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Reps</div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <button onclick="gymKpStepReps(-1)" style="width:34px;height:44px;flex-shrink:0;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:16px;font-weight:800;cursor:pointer;">−</button>
-          <div style="flex:1;text-align:center;font-size:24px;font-weight:800;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 0;">${r}</div>
-          <button onclick="gymKpStepReps(1)" style="width:34px;height:44px;flex-shrink:0;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:16px;font-weight:800;cursor:pointer;">+</button>
-        </div>
-      </div>
+  const digit=d=>`<button onclick="gymKpDigit('${d}')">${d}</button>`;
+  return`<div class="kp">
+    <div class="kp-read">
+      <div class="kp-w"><i>Weight</i><b>${w||'0'}<small>kg</small></b></div>
+      <div class="kp-r"><i>Reps</i><div><button onclick="gymKpStepReps(-1)" aria-label="One fewer rep">−</button><b>${r}</b><button onclick="gymKpStepReps(1)" aria-label="One more rep">+</button></div></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 68px;gap:6px;">
+    <div class="kp-pad">
       ${digit('1')}${digit('2')}${digit('3')}
-      <button onclick="gymKpLogSet()" style="grid-row:span 4;background:var(--accent);color:var(--on-accent);border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;line-height:1.3;">Log<br>set</button>
+      <button class="kp-log" onclick="gymKpLogSet()">Log<br>set</button>
       ${digit('4')}${digit('5')}${digit('6')}
       ${digit('7')}${digit('8')}${digit('9')}
-      ${digit('.')}${digit('0')}<button onclick="gymKpBackspace()" style="${btnStyle}">⌫</button>
+      ${digit('.')}${digit('0')}<button onclick="gymKpBackspace()" aria-label="Delete"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M13 10l4 4M17 10l-4 4"/></svg></button>
     </div>
   </div>`;
 }
@@ -5720,9 +5878,9 @@ function renderGymFocusFlow(lastSame,prog,sessions){
     <div style="display:flex;gap:4px;align-items:center;">${dots}</div>
     <button onclick="gymFocusNav(1)" ${i===exs.length-1?'disabled':''} style="background:none;border:none;color:${i===exs.length-1?'var(--border)':'var(--text3)'};cursor:${i===exs.length-1?'default':'pointer'};padding:4px;display:flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
   </div>
-  <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;text-align:center;margin-bottom:8px;">Exercise ${i+1} of ${exs.length}</div>
+  <div class="gl-eyebrow">Exercise ${i+1} of ${exs.length}</div>
   <div id="gym-exercises">${renderExBlock(ex,i,lastSame,prog,sessions,false,true)}</div>
-  ${exs.length>1?`<button class="btn-secondary" style="margin-bottom:10px;" onclick="_gymShowAllEx=!_gymShowAllEx;renderGymLogger();">${_gymShowAllEx?'Hide other exercises':'View all exercises'}</button>`:''}
+  ${exs.length>1?`<button class="gl-text" onclick="_gymShowAllEx=!_gymShowAllEx;renderGymLogger();">${_gymShowAllEx?'Hide the other exercises':`All ${exs.length} exercises`}</button>`:''}
   ${_gymShowAllEx?`<div style="margin-bottom:10px;">${exs.map((e,idx)=>idx===i?'':gymFocusRowSummary(e,idx)).join('')}</div>`:''}`;
 }
 function gymFocusRowSummary(ex,idx){
@@ -5827,7 +5985,37 @@ function gymDiscardSession(){
   gymKpResetTarget();
   renderGymSection();
 }
-function saveGymSession(){
+// Finishing: one sheet with the session's numbers, anything niggling, and how it felt.
+// Tapping how it felt saves the session (so finishing is one tap, and a stray tap on
+// Finish can't save by accident).
+let _gymFinishNig=[];
+function openGymFinish(){
+  if(!gymDraft)return;
+  let sets=0,vol=0;
+  gymDraft.exercises.forEach(ex=>{const ws=_gcWorking(ex);sets+=ws.length;ws.forEach(x=>vol+=parseFloat(x.weight||0)*(parseInt(x.reps)||0));});
+  _gymFinishNig=[];
+  const eff=[['Easy','plenty left'],['Solid','a couple in the tank'],['Pushed','hard work'],['Max','nothing left']];
+  document.getElementById('gym-finish-content').innerHTML=`
+    <div class="modal-handle"></div>
+    <div class="gl-eyebrow" style="text-align:left;margin-bottom:4px;">Finish ${esc(gymDraft.type)}</div>
+    <div class="gf-stats">
+      <div><b>${gymElapsedMins()}</b><i>min</i></div>
+      <div><b>${sets}</b><i>sets</i></div>
+      <div><b>${vol>0?Math.round(vol).toLocaleString('en-GB'):'—'}</b><i>kg lifted</i></div>
+    </div>
+    <div class="gl-eyebrow" style="text-align:left;margin:18px 0 8px;">Anything niggling?</div>
+    <div class="gn-row">${['Shoulder','Elbow','Wrist','Back','Knee'].map(n=>`<button id="gn-${n}" onclick="gymFinishNiggle('${n}')">${n}</button>`).join('')}</div>
+    <div class="gl-eyebrow" style="text-align:left;margin:6px 0 8px;">How did it feel? Tap to save</div>
+    <div class="gf-eff">${eff.map(([e,d])=>`<button onclick="closeModal('gym-save-modal');saveGymSession('${e}')"><b>${e}</b><span>${d}</span></button>`).join('')}</div>
+    <button class="gl-text" onclick="closeModal('gym-save-modal');saveGymSession(null)">Save without rating it</button>
+    <button class="gl-text" style="padding-top:0;" onclick="closeModal('gym-save-modal')">Keep going</button>`;
+  openModal('gym-save-modal');
+}
+function gymFinishNiggle(n){
+  const i=_gymFinishNig.indexOf(n);if(i>=0)_gymFinishNig.splice(i,1);else _gymFinishNig.push(n);
+  const b=document.getElementById('gn-'+n);if(b)b.classList.toggle('on',i<0);haptic('light');
+}
+function saveGymSession(effort){
   const notesEl=document.getElementById('gym-notes-field');
   if(notesEl&&gymDraft)gymDraft.notes=notesEl.value||'';
   const hasValue=s=>String(s.weight||'').trim()!==''||String(s.reps||'').trim()!=='';
@@ -5844,7 +6032,11 @@ function saveGymSession(){
   // - it needs to reflect when you actually trained, not whenever you happened to tap
   // Save, which can be a long time after a session that ran late or got interrupted.
   const sessionTs=gymDraft.startedAt||Date.now();
-  sessions.push({date:dk(today()),type:sessionType,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:sessionTs,endTs:Date.now()});
+  const rec={date:dk(today()),type:sessionType,superset:gymDraft.superset||false,exercises,notes:gymDraft.notes||'',ts:sessionTs,endTs:Date.now()};
+  if(effort)rec.effort=effort;
+  if(_gymFinishNig.length)rec.niggles=_gymFinishNig.slice();
+  _gymFinishNig=[];
+  sessions.push(rec);
   saveGymData(sessions);
   const prog=loadGymProg();
   exercises.forEach(e=>{if(!prog[e.name])prog[e.name]={history:[]};prog[e.name].history.push({date:dk(today()),sets:e.sets});});
@@ -5869,12 +6061,13 @@ function saveGymSession(){
     effortModalDelay=2400;
   }
   haptic('success');renderGymSection();
-  setTimeout(()=>openGymEffortModal(sessionTs,sessionType),effortModalDelay);
+  // Rated on the finish sheet already; only ask afterwards if it was called some other way.
+  if(effort===undefined)setTimeout(()=>openGymEffortModal(sessionTs,sessionType),effortModalDelay);
 }
 let _gymEffortTs=null;
 function openGymEffortModal(ts,type){
   _gymEffortTs=ts;
-  const pill=(label,emoji)=>`<button onclick="gymTagEffort('${label}')" style="padding:16px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-weight:800;font-size:14px;text-align:center;cursor:pointer;"><span style="display:block;font-size:20px;margin-bottom:4px;">${emoji}</span>${label}</button>`;
+  const pill=(label,emoji)=>`<button onclick="gymTagEffort('${label}')" style="padding:16px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-weight:800;font-size:14px;text-align:center;cursor:pointer;">${label}</button>`;
   document.getElementById('gym-effort-modal-content').innerHTML=`
     <div class="modal-handle"></div>
     <h3>Rate this session</h3>
@@ -5882,7 +6075,7 @@ function openGymEffortModal(ts,type){
     <div style="font-size:12px;color:var(--text3);font-weight:700;margin:-8px 0 8px;">Anything niggling? Tap it first (optional)</div>
     <div class="gn-row">${['Shoulder','Elbow','Wrist','Back','Knee'].map(n=>`<button id="gn-${n}" onclick="gymTagNiggle('${n}')">${n}</button>`).join('')}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
-      ${pill('Easy','🌤️')}${pill('Solid','💪')}${pill('Pushed','🔥')}${pill('Max','⚡')}
+      ${pill('Easy','')}${pill('Solid','')}${pill('Pushed','')}${pill('Max','')}
     </div>
     <button onclick="closeModal('gym-effort-modal')" style="width:100%;text-align:center;background:none;border:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;padding:6px;cursor:pointer;">Skip</button>
   `;
@@ -5969,7 +6162,7 @@ function renderRunSection(){
           ${r.time?`<span style="font-size:12px;color:var(--text2);font-weight:600;">${r.time}</span>`:''}
           ${pace?`<span style="font-size:12px;color:var(--orange);font-weight:600;">${pace}</span>`:''}
           ${r.effort?`<span style="padding:2px 7px;border-radius:8px;background:${effortStyle(r.effort).bg};color:${effortStyle(r.effort).text};font-size:11px;font-weight:700;">${r.effort}</span>`:''}
-          ${r.hr?`<span style="padding:2px 7px;border-radius:8px;background:rgba(232,14,14,0.1);color:var(--red);font-size:11px;font-weight:700;">♥ ${r.hr}</span>`:''}
+          ${r.hr?`<span style="padding:2px 7px;border-radius:8px;background:rgba(232,14,14,0.1);color:var(--red);font-size:11px;font-weight:700;">${r.hr} bpm</span>`:''}
         </div>
         <button onclick="openRunEdit(${globalIdx})" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(8,132,91,0.3);background:transparent;color:var(--green);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
       </div>`;
@@ -6634,7 +6827,7 @@ function switchTrendsTab(tab){
 }
 function renderPPLBalanceNote(){
   const balance=getPPLBalance();
-  return balance?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--accent2);"><div style="font-size:13px;font-weight:700;color:var(--text);">⚖️ ${balance.behind.join('/')} ${balance.behind.length>1?'are':'is'} ${balance.gap} session${balance.gap>1?'s':''} behind ${balance.ahead.join('/')} this week</div></div>`:'';
+  return balance?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--accent2);"><div style="font-size:13px;font-weight:700;color:var(--text);">${balance.behind.join('/')} ${balance.behind.length>1?'are':'is'} ${balance.gap} session${balance.gap>1?'s':''} behind ${balance.ahead.join('/')} this week</div></div>`:'';
 }
 function renderTrends(){
   const el=document.getElementById('trends-content');
@@ -6663,7 +6856,7 @@ function renderTrends(){
   const gradeColor=gradeNow.grade==='S'?'var(--accent2)':gradeNow.grade==='A'?'var(--green)':gradeNow.grade==='B'?'var(--orange)':'var(--text3)';
   const gradeTrend=gradeNow.rank>gradePrev.rank?`<span style="color:var(--green);">↑ was ${gradePrev.grade}</span>`:gradeNow.rank<gradePrev.rank?`<span style="color:var(--red);">↓ was ${gradePrev.grade}</span>`:`<span style="color:var(--text3);">→ steady</span>`;
   const streak=getWeeklyStreak();
-  const streakHtml=streak>0?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--orange);"><div style="font-size:13px;font-weight:700;color:var(--text);">🔥 ${streak} week${streak>1?'s':''} running — every weekly session target hit</div></div>`:'';
+  const streakHtml=streak>0?`<div class="chart-card" style="margin-bottom:10px;border-left:3px solid var(--orange);"><div style="font-size:13px;font-weight:700;color:var(--text);">${streak} week${streak>1?'s':''} running — every weekly session target hit</div></div>`:'';
 
   const vsAvg=getWeekVsAverage();
   const vsAvgLine=(field,pct)=>pct==null?'':`<span style="color:${pct>=0?'var(--green)':'var(--red)'};">${pct>=0?'+':''}${pct}% vs your ${field} avg</span>`;
@@ -6852,7 +7045,7 @@ function renderRunPBBanner(run){
   if(!a)return'';
   return`<div class="chart-card pb-banner">
     <div style="display:flex;gap:14px;align-items:center;">
-      <div style="font-size:32px;line-height:1;">🏆</div>
+      <div style="line-height:1;color:var(--c-gold);">${svgIcon('medal',32)}</div>
       <div style="min-width:0;">
         <div class="pb-eyebrow">${run.date===dk(today())?"Today's run":_pbDate(run.date)}</div>
         <div style="font-size:18px;font-weight:800;letter-spacing:-0.4px;margin-top:2px;">${esc(a.head)}</div>
@@ -7337,7 +7530,7 @@ function renderTrendsRunAnalysis(){
         <span style="font-size:11px;font-weight:700;color:var(--text2);">This week: <span style="color:${weekBarCol};">${thisWeekKm.toFixed(1)} km</span></span>
         <span style="display:flex;align-items:center;gap:6px;">
           <span id="run-target-display" style="font-size:11px;font-weight:700;color:var(--text3);">/ ${(()=>{const yw=state.yearRunGoal&&getYearGoalWeek();return yw?Math.round(yw.target)+' km this week\'s plan':runTarget+' km target';})()}</span>
-          ${state.yearRunGoal?'':`<button onclick="editRunTargetInline()" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;font-size:13px;" title="Edit target">✏️</button>`}
+          ${state.yearRunGoal?'':`<button onclick="editRunTargetInline()" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;font-size:13px;font-weight:700;" title="Edit target">Edit</button>`}
         </span>
       </div>
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;height:7px;overflow:hidden;">
@@ -10283,7 +10476,7 @@ function renderTimeOfDay(){
   return`<div class="chart-card" style="margin-bottom:10px;">
     <div class="chart-card-header"><span class="chart-card-title">Best Time of Day</span><span class="chart-card-val">${sessions.length} sessions</span></div>
     ${counts.map(s=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
-      <div style="width:32px;text-align:center;font-size:20px;">${s.icon}</div>
+      <div style="width:32px;display:flex;justify-content:center;"><span style="width:10px;height:10px;border-radius:50%;background:${s.color};"></span></div>
       <div style="min-width:80px;">
         <div style="font-size:14px;font-weight:800;">${s.label}</div>
         <div style="font-size:11px;color:var(--text3);font-weight:600;">${s.sub}</div>
@@ -10402,7 +10595,7 @@ function renderYearGoalCard(){
   wrap.innerHTML=`<div class="year-goal-card" onclick="openYearGoalModal()" style="cursor:pointer;">
     <div class="year-goal-head"><span>${p.year} running goal</span><span>${fmt(p.g.targetKm)} km</span></div>
     ${complete
-      ?`<div class="year-goal-big" style="color:var(--green);">Done! 🎉</div><div class="year-goal-sub">${fmt(p.done)}km run this year${p.done>p.g.targetKm?`, ${fmt(p.done-p.g.targetKm)}km over target`:''}.</div>`
+      ?`<div class="year-goal-big" style="color:var(--green);">Done.</div><div class="year-goal-sub">${fmt(p.done)}km run this year${p.done>p.g.targetKm?`, ${fmt(p.done-p.g.targetKm)}km over target`:''}.</div>`
       :`<div class="year-goal-big">${fmt1(p.remaining)}<span> km to go</span></div>`}
     <div class="year-goal-track">
       <div class="year-goal-fill" style="width:${p.pct.toFixed(1)}%;"></div>
@@ -11509,17 +11702,17 @@ function renderWeekReviewBody(r,{showNext}={}){
       <div class="wr-line">Gym: ${r.gymTarget} sessions</div></div>`;
   }
   return`<div class="wr-verdict">${r.verdict}</div>
-    <div class="wr-sec"><div class="wr-sec-h">🏃 Running</div>
+    <div class="wr-sec"><div class="wr-sec-h">Running</div>
       <div class="wr-row"><span><strong>${f1(r.km)}</strong>${r.runTarget?` / ${f1(r.runTarget)}`:''} km</span>${r.runTarget?`<span style="font-weight:800;color:${r.km>=r.runTarget-0.05?'var(--green)':'var(--orange)'};">${Math.round(r.km/r.runTarget*100)}%</span>`:''}</div>
       ${r.runTarget?`<div class="wr-bar"><div style="width:${pct.toFixed(1)}%;background:${r.km>=r.runTarget-0.05?'var(--green)':'var(--orange)'};"></div></div>`:''}
       <div class="wr-line">${r.runCount} run${r.runCount===1?'':'s'}${r.runCount?` · longest ${f1(r.longest)}km`:''}${goalLine}</div></div>
-    <div class="wr-sec"><div class="wr-sec-h">🏋️ Gym</div>
+    <div class="wr-sec"><div class="wr-sec-h">Gym</div>
       <div class="wr-line"><strong>${r.gymCount} / ${r.gymTarget}</strong> sessions${r.pbs.length?` · ${r.pbs.length} new PB${r.pbs.length===1?'':'s'}`:''}</div>
-      ${r.pbs.slice(0,4).map(p=>`<div class="wr-line">🏆 ${esc(p.name)} <strong>${p.detail}</strong></div>`).join('')}</div>
-    ${r.rec.days?`<div class="wr-sec"><div class="wr-sec-h">😴 Recovery <span style="float:right;font-weight:700;letter-spacing:0;text-transform:none;">vs last week</span></div>
+      ${r.pbs.slice(0,4).map(p=>`<div class="wr-line">PB · ${esc(p.name)} <strong>${p.detail}</strong></div>`).join('')}</div>
+    ${r.rec.days?`<div class="wr-sec"><div class="wr-sec-h">Recovery <span style="float:right;font-weight:700;letter-spacing:0;text-transform:none;">vs last week</span></div>
       <div class="wr-row"><span>Sleep score</span><span><strong>${r.rec.sleep!=null?Math.round(r.rec.sleep):'–'}</strong> &nbsp;${delta(r.rec.sleep,r.recPrev.sleep,'')}</span></div>
       <div class="wr-row"><span>HRV</span><span><strong>${r.rec.hrv!=null?Math.round(r.rec.hrv)+'ms':'–'}</strong> &nbsp;${delta(r.rec.hrv,r.recPrev.hrv,'ms')}</span></div></div>`:''}
-    ${r.habits.length?`<div class="wr-sec"><div class="wr-sec-h">✅ Habits</div>
+    ${r.habits.length?`<div class="wr-sec"><div class="wr-sec-h">Habits</div>
       <div class="wr-habits">${r.habits.map(h=>`<span class="wr-habit${h.done===h.days?' full':''}">${esc(h.name)} <strong>${h.done}/${h.days}</strong></span>`).join('')}</div></div>`:''}
     ${nextHtml}
     <div class="wr-focus"><strong>Focus:</strong> ${r.focus}</div>`;
@@ -11559,7 +11752,7 @@ function renderWeekReviewHistory(){
     ${weeks.map((r,i)=>{const open=!!_wrOpen[r.monStr];const hit=r.runTarget?r.km>=r.runTarget-0.05:null;return`<div style="${i<weeks.length-1?'border-bottom:1px solid var(--border);':''}">
       <button class="wr-hist-row" onclick="toggleWeekReviewRow('${r.monStr}')" aria-expanded="${open}">
         <span style="font-weight:800;color:var(--text1);min-width:92px;text-align:left;">${fmtWeekRange(r.mon)}</span>
-        <span style="flex:1;text-align:left;color:var(--text2);">🏃 ${f1(r.km)}km${hit===null?'':hit?' ✓':''} · 🏋️ ${r.gymCount}${r.rec.sleep!=null?` · 😴 ${Math.round(r.rec.sleep)}`:''}${r.pbs.length?` · 🏆${r.pbs.length}`:''}</span>
+        <span style="flex:1;text-align:left;color:var(--text2);">${f1(r.km)} km${hit===null?'':hit?' ✓':''} · ${r.gymCount} gym${r.rec.sleep!=null?` · sleep ${Math.round(r.rec.sleep)}`:''}${r.pbs.length?` · ${r.pbs.length} PB${r.pbs.length===1?'':'s'}`:''}</span>
         <span class="yg-next-chev${open?' open':''}">▾</span>
       </button>
       ${open?`<div style="padding:0 0 12px;">${renderWeekReviewBody(r)}</div>`:''}
@@ -11801,14 +11994,14 @@ function renderWhatMovesCard(group){
     <div class="chart-card-header"><span class="chart-card-title">${WHAT_MOVES_TITLES[group]}</span><span class="chart-card-val">${ready.length} of ${items.length}</span></div>
     <div style="font-size:11px;color:var(--text3);margin:-4px 0 6px;line-height:1.5;">${WHAT_MOVES_NOTES[group]} Patterns, not proof.</div>
     ${groups.map(({list})=>list.map((i,idx)=>`<div style="padding:10px 0 12px;${idx<list.length-1?'border-bottom:1px solid var(--border);':''}">
-      <div style="font-size:13px;font-weight:800;color:var(--text1);margin-bottom:4px;">${i.icon} ${i.title}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--text1);margin-bottom:4px;">${i.title}</div>
       <div style="font-size:12.5px;color:var(--text2);line-height:1.5;margin-bottom:8px;">${i.text}</div>
       <div style="display:flex;gap:8px;">${side(i.a)}${side(i.b)}</div>
       ${i.note?`<div style="font-size:10px;color:var(--text3);margin-top:6px;">${i.note}</div>`:''}
     </div>`).join('')).join('')}
     ${pending.length?`<div style="padding-top:10px;margin-top:4px;${ready.length?'border-top:1px solid var(--border);':''}">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:4px;">Still collecting</div>
-      ${pending.map(i=>`<div style="font-size:12px;color:var(--text3);padding:3px 0;">${i.icon} ${i.title} <span style="opacity:0.8;">· ${i.pending}</span></div>`).join('')}
+      ${pending.map(i=>`<div style="font-size:12px;color:var(--text3);padding:3px 0;">${i.title} <span style="opacity:0.8;">· ${i.pending}</span></div>`).join('')}
     </div>`:''}
   </div>`;
 }
@@ -12520,14 +12713,14 @@ function renderStoryCard(){
   const win=getWeeklyWin();
   if(win){
     const dateLabel=new Date(win.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-    const icon=win.type==='run'?'🏃':'🏆';
+    
     // Same compact pill treatment as .today-status and the deload/load nudge above it
     // (tinted background, thin full border, matching padding/radius/margin) instead of
     // the heavier .chart-card component - the three read as one consistent "today's
     // insights" stack now rather than two pills plus one oversized card with a stray
     // left-border accent nothing else on the page uses.
     el.innerHTML=`<div style="background:rgba(5,150,105,0.07);border:1px solid rgba(5,150,105,0.22);border-radius:14px;padding:11px 14px;margin-bottom:8px;text-align:left;">
-      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:4px;">${icon} This week's win</div>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:4px;">This week's win</div>
       <div style="font-size:13.5px;color:var(--text2);line-height:1.4;"><strong style="color:var(--text);">${esc(win.name)}</strong> — ${win.detail} on ${dateLabel}</div>
     </div>`;
     return;
@@ -12721,7 +12914,7 @@ function renderAnomalyAlerts(){
   const alerts=getAnomalyAlerts().filter(a=>a.type==='alert-backup');
   if(!alerts.length)return'';
   return`<div class="anomaly-alerts">${alerts.map(a=>`<div class="anomaly-banner ${esc(a.type)}" id="anomaly-${esc(a.id)}">
-    <div class="anomaly-banner-icon">${a.icon}</div>
+    <div class="anomaly-banner-icon"></div>
     <div class="anomaly-banner-body"><div class="anomaly-banner-title">${esc(a.title)}</div><div class="anomaly-banner-desc">${esc(a.desc)}</div>${a.action?`<button class="anomaly-banner-action" onclick="${a.action.onclick}">${esc(a.action.label)}</button>`:''}</div>
     <button class="anomaly-dismiss" onclick="dismissAlert('${esc(a.id)}')">×</button>
   </div>`).join('')}</div>`;
@@ -12892,7 +13085,7 @@ function renderDayModalContent(ds){
         return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:${done?'rgba(8,132,91,0.07)':'var(--surface2)'};border:1px solid ${done?'rgba(8,132,91,0.25)':'var(--border)'};">
           ${goalAvatarInline(g.name,28)}
           <span style="flex:1;font-size:14px;font-weight:700;">${esc(g.name)}</span>
-          <span style="font-size:16px;">${done?'✅':'❌'}</span>
+          <span style="color:${done?'var(--green)':'var(--text3)'};display:flex;">${done?svgIcon('check',16):'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'}</span>
         </div>`;
       }).join('')}
     </div>`;
@@ -12934,7 +13127,7 @@ function renderDayModalContent(ds){
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
         ${r.effort?`<span style="padding:3px 9px;border-radius:10px;background:${effortBg};color:${effortCol};font-size:12px;font-weight:700;">${esc(r.effort)}</span>`:''}
-        ${r.startTime?`<span style="font-size:11px;color:var(--text3);font-weight:600;">🕐 ${r.startTime}</span>`:''}
+        ${r.startTime?`<span style="font-size:11px;color:var(--text3);font-weight:600;">${r.startTime}</span>`:''}
       </div>
       <div style="font-size:13px;color:var(--text2);font-weight:600;">${[r.km?fmtKm(r.km)+'km':'',r.time||'',pace||''].filter(Boolean).join(' · ')}</div>
       ${r.note?`<div style="font-size:12px;color:var(--text3);margin-top:5px;font-style:italic;">${esc(r.note)}</div>`:''}
@@ -13311,9 +13504,12 @@ function renderGymBriefCard(type){
   // No "add sets" advice on a day that's asking for less.
   const gctx=getGymContext();
   const holdBack=(st&&st.key==='recover')||(phase&&phase.key==='taper')||gctx.comeback;
-  const gaps=GC_TYPE_MUSCLES[type]&&!holdBack?getGymMuscleGaps(type,exNames):[];
+  const coached=!!planGymSession(type); // its notes already cover a comeback, race week and short muscles
+  const gaps=GC_TYPE_MUSCLES[type]&&!holdBack&&!coached?getGymMuscleGaps(type,exNames):[];
   const lines=[];
-  if(gctx.comeback){
+  if(gctx.comeback&&coached){if(st&&st.key==='recover')lines.push({col:st.col,text:GC_READY_LINE.recover});}
+  else if(gctx.race&&coached){if(st)lines.push({col:st.col,text:GC_READY_LINE[st.key]});}
+  else if(gctx.comeback){
     const tops=lastSame?_gymTopSets(lastSame):[];
     lines.push({col:'var(--st-ready)',text:`${gctx.layoff} days since your last session, so this is a re-entry: about 80% of your last weights for 8–10 reps${tops.length?` (${tops.map(x=>`${x.name} ${_kg(_r25(x.w*0.8))}`).join(', ')})`:''}. Save PR attempts for next time; muscles come back fast, tendons slower.`});
     if(st&&st.key==='recover')lines.push({col:st.col,text:GC_READY_LINE.recover});
@@ -13330,7 +13526,7 @@ function renderGymBriefCard(type){
   const alt=clash&&clash.alt?_gcUpperAlt():null;
   return`<div class="chart-card rd-mini gc-brief" style="--st:${st?st.col:'var(--text)'};">
     <div class="rd-mini-head"><span class="rd-eyebrow">Session brief</span>${st?`<span class="rd-mini-score">${r.score}</span>`:`<button class="rd-info" onclick="openMorningModal()">Check in</button>`}</div>
-    <div class="rd-mini-state">${st?st.label:esc(type)}</div>
+    <div class="rd-mini-state">${st?st.label:'No check-in yet'}</div>
     ${clash?`<div class="gc-guard gc-${clash.level}"><div>${esc(clash.text)}</div>${alt?`<button onclick="gymPickType('${alt}')">Switch to ${alt}</button>`:''}</div>`:''}
     <ul class="gc-lines">${lines.map(l=>`<li style="--c:${l.col};">${esc(l.text)}</li>`).join('')}</ul>
   </div>`;
@@ -13387,7 +13583,7 @@ function renderCoachGymPreview(type,compact){
   const P=planGymSession(type);if(!P)return'';
   const rows=compact?P.rows.slice(0,4):P.rows;
   return`<div class="cg">
-    <div class="cg-h"><span>Coach's session</span><b>${esc(type)} · about ${P.mins} min</b></div>
+    <div class="cg-h"><span>Coach's session</span><b>about ${P.mins} min</b></div>
     ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.why?`<em>${esc(r.why)}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
     ${compact&&P.rows.length>4?`<div class="cg-more">+ ${P.rows.length-4} more</div>`:''}
     ${P.notes.map(n=>`<div class="cg-note">${n}</div>`).join('')}
@@ -13482,7 +13678,7 @@ function checkLivePR(i,si){
     if(w>bestW||(w===bestW&&r>bestWr))msg=`${w}kg × ${r}`;
     else if(_gcE1rm(w,r)>bestE+0.05)msg=`${w}kg × ${r}, e1RM ${Math.round(_gcE1rm(w,r)*10)/10}kg`;
   }else if(w===0&&bestW===0&&r>bestR)msg=`${r} reps`;
-  if(msg){s._pr=true;toastMsg(`🏆 New PR · ${ex.name} ${msg}`,3000);haptic('success');}
+  if(msg){s._pr=true;toastMsg(`New PR · ${ex.name} ${msg}`,3000);haptic('success');}
 }
 function renderGymScoreboard(){
   if(!gymDraft)return'<div id="gym-scoreboard"></div>';
@@ -13767,7 +13963,7 @@ function renderTodayDebrief(){
   const out=[];let tomorrow=null;
   const run=loadRunData().filter(r=>r.date===ds).pop();
   const ach=run?getRunAchievement(run):null;
-  if(ach)out.push({col:'var(--c-gold)',head:`🏆 ${esc(ach.head)}`,text:ach.sub});
+  if(ach)out.push({col:'var(--c-gold)',head:esc(ach.head),text:ach.sub});
   if(run){const d=getRunDebrief(run);if(d){out.push({col:d.col,head:d.head,text:(d.lines.find(l=>l.text!==d.tomorrow)||{}).text||''});tomorrow=d.tomorrow;}}
   const gym=loadGymData().filter(s=>s.date===ds).pop();
   if(gym){const v=getSessionVerdict(gym);if(v){out.push({col:!v.compared?'var(--st-ready)':v.up*2>=v.compared?'var(--st-go)':'var(--st-ready)',head:`${esc(gym.type||'Gym')}: ${v.compared?`${v.up} of ${v.compared} lifts up${v.prs?`, ${v.prs} PR${v.prs===1?'':'s'}`:''}`:'baseline set'}`,text:''});tomorrow=tomorrow||v.tomorrow;}}

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="111">
+<meta name="app-version" content="112">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -999,6 +999,8 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .today-plan-cta{margin-top:12px;}
 .tp-gymskip{display:block;width:100%;margin-top:4px;padding:8px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
 .tp-gymstart{display:block;width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
+.gw span .wu-done{color:var(--text3);font-weight:600;}
+.gw span span{font:inherit;}
 .gn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
 .gf-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:6px;}
 .gf-stats>div{display:flex;flex-direction:column;}
@@ -5191,10 +5193,20 @@ function gymSetProgress(){
   return{done,plan};
 }
 // Log the prescribed warm-ups in one tap (kept as warm-ups, so they never count as work).
+// The prescribed warm-ups still to do: each one logged (within 5 kg) ticks one off, and
+// they stop mattering once a working set is in.
+function _wuPlan(ex){return ex._wuPlan||ex._warmups||[];}
+function _wuLeft(ex){
+  const plan=_wuPlan(ex);if(!plan.length||_gcWorking(ex).length)return[];
+  const done=(ex.sets||[]).filter(s=>s.warmup&&gymSetFilled(s,ex.name)).map(s=>+s.weight||0);
+  return plan.filter(([w])=>{const k=done.findIndex(d=>Math.abs(d-w)<=5);if(k>=0){done.splice(k,1);return false;}return true;});
+}
 function gymLogWarmups(i){
-  const ex=gymDraft&&gymDraft.exercises[i];if(!ex||!ex._warmups)return;
-  ex.sets=[...ex._warmups.map(([w,r])=>({weight:String(w),reps:String(r),warmup:true,technique:false})),...ex.sets];
-  ex._warmups=null;gymKpResetTarget();renderGymLogger();haptic('success');
+  const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
+  ex._wuPlan=_wuPlan(ex);const left=_wuLeft(ex);if(!left.length)return;
+  const filled=(ex.sets||[]).filter(s=>gymSetFilled(s,ex.name)),blank=(ex.sets||[]).filter(s=>!gymSetFilled(s,ex.name));
+  ex.sets=[...filled,...left.map(([w,r])=>({weight:String(w),reps:String(r),warmup:true,technique:false})),...blank];
+  gymKpResetTarget();renderGymLogger();haptic('success');
 }
 let _gymMenu=false;
 function gymToggleMenu(e){if(e)e.stopPropagation();_gymMenu=!_gymMenu;renderGymLogger();}
@@ -5795,7 +5807,9 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       ${ex._planSets?`<div class="gx-tgt-r"><b>${ex._planSets}</b><i>set${ex._planSets===1?'':'s'}</i></div>`:''}
       ${liftT&&liftT.note?`<span>${liftT.note}</span>`:''}
     </div>`:''}
-    ${ex._warmups&&ex._warmups.length&&!(ex.sets||[]).some(s=>gymSetFilled(s,ex.name))?`<div class="gw"><div><i>Warm up first</i><span>${ex._warmups.map(([w,r])=>`${w} × ${r}`).join('<em>·</em>')}</span></div><button onclick="gymLogWarmups(${i})">Log them</button></div>`:''}
+    ${(()=>{const plan=_wuPlan(ex);if(!plan.length||started)return'';const left=_wuLeft(ex);let lc=left.slice();
+      const items=plan.map(([w,r])=>{const k=lc.findIndex(x=>x[0]===w&&x[1]===r);const done=k<0;if(!done)lc.splice(k,1);return`<span class="${done?'wu-done':''}">${done?'✓ ':''}${w} × ${r}</span>`;}).join('<em>·</em>');
+      return`<div class="gw"><div><i>${left.length?'Warm up first':'Warm-ups done'}</i><span>${items}</span></div>${left.length?`<button onclick="gymLogWarmups(${i})">${left.length<plan.length?'Log the rest':'Log them'}</button>`:''}</div>`;})()}
     ${(()=>{
       const setTgt=getSetTarget(ex,gymKpCurrentSi(i,ex),lastSets,pb);
       const draft=gymKpSyncDraft(i,ex,setTgt);
@@ -5990,6 +6004,9 @@ function gymKpSyncDraft(i,ex,tgt){
     // Without this, logging 80kg then moving to a set pre-filled with that same 80kg
     // and typing "85" produced "8085".
     _gymKpDraft={i,si,weight:String(startW||''),reps:parseInt(s.reps)||(tgt&&tgt.reps)||0,fresh:true,tgt:tgt||null};
+    // Warm-ups still to do and nothing logged in this slot: the pad offers the next one.
+    const wl=!s.weight&&!s.reps?_wuLeft(ex):[];
+    if(wl.length){_gymKpDraft.weight=String(wl[0][0]);_gymKpDraft.reps=wl[0][1];_gymKpDraft.wu=true;}
   }
   return _gymKpDraft;
 }
@@ -6028,7 +6045,15 @@ function gymKpLogSet(){
   if(!reps||(requireWeight&&!weight)){toastMsg(requireWeight?'Enter weight and reps':'Enter reps');haptic('error');return;}
   s.weight=weight;s.reps=String(reps);
   const tgt=_gymKpDraft.tgt;
-  if(tgt&&tgt.reps){s._tgtR=tgt.reps;s._tgtW=tgt.weight;}
+  // A warm-up: the one the pad offered, or anything well under today's target before the
+  // first working set. Counted as a warm-up, so no rest timer and no 'that's your sets'.
+  const tW=tgt&&tgt.weight!=null?+tgt.weight:(_wuPlan(ex).length?null:null);
+  const firstW=(()=>{const p=_wuPlan(ex);return p.length?Math.max(...p.map(x=>x[0]))/0.75:tW;})();
+  const ref=tW||firstW;
+  const autoWu=!_gcWorking(ex).length&&ref>=20&&+weight<ref*0.85;
+  if(_gymKpDraft.wu&&ref&&+weight>=ref*0.85)_gymKpDraft.wu=false; // typed the working weight instead
+  if(_gymKpDraft.wu||autoWu){s.warmup=true;s.technique=false;if(autoWu&&!_gymKpDraft.wu)toastMsg(`Counted as a warm-up: today's working weight is ${_kg(ref)}`,2500);}
+  else if(tgt&&tgt.reps){s._tgtR=tgt.reps;s._tgtW=tgt.weight;}
   gymSetActiveEx(i);
   gymCheckSetDone(i,si,true);
   // If that was the last remaining set to fill, add a fresh blank one straight away -

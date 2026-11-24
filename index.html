@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="107">
+<meta name="app-version" content="108">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1124,6 +1124,12 @@ body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
 .cg-row span{font-weight:600;color:var(--text);}
 .cg-row em{display:block;font-style:normal;font-size:11px;color:var(--accent2);font-weight:600;}
 .cg-row b{font-family:var(--display);font-weight:800;font-size:15px;white-space:nowrap;}
+.cg-len{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 8px;}
+.cg-len button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 4px;border:none;border-radius:10px;background:var(--surface);color:var(--text2);font-family:var(--display);font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:0.03em;cursor:pointer;}
+.cg-len button i{font-style:normal;font-family:-apple-system,system-ui,sans-serif;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--text3);}
+.cg-len button.on{background:var(--accent);color:var(--on-accent);}
+.cg-len button.on i{color:var(--on-accent);opacity:0.8;}
+.cg-len button:disabled{opacity:0.45;cursor:default;}
 .cg-more{font-size:12px;color:var(--text3);padding-top:4px;}
 .cg-note{margin-top:7px;font-size:12px;line-height:1.45;color:var(--text2);}
 .tp-steps{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
@@ -13737,22 +13743,57 @@ function planGymSession(type){
   const NIG={Shoulder:['Shoulders','Chest'],Elbow:['Triceps','Biceps'],Wrist:['Biceps','Triceps','Chest'],Back:['Back'],Knee:['Quads','Hamstrings','Glutes']};
   const recentN=[...new Set(sessions.filter(x=>x.date>=_dsAgo(14)&&Array.isArray(x.niggles)).flatMap(x=>x.niggles))];
   recentN.forEach(nj=>{const ms=NIG[nj]||[];rows.forEach(r=>{if((getExerciseMuscles(r.name)||[]).some(m=>ms.includes(m))&&r.sets>1){r.sets--;r.eased=nj;}});});
-  const budget=taper||ctx.race?30:40;
+  // How long: from the day. Race weeks and low readiness get less; a day with no run, or
+  // a fresh morning, gets more. Short and Long move it from there (Long isn't offered when
+  // the body or the race calendar says no).
+  const cwd=(()=>{try{const c=getCalendarWeek(0);return c&&c.days.find(x=>x.isToday);}catch(e){return null;}})();
+  const runs=cwd?(cwd.planned||[]).filter(x=>x.type!=='Race'&&x.km):[];
+  const hardRun=runs.some(x=>['Tempo','Intervals','Sharpener','Long','B2B'].includes(x.sub)||x.type==='Long'||x.type==='Tempo');
+  let base,why;
+  if(taper||ctx.race){base=30;why=taper?'taper week':'race week';}
+  else if(k==='recover'){base=25;why='readiness says recover';}
+  else if(k==='pace'){base=35;why='readiness says pace yourself';}
+  else if(!runs.length){base=50;why='no run today';}
+  else if(hardRun){base=35;why='a hard run today';}
+  else{base=40;why='an easy run today';}
+  if(k==='go'&&base>=40&&!taper&&!ctx.race){base+=5;why+=', and you\'re fresh';}
+  const longOk=!(taper||ctx.race||k==='recover'||k==='pace');
+  const len=_gymLen==='short'?'short':_gymLen==='long'&&longOk?'long':'coach';
+  const budget=len==='short'?20:len==='long'?Math.min(60,base+15):base;
   const mins=()=>rows.reduce((a,r)=>a+r.sets*(r.rest+40),0)/60+6;
   let guard=0;
   while(mins()>budget&&rows.length>2&&guard++<20){const r=rows.slice(1).sort((a,b)=>b.sets-a.sets)[0];if(r.sets>2)r.sets--;else rows.pop();}
+  // Room to spare: a set back on the main lifts first, then another of your usual lifts.
+  if(!taper&&k!=='recover'){
+    guard=0;
+    while(mins()<budget-6&&guard++<12){
+      const r=rows.filter(x=>x.sets<4&&!x.eased).sort((a,b)=>a.sets-b.sets||b.w-a.w)[0];
+      const spare=order.map(kk=>freq[kk]).find(x=>fits(x.name)&&!rows.some(r2=>r2.name.toLowerCase()===x.name.toLowerCase()));
+      if(r&&r.sets<3)r.sets++;
+      else if(spare){const last=getLastExSets(spare.name,sessions)||[],top=_gcTopLast(last);rows.push({name:spare.name,sets:3,tgt:top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null,rest:getExRestSecs(spare.name)||75,w:top?+top.weight||0:0,why:'room for one more'});}
+      else if(r)r.sets++;else break;
+      if(mins()>budget){const l=rows[rows.length-1];if(l.why==='room for one more')rows.pop();else if(r)r.sets--;break;}
+    }
+  }
   const notes=[];
+  notes.push(len==='short'?'Short: the main lifts only, about 20 minutes.':len==='long'?`Long: about ${budget} minutes, more sets on the main lifts.`:`About ${budget} minutes because it's ${why}.`);
+  if(_gymLen==='long'&&!longOk)notes.push(`Long isn't on today (${why}).`);
   if(ctx.comeback)notes.push(`${ctx.layoff} days since the gym: about 80% of your last weights for 8–10 reps. Muscle comes back fast; tendons are slower.`);
   else if(ctx.race)notes.push(`${esc(ctx.race.name||'Race')} in ${ctx.dRace} days: hold your weights, nothing to failure.`);
   if(taper)notes.push('Taper: half the sets.');else if(k==='recover')notes.push('Readiness says recover: one set fewer per lift, technique first.');
   if(recentN.length)notes.push(`${recentN.join(' and ')} niggle flagged recently: one set fewer on the lifts that load it. Stop anything that hurts.`);
-  return{type,rows,mins:Math.round(mins()),notes};
+  return{type,rows,mins:Math.round(mins()),notes,len,longOk,base};
 }
+let _gymLen='coach';
+function setGymLen(v,e){if(e)e.stopPropagation();_gymLen=v;haptic('light');refreshActivePage();}
 function renderCoachGymPreview(type,compact){
   const P=planGymSession(type);if(!P)return'';
   const rows=compact?P.rows.slice(0,4):P.rows;
+  const keep=_gymLen,m={};['short','coach','long'].forEach(v=>{_gymLen=v;const q=planGymSession(type);m[v]=q?q.mins:null;});_gymLen=keep;
+  const chip=(v,l)=>`<button class="${P.len===v?'on':''}" ${v==='long'&&!P.longOk?'disabled':''} onclick="setGymLen('${v}',event)">${l}<i>${v==='long'&&!P.longOk?'not today':`~${m[v]} min`}</i></button>`;
   return`<div class="cg">
     <div class="cg-h"><span>Coach's session</span><b>about ${P.mins} min</b></div>
+    <div class="cg-len">${chip('short','Short')}${chip('coach',"Coach's")}${chip('long','Long')}</div>
     ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.why?`<em>${esc(r.why)}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
     ${compact&&P.rows.length>4?`<div class="cg-more">+ ${P.rows.length-4} more</div>`:''}
     ${P.notes.map(n=>`<div class="cg-note">${n}</div>`).join('')}
@@ -13779,7 +13820,7 @@ function buildGymSession(type){
       return{name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why,_warmups:wu};
     });
     _gymFocusIdx=null;_gymShowAllEx=false;gymKpResetTarget();
-    gymDraft={type,exercises,startedAt:Date.now(),coach:true,planMins:P.mins};
+    gymDraft={type,exercises,startedAt:Date.now(),coach:true,planMins:P.mins};_gymLen='coach';
     renderGymLogger();
     toastMsg(`The coach's ${type}: ${exercises.length} exercises, about ${P.mins} min`,3000);haptic('light');
     return;

@@ -10966,6 +10966,8 @@ function _coachWeek(o,mode,monK,td){
       let sub=t==='Long'?'Long':t==='Intervals'?'Intervals':t==='Tempo'?'Tempo':'Easy',why='From your usual week.';
       if((sub==='Tempo'||sub==='Intervals')&&(postRace||kind==='recovery')){sub='Easy';why=postRace?'Your quality day, run easy: no hard sessions the week after a race.':'Your quality day, run easy: it\'s a recovery week.';}
       else if((sub==='Tempo'||sub==='Intervals')&&(kind==='taper'||kind==='race')){sub='Sharpener';why='Your quality day becomes race-pace reps: sharp, not tiring, before the race.';}
+      // Nothing hard in the two days before a race, even on your usual quality day.
+      if(['Tempo','Intervals','Sharpener'].includes(sub)&&raceI!=null&&raceI>=i&&raceI-i<3){sub='Easy';why=`Your quality day, run easy: it's ${raceI-i===1?'the day before':'two days before'} the race.`;}
       const l=low(i);if(l&&l.phase==='low'&&sub!=='Easy'){sub='Easy';why=`Easy only while you're ${(_LOW[l.reason]||_LOW.tired).lbl}.`;}
       if(i===tdI&&rk==='recover'&&sub!=='Easy'){sub='Recovery';why='Readiness says recover: run it very easy, or rest.';}
       set(i,sub,why);

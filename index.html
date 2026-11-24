@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="105">
+<meta name="app-version" content="106">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -3742,8 +3742,9 @@ function renderTodayPlanFromCalendar(readiness){
       ${d.gym?(()=>{const gt=GYM_PLAN_TYPES.has(d.gym)?d.gym:_coachGymType(),pv=renderCoachGymPreview(gt,true);
         return pv?`<div class="today-plan-meta" style="margin-top:10px;"><b>Plus ${esc(gt.toLowerCase())}</b>${d.gymWhy?`: ${d.gymWhy.replace(/^\w+day: \w+, /,'').replace(/^\w+day: /,'')}`:''}</div>${pv}<button class="tp-gymstart" onclick="showPage('train');switchTrainTab('gym');setTimeout(()=>buildGymSession('${gt}'),80)">Start the gym session</button><button class="tp-gymskip" onclick="skipTodayGym(event)">No time for the gym today</button>`
           :`<div class="today-plan-meta" style="margin-top:6px;"><b>Plus ${esc(gt.toLowerCase())}</b>: ${d.gym==='Upper body'?'short and light, no legs.':'keep legs light with a key run close.'}</div>`;})():''}
+      ${!d.gym&&_addGymOpen?_addGymHtml(d):''}
       <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('run');setTimeout(()=>useTodaysRun(${run.km},'${effort}'),80)">Log this run</button>
-      <div class="tp-acts"><button onclick="moveTodayRun(event)">Move to tomorrow</button><button onclick="openN100(event)">Not 100%?</button></div>
+      <div class="tp-acts"><button onclick="moveTodayRun(event)">Move to tomorrow</button>${d.gym||_addGymOpen?'':`<button onclick="toggleAddGym(event)">Add gym</button>`}<button onclick="openN100(event)">Not 100%?</button></div>
       ${n100Html()}${(setTimeout(fillTodayWx,0),'')}`;
   }
   if(d.gym){
@@ -10965,6 +10966,8 @@ function _coachWeek(o,mode,monK,td){
       let sub=t==='Long'?'Long':t==='Intervals'?'Intervals':t==='Tempo'?'Tempo':'Easy',why='From your usual week.';
       if((sub==='Tempo'||sub==='Intervals')&&(postRace||kind==='recovery')){sub='Easy';why=postRace?'Your quality day, run easy: no hard sessions the week after a race.':'Your quality day, run easy: it\'s a recovery week.';}
       else if((sub==='Tempo'||sub==='Intervals')&&(kind==='taper'||kind==='race')){sub='Sharpener';why='Your quality day becomes race-pace reps: sharp, not tiring, before the race.';}
+      // Nothing hard in the two days before a race, even on your usual quality day.
+      if(['Tempo','Intervals','Sharpener'].includes(sub)&&raceI!=null&&raceI>=i&&raceI-i<3){sub='Easy';why=`Your quality day, run easy: it's ${raceI-i===1?'the day before':'two days before'} the race.`;}
       const l=low(i);if(l&&l.phase==='low'&&sub!=='Easy'){sub='Easy';why=`Easy only while you're ${(_LOW[l.reason]||_LOW.tired).lbl}.`;}
       if(i===tdI&&rk==='recover'&&sub!=='Easy'){sub='Recovery';why='Readiness says recover: run it very easy, or rest.';}
       set(i,sub,why);
@@ -13264,6 +13267,20 @@ function getWeekPlanGym(i){const t=state.weekPlanGym&&state.weekPlanGym[i];retur
 // (muscle sets short, days since, lift momentum), so everything that asks "what's the
 // gym session" gets a real answer. Cached briefly: it's asked a lot per render.
 let _gymDue=null,_gymResolving=false,_gymAutoCache={t:0,v:null};
+// Gym on a day the plan hasn't put one: the coach picks it. If a session is planned later
+// this week, that's the one (do it today and the week re-plans around it); otherwise
+// whatever your muscle balance and progress say is due. Shown before you start.
+let _addGymOpen=false;
+function toggleAddGym(e){if(e)e.stopPropagation();_addGymOpen=!_addGymOpen;renderToday();}
+function _addGymHtml(d){
+  const cw=getCalendarWeek(0),later=cw&&cw.days.find(x=>x.ds>d.ds&&x.gym&&GYM_PLAN_TYPES.has(x.gym));
+  const gt=later?later.gym:_coachGymType(),pv=renderCoachGymPreview(gt,true);
+  return`<div class="tp-addgym" onclick="event.stopPropagation()">
+    <div class="today-plan-meta" style="margin-top:10px;"><b>Plus ${esc(gt.toLowerCase())}</b>: ${later?`${DAY_NAMES[later.i]}'s session, brought forward; the rest of the week re-plans once it's logged.`:'what your muscle balance and progress say is due.'}${d.planned.some(x=>['Tempo','Intervals','Sharpener'].includes(x.sub))?' Upper body after a quality run is fine; run first if you can.':''}</div>
+    ${pv||''}
+    <button class="tp-gymstart" onclick="_addGymOpen=false;showPage('train');switchTrainTab('gym');setTimeout(()=>buildGymSession('${gt}'),80)">Start the ${esc(gt.toLowerCase())} session</button>
+    <button class="tp-gymskip" onclick="toggleAddGym(event)">Not today</button></div>`;
+}
 function _coachGymType(){
   if(Date.now()-_gymAutoCache.t<1500&&_gymAutoCache.v)return _gymAutoCache.v;
   const fb=()=>{const g=loadGymData().filter(x=>['Push','Pull','Legs'].includes(x.type));const l=g.length?g[g.length-1].type:null;return l==='Push'?'Pull':'Push';};

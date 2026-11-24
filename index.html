@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="110">
+<meta name="app-version" content="111">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -5152,6 +5152,7 @@ function renderGymLogger(){
   ${_gymMenu?`<div class="gl-pop" onclick="event.stopPropagation()">
     <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
     ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${new Date(lastSame.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})})</button>`:''}
+    ${_todayRunInfo()?`<button onclick="_gymMenu=false;showPage('train');switchTrainTab('run');setTimeout(()=>{const t=_todayRunInfo();if(t)useTodaysRun(t.run.km,t.effort);},80)">Log today's run (session waits)</button>`:''}
     <button onclick="_gymMenu=false;showPage('today')">Leave for now (it'll be here in Log)</button>
     <button class="danger" onclick="_gymMenu=false;openModal('gym-discard-modal')">Discard session</button>
   </div>`:''}
@@ -6273,6 +6274,7 @@ function saveGymSession(effort){
   haptic('success');renderGymSection();
   // Rated on the finish sheet already; only ask afterwards if it was called some other way.
   if(effort===undefined)setTimeout(()=>openGymEffortModal(sessionTs,sessionType),effortModalDelay);
+  else setTimeout(_afterGymRunPrompt,Math.max(700,effortModalDelay));
 }
 let _gymEffortTs=null;
 function openGymEffortModal(ts,type){
@@ -6550,6 +6552,38 @@ function saveRun(){
   _runLogDate=logDate; // stay on the day just logged so its debrief shows
   saveState();selectedEffort='';toastMsg('Run saved');haptic('success');renderRunSection();
   window.scrollTo({top:0,behavior:'smooth'});
+  if(logDate===dk(today()))setTimeout(_afterRunGymPrompt,700);
+}
+// ── RUN AND LIFT IN ONE GO ──
+// Either order. After the run: back into a gym session that's waiting, or start today's.
+// After the gym: today's run, ready to log once it's done.
+function _todayRunInfo(){
+  const cw=getCalendarWeek(0),d=cw&&cw.days.find(x=>x.isToday);if(!d)return null;
+  const ran=loadRunData().some(r=>r.date===d.ds);if(ran)return null;
+  const run=(d.planned||[]).filter(x=>x.type!=='Race'&&x.km).sort((a,b)=>b.km-a.km)[0];if(!run)return null;
+  const effort=run.sub?({Long:'Long Run',B2B:'Long Run',Tempo:'Tempo',Sharpener:'Tempo',Intervals:'Intervals'}[run.sub]||'Easy'):({Long:'Long Run',Tempo:'Tempo',Easy:'Easy'}[run.type]||'Easy');
+  return{run,effort,day:d};
+}
+function _afterRunGymPrompt(){
+  if(gymDraft&&gymDraft.exercises&&gymDraft.exercises.length){_runLiftSheet(`<h3>Back to the gym</h3><p class="np-p">Run logged. Your ${esc(gymDraft.type)} session is waiting where you left it.</p><button class="btn-primary" onclick="closeModal('session-detail-modal');showPage('train');switchTrainTab('gym')">Back to ${esc(gymDraft.type)}</button>`);return;}
+  const cw=getCalendarWeek(0),d=cw&&cw.days.find(x=>x.isToday);
+  const lifted=loadGymData().some(s=>s.date===dk(today()));
+  if(!d||!d.gym||lifted)return;
+  const gt=GYM_PLAN_TYPES.has(d.gym)?d.gym:_coachGymType();
+  _runLiftSheet(`<h3>Now the ${esc(gt.toLowerCase())}</h3><p class="np-p">Run logged. Next on today's plan:</p>${renderCoachGymPreview(gt)||''}<button class="btn-primary" style="margin-top:12px;" onclick="closeModal('session-detail-modal');showPage('train');switchTrainTab('gym');setTimeout(()=>buildGymSession('${gt}'),80)">Start the ${esc(gt.toLowerCase())}</button>`);
+}
+function _afterGymRunPrompt(){
+  const t=_todayRunInfo();if(!t)return;const r=t.run;
+  const hard=['Tempo','Intervals','Sharpener'].includes(r.sub);
+  _runLiftSheet(`<h3>Now the run</h3><div class="today-plan-type" style="font-size:30px!important;margin-bottom:6px;">${r.km} km ${esc(r.title||r.type)}</div>
+    ${r.steps&&r.steps.length?_tpSteps(r.steps):`<p class="np-p">${r.desc||''}</p>`}
+    ${hard?'<p class="np-p">Upper body first is fine for this; keep the reps sharp and cut the last one if your form goes.</p>':''}
+    <p class="np-p">Log it when you're done: on a treadmill, the distance and time from the display (31.39 works).</p>
+    <button class="btn-primary" onclick="closeModal('session-detail-modal');showPage('train');switchTrainTab('run');setTimeout(()=>useTodaysRun(${r.km},'${t.effort}'),80)">Log the run</button>`);
+}
+function _runLiftSheet(html){
+  document.getElementById('session-detail-content').innerHTML=`${html}<button class="btn-ghost" style="width:100%;margin-top:6px;" onclick="closeModal('session-detail-modal')">Later</button>`;
+  openModal('session-detail-modal');
 }
 let _runHistoryExpanded=false;
 function renderRunHistory(runs){

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="114">
+<meta name="app-version" content="115">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1001,6 +1001,13 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .tp-gymstart{display:block;width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;}
 .gw span .wu-done{color:var(--text3);font-weight:600;}
 .gw span span{font:inherit;}
+.td-list{display:flex;flex-direction:column;margin-top:6px;border-top:1px solid var(--border);}
+.td-item{padding:10px 0;border-bottom:1px solid var(--border);}
+.td-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+.td-h b{font-family:var(--display);font-weight:800;font-size:20px;text-transform:uppercase;}
+.td-h span{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap;}
+.td-v{font-size:13px;line-height:1.45;color:var(--text2);margin-top:3px;}
+.td-v i{font-style:normal;font-weight:800;color:var(--c);}
 .gn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
 .gf-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:6px;}
 .gf-stats>div{display:flex;flex-direction:column;}
@@ -3578,7 +3585,8 @@ function renderUsualWeek(){
       const p=d.planned.filter(x=>x.type!=='Race').sort((a,b)=>b.km-a.km)[0],r=d.planned.find(x=>x.type==='Race');
       const doneKm=d.done.reduce((a,x)=>a+(+x.km||0),0);
       let main,sub='',cls;
-      if(d.done.length){main='✓ '+Math.round(doneKm);sub=d.gym?`</em><em class="uw-gym">+ ${d.gym.toLowerCase()}`:'';cls='done';}
+      const gDone=loadGymData().find(g=>g.date===d.ds);
+      if(d.done.length){main='✓ '+Math.round(doneKm);sub=gDone?`</em><em class="uw-gym">✓ ${gDone.type.toLowerCase()}`:d.gym?`</em><em class="uw-gym">+ ${d.gym.toLowerCase()}`:'';cls='done';}
       else if(r){main='Race';sub=fmtKm(r.km)+' km';cls='race';}
       else if(p){main=lbl[p.sub]||p.type;sub=`${p.km} km${d.gym?`</em><em class="uw-gym">+ ${d.gym==='Upper body'?'upper':d.gym.toLowerCase()}`:''}`;cls=p.type==='Long'?'long':p.type==='Tempo'?'tempo':'easy';}
       else if(d.gym){main=d.gym==='Upper body'?'Upper':d.gym;sub='gym';cls='gym';}
@@ -3674,7 +3682,8 @@ function renderPlanCalendar(){
     const mx=Math.max(...kmDay,1);
     const shape=`<div class="pc-shape">${kmDay.map((k,i)=>`<i class="${w.days[i].done.length?'done':w.days[i].planned.some(x=>x.type==='Race')?'race':''}" style="height:${k?Math.max(12,k/mx*100):4}%"></i>`).join('')}</div>`;
     const rows=w.days.map(d=>{
-      const done=d.done.map(r=>`<div class="pc-item done"><b>✓ ${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}</b></div>`).join('');
+      const done=d.done.map(r=>`<div class="pc-item done"><b>✓ ${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}</b></div>`).join('')
+        +loadGymData().filter(g=>g.date===d.ds).map(g=>`<div class="pc-item done gymdone"><b>✓ ${esc(g.type||'Gym')}</b><span>${(g.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup&&+x.reps>0).length,0)} sets</span></div>`).join('');
       const plan=d.planned.map(s=>{const sel=_calPick&&_calPick.mon===w.mon&&_calPick.key===s.key;
         return`<div class="pc-item ${s.type.toLowerCase()}${sel?' sel':''}" onclick="calPick('${w.mon}','${s.key}')"><b>${s.km} km ${esc(s.title||s.type)}</b><span>${s.desc||''}</span>${s.why&&!sel?`<em class="pc-why">${s.why}</em>`:''}${sel?`<div class="pc-move">${_CAL_DAY.map((nm,i)=>w.days[i].past?'':`<button onclick="event.stopPropagation();calMove('${w.mon}','${s.key}',${i})" class="${i===d.i?'on':''}">${nm}</button>`).join('')}</div>${s.id!=null&&s.type!=='Race'?slotEditorHtml(w.mon,s,s.km):''}`:''}</div>`;}).join('');
       const gym=d.gym?`<div class="pc-item gym"${d.gymWhy?` title="${esc(d.gymWhy)}"`:''}><b>${d.gym==='Gym'&&tmpl0&&d.isToday?_coachGymType():d.gym}${d.gym==='Gym'&&tmpl0?' · coach picks':''}</b><span>${d.gymWhy&&planMode()==='coach'?(d.gymUpper?'Upper body, and keep it short.':'A normal session.'):d.gym==='Gym'&&tmpl0?(d.isToday?`Today: ${_coachGymType()}, the coach's pick from your muscle balance and progress.`:'The coach picks the session on the day, from your muscle balance and progress.'):d.gym==='Upper body'?'Short and light, no legs.':GYM_PLAN_TYPES.has(d.gym)?`From your plan.${(W=>W==='race'||W==='taper')(w.kind)?' Keep it short in a '+w.kind+' week.':''}`:'A normal session; legs only if no key run within 48 hours.'}</span>${d.gymWhy?`<em class="pc-why">${d.gymWhy}</em>`:''}</div>`:'';
@@ -3799,7 +3808,7 @@ function renderTodayPlanFromCalendar(readiness){
       <button class="today-plan-cta" onclick="showPage('train');switchTrainTab('gym')">Start gym session</button>
       <div class="tp-acts"><button onclick="openN100(event)">Not 100%?</button></div>${n100Html()}`;
   }
-  if(d.done.length)return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">Done</div><div class="today-plan-meta">${doneTxt} ${nxTxt}</div><button class="today-plan-cta done" onclick="showPage('train');switchTrainTab('history')">Logged ✓</button>`;
+  if(d.done.length)return _todayDoneHtml(d,nxTxt);
   return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">Rest</div>
     <div class="today-plan-meta">${cw.coach&&planMode()==='coach'&&!cw.coach.free.includes(d.i)?'You\'re busy today, so nothing\'s planned.':'Recovery is where the training turns into fitness.'} ${nxTxt}</div>
     ${n100Html()}
@@ -11346,6 +11355,26 @@ function _tpSteps(steps){
   if(!steps||!steps.length)return'';
   if(steps.length===1){const m=/at (.+)$/.exec(steps[0].d||'');if(m)return`<div class="tp-steps"><div><b>Pace</b><span>${m[1]}</span></div></div>`;}
   return`<div class="tp-steps">${steps.map(x=>`<div><b>${x.l}</b><span>${x.d}</span></div>`).join('')}</div>`;
+}
+// Everything done today, with what each one said, and what's next.
+function _todayDoneHtml(d,nxTxt){
+  const ds=d.ds,runs=loadRunData().filter(r=>r.date===ds),gyms=loadGymData().filter(g=>g.date===ds);
+  const items=[];
+  runs.forEach(r=>{const secs=parseTimeToSecs(r.time),db=getRunDebrief(r);
+    items.push(`<div class="td-item"><div class="td-h"><b>${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}</b><span>${r.time?esc(normTime(r.time)):''}${secs&&r.km?` · ${fmtPace(r.km/secs)}`:''}${r.hr?` · ${r.hr} bpm`:''}</span></div>
+      ${db?`<div class="td-v" style="--c:${db.col};"><i>${esc(db.head)}</i>${db.lines[0]?` ${db.lines[0].text||db.lines[0]}`:''}</div>`:''}</div>`);});
+  gyms.forEach(g=>{const ws=(g.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup&&+x.reps>0).length,0);
+    const vol=(g.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).reduce((b,x)=>b+(+x.weight||0)*(+x.reps||0),0),0);
+    const v=getSessionVerdict(g),bits=[];
+    if(v){if(v.prs)bits.push(`${v.prs} PR${v.prs===1?'':'s'}`);if(v.up)bits.push(`up on ${v.up} lift${v.up===1?'':'s'}`);}if(!bits.length)bits.push(g.effort==='Max'||g.effort==='Pushed'?'hard work banked':'done as planned');
+    items.push(`<div class="td-item"><div class="td-h"><b>${esc(g.type||'Gym')}</b><span>${ws} sets${vol?` · ${Math.round(vol).toLocaleString('en-GB')} kg`:''}${g.effort?` · ${esc(g.effort.toLowerCase())}`:''}</span></div>
+      ${bits.length?`<div class="td-v" style="--c:var(--st-go);"><i>${bits.join(', ')}</i></div>`:''}</div>`);});
+  const hard=runs.some(r=>/tempo|interval|race|long/i.test(r.effort||''))||gyms.length&&runs.length;
+  return`<div class="today-plan-lbl">Today's plan</div><div class="today-plan-type">Done</div>
+    <div class="td-list">${items.join('')}</div>
+    ${nxTxt?`<div class="today-plan-meta" style="margin-top:10px;">${nxTxt}</div>`:''}
+    ${hard?`<div class="tp-why">A big day: eat well tonight and get to bed on time; that's when it turns into fitness.</div>`:''}
+    <button class="today-plan-cta done" onclick="openDayModal('${ds}')">See today in full</button>`;
 }
 // ── SEASON PHASE ──
 // Where a week sits on the road to your next A race: base (12+ weeks out: easy volume,

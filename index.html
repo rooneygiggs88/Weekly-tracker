@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="116">
+<meta name="app-version" content="117">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1456,6 +1456,11 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
 .gr-bar b{font-family:var(--display);font-weight:800;font-size:28px;line-height:1;}
 .gr-bar small{font-size:15px;color:var(--text3);}
 .gr-bar em{font-style:normal;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:0.06em;text-transform:uppercase;padding:10px 16px;border-radius:var(--radius-sm);background:var(--accent);color:var(--on-accent);}
+/* Banners and callouts: tone, with the colour as a mark */
+.anomaly-banner,.anomaly-banner.alert-gym,.anomaly-banner.alert-score,.anomaly-banner.alert-backup{background:var(--surface)!important;border:none!important;}
+.anomaly-banner-action{border:none!important;background:var(--surface2)!important;color:var(--text)!important;}
+.yp-call{border:none!important;background:var(--surface2)!important;box-shadow:inset 4px 0 0 var(--accent2);}
+.yg-guard{border:none!important;background:var(--surface2)!important;}
 /* Secondary actions: tone, no outline */
 .btn-secondary{border-color:transparent;}
 .ins-list{display:flex;flex-direction:column;margin-top:8px;border-top:1px solid var(--border);}
@@ -2904,7 +2909,7 @@ function renderRaceMode(){
     ${RP?'':`<div class="rm-splits">${splits}</div>`}`:''}
     ${RP?`<div class="rm-sub" style="margin-top:12px;">Your race plan <b>${fmtDurationFromSecs(RP.target)}</b></div><div class="rm-tip">${RP.why}</div>
       <div class="rm-splits">${RP.splits.map(x=>`<div class="rm-split${x.fin?' fin':''}"><span>${x.fin?fmtKm(x.k):x.k}</span><b>${fmtDurationFromSecs(x.t)}</b></div>`).join('')}</div>`:paceTip?`<div class="rm-tip">${paceTip}</div>`:''}
-    <div class="rm-sub" style="margin-top:12px;">Race morning</div>
+    ${RM?`<div class="rm-sub" style="margin-top:12px;">Race morning</div>`:''}
     ${RM?`<div class="rm-time">${RM.map(([t,x])=>`<div><b>${t}</b><span>${x}</span></div>`).join('')}</div>`:''}
     <div class="rm-tip" style="margin-top:8px;"><b>Fuel:</b> ${raceFuel(r)}</div>
     <div id="rm-wx"></div>
@@ -4852,7 +4857,7 @@ function gymRestNext(){
   const lastSets=getLastExSets(ex.name,loadGymData());
   const tmp={...ex,sets:[...ex.sets.filter(x=>gymSetFilled(x,ex.name)),{weight:'',reps:'',warmup:false}]};
   const t=getSetTarget(tmp,tmp.sets.length-1,lastSets,0);
-  return`<i>Set ${ws.length+1}${ex._planSets?` of ${ex._planSets}`:''}</i><b>${t&&t.reps?(t.weight!=null?`${+t.weight} kg × ${t.reps}`:`${t.reps} reps`):esc(ex.name)}</b>${t&&t.why?`<span>${esc(t.why)}</span>`:''}`;
+  return`<i>${esc(ex.name)} · set ${ws.length+1}${ex._planSets?` of ${ex._planSets}`:''}</i><b>${t&&t.reps?(t.weight!=null?`${+t.weight} kg × ${t.reps}`:`${t.reps} reps`):esc(ex.name)}</b>${t&&t.why?`<span>${esc(t.why)}</span>`:''}`;
 }
 function restTimerAdd(s){
   if(!restEndsAt)return;
@@ -5305,7 +5310,10 @@ function gymSwapEx(i){
   const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
   const words=(ex.name||'').toLowerCase().split(/\W+/).filter(w=>w.length>3),want=getExerciseMuscles(ex.name)||[],have=new Set(gymDraft.exercises.map(e=>(e.name||'').toLowerCase())),gym=loadGymData();
   const used={};gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)used[e.name.toLowerCase()]=(used[e.name.toLowerCase()]||0)+1;}));
-  const alts=_gcLibrary().filter(n=>!have.has(n.toLowerCase())).map(n=>{const m=getExerciseMuscles(n)||[];const sim=n.toLowerCase().split(/\W+/).filter(w=>w.length>3&&words.includes(w)).length;return{n,ov:m.filter(x=>want.includes(x)).length,primary:m[0]&&m[0]===want[0],sim,u:used[n.toLowerCase()]||0};})
+  // Your library first, then common alternatives, so a small library still gets options.
+  const COMMON=['Dumbbell shoulder press','Arnold press','Lateral Raises','Push-ups','Incline dumbbell press','Close-grip bench press','Dips','Tricep Pushdowns','Cable fly','Pec fly','Seated row','Cable row','Pull-ups','Chin-ups','Lat pulldown','Face Pulls','Rear delt fly','Hammer Curls','EZ Bar Curl','Goblet squat','Leg press','Bulgarian split squat','Romanian deadlift','Hip thrust','Leg extension','Leg curl','Calf raise','Plank','Cable crunch'];
+  const pool=[..._gcLibrary()];COMMON.forEach(n=>{if(!pool.some(x=>x.toLowerCase()===n.toLowerCase()))pool.push(n);});
+  const alts=pool.filter(n=>!have.has(n.toLowerCase())).map(n=>{const m=getExerciseMuscles(n)||[];const sim=n.toLowerCase().split(/\W+/).filter(w=>w.length>3&&words.includes(w)).length;return{n,ov:m.filter(x=>want.includes(x)).length,primary:m[0]&&m[0]===want[0],sim,u:used[n.toLowerCase()]||0};})
     .filter(a=>a.ov>0).sort((a,b)=>(b.primary-a.primary)||(b.sim-a.sim)||(b.ov-a.ov)||(b.u-a.u)).slice(0,4);
   const row=a=>{const last=getLastExSets(a.n,gym)||[],top=_gcTopLast(last),t=top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null;
     return`<button onclick="gymDoSwap(${i},${JSON.stringify(a.n).replace(/"/g,'&quot;')})"><b>${esc(a.n)}</b><span>${t&&t.reps&&t.reps!=='?'?`${t.weight!=null?_kg(+t.weight)+' × ':''}${t.reps} · from your history`:'New to you: start light, 10–12 reps'}</span></button>`;};
@@ -5614,7 +5622,7 @@ function gymCheckSetDone(i,si,fromKeypad){
     if(fromKeypad)checkLivePR(i,si);
     const rest=getSmartRest(gymDraft.exercises[i],s);
     startRestTimer(rest.secs,rest.label);
-    if(rest.toIdx!=null){_gymFocusIdx=rest.toIdx;gymKpResetTarget();}
+    if(rest.toIdx!=null){_gymFocusIdx=rest.toIdx;gymKpResetTarget();const nx=document.getElementById('rest-next');if(nx)nx.innerHTML=gymRestNext();}
     saveGymDraft();
   }else if(!done){
     s._restFired=false;

@@ -166,6 +166,85 @@ async function agreements(browser){
   await ctx.close();
 }
 
+// The live gym session and the day around it: warm-ups, rest, supersets, PR attempts,
+// easy weeks, trimming, swaps, coach's picks, run-and-lift, skipping, the done card,
+// run times typed with dots, and the nicotine plan in puffs.
+async function gymLive(browser){
+  const {ctx,page,errors}=await boot(browser);
+  const r=await page.evaluate(()=>{const o={};
+    try{
+    // Time typed on the iPhone number pad
+    o.time=[parseTimeToSecs('31.39'),parseTimeToSecs('1.05.20'),parseTimeToSecs('43:10'),normTime('31,39')];
+    showPage('train');switchTrainTab('gym');
+    const type=['Push','Pull','Legs'].find(t=>planGymSession(t))||'Push';
+    buildGymSession(type);restStop();
+    const ex0=gymDraft.exercises[0];
+    // Warm-ups: the pad offers them first, and a light set before work counts as one
+    const wl=_wuLeft(ex0);o.wuPlan=_wuPlan(ex0).length;
+    if(wl.length){o.padFirst=+_gymKpDraft.weight===wl[0][0]&&!!_gymKpDraft.wu;gymKpLogSet();restStop();o.wuLogged=!!ex0.sets[0].warmup;o.noWorkYet=_gcWorking(ex0).length===0;}
+    // Rest depends on the set
+    const ex=gymDraft.exercises.find(e=>/press|bench|row|squat|pulldown/i.test(e.name))||ex0;
+    const heavy=getSmartRest({name:ex.name,_planSets:9,sets:[]},{weight:'200',reps:'3',_tgtR:6}).secs;
+    const light=getSmartRest({name:ex.name,_planSets:9,sets:[]},{weight:'10',reps:'15',_tgtR:10}).secs;
+    o.rest=[heavy,light];
+    // Length choice changes the session; Long isn't offered in race/taper weeks
+    _gymLen='short';const S=planGymSession(type);_gymLen='long';const L=planGymSession(type);_gymLen='coach';const C=planGymSession(type);
+    o.len={s:S.mins,c:C.mins,l:L.mins,longOk:C.longOk,pairs:S.rows.some(x=>x.pairWith)||S.rows.length<2};
+    // Coach's picks add exercises and time
+    const n0=gymDraft.exercises.length,m0=gymDraft.planMins,picks=_coachExtraPicks();
+    if(picks.length){gymAddCoachPicks(1);o.picks=gymDraft.exercises.length===n0+1&&gymDraft.planMins>m0;}else o.picks=true;
+    // Swap offers lifts for the same muscles
+    gymSwapEx(gymDraft.exercises.length-1);o.swap=document.querySelectorAll('#session-detail-content .ga-opts button').length;closeModal('session-detail-modal');
+    // Trim to fit keeps at least two lifts
+    gymDraft.startedAt=Date.now()-120*60000;gymTrimToFit();o.trim=gymDraft.exercises.length>=Math.min(2,n0);
+    // Fatigue: reps falling away on two lifts
+    const f=(e,rs)=>{e.sets=rs.map(x=>({weight:'40',reps:String(x),warmup:false}));};
+    if(gymDraft.exercises.length>=2){f(gymDraft.exercises[0],[8,6,4]);f(gymDraft.exercises[1],[10,7,5]);o.fatigue=!!_gymFatigue();}else o.fatigue=true;
+    // Keypad pinned and the current set in view
+    gymDraft.startedAt=Date.now();gymDraft.exercises.forEach(e=>{e.sets=[{weight:'',reps:'',warmup:false}];e._completed=false;});_gymFocusIdx=0;gymKpResetTarget();renderGymLogger();
+    o.kp=getComputedStyle(document.querySelector('.gx .kp')).position==='sticky';
+    o.more=document.querySelectorAll('.gx-more button').length===4;
+    gymDiscardSession();
+    }catch(e){o.err=e.message;}
+    return o;});
+  check(!r.err,`gym live threw: ${r.err}`);
+  check(r.time&&r.time[0]===1899&&r.time[1]===3920&&r.time[2]===2590&&r.time[3]==='31:39',`run times with dots: ${JSON.stringify(r.time)}`);
+  if(r.wuPlan){check(r.padFirst,'keypad doesn\'t offer the warm-up first');check(r.wuLogged&&r.noWorkYet,'a warm-up on the keypad counted as a working set');}
+  check(r.rest&&r.rest[0]>r.rest[1],`rest doesn't follow the set: heavy ${r.rest&&r.rest[0]}s vs light ${r.rest&&r.rest[1]}s`);
+  check(r.len&&r.len.s<=r.len.c&&(!r.len.longOk||r.len.l>=r.len.c),`Short/Coach's/Long out of order: ${JSON.stringify(r.len)}`);
+  check(r.len&&r.len.pairs,'Short doesn\'t pair lifts as supersets');
+  check(r.picks,'coach\'s picks didn\'t add an exercise and time');
+  check(r.swap>0,'swap offered nothing');
+  check(r.trim,'trim to fit dropped below two lifts');
+  check(r.fatigue,'falling reps on two lifts weren\'t flagged');
+  check(r.kp,'keypad isn\'t pinned in live mode');
+  check(r.more,'quick actions row missing under the sets');
+  // Run and lift, skip, done card, nicotine in puffs
+  const r2=await page.evaluate(()=>{const o={};try{
+    const cw=getCalendarWeek(0),d=cw.days.find(x=>x.isToday);
+    showPage('today');
+    o.addGymBtn=!d.gym&&d.planned.some(x=>x.km&&x.type!=='Race')?[...document.querySelectorAll('.tp-acts button')].some(b=>b.textContent==='Add gym'):true;
+    // Skip today's gym (if any) moves it or drops it, and undo restores
+    if(d.gym){const before=JSON.stringify(getCalendarWeek(0).days.map(x=>x.gym));skipTodayGym();const after=getCalendarWeek(0).days.find(x=>x.isToday).gym;o.skip=!after;undoSkipGym();o.undo=JSON.stringify(getCalendarWeek(0).days.map(x=>x.gym))===before;}else{o.skip=o.undo=true;}
+    // Log a run today and a gym session: the done card lists both
+    const runs=loadRunData();runs.push({date:dk(today()),km:6,time:'30.00',effort:'Easy',loggedAt:Date.now()});saveRunData(runs);
+    const g=loadGymData();g.push({date:dk(today()),type:'Push',ts:Date.now()-3600e3,endTs:Date.now()-1800e3,effort:'Solid',exercises:[{name:'Bench press',sets:[{weight:'60',reps:'8'}]}]});saveGymData(g);
+    _cwMemo={};showPage('today');
+    const txt=(document.querySelector('.td-list')||{}).innerText||'';o.done=/6 km/i.test(txt)&&/push/i.test(txt);
+    o.planGym=[...document.querySelectorAll('.pc-day.today .pc-item')].some(x=>/push/i.test(x.innerText));
+    // Nicotine plan reads in puffs when a strength is logged
+    if(typeof getNicPlan==='function'&&state.nicPlan){showPage('trends');switchTrendsTab('wellness');o.puffs=/puffs a day/.test((document.querySelector('.np-card')||{}).innerText||'');}else o.puffs=true;
+  }catch(e){o.err=e.message;}return o;});
+  check(!r2.err,`day flow threw: ${r2.err}`);
+  check(r2.addGymBtn,'no Add gym on a run-only day');
+  check(r2.skip&&r2.undo,'skip today\'s gym / undo didn\'t work');
+  check(r2.done,'done card doesn\'t list both the run and the gym session');
+  check(r2.planGym,'plan doesn\'t show the gym session done today');
+  check(r2.puffs,'nicotine plan not in puffs');
+  check(errors.length===0,`gym live: page errors: ${errors.join(' | ')}`);
+  await ctx.close();
+}
+
 (async()=>{
   const browser=await chromium.launch();
   try{
@@ -174,6 +253,7 @@ async function agreements(browser){
     await planRules(browser,'coach+busy',d=>{d.state.availCustom=true;d.state.avail=[0,1,2,3,4,5,6].map(i=>({run:i!==4,long:i>=5,gym:i===0||i===3}));});
     await planRules(browser,'manual',d=>{d.state.planMode='manual';d.state.weekPlan=['Rest','Run','Run','Run','Rest','Run','Run'];d.state.weekPlanRunType=[null,'Tempo','Easy','Auto','Easy','Easy','Long'];d.state.weekPlanGym=['Push',null,null,'Pull',null,null,null];});
     await agreements(browser);
+    await gymLive(browser);
     await nextYear(browser);
   }finally{await browser.close();}
   console.log(`${checks-failures.length}/${checks} checks passed`);

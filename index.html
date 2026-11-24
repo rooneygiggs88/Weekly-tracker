@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="108">
+<meta name="app-version" content="109">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1037,6 +1037,10 @@ body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
 .gl-pop button+button{border-top:1px solid var(--border);}
 .gl-pop button.danger{color:var(--red);}
 .gl-nudge{margin:-4px 0 14px;padding:11px 14px 11px 16px;border-radius:var(--radius-sm);font-size:13px;line-height:1.45;color:var(--text);background:var(--surface);border:none;position:relative;overflow:hidden;}
+.gl-nudge{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.gl-nudge button{flex-shrink:0;padding:8px 12px;border:none;border-radius:10px;background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;}
+.gl-ahead::before{background:var(--green)!important;}
+.gx-swap{flex-shrink:0;height:32px;padding:0 10px;border:none;border-radius:10px;background:var(--surface2);color:var(--text2);font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;}
 .gl-nudge::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--orange);}
 .gl-eyebrow{text-align:center;margin-bottom:10px;}
 .gl-text{display:block;width:100%;padding:12px;border:none;background:none;color:var(--text2);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:center;}
@@ -5130,6 +5134,8 @@ function renderGymLogger(){
     <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
     ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${new Date(lastSame.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})})</button>`:''}
     <button onclick="_gymMenu=false;gymAddEx()">Add an exercise</button>
+    <button onclick="gymLiveLen('short')">Short on time: trim what's left</button>
+    <button onclick="gymLiveLen('long')">Got more time: about 15 min more</button>
     <button onclick="_gymMenu=false;showPage('today')">Leave for now (it'll be here in Log)</button>
     <button class="danger" onclick="_gymMenu=false;openModal('gym-discard-modal')">Discard session</button>
   </div>`:''}
@@ -5166,15 +5172,79 @@ function gymLogWarmups(i){
 let _gymMenu=false;
 function gymToggleMenu(e){if(e)e.stopPropagation();_gymMenu=!_gymMenu;renderGymLogger();}
 // How the session is tracking against its planned time, and what to cut if it's running over.
+// Where the session stands against its planned time: minutes gone, minutes of planned
+// sets left, and how far over or under that puts you.
+function _gymProj(){
+  const el=(Date.now()-gymDraft.startedAt)/60000;let rem=0,remSets=0;const open=[];
+  gymDraft.exercises.forEach((ex,i)=>{if(ex._completed)return;const done=_gcWorking(ex).length,left=Math.max(0,(ex._planSets||3)-done);if(left){rem+=left*((getExRestSecs(ex.name)||90)+40)/60;remSets+=left;open.push({ex,i,done,left});}});
+  return{el,rem,remSets,open,over:Math.round(el+rem-(gymDraft.planMins||0))};
+}
+// Reps falling away on the last two lifts you worked: the session's useful work is done.
+function _gymFatigue(){
+  const worked=gymDraft.exercises.filter(ex=>_gcWorking(ex).length>=2);
+  const fell=ex=>{const w=_gcWorking(ex),f=w[0],l=w[w.length-1],fr=+f.reps||0,lr=+l.reps||0;return fr>=5&&(+l.weight||0)<=(+f.weight||0)&&(fr-lr>=3||lr<=fr*0.7);};
+  const last2=worked.slice(-2);
+  return last2.length===2&&last2.every(fell)?last2.map(e=>e.name):null;
+}
 function gymTimeNudge(){
   if(!gymDraft||!gymDraft.planMins)return'';
-  const el=(Date.now()-gymDraft.startedAt)/60000;
-  let rem=0,lastEx=null;
-  gymDraft.exercises.forEach(ex=>{if(ex._completed)return;const left=Math.max(0,(ex._planSets||3)-_gcWorking(ex).length);if(left){rem+=left*((getExRestSecs(ex.name)||90)+40)/60;lastEx=ex;}});
-  const over=Math.round(el+rem-gymDraft.planMins);
-  if(el>gymDraft.planMins+5)return`<div class="gl-nudge">Past the planned ${gymDraft.planMins} minutes: finish this lift and call it a session.</div>`;
-  if(over>=5&&lastEx)return`<div class="gl-nudge">Running about ${over} min over: drop ${esc(lastEx.name)} (or its last set) and you'll finish on time.</div>`;
+  const P=_gymProj(),fat=_gymFatigue();
+  if(fat)return`<div class="gl-nudge">Reps fell away on ${esc(fat[0])} and ${esc(fat[1])}. That's the useful work done: finish this lift and call it.<button onclick="openGymFinish()">Finish now</button></div>`;
+  if(P.el>gymDraft.planMins+5)return`<div class="gl-nudge">Past the planned ${gymDraft.planMins} minutes: finish this lift and call it a session.<button onclick="openGymFinish()">Finish now</button></div>`;
+  if(P.over>=5&&P.open.length)return`<div class="gl-nudge">Running about ${P.over} min over.<button onclick="gymTrimToFit()">Trim to fit</button></div>`;
+  // Nearly done, well ahead, reps holding: room for one more (not in race weeks or when tired).
+  const ctx=getGymContext(),light=ctx.race||(getGymRacePhase()||{}).key==='taper'||['recover','pace'].includes(_gcReadyKey());
+  const ahead=Math.round(gymDraft.planMins-(P.el+P.rem));
+  if(!light&&P.remSets<=2&&ahead>=8&&_gcWorking(gymDraft.exercises[0]||{sets:[]}).length){const pk=_coachExtraPicks()[0];if(pk)return`<div class="gl-nudge gl-ahead">About ${ahead} min ahead and your reps are holding. Room for ${esc(pk.name)}?<button onclick="gymAddCoachPicks(1)">Add it</button></div>`;}
   return'';
+}
+// Back on time: drop the last untouched exercise, then a set from the lifts still to come.
+function gymTrimToFit(target){
+  if(!gymDraft)return;const goal=target!=null?target:gymDraft.planMins;let guard=0;const cut=[];
+  const over=()=>{const P=_gymProj();return P.el+P.rem-goal;};
+  while(over()>1&&guard++<20){
+    const P=_gymProj(),untouched=P.open.filter(o=>o.done===0&&o.i!==_gymFocusIdx);
+    // Keep at least two lifts: past that, sets come off instead (down to two each).
+    if(untouched.length&&P.open.length>2){const o=untouched[untouched.length-1];cut.push(o.ex.name);gymDraft.exercises.splice(o.i,1);if(_gymFocusIdx>o.i)_gymFocusIdx--;continue;}
+    const o=P.open.filter(x=>(x.ex._planSets||3)>Math.max(2,x.done)).sort((a,b)=>b.left-a.left)[0];if(!o)break;
+    o.ex._planSets=(o.ex._planSets||3)-1;cut.push(`a set of ${o.ex.name}`);
+  }
+  if(target!=null)gymDraft.planMins=Math.round(goal);
+  gymKpResetTarget();renderGymLogger();haptic('success');
+  const left=Math.round(over());
+  toastMsg(cut.length?`Trimmed: ${[...new Set(cut)].slice(0,3).join(', ')}${left>2?`. Still about ${left} min over: finish what you can`:''}`:left>2?'Already down to the essentials: finish what you can':'Already on time',3500);
+}
+// Mid-session change of plan: less time, or more.
+function gymLiveLen(v){
+  _gymMenu=false;if(!gymDraft)return;const P=_gymProj();
+  if(v==='short'){gymTrimToFit(Math.max(P.el+5,20));return;}
+  const picks=_coachExtraPicks();let mins=0,n=0;
+  while(n<picks.length&&mins<12){mins+=picks[n].sets*(picks[n].rest+40)/60+2;n++;}
+  if(!n){toastMsg('Nothing sensible to add today');renderGymLogger();return;}
+  gymAddCoachPicks(n);
+}
+// Swap an exercise (kit taken, or it doesn't feel right): others that work the same
+// muscles, with a target from your history on them.
+function gymSwapEx(i){
+  const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
+  const words=(ex.name||'').toLowerCase().split(/\W+/).filter(w=>w.length>3),want=getExerciseMuscles(ex.name)||[],have=new Set(gymDraft.exercises.map(e=>(e.name||'').toLowerCase())),gym=loadGymData();
+  const used={};gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)used[e.name.toLowerCase()]=(used[e.name.toLowerCase()]||0)+1;}));
+  const alts=_gcLibrary().filter(n=>!have.has(n.toLowerCase())).map(n=>{const m=getExerciseMuscles(n)||[];const sim=n.toLowerCase().split(/\W+/).filter(w=>w.length>3&&words.includes(w)).length;return{n,ov:m.filter(x=>want.includes(x)).length,primary:m[0]&&m[0]===want[0],sim,u:used[n.toLowerCase()]||0};})
+    .filter(a=>a.ov>0).sort((a,b)=>(b.primary-a.primary)||(b.sim-a.sim)||(b.ov-a.ov)||(b.u-a.u)).slice(0,4);
+  const row=a=>{const last=getLastExSets(a.n,gym)||[],top=_gcTopLast(last),t=top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null;
+    return`<button onclick="gymDoSwap(${i},${JSON.stringify(a.n).replace(/"/g,'&quot;')})"><b>${esc(a.n)}</b><span>${t&&t.reps&&t.reps!=='?'?`${t.weight!=null?_kg(+t.weight)+' × ':''}${t.reps} · from your history`:'New to you: start light, 10–12 reps'}</span></button>`;};
+  document.getElementById('session-detail-content').innerHTML=`<h3>Swap ${esc(ex.name)}</h3>
+    ${alts.length?`<div class="gl-eyebrow" style="text-align:left;margin-bottom:8px;">Same muscles${want.length?`: ${want.slice(0,2).join(', ').toLowerCase()}`:''}</div><div class="ga-opts">${alts.map(row).join('')}</div>`:'<p class="np-p">Nothing in your library works the same muscles yet.</p>'}
+    <button class="btn-secondary" style="margin-top:10px;" onclick="closeModal('session-detail-modal');gymAddExManual()">Something else</button>
+    <button class="btn-ghost" style="width:100%;margin-top:4px;" onclick="closeModal('session-detail-modal')">Cancel</button>`;
+  openModal('session-detail-modal');
+}
+function gymDoSwap(i,name){
+  const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
+  const fresh={name,sets:[{weight:'',reps:'',warmup:false}],_planSets:ex._planSets||3,_why:`instead of ${ex.name}`};
+  if(_gcWorking(ex).length){ex._completed=true;gymDraft.exercises.splice(i+1,0,fresh);_gymFocusIdx=i+1;}
+  else gymDraft.exercises[i]=fresh;
+  closeModal('session-detail-modal');gymKpResetTarget();renderGymLogger();haptic('success');toastMsg(`Swapped to ${name}`);
 }
 function gymShowTypeEdit(){const el=document.getElementById('gym-type-edit');if(el)el.style.display='block';}
 function gymHideTypeEdit(){const el=document.getElementById('gym-type-edit');if(el)el.style.display='none';}
@@ -5686,6 +5756,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
     <div class="gx-head">
       ${ex._renaming||!ex.name?`<input class="gx-name gx-in" value="${esc(ex.name||'')}" placeholder="Exercise name" oninput="gymSetExName(${i},this.value)" onblur="gymDraft.exercises[${i}]._renaming=false;renderGymLogger()" onfocus="gymSetActiveEx(${i})" list="exs-${i}">`:`<div class="gx-name" onclick="gymDraft.exercises[${i}]._renaming=true;renderGymLogger();setTimeout(()=>{const x=document.querySelector('#ex-block-${i} .gx-in');if(x){x.focus();x.select();}},30)">${esc(ex.name)}</div>`}
       <datalist id="exs-${i}">${sugg.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+      <button class="gx-swap" onclick="gymSwapEx(${i})">Swap</button>
       <button class="gx-x" onclick="gymRemoveEx(${i})" aria-label="Remove exercise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     ${meta?`<div class="gx-meta">${meta}</div>`:''}

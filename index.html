@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="113">
+<meta name="app-version" content="114">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -14104,14 +14104,29 @@ function getCallIt(ex,lastSets){
 
 // 8. Rest that fits the set: compounds get longer than isolation work (getExRestSecs), and a
 // set that fell short of target, or a low-readiness day, adds a little more.
+// Rest from the set you just did, not one number per lift. Start from the lift (a
+// compound needs more than an isolation move), then: how heavy it was against your best
+// (estimated one-rep max), how many reps, and whether it was easy or a grind against the
+// target. The last planned set of a lift is a change-over: just long enough to set up.
 function getSmartRest(ex,s){
-  const base=getExRestSecs(ex.name||'');
-  const compound=base>=120;
-  const k=_gcReadyKey();
-  let add=0;const why=[];
-  if(s._tgtR&&(parseInt(s.reps)||0)<s._tgtR){add+=compound?30:15;why.push('tough set');}
-  if(compound&&(k==='pace'||k==='recover')){add+=30;why.push('low readiness');}
-  return{secs:base+add,label:add?`Rest · +${add}s, ${why.join(' and ')}`:compound?'Rest · heavy lift':'Rest'};
+  const lib=getExRestSecs(ex.name||''),compound=lib>=120||/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(ex.name||'');
+  const w=parseFloat(s.weight||0),r=parseInt(s.reps)||0,k=_gcReadyKey();
+  // Your best estimated one-rep max on this lift.
+  let best=0;const nl=(ex.name||'').toLowerCase();
+  loadGymData().forEach(x=>(x.exercises||[]).forEach(e=>{if(e.name&&e.name.toLowerCase()===nl)(e.sets||[]).filter(z=>!z.warmup&&+z.reps>0).forEach(z=>{best=Math.max(best,_gcE1rm(parseFloat(z.weight||0),+z.reps));});}));
+  const pct=best&&w?_gcE1rm(w,r)/best:null; // how close this set came to your best
+  let secs=compound?120:75;const why=[];
+  if(pct!=null){if(pct>=0.95){secs+=60;why.push('near your best');}else if(pct>=0.85){secs+=30;}else if(pct<0.75){secs-=30;why.push('light');}}
+  if(r>=12)secs-=15;
+  if(s._tgtR){if(r<s._tgtR-1){secs+=30;why.push('a grind');}else if(r>s._tgtR+1){secs-=20;why.push('easy');}}
+  if(k==='pace'||k==='recover'){secs+=15;why.push('low readiness');}
+  const done=_gcWorking(ex).length;
+  if(ex._planSets&&done>=ex._planSets&&gymDraft&&gymDraft.exercises.some(e=>e!==ex&&!e._completed)){
+    return{secs:Math.min(secs,90),label:'Change over · set up the next lift'};
+  }
+  secs=Math.max(45,Math.min(240,Math.round(secs/15)*15));
+  const kind=pct!=null&&pct>=0.9?'heavy set':pct!=null&&pct<0.75?'light set':compound?'working set':'isolation';
+  return{secs,label:`Rest · ${kind}${why.length?`, ${why.filter(x=>x!=='light').join(', ')}`:''}`.replace(/, $/,'')};
 }
 
 // 9. Session verdict, shown once the session is saved.

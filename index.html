@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="109">
+<meta name="app-version" content="110">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1040,6 +1040,25 @@ body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
 .gl-nudge{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .gl-nudge button{flex-shrink:0;padding:8px 12px;border:none;border-radius:10px;background:var(--surface2);color:var(--text);font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;}
 .gl-ahead::before{background:var(--green)!important;}
+body.gym-live .gx .kp{position:sticky;bottom:0;z-index:15;margin:0 -8px;padding:10px 10px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -10px 24px -8px rgba(0,0,0,0.45);}
+body.gym-live .gx .kp-read{margin-bottom:8px;gap:8px;}
+body.gym-live .gx .kp-read>div{flex-direction:row;align-items:center;gap:8px;}
+body.gym-live .gx .kp-read i{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;}
+body.gym-live .gx .kp-read b{font-size:30px;}
+body.gym-live .gx .kp-w b{flex:1;padding:6px 8px;}
+body.gym-live .gx .kp-r>div{flex:1;}
+body.gym-live .gx .kp-r b{padding:6px 0;}
+body.gym-live .gx .kp-r button{height:44px;width:34px;}
+body.gym-live .gx .kp-pad{gap:5px;}
+body.gym-live .gx .kp-pad button{padding:7px 0;font-size:22px;}
+.gx-tgt1{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin:10px 0 2px;padding:8px 0;border-bottom:1px solid var(--border);}
+.gx-tgt1 i{font-style:normal;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--lt);}
+.gx-tgt1 b{font-family:var(--display);font-weight:800;font-size:24px;}
+.gx-tgt1 small{font-size:12px;color:var(--text3);}
+.gx-tgt1 span{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text3);}
+.gx-more{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 12px;}
+.gx-more button{padding:9px 2px;border:none;border-radius:10px;background:var(--surface2);color:var(--text2);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+.rest-nx{margin-top:10px;padding:12px 26px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:var(--on-accent);font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;}
 .gx-swap{flex-shrink:0;height:32px;padding:0 10px;border:none;border-radius:10px;background:var(--surface2);color:var(--text2);font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;}
 .gl-nudge::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--orange);}
 .gl-eyebrow{text-align:center;margin-bottom:10px;}
@@ -4802,7 +4821,7 @@ function gymRestNext(){
   const ws=_gcWorking(ex);
   if(ex._planSets&&ws.length>=ex._planSets){
     const nx=gymDraft.exercises.find((e,j)=>j>i&&!e._completed);
-    return nx?`<i>Next up</i><b>${esc(nx.name)}</b>`:`<i>That's the plan done</i>`;
+    return nx?`<i>That's ${ws.length} of ${ex._planSets}</i><b>Next: ${esc(nx.name)}</b><button class="rest-nx" onclick="restStop();gymCompleteExercise(${i})">Move on</button>`:`<i>That's the plan done</i><button class="rest-nx" onclick="restStop();openGymFinish()">Finish session</button>`;
   }
   const lastSets=getLastExSets(ex.name,loadGymData());
   const tmp={...ex,sets:[...ex.sets.filter(x=>gymSetFilled(x,ex.name)),{weight:'',reps:'',warmup:false}]};
@@ -5133,9 +5152,6 @@ function renderGymLogger(){
   ${_gymMenu?`<div class="gl-pop" onclick="event.stopPropagation()">
     <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
     ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${new Date(lastSame.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})})</button>`:''}
-    <button onclick="_gymMenu=false;gymAddEx()">Add an exercise</button>
-    <button onclick="gymLiveLen('short')">Short on time: trim what's left</button>
-    <button onclick="gymLiveLen('long')">Got more time: about 15 min more</button>
     <button onclick="_gymMenu=false;showPage('today')">Leave for now (it'll be here in Log)</button>
     <button class="danger" onclick="_gymMenu=false;openModal('gym-discard-modal')">Discard session</button>
   </div>`:''}
@@ -5154,6 +5170,16 @@ function renderGymLogger(){
   <button class="btn-primary" onclick="openGymFinish()" style="margin-bottom:8px;">Finish session</button>`;
   startGymTimer();
   startGymPersist();
+  // Keep the set you're on in view, just above the pinned keypad.
+  requestAnimationFrame(()=>{const on=document.querySelector('.gs.on'),kp=document.querySelector('.gx .kp');if(!on||!kp)return;
+    const ob=on.getBoundingClientRect(),kb=kp.getBoundingClientRect();
+    if(ob.bottom>kb.top-6)window.scrollBy({top:ob.bottom-kb.top+12,behavior:'smooth'});
+    else if(ob.top<70)window.scrollBy({top:ob.top-90,behavior:'smooth'});});
+  const ge=document.getElementById('gym-exercises');
+  if(ge&&!gymDraft.superset){let x0=null,y0=null;
+    ge.addEventListener('touchstart',e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY;},{passive:true});
+    ge.addEventListener('touchend',e=>{if(x0==null)return;const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;
+      if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5&&!e.target.closest('.kp,input,button'))gymFocusNav(dx<0?1:-1);},{passive:true});}
 }
 function gymSetType(t){gymDraft.type=t;renderGymLogger();}
 // Minutes on the clock, and working sets done against the plan, for the live bar.
@@ -5751,6 +5777,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
     const meta=[pb>0?`PB ${pb} kg`:pbReps>0?`PB ${pbReps} reps`:'',
       lastSets.length?`last ${lastDateStr?lastDateStr+': ':''}${lastSets.map(x=>kgx(x.weight,x.reps)).join(', ')}`:'',
       trend&&trend.label!=='Building baseline'?`<em style="color:${trend.col};">${trend.label.toLowerCase()}</em>`:''].filter(Boolean).join(' · ');
+    const started=_gcWorking(ex).length>0;
     const tw=liftT?(targetWeight!=null?`${+targetWeight}<small>kg</small> × ${liftT.reps}`:`${targetReps}<small> reps</small>`):'';
     return`<div class="gx" id="ex-block-${i}">
     <div class="gx-head">
@@ -5759,9 +5786,10 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       <button class="gx-swap" onclick="gymSwapEx(${i})">Swap</button>
       <button class="gx-x" onclick="gymRemoveEx(${i})" aria-label="Remove exercise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    ${meta?`<div class="gx-meta">${meta}</div>`:''}
-    ${ex._why?`<div class="gx-meta" style="color:var(--st-pace);">Added to the plan: ${esc(ex._why)}</div>`:''}
-    ${liftT||ex._planSets?`<div class="gx-tgt" style="--lt:${liftT?liftT.col:'var(--text3)'};">
+    ${started?'':`${meta?`<div class="gx-meta">${meta}</div>`:''}
+    ${ex._why?`<div class="gx-meta" style="color:var(--st-pace);">Added to the plan: ${esc(ex._why)}</div>`:''}`}
+    ${started&&(liftT||ex._planSets)?`<div class="gx-tgt1" style="--lt:${liftT?liftT.col:'var(--text3)'};"><i>${liftT?esc(liftT.tag):'Plan'}</i>${tw?`<b>${tw}</b>`:''}${ex._planSets?`<span>${_gcWorking(ex).length} of ${ex._planSets} sets</span>`:''}</div>`
+    :liftT||ex._planSets?`<div class="gx-tgt" style="--lt:${liftT?liftT.col:'var(--text3)'};">
       <div class="gx-tgt-l"><i>${liftT?`Target · ${liftT.tag}`:'Plan'}</i>${tw?`<b>${tw}</b>`:''}</div>
       ${ex._planSets?`<div class="gx-tgt-r"><b>${ex._planSets}</b><i>set${ex._planSets===1?'':'s'}</i></div>`:''}
       ${liftT&&liftT.note?`<span>${liftT.note}</span>`:''}
@@ -5799,7 +5827,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       }).join('');
       const last=gymDraft.exercises.findIndex((e,j)=>j!==i&&!e._completed)===-1;
       return`<div class="gs-list">${rows}</div>
-        <button class="gl-text" style="margin:2px 0 10px;" onclick="gymAddSet(${i})">Add a set</button>
+        <div class="gx-more"><button onclick="gymAddSet(${i})">+ Set</button><button onclick="gymAddEx()">+ Exercise</button><button onclick="gymLiveLen('short')">Less time</button><button onclick="gymLiveLen('long')">More time</button></div>
         ${callIt?`<div class="gc-callit${callIt.strong?' strong':''}"><span>${esc(callIt.text)}</span><button onclick="gymCompleteExercise(${i})">Done with it</button></div>`:''}
         ${renderGymKeypad(draft)}
         ${renderPlateCalc(parseFloat(draft.weight)||0)}

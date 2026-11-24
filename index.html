@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="112">
+<meta name="app-version" content="113">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -5193,6 +5193,19 @@ function gymSetProgress(){
   return{done,plan};
 }
 // Log the prescribed warm-ups in one tap (kept as warm-ups, so they never count as work).
+// Warm-ups by the lift, not just the weight. A compound (press, row, squat...) always gets
+// a ramp: heavy ones bar / 50% / 75%, lighter ones 50% and 75%. An isolation lift gets one
+// light set, unless an earlier lift today already worked the same muscle.
+function _warmupsFor(name,T,earlier){
+  if(!T||T<10)return[];
+  const r25=v=>Math.max(2.5,Math.round(v/2.5)*2.5);
+  const compound=/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust|leg press/i.test(name||'');
+  const ramp=a=>a.filter(([w],x,arr)=>w<T&&(x===0||w>arr[x-1][0]));
+  if(compound)return T>=40?ramp([[20,10],[r25(T*0.5),5],[r25(T*0.75),3]]):ramp([[r25(T*0.5),8],[r25(T*0.75),4]]);
+  const m=(getExerciseMuscles(name)||[])[0];
+  if(m&&(earlier||[]).some(n=>(getExerciseMuscles(n)||[]).includes(m)))return[];
+  return ramp([[r25(T*0.5),12]]);
+}
 // The prescribed warm-ups still to do: each one logged (within 5 kg) ticks one off, and
 // they stop mattering once a working set is in.
 function _wuPlan(ex){return ex._wuPlan||ex._warmups||[];}
@@ -5791,6 +5804,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       lastSets.length?`last ${lastDateStr?lastDateStr+': ':''}${lastSets.map(x=>kgx(x.weight,x.reps)).join(', ')}`:'',
       trend&&trend.label!=='Building baseline'?`<em style="color:${trend.col};">${trend.label.toLowerCase()}</em>`:''].filter(Boolean).join(' · ');
     const started=_gcWorking(ex).length>0;
+    if(!ex._wuPlan&&!(ex._warmups&&ex._warmups.length)&&!ex._wuChecked&&targetWeight!=null){ex._wuChecked=true;ex._wuPlan=_warmupsFor(ex.name,+targetWeight,gymDraft.exercises.slice(0,i).map(x=>x.name));}
     const tw=liftT?(targetWeight!=null?`${+targetWeight}<small>kg</small> × ${liftT.reps}`:`${targetReps}<small> reps</small>`):'';
     return`<div class="gx" id="ex-block-${i}">
     <div class="gx-head">
@@ -13974,7 +13988,7 @@ function buildGymSession(type){
     const exercises=P.rows.map((r,j)=>{
       const T=r.tgt&&r.tgt.weight?+r.tgt.weight:0;
       // Ramp-up sets for the first two heavy lifts: bar, ~50%, ~75%.
-      const wu=j<2&&T>=40?[[20,10],[r25(T*0.5),5],[r25(T*0.75),3]].filter(([w],x,a)=>w<T&&(x===0||w>a[x-1][0])):null;
+      const wu=_warmupsFor(r.name,T,P.rows.slice(0,j).map(x=>x.name));
       return{name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why,_warmups:wu};
     });
     _gymFocusIdx=null;_gymShowAllEx=false;gymKpResetTarget();

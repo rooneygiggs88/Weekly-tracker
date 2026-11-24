@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="115">
+<meta name="app-version" content="116">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1008,6 +1008,10 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .td-h span{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap;}
 .td-v{font-size:13px;line-height:1.45;color:var(--text2);margin-top:3px;}
 .td-v i{font-style:normal;font-weight:800;color:var(--c);}
+.rw-today{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:12px 0 2px;padding:10px 12px;border-radius:10px;background:var(--surface2);font-size:13px;line-height:1.45;color:var(--text2);}
+.rw-today i{font-style:normal;font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent2);}
+.rw-today span{flex:1;min-width:60%;}
+.rw-today input{padding:6px 8px;border-radius:8px;border:none;background:var(--surface);color:var(--text);font-family:inherit;font-size:15px;}
 .gn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
 .gf-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:6px;}
 .gf-stats>div{display:flex;flex-direction:column;}
@@ -2800,6 +2804,14 @@ function racePacePlan(r){
   if(km-whole>0.05)splits.push({k:km,t:Math.round(target),fin:true});
   return{target,first,second,why,splits,proj:P,goal};
 }
+// Race week, one job a day, so the race kit comes to you instead of waiting to be read.
+function _raceWeekToday(r,d){
+  const km=+r.km||0,long=km>=21,line=(h,t)=>`<div class="rw-today"><i>${h}</i><span>${t}</span></div>`;
+  let out='';
+  if(!r.start&&d<=7)out+=`<div class="rw-today"><i>Start time?</i><span>Add it and race morning below gets real times: breakfast, warm-up, start pen.</span><input type="time" onchange="setRaceStart(this.value)" aria-label="Race start time"></div>`;
+  return out;
+}
+function setRaceStart(v){if(!v||!state.race)return;state.race.start=v;saveState();haptic('success');toastMsg(`Start time ${v}: race morning is set`);if(typeof renderRaceMode==='function')renderRaceMode();}
 function raceMorning(r){
   if(!r.start)return null;
   const [h,m]=r.start.split(':').map(Number),st=h*60+m,at=x=>{const v=(st+x+1440)%1440;return`${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
@@ -2887,12 +2899,13 @@ function renderRaceMode(){
       <div><div class="rm-eyebrow">Race mode</div><div class="rm-name">${esc(r.name||'Race')}</div><div class="rm-meta">${dateTxt} · ${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</div>${thenTxt?`<div class="rm-then">${thenTxt}</div>`:''}</div>
       <div class="rm-count"><b>${d===0?'Today':d}</b>${d===0?'':`<span>day${d===1?'':'s'}</span>`}</div>
     </div>
+    ${_raceWeekToday(r,d)}
     ${pace?`<div class="rm-sub">${goal?'Goal':'Predicted'} pace <b>${fmtMS(pace)}/km</b>${proj&&goal?` · predicted ${proj.projTime}`:''}${plan&&plan.daysToTaper>0?` · ${plan.isB?'race week':'taper'} from ${fmtShortDate(plan.taperStart)}`:''}</div>
     ${RP?'':`<div class="rm-splits">${splits}</div>`}`:''}
     ${RP?`<div class="rm-sub" style="margin-top:12px;">Your race plan <b>${fmtDurationFromSecs(RP.target)}</b></div><div class="rm-tip">${RP.why}</div>
       <div class="rm-splits">${RP.splits.map(x=>`<div class="rm-split${x.fin?' fin':''}"><span>${x.fin?fmtKm(x.k):x.k}</span><b>${fmtDurationFromSecs(x.t)}</b></div>`).join('')}</div>`:paceTip?`<div class="rm-tip">${paceTip}</div>`:''}
     <div class="rm-sub" style="margin-top:12px;">Race morning</div>
-    ${RM?`<div class="rm-time">${RM.map(([t,x])=>`<div><b>${t}</b><span>${x}</span></div>`).join('')}</div>`:`<button class="rm-more" style="margin-top:4px;" onclick="openRaceModal()">Add the start time for race-morning timings</button>`}
+    ${RM?`<div class="rm-time">${RM.map(([t,x])=>`<div><b>${t}</b><span>${x}</span></div>`).join('')}</div>`:''}
     <div class="rm-tip" style="margin-top:8px;"><b>Fuel:</b> ${raceFuel(r)}</div>
     <div id="rm-wx"></div>
     <div class="rm-sub" style="margin-top:12px;">Race-week checklist <b>${doneN}/${all.length}</b></div>
@@ -3681,7 +3694,9 @@ function renderPlanCalendar(){
     const kmDay=w.days.map(d=>d.done.reduce((a,r)=>a+(+r.km||0),0)+d.planned.reduce((a,x)=>a+x.km,0));
     const mx=Math.max(...kmDay,1);
     const shape=`<div class="pc-shape">${kmDay.map((k,i)=>`<i class="${w.days[i].done.length?'done':w.days[i].planned.some(x=>x.type==='Race')?'race':''}" style="height:${k?Math.max(12,k/mx*100):4}%"></i>`).join('')}</div>`;
-    const rows=w.days.map(d=>{
+    // This week, shortened to today and the next two days unless you ask for the lot.
+    const shortWk=w.weekOffset===0&&!_pcAll;
+    const rows=w.days.filter(d=>!shortWk||(d.ds>=dk(today())&&d.ds<=dk(addDays(today(),2)))).map(d=>{
       const done=d.done.map(r=>`<div class="pc-item done"><b>✓ ${fmtKm(r.km)} km ${esc((r.effort||'run').toLowerCase())}</b></div>`).join('')
         +loadGymData().filter(g=>g.date===d.ds).map(g=>`<div class="pc-item done gymdone"><b>✓ ${esc(g.type||'Gym')}</b><span>${(g.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup&&+x.reps>0).length,0)} sets</span></div>`).join('');
       const plan=d.planned.map(s=>{const sel=_calPick&&_calPick.mon===w.mon&&_calPick.key===s.key;
@@ -3689,7 +3704,7 @@ function renderPlanCalendar(){
       const gym=d.gym?`<div class="pc-item gym"${d.gymWhy?` title="${esc(d.gymWhy)}"`:''}><b>${d.gym==='Gym'&&tmpl0&&d.isToday?_coachGymType():d.gym}${d.gym==='Gym'&&tmpl0?' · coach picks':''}</b><span>${d.gymWhy&&planMode()==='coach'?(d.gymUpper?'Upper body, and keep it short.':'A normal session.'):d.gym==='Gym'&&tmpl0?(d.isToday?`Today: ${_coachGymType()}, the coach's pick from your muscle balance and progress.`:'The coach picks the session on the day, from your muscle balance and progress.'):d.gym==='Upper body'?'Short and light, no legs.':GYM_PLAN_TYPES.has(d.gym)?`From your plan.${(W=>W==='race'||W==='taper')(w.kind)?' Keep it short in a '+w.kind+' week.':''}`:'A normal session; legs only if no key run within 48 hours.'}</span>${d.gymWhy?`<em class="pc-why">${d.gymWhy}</em>`:''}</div>`:'';
       const empty=!done&&!plan&&!gym?`<div class="pc-rest">${d.past?'':'Rest'}</div>`:'';
       return`<div class="pc-day${d.isToday?' today':''}${d.past?' past':''}"><div class="pc-d"><b>${_CAL_DAY[d.i]}</b><span>${new Date(d.ds+'T12:00:00').getDate()}</span></div><div class="pc-items">${done}${plan}${gym}${empty}</div></div>`;
-    }).join('');
+    }).join('')+(w.weekOffset===0?`<button class="tl-more" onclick="_pcAll=!_pcAll;refreshActivePage()">${_pcAll?'Just the next few days':'Show the whole week'}</button>`:'');
     return`<div class="pc-week"><div class="pc-wh"><span>${w.weekOffset===0?'This week':w.weekOffset===1?'Next week':`Week of ${_pbDate(w.mon)}`}</span><b>${kindTxt[w.kind]||'Week'} · ${Math.round(w.target)} km</b>${shape}${planMode()==='coach'?((state.weekDays||{})[w.mon]?`<button onclick="keepWeekDays(${w.weekOffset})">Keep these days</button>`:''):reshaped?`<button onclick="promoteUsualWeek(${w.weekOffset})">Make this my usual week</button>`:''}${moved||(state.weekSlotEdits||{})[w.mon]||(state.weekDays||{})[w.mon]?`<button onclick="resetWeekAll('${w.mon}')">Reset week</button>`:''}</div>${w.weekOffset===0&&planMode()==='coach'?'':renderWeekDays(w.weekOffset)}${w.coach&&(w.coach.summary||w.coach.notes.length)&&!(w.weekOffset===0&&planMode()==='coach')?`<div class="pc-sum">${[w.coach.summary,...w.coach.notes].filter(Boolean).join(' ')}</div>`:''}${rows}</div>`;
   };
   el.innerHTML=`<div class="chart-card pc-card"><div class="chart-card-header"><span class="chart-card-title">Plan</span><span class="chart-card-val">tap a run to move or change it</span></div>
@@ -5599,6 +5614,7 @@ function gymCheckSetDone(i,si,fromKeypad){
     if(fromKeypad)checkLivePR(i,si);
     const rest=getSmartRest(gymDraft.exercises[i],s);
     startRestTimer(rest.secs,rest.label);
+    if(rest.toIdx!=null){_gymFocusIdx=rest.toIdx;gymKpResetTarget();}
     saveGymDraft();
   }else if(!done){
     s._restFired=false;
@@ -5800,7 +5816,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
   const pb=parseFloat(pbSet.weight||0);
   const pbReps=everWeighted?0:parseFloat(pbSet.reps||0);
   // Today's top-set target, scaled by readiness: push on good days, hold or lighten on rough ones.
-  const liftT=getLiftTarget(topLast,lastHasWeight,pb,lastSets);
+  const liftT=ex._tgtOverride||getLiftTarget(topLast,lastHasWeight,pb,lastSets);
   const targetWeight=liftT&&liftT.weight!=null?liftT.weight:null;
   const targetReps=liftT&&liftT.weight==null?liftT.reps:null;
   const sugg=getExerciseSuggestions(ex.name,gymSessions);
@@ -11376,6 +11392,7 @@ function _todayDoneHtml(d,nxTxt){
     ${hard?`<div class="tp-why">A big day: eat well tonight and get to bed on time; that's when it turns into fitness.</div>`:''}
     <button class="today-plan-cta done" onclick="openDayModal('${ds}')">See today in full</button>`;
 }
+let _pcAll=false;
 // ── SEASON PHASE ──
 // Where a week sits on the road to your next A race: base (12+ weeks out: easy volume,
 // one light quality session every other week), build (quality every week, alternating),
@@ -13944,6 +13961,28 @@ function planGymSession(type){
   const NIG={Shoulder:['Shoulders','Chest'],Elbow:['Triceps','Biceps'],Wrist:['Biceps','Triceps','Chest'],Back:['Back'],Knee:['Quads','Hamstrings','Glutes']};
   const recentN=[...new Set(sessions.filter(x=>x.date>=_dsAgo(14)&&Array.isArray(x.niggles)).flatMap(x=>x.niggles))];
   recentN.forEach(nj=>{const ms=NIG[nj]||[];rows.forEach(r=>{if((getExerciseMuscles(r.name)||[]).some(m=>ms.includes(m))&&r.sets>1){r.sets--;r.eased=nj;}});});
+  // The season: heavier strength work in the running base phase, holding strength when the
+  // running gets specific, an easier week after a race or every fifth week of training,
+  // and one PR attempt when you're fresh and the lift is moving.
+  const r25=v=>Math.max(2.5,Math.round(v/2.5)*2.5);
+  const isCompound=n=>/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(n||'');
+  const PHs=(()=>{try{return weekPhase(dk(getMonday(today())));}catch(e){return null;}})();
+  const raced=loadRunData().some(x=>/race/i.test(x.effort||'')&&x.date>=_dsAgo(7)&&x.date<dk(today()));
+  const streak=(()=>{let n=0;for(let w=1;w<=12;w++){const a=_dsAgo(7*w+((today().getDay()+6)%7)),b=_dsAgo(7*(w-1)+((today().getDay()+6)%7)+1);if(sessions.some(x=>x.date>=a&&x.date<=b))n++;else break;}return n;})();
+  const deload=!ctx.comeback&&!taper&&(raced||(streak>=4&&streak%5===4));
+  const seasonNote=[];
+  if(deload){rows.forEach(r=>{r.sets=Math.max(1,r.sets-1);if(r.tgt&&r.tgt.weight)r.tgt={...r.tgt,weight:r25(+r.tgt.weight*0.9),tag:'Easy week'};});seasonNote.push(raced?'Easy week after your race: 10% lighter, a set fewer. Strength holds; the legs recover.':`Easy week: ${streak} weeks of training in a row, so 10% lighter and a set fewer. You come back stronger.`);}
+  else if(PHs&&!ctx.comeback&&!ctx.race&&!taper&&k!=='recover'){
+    if(PHs.phase==='base'){let n=0;rows.forEach(r=>{if(isCompound(r.name)&&r.tgt&&r.tgt.weight&&+r.tgt.reps>6){r.tgt={...r.tgt,weight:r25(+r.tgt.weight*1.05),reps:6,tag:'Strength'};n++;}});if(n)seasonNote.push(`Strength block (running base phase, ${PHs.weeksTo} weeks to ${esc(PHs.race.name||'your race')}): heavier, 5–6 reps on the main lifts.`);}
+    else{rows.forEach(r=>{r.sets=Math.min(3,r.sets);});seasonNote.push(`Holding strength while the running gets specific (${PHs.phase} phase): same weights, no more than 3 sets.`);}
+  }
+  if(!deload&&!ctx.comeback&&!ctx.race&&!taper&&k!=='pace'&&k!=='recover'){
+    const cand=rows.filter(r=>isCompound(r.name)&&r.tgt&&r.tgt.weight).find(r=>{const mo=_liftMomentum(r.name);return mo&&mo.pct>=2;/* trending up on recent sessions */});
+    if(cand){let pbW=0,pbR=0;sessions.forEach(x=>(x.exercises||[]).forEach(e=>{if(e.name&&e.name.toLowerCase()===cand.name.toLowerCase())(e.sets||[]).filter(z=>!z.warmup).forEach(z=>{const w=+z.weight||0,rr=+z.reps||0;if(w>pbW||(w===pbW&&rr>pbR)){pbW=w;pbR=rr;}});}));
+      if(pbW&&+cand.tgt.weight>=pbW*0.92){const tw=+cand.tgt.weight,tr=+cand.tgt.reps||5,already=tw>pbW||(tw===pbW&&tr>pbR);
+        const w=already?tw:Math.max(tw,pbW),rr=already?tr:w>pbW?Math.max(3,Math.min(tr,pbR)):pbR+1;
+        cand.tgt={...cand.tgt,weight:w,reps:rr,tag:'PR attempt',note:`fresh and trending up: ${_kg(w)} × ${rr} beats your best ${_kg(pbW)} × ${pbR}. If the first set falls 2+ short, drop 5% for the rest`};cand.why='PR attempt today';}}
+  }
   // How long: from the day. Race weeks and low readiness get less; a day with no run, or
   // a fresh morning, gets more. Short and Long move it from there (Long isn't offered when
   // the body or the race calendar says no).
@@ -13961,7 +14000,11 @@ function planGymSession(type){
   const longOk=!(taper||ctx.race||k==='recover'||k==='pace');
   const len=_gymLen==='short'?'short':_gymLen==='long'&&longOk?'long':'coach';
   const budget=len==='short'?20:len==='long'?Math.min(60,base+15):base;
-  const mins=()=>rows.reduce((a,r)=>a+r.sets*(r.rest+40),0)/60+6;
+  // Short on time: pair lifts that don't share a main muscle and rest once per pair.
+  if(len==='short'&&rows.length>=2){const prim=n=>(getExerciseMuscles(n)||[])[0]||n;const free=rows.slice();
+    while(free.length>=2){const a=free.shift(),j=free.findIndex(b=>prim(b.name)!==prim(a.name));if(j<0)continue;const b=free.splice(j,1)[0];a.pairWith=b.name;b.pairWith=a.name;}}
+  const mins=()=>{let t=0;const seen=new Set();rows.forEach(r=>{if(seen.has(r.name))return;const q=r.pairWith&&rows.find(x=>x.name===r.pairWith);
+    if(q){seen.add(q.name);seen.add(r.name);t+=Math.max(r.sets,q.sets)*(Math.max(r.rest,q.rest)*0.75+80);}else t+=r.sets*(r.rest+40);});return t/60+6;};
   let guard=0;
   while(mins()>budget&&rows.length>2&&guard++<20){const r=rows.slice(1).sort((a,b)=>b.sets-a.sets)[0];if(r.sets>2)r.sets--;else rows.pop();}
   // Room to spare: a set back on the main lifts first, then another of your usual lifts.
@@ -13976,8 +14019,8 @@ function planGymSession(type){
       if(mins()>budget){const l=rows[rows.length-1];if(l.why==='room for one more')rows.pop();else if(r)r.sets--;break;}
     }
   }
-  const notes=[];
-  notes.push(len==='short'?'Short: the main lifts only, about 20 minutes.':len==='long'?`Long: about ${budget} minutes, more sets on the main lifts.`:`About ${budget} minutes because it's ${why}.`);
+  const notes=[...seasonNote];
+  notes.push(len==='short'?`Short: about 20 minutes${rows.some(r=>r.pairWith)?', paired as supersets (one rest per pair)':', the main lifts only'}.`:len==='long'?`Long: about ${budget} minutes, more sets on the main lifts.`:`About ${budget} minutes because it's ${why}.`);
   if(_gymLen==='long'&&!longOk)notes.push(`Long isn't on today (${why}).`);
   if(ctx.comeback)notes.push(`${ctx.layoff} days since the gym: about 80% of your last weights for 8–10 reps. Muscle comes back fast; tendons are slower.`);
   else if(ctx.race)notes.push(`${esc(ctx.race.name||'Race')} in ${ctx.dRace} days: hold your weights, nothing to failure.`);
@@ -13995,7 +14038,7 @@ function renderCoachGymPreview(type,compact){
   return`<div class="cg">
     <div class="cg-h"><span>Coach's session</span><b>about ${P.mins} min</b></div>
     <div class="cg-len">${chip('short','Short')}${chip('coach',"Coach's")}${chip('long','Long')}</div>
-    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.why?`<em>${esc(r.why)}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
+    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.pairWith?`<em>superset with ${esc(r.pairWith)}</em>`:r.why?`<em>${esc(r.why)}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
     ${compact&&P.rows.length>4?`<div class="cg-more">+ ${P.rows.length-4} more</div>`:''}
     ${P.notes.map(n=>`<div class="cg-note">${n}</div>`).join('')}
   </div>`;
@@ -14018,7 +14061,7 @@ function buildGymSession(type){
       const T=r.tgt&&r.tgt.weight?+r.tgt.weight:0;
       // Ramp-up sets for the first two heavy lifts: bar, ~50%, ~75%.
       const wu=_warmupsFor(r.name,T,P.rows.slice(0,j).map(x=>x.name));
-      return{name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why,_warmups:wu};
+      return{name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why,_warmups:wu,_pair:r.pairWith||null,_tgtOverride:r.tgt&&/PR attempt|Easy week|Strength/.test(r.tgt.tag||'')?r.tgt:null};
     });
     _gymFocusIdx=null;_gymShowAllEx=false;gymKpResetTarget();
     gymDraft={type,exercises,startedAt:Date.now(),coach:true,planMins:P.mins};_gymLen='coach';
@@ -14051,7 +14094,7 @@ function getSetTarget(ex,si,lastSets,pb){
   const sets=ex.sets||[];
   const s=sets[si];if(!s||s.warmup||s.technique)return null;
   const topLast=_gcTopLast(lastSets);
-  const base=getLiftTarget(topLast,lastSets.some(x=>parseFloat(x.weight||0)>0),pb||0,lastSets);
+  const base=ex._tgtOverride||getLiftTarget(topLast,lastSets.some(x=>parseFloat(x.weight||0)>0),pb||0,lastSets);
   const prev=sets.slice(0,si).filter(x=>!x.warmup&&!x.technique&&gymSetFilled(x,ex.name)).pop();
   if(!prev){
     if(!base)return null;
@@ -14138,6 +14181,8 @@ function getCallIt(ex,lastSets){
 // (estimated one-rep max), how many reps, and whether it was easy or a grind against the
 // target. The last planned set of a lift is a change-over: just long enough to set up.
 function getSmartRest(ex,s){
+  if(ex._pair&&gymDraft){const j=gymDraft.exercises.findIndex(e=>e.name===ex._pair&&!e._completed);
+    if(j>=0&&_gcWorking(gymDraft.exercises[j]).length<_gcWorking(ex).length)return{secs:15,label:`Superset · straight to ${ex._pair}`,toIdx:j};}
   const lib=getExRestSecs(ex.name||''),compound=lib>=120||/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(ex.name||'');
   const w=parseFloat(s.weight||0),r=parseInt(s.reps)||0,k=_gcReadyKey();
   // Your best estimated one-rep max on this lift.

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="106">
+<meta name="app-version" content="107">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1005,6 +1005,11 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .gf-stats>div+div{border-left:1px solid var(--border);padding-left:14px;}
 .gf-stats b{font-family:var(--display);font-weight:800;font-size:40px;line-height:0.95;font-variant-numeric:tabular-nums;}
 .gf-stats i{font-style:normal;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.ga-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:6px;}
+.ga-opts button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:13px 14px;border:none;border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);cursor:pointer;text-align:left;font-family:inherit;}
+.ga-opts button:active{background:var(--accent);color:var(--on-accent);}
+.ga-opts b{font-family:var(--display);font-weight:800;font-size:22px;text-transform:uppercase;line-height:1;}
+.ga-opts span{font-size:12.5px;font-weight:600;color:var(--text3);}
 .gf-eff{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;}
 .gf-eff button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;border:none;border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);cursor:pointer;text-align:left;font-family:inherit;}
 .gf-eff button:active{background:var(--accent);color:var(--on-accent);}
@@ -5117,7 +5122,7 @@ function renderGymLogger(){
   </div>
   ${_gymMenu?`<div class="gl-pop" onclick="event.stopPropagation()">
     <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
-    ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${lastSame.date})</button>`:''}
+    ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${new Date(lastSame.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})})</button>`:''}
     <button onclick="_gymMenu=false;gymAddEx()">Add an exercise</button>
     <button onclick="_gymMenu=false;showPage('today')">Leave for now (it'll be here in Log)</button>
     <button class="danger" onclick="_gymMenu=false;openModal('gym-discard-modal')">Discard session</button>
@@ -5197,7 +5202,46 @@ function _newExPopulate(){
   _renderNewExRest(90);
   _renderNewExCategory('custom');
 }
+// Adding to a session: the coach's picks first (1, 2 or 3 more, with the time each
+// adds), or your own from the library.
+function _coachExtraPicks(){
+  if(!gymDraft)return[];
+  const type=gymDraft.type,have=new Set(gymDraft.exercises.map(e=>(e.name||'').toLowerCase())),out=[];
+  const add=(name,why)=>{if(!name||have.has(name.toLowerCase())||out.some(o=>o.name.toLowerCase()===name.toLowerCase()))return;out.push({name,why});};
+  try{getGymMuscleGaps(type,[...have]).forEach(g=>{if(g.ex)add(g.ex,`${g.muscle} is short this week`);});}catch(e){}
+  const same=loadGymData().filter(s=>s.type===type).slice(-6),freq={};
+  same.forEach(s=>(s.exercises||[]).forEach(e=>{const n=_resolveExName(e.name)||e.name;if(n)freq[n]=(freq[n]||0)+1;}));
+  Object.entries(freq).sort((a,b)=>b[1]-a[1]).forEach(([n,c])=>add(n,`in ${c} of your last ${same.length} ${type} sessions`));
+  getDefaultExercisesForType(type).forEach(e=>add(e.name,`from your ${type} library`));
+  const ctx=getGymContext(),light=ctx.comeback||ctx.race||(getGymRacePhase()||{}).key==='taper';
+  return out.slice(0,3).map(o=>{const last=getLastExSets(o.name,loadGymData())||[],top=_gcTopLast(last);
+    return{...o,sets:light?2:3,rest:getExRestSecs(o.name)||75,tgt:top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null};});
+}
 function gymAddEx(){
+  const P=_coachExtraPicks();
+  if(!P.length){gymAddExManual();return;}
+  const opt=n=>{const ps=P.slice(0,n),mins=Math.round(ps.reduce((a,x)=>a+x.sets*(x.rest+40),0)/60+2*n); // + setting up each one
+    return`<button onclick="gymAddCoachPicks(${n})"><b>+${n} exercise${n===1?'':'s'}</b><span>about ${mins} min · ${ps.map(x=>esc(x.name)).join(', ')}</span></button>`;};
+  document.getElementById('session-detail-content').innerHTML=`
+    <h3>Add to ${esc(gymDraft.type)}</h3>
+    <div class="gl-eyebrow" style="text-align:left;margin-bottom:8px;">Coach's picks</div>
+    <div class="ga-opts">${[1,2,3].filter(n=>n<=P.length).map(opt).join('')}</div>
+    <div class="ins-list">${P.map(x=>`<div class="ins-line" style="--c:var(--accent);">${esc(x.name)}${x.tgt&&x.tgt.reps&&x.tgt.reps!=='?'?` · ${x.sets} × ${x.tgt.reps}${x.tgt.weight!=null?` @ ${_kg(+x.tgt.weight)}`:''}`:` · ${x.sets} sets`}<span>${esc(x.why)}</span></div>`).join('')}</div>
+    <button class="btn-secondary" style="margin-top:12px;" onclick="closeModal('session-detail-modal');gymAddExManual()">Pick from your library, or a new one</button>
+    <button class="btn-ghost" style="width:100%;margin-top:4px;" onclick="closeModal('session-detail-modal')">Cancel</button>`;
+  openModal('session-detail-modal');
+}
+function gymAddCoachPicks(n){
+  const P=_coachExtraPicks().slice(0,n);if(!P.length||!gymDraft)return;
+  const at=gymDraft.exercises.length;
+  P.forEach(x=>gymDraft.exercises.push({name:x.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:x.sets,_why:x.why}));
+  const mins=Math.round(P.reduce((a,x)=>a+x.sets*(x.rest+40),0)/60+2*P.length);
+  if(gymDraft.planMins)gymDraft.planMins+=mins;
+  if(gymDraft.exercises.slice(0,at).every(e=>e._completed))_gymFocusIdx=at;
+  closeModal('session-detail-modal');gymKpResetTarget();renderGymLogger();haptic('success');
+  toastMsg(`Added ${P.map(x=>x.name).join(', ')}: about ${mins} min more`);
+}
+function gymAddExManual(){
   _libAddMode=false;_newExRestSecs=90;_newExCategory='custom';
   _newExPopulate();
   document.getElementById('new-ex-confirm-btn').textContent='Add to Session';

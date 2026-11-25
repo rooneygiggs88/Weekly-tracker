@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="120">
+<meta name="app-version" content="121">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -11416,7 +11416,9 @@ function _coachWeek(o,mode,monK,td){
     const cand=[0,1,2,3,4,5,6].filter(i=>inR(i)&&ds(i)>=td&&A[i].gym&&!(state.gymSkip||{})[ds(i)]&&i!==restDay&&!loggedGym.has(ds(i))&&!key.has(i)&&ds(i)!==afterRaceDay&&!(raceI!=null&&(i===raceI||i===raceI-1)));
     if(restDay!=null)rest.push(restDay);
     const upperOn=i=>kind==='taper'||kind==='race'||key.has(i+1);
-    const score=i=>(runOn(i)?0:2)+(upperOn(i)?0:1)+Math.min(3,gapTo(i,gym.map(g=>g.day)));
+    // Full-body sessions on consecutive days hit the same muscles twice in 24 hours: avoided
+    // when another day will do.
+    const score=i=>(runOn(i)?0:2)+(upperOn(i)?0:1)+Math.min(3,gapTo(i,gym.map(g=>g.day)))-(gymProgOn()&&gapTo(i,[...gym.map(g=>g.day),...[0,1,2,3,4,5,6].filter(j=>loggedGym.has(ds(j)))])<2?4:0);
     while(gym.length<want&&cand.length){
       cand.sort((a,b)=>score(b)-score(a)||a-b);
       const i=cand.shift(),upper=upperOn(i);
@@ -14000,6 +14002,7 @@ function renderGymBriefCard(type){
   }else if(gctx.race&&st&&st.key!=='recover')lines.push({col:'var(--st-pace)',text:`${gctx.race.name||'Your race'} is ${gctx.dRace===0?'today':`in ${gctx.dRace} days`}: hold your weights, keep it to about 40 minutes and skip anything new.`});
   else if(st)lines.push({col:st.col,text:GC_READY_LINE[st.key]});
   else lines.push({col:'var(--text3)',text:'Log this morning\'s check-in and the targets get scaled to readiness.'});
+  if(!lines.length&&!st)lines.push({col:'var(--text3)',text:'Log this morning\'s check-in and the targets get scaled to readiness.'});
   if(lastSame){
     const ago=-_gcDaysUntil(lastSame.date);
     const sets=(lastSame.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);

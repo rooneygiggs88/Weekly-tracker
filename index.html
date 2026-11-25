@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="124">
+<meta name="app-version" content="125">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1571,6 +1571,13 @@ body{font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-
 
 /* Race mode: a bib */
 .rm-card{background:var(--surface);border:none;position:relative;overflow:hidden;}
+.rm-plan{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:12px;}
+.rm-plan b{font-family:var(--display);font-size:34px;line-height:0.95;color:var(--text);font-variant-numeric:tabular-nums;}
+.rm-plan b small{font-size:15px;color:var(--text3);}
+.rm-plan span{font-size:13px;font-weight:600;color:var(--text2);}
+.rm-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.rm-acts button{background:var(--surface2);border:0;border-radius:99px;padding:8px 13px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text);cursor:pointer;}
+.rm-acts button:first-child{background:var(--text);color:var(--bg);}
 .rm-card::before{content:'';position:absolute;inset:0 0 auto 0;height:6px;background:repeating-linear-gradient(90deg,var(--accent) 0 18px,transparent 18px 26px);}
 .rm-eyebrow,.rm-count b{color:var(--accent2);}
 .rm-check.done .rm-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
@@ -2839,7 +2846,19 @@ const RACE_CHECKLIST=[
 ];
 // The card grows as the race gets closer: a slim strip until a week out (tap to open),
 // then the full card, with the checklist showing only what's due in the next two days.
-let _rmOpen=false,_rmAllChecks=false;
+let _rmOpen=false,_rmAllChecks=false,_rmSheet=null;
+// The full race plan as a sheet: why this target, km splits, race morning and fuel.
+function openRacePlan(){
+  const S=_rmSheet;if(!S)return;
+  document.getElementById('session-detail-content').innerHTML=`<h3>${esc(S.name)}: the plan</h3>
+    ${S.RP?`<div class="rm-sub">Target <b>${fmtDurationFromSecs(S.RP.target)}</b></div><div class="rm-tip">${S.RP.why}</div>
+      <div class="rm-splits">${S.RP.splits.map(x=>`<div class="rm-split${x.fin?' fin':''}"><span>${x.fin?fmtKm(x.k):x.k}</span><b>${fmtDurationFromSecs(x.t)}</b></div>`).join('')}</div>`
+      :S.pace?`<div class="rm-sub">${S.goal?'Goal':'Predicted'} pace <b>${fmtMS(S.pace)}/km</b></div>${S.paceTip?`<div class="rm-tip">${S.paceTip}</div>`:''}<div class="rm-splits">${S.splits}</div>`:''}
+    ${S.morning||`<div class="rm-tip" style="margin-top:12px;">Add the start time on the race card and race morning gets real times.</div>`}
+    <div class="rm-tip" style="margin-top:8px;"><b>Fuel:</b> ${S.fuel}</div>
+    <button class="btn-ghost" style="width:100%;margin-top:12px;" onclick="closeModal('session-detail-modal')">Close</button>`;
+  openModal('session-detail-modal');haptic('light');
+}
 function toggleRaceMode(){_rmOpen=!_rmOpen;haptic('light');renderRaceMode();}
 function toggleRaceChecksAll(){_rmAllChecks=!_rmAllChecks;renderRaceMode();}
 function toggleRaceCheck(id){
@@ -2961,25 +2980,33 @@ function renderRaceMode(){
   const items=_rmAllChecks||!due.length?all:due;
   const plan=getRaceTaperPlan();
   const dateTxt=new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  // Compact on Today: the target and how to run it, today's race-week jobs and the
+  // forecast. The full plan (the reasoning, km splits, race morning, fuel) is one tap away,
+  // and comes onto the card itself the day before and on race day, when it's what matters.
+  const close=d<=1;
+  const planLine=RP?`<div class="rm-plan"><b>${fmtDurationFromSecs(RP.target)}</b><span>${Math.abs(RP.first-RP.second)>=1?`${fmtMS(RP.first)}/km to halfway, then ${fmtMS(RP.second)}/km`:`even ${fmtMS(RP.first)}/km`}${proj&&goal?` · predicted ${proj.projTime}`:''}</span></div>`
+    :pace?`<div class="rm-plan"><b>${fmtMS(pace)}<small>/km</small></b><span>${goal?'goal pace':'predicted pace'}${proj&&goal?` · predicted ${proj.projTime}`:''}</span></div>`:'';
+  const open=all.filter(c=>c.d===d||(c.d>d&&!checks[c.id]));
+  const items2=_rmAllChecks?all:open;
+  const morning=RM?`<div class="rm-sub" style="margin-top:12px;">Race morning</div><div class="rm-time">${RM.map(([t,x])=>`<div><b>${t}</b><span>${x}</span></div>`).join('')}</div>`:'';
   el.innerHTML=`<div class="rm-card">
     <div class="rm-top">
-      <div><div class="rm-eyebrow">Race mode</div><div class="rm-name">${esc(r.name||'Race')}</div><div class="rm-meta">${dateTxt} · ${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</div>${thenTxt?`<div class="rm-then">${thenTxt}</div>`:''}</div>
+      <div><div class="rm-eyebrow">Race mode</div><div class="rm-name">${esc(r.name||'Race')}</div><div class="rm-meta">${new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} · ${fmtKm(km)} km${r.goalTime?` · goal ${esc(r.goalTime)}`:''}</div>${thenTxt?`<div class="rm-then">${thenTxt}</div>`:''}</div>
       <div class="rm-count"><b>${d===0?'Today':d}</b>${d===0?'':`<span>day${d===1?'':'s'}</span>`}</div>
     </div>
     ${_raceWeekToday(r,d)}
-    ${pace?`<div class="rm-sub">${goal?'Goal':'Predicted'} pace <b>${fmtMS(pace)}/km</b>${proj&&goal?` · predicted ${proj.projTime}`:''}${plan&&plan.daysToTaper>0?` · ${plan.isB?'race week':'taper'} from ${fmtShortDate(plan.taperStart)}`:''}</div>
-    ${RP?'':`<div class="rm-splits">${splits}</div>`}`:''}
-    ${RP?`<div class="rm-sub" style="margin-top:12px;">Your race plan <b>${fmtDurationFromSecs(RP.target)}</b></div><div class="rm-tip">${RP.why}</div>
-      <div class="rm-splits">${RP.splits.map(x=>`<div class="rm-split${x.fin?' fin':''}"><span>${x.fin?fmtKm(x.k):x.k}</span><b>${fmtDurationFromSecs(x.t)}</b></div>`).join('')}</div>`:paceTip?`<div class="rm-tip">${paceTip}</div>`:''}
-    ${RM?`<div class="rm-sub" style="margin-top:12px;">Race morning</div>`:''}
-    ${RM?`<div class="rm-time">${RM.map(([t,x])=>`<div><b>${t}</b><span>${x}</span></div>`).join('')}</div>`:''}
-    <div class="rm-tip" style="margin-top:8px;"><b>Fuel:</b> ${raceFuel(r)}</div>
+    ${planLine}
+    ${close?`${RP?`<div class="rm-tip">${RP.why}</div>`:paceTip?`<div class="rm-tip">${paceTip}</div>`:''}${morning}<div class="rm-tip" style="margin-top:8px;"><b>Fuel:</b> ${raceFuel(r)}</div>`:''}
     <div id="rm-wx"></div>
-    <div class="rm-sub" style="margin-top:12px;">Race-week checklist <b>${doneN}/${all.length}</b></div>
-    ${items.map(c=>`<button class="rm-check${checks[c.id]?' done':''}" onclick="toggleRaceCheck('${c.id}')"><span class="rm-box">${checks[c.id]?'✓':''}</span><span>${c.t}</span>${c.d===d?'<em>today</em>':c.d<d?`<em class="later">${c.d===0?'race day':c.d===1?'day before':`${c.d} days out`}</em>`:''}</button>`).join('')}
-    ${items.length<all.length||_rmAllChecks?`<button class="rm-more" onclick="toggleRaceChecksAll()">${_rmAllChecks?'Show what is due now':`Show all ${all.length}`}</button>`:''}
-    ${d>7?`<button class="rm-more" onclick="toggleRaceMode()">Collapse</button>`:''}
+    <div class="rm-sub" style="margin-top:12px;">Race-week checklist <b>${doneN}/${all.length}</b>${!items2.length?' · nothing due today':''}</div>
+    ${items2.map(c=>`<button class="rm-check${checks[c.id]?' done':''}" onclick="toggleRaceCheck('${c.id}')"><span class="rm-box">${checks[c.id]?'✓':''}</span><span>${c.t}</span>${c.d===d?'<em>today</em>':c.d>d?'<em class="later">overdue</em>':`<em class="later">${c.d===0?'race day':c.d===1?'day before':`${c.d} days out`}</em>`}</button>`).join('')}
+    <div class="rm-acts">
+      <button onclick="openRacePlan()">${close?'Splits':'Full race plan'}</button>
+      <button onclick="toggleRaceChecksAll()">${_rmAllChecks?'Just today\'s jobs':'Whole checklist'}</button>
+      ${d>7?`<button onclick="toggleRaceMode()">Collapse</button>`:''}
+    </div>
   </div>${rep}`;
+  _rmSheet={RP,splits,paceTip,morning,fuel:raceFuel(r),name:r.name||'Race',pace,goal,proj};
   setTimeout(()=>fillRaceWx(r),0);
 }
 

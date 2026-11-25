@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="118">
+<meta name="app-version" content="119">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -870,6 +870,9 @@ input,textarea,select{user-select:text;-webkit-user-select:text;}
 .week-plan-day-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);}
 .week-plan-pill{width:100%;padding:6px 2px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .week-plan-pill.active-push{background:color-mix(in srgb,var(--c-indigo) 16%,transparent);border-color:transparent;color:var(--c-indigo);}
+.week-plan-pill.active-strength{background:color-mix(in srgb,var(--c-indigo) 16%,transparent);border-color:transparent;color:var(--c-indigo);}
+.week-plan-pill.active-size{background:color-mix(in srgb,var(--c-pink) 14%,transparent);border-color:transparent;color:var(--c-pink);}
+.week-plan-pill.active-pump{background:color-mix(in srgb,var(--c-violet) 16%,transparent);border-color:transparent;color:var(--c-violet);}
 .week-plan-pill.active-pull{background:color-mix(in srgb,var(--c-pink) 14%,transparent);border-color:transparent;color:var(--c-pink);}
 .week-plan-pill.active-legs{background:rgba(8,132,91,0.15);border-color:rgba(8,132,91,0.4);color:var(--green);}
 .week-plan-pill.active-core{background:rgba(144,109,1,0.15);border-color:rgba(144,109,1,0.4);color:var(--c-gold);}
@@ -1156,6 +1159,16 @@ body.gym-live .gx .kp-pad button{padding:7px 0;font-size:22px;}
 .cg-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
 .cg-h span{font-family:var(--display);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);}
 .cg-h b{font-size:12.5px;color:var(--text2);}
+.gp-types{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;}
+.gp-types button{background:var(--surface2);border:0;border-radius:var(--radius-xs);padding:12px 8px 10px;text-align:left;font-family:inherit;cursor:pointer;color:var(--text2);}
+.gp-types button b{display:block;font-family:var(--display);font-size:19px;letter-spacing:0.02em;line-height:1;color:var(--text);text-transform:uppercase;}
+.gp-types button i{display:block;font-style:normal;font-size:10.5px;font-weight:600;margin-top:5px;line-height:1.3;color:var(--text3);}
+.gp-types button.on{background:color-mix(in srgb,var(--accent) 16%,var(--surface2));}
+.gp-types button.on b{color:var(--accent2);}
+.gp-old{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:12px;}
+.gp-old i{font-style:normal;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-right:4px;}
+.gp-old button{background:var(--surface2);border:0;border-radius:99px;padding:5px 10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;}
+.gp-old button.on{background:color-mix(in srgb,var(--accent) 16%,var(--surface2));color:var(--accent2);}
 .cg-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--border);font-size:13.5px;}
 .cg-row span{font-weight:600;color:var(--text);}
 .cg-row em{display:block;font-style:normal;font-size:11px;color:var(--accent2);font-weight:600;}
@@ -2193,6 +2206,9 @@ function loadState(){
       if(!Array.isArray(p.customGoals))p.customGoals=[];
       if(!p.data||typeof p.data!=='object')p.data={};
       if(!p.builtinTargets||typeof p.builtinTargets!=='object')p.builtinTargets={};
+      // The two-session programme (Nov 2026): a gym target of 3 becomes 2, with Pump as the
+      // optional third. Once only; set it back to 3 from the goal and it stays.
+      if(!p.gymProg1){p.gymProg1=1;if(!p.builtinTargets.gym||p.builtinTargets.gym===3)p.builtinTargets.gym=2;}
       if(!p.archivedWeeks||typeof p.archivedWeeks!=='object')p.archivedWeeks={};
       if(!p.race)p.race=null;
       if(!p.userName)p.userName='';
@@ -2250,7 +2266,7 @@ function goalAvatarInline(name,size=36){return goalAvatar(name,size);}
 const EFFORT_COLS={Recovery:{text:'var(--c-easy)',bg:'rgba(26,157,108,0.12)'},Easy:{text:'var(--c-easy)',bg:'rgba(26,157,108,0.12)'},'Long Run':{text:'var(--c-long)',bg:'rgba(61,111,224,0.12)'},'Long run':{text:'var(--c-long)',bg:'rgba(61,111,224,0.12)'},Long:{text:'var(--c-long)',bg:'rgba(61,111,224,0.12)'},Tempo:{text:'var(--c-tempo)',bg:'rgba(201,108,26,0.12)'},Fartlek:{text:'var(--c-tempo)',bg:'rgba(201,108,26,0.12)'},Intervals:{text:'var(--c-int)',bg:'rgba(224,57,63,0.12)'},Hard:{text:'var(--c-int)',bg:'rgba(224,57,63,0.12)'},Race:{text:'var(--c-race)',bg:'rgba(162,63,176,0.12)'}};
 function effortStyle(effort){return EFFORT_COLS[effort]||{text:'var(--text2)',bg:'var(--surface2)'};}
 const BUILTIN_DAILY=[{id:'steps',name:'10k Steps',type:'daily',inputStyle:'check'}];
-const BUILTIN_SESSIONS=[{id:'gym',name:'Gym',type:'weekly',weeklyTarget:3},{id:'run',name:'Running',type:'weekly',weeklyTarget:3}];
+const BUILTIN_SESSIONS=[{id:'gym',name:'Gym',type:'weekly',weeklyTarget:2},{id:'run',name:'Running',type:'weekly',weeklyTarget:3}];
 function allDailyGoals(){const cg=Array.isArray(state.customGoals)?state.customGoals:[];return[...BUILTIN_DAILY,...cg.filter(g=>g.type==='daily')];}
 function allSessionGoals(){const cg=Array.isArray(state.customGoals)?state.customGoals:[];return[...BUILTIN_SESSIONS,...cg.filter(g=>g.type==='weekly')];}
 function allGoals(){return[...allDailyGoals(),...allSessionGoals()];}
@@ -3521,7 +3537,7 @@ function renderWeekDays(offset){
 // the goal and races, paces from your fitness, the gym session on "coach picks" days,
 // and on-the-day changes from readiness. Edits here apply from this week.
 let _uwSel=null,_uwUndo=null;
-const _UW_RUN=['Easy','Tempo','Intervals','Long'],_UW_GYM=['Gym','Push','Pull','Legs','Core'];
+const _UW_RUN=['Easy','Tempo','Intervals','Long'],_UW_GYM=['Gym','Strength','Size','Pump','Push','Pull','Legs','Core'];
 function _uwDay(i){
   const p=state.weekPlan||[];const t=p[i]||'Rest';
   const run=t==='Run'?getWeekPlanRunTypeRaw(i):null;
@@ -3657,7 +3673,7 @@ function renderUsualWeek(){
     ed=`<div class="uw-ed" onclick="event.stopPropagation()">
       <div class="uw-ed-h">${DAY_NAMES[i]}s</div>
       <div class="uw-ed-row"><span>Run</span>${seg('run',[[null,'None'],['Auto','Coach picks'],..._UW_RUN.map(x=>[x,x==='Intervals'?'Ints':x])],u.run)}</div>
-      <div class="uw-ed-row"><span>Gym</span>${seg('gym',[[null,'None'],['Gym','Coach picks'],['Push','Push'],['Pull','Pull'],['Legs','Legs'],['Core','Core']],u.gym)}</div>
+      <div class="uw-ed-row"><span>Gym</span>${seg('gym',[[null,'None'],['Gym','Coach picks'],['Strength','Strength'],['Size','Size'],['Pump','Pump'],...(['Push','Pull','Legs','Core'].includes(u.gym)?[[u.gym,u.gym]]:[])],u.gym)}</div>
     </div>`;
   }
   const runs=has?state.weekPlan.filter(t=>t==='Run').length:0;
@@ -3964,7 +3980,7 @@ function renderGymTrendsCoach(){
     :`<b>${(g4.length/4).toFixed(1)} sessions a week</b> over the last 4 weeks${g8.length?`, against ${(g8.length/4).toFixed(1)} before`:''}.${g4.length<4?' Two a week is the sweet spot alongside this much running.':''}`);
   // Sets per muscle per week (last 4 weeks) against the targets the session coach uses.
   const sets={};
-  g4.forEach(s=>(s.exercises||[]).forEach(e=>{const n=(e.sets||[]).filter(x=>!x.warmup).length;getExerciseMuscles(e.name).forEach(m=>{sets[m]=(sets[m]||0)+n;});}));
+  ALL_MUSCLE_GROUPS.forEach(m=>sets[m]=0);g4.forEach(s=>(s.exercises||[]).forEach(e=>_tallySets(sets,e.name,(e.sets||[]).filter(x=>!x.warmup).length)));
   if(g4.length){
     const short=Object.entries(VOL_MUSCLE_TARGETS).filter(([m])=>!(legsByRunning()&&GC_LEG_MUSCLES.has(m))).map(([m,t])=>({m,per:(sets[m]||0)/4,t})).filter(x=>x.per<x.t.min*0.6).sort((a,b)=>a.per/a.t.min-b.per/b.t.min);
     if(short.length)lines.push(`<b>Falling behind:</b> ${short.slice(0,3).map(x=>`${x.m} (${x.per.toFixed(0)} sets a week, aim ${x.t.min}+)`).join(', ')}.`);
@@ -4206,8 +4222,7 @@ const _r25=v=>Math.max(2.5,Math.round(v/2.5)*2.5);
 function _muscleSets7(){
   const from=_dsAgo(6),c={};ALL_MUSCLE_GROUPS.forEach(m=>c[m]=0);
   loadGymData().filter(s=>s.date>=from).forEach(s=>(s.exercises||[]).forEach(e=>{
-    const n=(e.sets||[]).filter(x=>!x.warmup).length;
-    getExerciseMuscles(e.name).forEach(m=>{if(c[m]!=null)c[m]+=n;});
+    _tallySets(c,e.name,(e.sets||[]).filter(x=>!x.warmup).length);
   }));
   const km=loadRunData().filter(r=>r.date>=from).reduce((a,r)=>a+(parseFloat(r.km)||0),0);
   ['Quads','Hamstrings','Glutes','Core'].forEach(m=>c[m]+=km/10);c.Calves+=km/5;
@@ -4251,7 +4266,10 @@ function getGymCoachLine(){
   // Your plan has runs and no Legs day: legs are trained by running, so the rotation is
   // Push / Pull (the same rule as the rest of the gym features).
   const legsRun=legsByRunning();
-  const types=['Push','Pull','Legs'].filter(t=>t!=='Legs'||(!legsRun&&gym.some(g=>g.type==='Legs')));
+  // The programme: Strength and Size alternate; Pump joins once both are done this week.
+  const progOn=gymProgOn(),monD=dk(getMonday(now));
+  const pumpOk=progOn&&['Strength','Size'].every(t=>gym.some(g=>g.type===t&&g.date>=monD))&&!gym.some(g=>g.type==='Pump'&&g.date>=monD);
+  const types=progOn?['Strength','Size',...(pumpOk?['Pump']:[])]:['Push','Pull','Legs'].filter(t=>t!=='Legs'||(!legsRun&&gym.some(g=>g.type==='Legs')));
   const lastOf=t=>{for(let i=gym.length-1;i>=0;i--)if(gym[i].type===t)return gym[i];return null;};
   // Score each session on what the data says, not just whose turn it is: how long since
   // you did it, how far its muscles are below their weekly set targets (last 7 days),
@@ -4270,7 +4288,8 @@ function getGymCoachLine(){
     const tops=pool.sort((a,b)=>(hits(b)-hits(a))||(b.w-a.w)).slice(0,2);
     const mom=s&&d<14?tops.map(x=>({name:x.name,...(_liftMomentum(x.name)||{})})).filter(x=>x.pct!=null):[];
     const up=mom.filter(x=>x.pct>=2&&x.stall<=1).sort((a,b)=>b.pct-a.pct)[0]||null;
-    const score=Math.min(d,14)+short*6+(up?2:0);
+    // In the programme the order matters more than the gaps: whichever was done longer ago.
+    const score=progOn?(s?Math.min(d,60):61)+(up?0.5:0):Math.min(d,14)+short*6+(up?2:0);
     return{t,s,d,gaps,short,tops,mom,up,score};
   }).sort((a,b)=>b.score-a.score);
   const due=cands[0];
@@ -4532,7 +4551,7 @@ function renderToday(){
   // Week strip
   const stripEl=document.getElementById('week-strip');
   stripEl.innerHTML='';
-  const planTypeColor={Push:'var(--c-indigo)',Pull:'var(--c-pink)',Legs:'var(--green)',Core:'var(--c-gold)',Custom:'var(--c-purple)',Run:'var(--c-teal)'};
+  const planTypeColor={Strength:'var(--c-indigo)',Size:'var(--c-pink)',Pump:'var(--c-violet)',Push:'var(--c-indigo)',Pull:'var(--c-pink)',Legs:'var(--green)',Core:'var(--c-gold)',Custom:'var(--c-purple)',Run:'var(--c-teal)'};
   ['M','T','W','T','F','S','S'].forEach((lbl,i)=>{
     const d=addDays(baseMonday,i);
     const dds=dk(d);
@@ -4673,7 +4692,7 @@ function renderToday(){
         })()}
         ${runDone||gymDone?renderTodayDebrief():''}${runDone&&gymDone?'':planAdvice(false)}${gymDone?'':clashHtml}`;
     }else if(todayPlan&&todayPlan!=='Rest'&&todayPlan!=='Off'){
-      const isGym=['Push','Pull','Legs','Core','Custom'].includes(todayPlan);
+      const isGym=GYM_PLAN_TYPES.has(todayPlan);
       const tab=isGym?'gym':'run';
       const gymPreselect=isGym?`;setTimeout(()=>{_gymPickedType='${todayPlan}';renderGymTypeSelector();},50)`:'';
       const alreadyDone=isGym?getSessionDone(dk(now),'gym'):getSessionDone(dk(now),'run');
@@ -5030,9 +5049,10 @@ function renderGymTypeSelector(){
   if(!_gymPickedType){
     if(showPlanCard)_gymPickedType=planType;
     else{
-      const ppl=legsByRunning()?['Push','Pull']:['Push','Pull','Legs'];
+      if(gymProgOn())_gymPickedType=_coachGymType();
+      else{const ppl=legsByRunning()?['Push','Pull']:['Push','Pull','Legs'];
       if(sessions.length){const idx=ppl.indexOf(sessions[sessions.length-1].type);_gymPickedType=idx>=0?ppl[(idx+1)%ppl.length]:'Push';}
-      else _gymPickedType='Push';
+      else _gymPickedType='Push';}
     }
   }
   const hasPrev=sessions.length>0;
@@ -5052,9 +5072,11 @@ function renderGymTypeSelector(){
   const gridCardHtml=showPlanCard?'':`<div class="chart-card" style="margin-bottom:10px;">
       ${isPlannedGymDay?`<button onclick="gymBackToPlan()" style="background:none;border:none;color:var(--accent2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0;margin-bottom:10px;">← Back to today's plan (${esc(planType)})</button>`:''}
       <div class="chart-card-header"><span class="chart-card-title">Select Session Type</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      ${gymProgOn()?`<div class="gp-types">${GYM_PROG_TYPES.map(t=>`<button id="gtype-${t}" class="${_gymPickedType===t?'on':''}" onclick="gymPickType('${t}')"><b>${t}</b><i>${GYM_PROG[t].sub}</i></button>`).join('')}</div>
+      <div class="gp-old"><i>Other sessions</i>${types.map(t=>`<button id="gtype-${t}" class="${_gymPickedType===t?'on':''}" onclick="gymPickType('${t}')">${t}</button>`).join('')}</div>`
+      :`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         ${types.map(t=>`<button id="gtype-${t.replace(' ','-')}" onclick="gymPickType('${t}')" style="padding:14px 10px;border-radius:var(--radius-xs);border:2px solid ${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent)'):'var(--border)'};background:${_gymPickedType===t?(t==='Makeup'?'rgba(210,153,34,0.15)':'color-mix(in srgb,var(--accent) 15%,transparent)'):'var(--surface2)'};color:${_gymPickedType===t?(t==='Makeup'?'var(--amber)':'var(--accent2)'):'var(--text2)'};font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;">${t}</button>`).join('')}
-      </div>
+      </div>`}
       ${isMakeup?`<div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.5;padding:8px 12px;background:rgba(210,153,34,0.08);border-radius:var(--radius-xs);border:1px solid rgba(210,153,34,0.2);">Loads Push, Pull${state.makeupIncludeLegs?' &amp; Legs':''} exercises not yet done this week</div>
       <button onclick="gymToggleMakeupLegs()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${state.makeupIncludeLegs?'var(--amber)':'var(--border)'};background:${state.makeupIncludeLegs?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${state.makeupIncludeLegs?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;transition:all 0.15s;">Include legs? ${state.makeupIncludeLegs?'— ON':'— OFF'}</button>`:`<button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">Superset mode${_gymSupersetMode?' — ON':''}</button>
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair · Push, Pull &amp; Legs only</div>`:''}`}
@@ -5128,6 +5150,7 @@ function confirmGymSession(){
 // by its rest time (either pattern-matched or set manually when adding to library).
 function exOrderPriority(name){return -getExRestSecs(name);}
 function getDefaultExercisesForType(type){
+  if(isProgType(type))return GYM_PROG[type].slots.map((sl,si)=>({name:_progPick(type,si),sets:[{weight:'',reps:'',warmup:false}],_slot:`${type}.${si}`}));
   const key=type.toLowerCase();
   const catMap={push:'push',pull:'pull',legs:'legs',core:'custom',custom:'custom'};
   const cat=catMap[key]||'custom';
@@ -5196,7 +5219,7 @@ function renderGymLogger(){
   <div id="gym-type-edit" class="chart-card" style="display:none;margin-bottom:10px;">
       <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Select new type</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
-        ${['Push','Pull','Legs','Core','Custom'].map(t=>`<button onclick="gymConfirmTypeChange('${t}')" style="padding:10px 6px;border-radius:var(--radius-xs);border:2px solid ${gymDraft.type===t?'var(--accent)':'var(--border)'};background:${gymDraft.type===t?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${gymDraft.type===t?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">${t}</button>`).join('')}
+        ${['Strength','Size','Pump','Push','Pull','Legs','Core','Custom'].map(t=>`<button onclick="gymConfirmTypeChange('${t}')" style="padding:10px 6px;border-radius:var(--radius-xs);border:2px solid ${gymDraft.type===t?'var(--accent)':'var(--border)'};background:${gymDraft.type===t?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${gymDraft.type===t?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">${t}</button>`).join('')}
       </div>
       <button onclick="gymHideTypeEdit()" style="width:100%;padding:8px;border-radius:var(--radius-xs);border:1px solid var(--border);background:none;color:var(--text3);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
     </div>
@@ -5316,11 +5339,13 @@ function gymSwapEx(i){
   const used={};gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)used[e.name.toLowerCase()]=(used[e.name.toLowerCase()]||0)+1;}));
   // Your library first, then common alternatives, so a small library still gets options.
   const COMMON=['Dumbbell shoulder press','Arnold press','Lateral Raises','Push-ups','Incline dumbbell press','Close-grip bench press','Dips','Tricep Pushdowns','Cable fly','Pec fly','Seated row','Cable row','Pull-ups','Chin-ups','Lat pulldown','Face Pulls','Rear delt fly','Hammer Curls','EZ Bar Curl','Goblet squat','Leg press','Bulgarian split squat','Romanian deadlift','Hip thrust','Leg extension','Leg curl','Calf raise','Plank','Cable crunch'];
-  const pool=[..._gcLibrary()];COMMON.forEach(n=>{if(!pool.some(x=>x.toLowerCase()===n.toLowerCase()))pool.push(n);});
+  // The catalogue's swaps for this lift come first: they do the same job.
+  const catAlt=((exCat(ex.name)||{}).alt||[]).map(n=>_resolveExName(n)||n),sl=_progSlotOf(ex);
+  const pool=[...catAlt,..._gcLibrary()];COMMON.forEach(n=>{if(!pool.some(x=>x.toLowerCase()===n.toLowerCase()))pool.push(n);});
   const alts=pool.filter(n=>!have.has(n.toLowerCase())).map(n=>{const m=getExerciseMuscles(n)||[];const sim=n.toLowerCase().split(/\W+/).filter(w=>w.length>3&&words.includes(w)).length;return{n,ov:m.filter(x=>want.includes(x)).length,primary:m[0]&&m[0]===want[0],sim,u:used[n.toLowerCase()]||0};})
-    .filter(a=>a.ov>0).sort((a,b)=>(b.primary-a.primary)||(b.sim-a.sim)||(b.ov-a.ov)||(b.u-a.u)).slice(0,4);
-  const row=a=>{const last=getLastExSets(a.n,gym)||[],top=_gcTopLast(last),t=top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null;
-    return`<button onclick="gymDoSwap(${i},${JSON.stringify(a.n).replace(/"/g,'&quot;')})"><b>${esc(a.n)}</b><span>${t&&t.reps&&t.reps!=='?'?`${t.weight!=null?_kg(+t.weight)+' × ':''}${t.reps} · from your history`:'New to you: start light, 10–12 reps'}</span></button>`;};
+    .filter(a=>a.ov>0||catAlt.includes(a.n)).sort((a,b)=>(catAlt.includes(b.n)-catAlt.includes(a.n))||(b.primary-a.primary)||(b.sim-a.sim)||(b.ov-a.ov)||(b.u-a.u)).filter((a,j,arr)=>arr.findIndex(x=>x.n.toLowerCase()===a.n.toLowerCase())===j).slice(0,4);
+  const row=a=>{const last=getLastExSets(a.n,gym)||[],top=_gcTopLast(last),t=sl?_progTarget(a.n,sl,last):top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null;
+    return`<button onclick="gymDoSwap(${i},${JSON.stringify(a.n).replace(/"/g,'&quot;')})"><b>${esc(a.n)}</b><span>${t&&t.tag!=='New'&&t.reps&&t.reps!=='?'?`${t.weight!=null?_kg(+t.weight)+' × ':''}${t.reps} · from your history`:sl?`New to you: start light, ${sl.lo}–${sl.hi} reps`:'New to you: start light, 10–12 reps'}</span></button>`;};
   document.getElementById('session-detail-content').innerHTML=`<h3>Swap ${esc(ex.name)}</h3>
     ${alts.length?`<div class="gl-eyebrow" style="text-align:left;margin-bottom:8px;">Same muscles${want.length?`: ${want.slice(0,2).join(', ').toLowerCase()}`:''}</div><div class="ga-opts">${alts.map(row).join('')}</div>`:'<p class="np-p">Nothing in your library works the same muscles yet.</p>'}
     <button class="btn-secondary" style="margin-top:10px;" onclick="closeModal('session-detail-modal');gymAddExManual()">Something else</button>
@@ -5330,9 +5355,13 @@ function gymSwapEx(i){
 function gymDoSwap(i,name){
   const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
   const fresh={name,sets:[{weight:'',reps:'',warmup:false}],_planSets:ex._planSets||3,_why:`instead of ${ex.name}`};
+  // A programme slot remembers the swap: next time this session uses what you swapped to.
+  const sl=_progSlotOf(ex);
+  if(sl){fresh._slot=ex._slot;fresh._tgtOverride=_progTarget(name,sl,getLastExSets(name,loadGymData())||[]);
+    if(!state.gymSlotPref)state.gymSlotPref={};state.gymSlotPref[ex._slot]=name;saveState();}
   if(_gcWorking(ex).length){ex._completed=true;gymDraft.exercises.splice(i+1,0,fresh);_gymFocusIdx=i+1;}
   else gymDraft.exercises[i]=fresh;
-  closeModal('session-detail-modal');gymKpResetTarget();renderGymLogger();haptic('success');toastMsg(`Swapped to ${name}`);
+  closeModal('session-detail-modal');gymKpResetTarget();renderGymLogger();haptic('success');toastMsg(sl?`Swapped to ${name}. Your next ${ex._slot.split('.')[0]} uses it too`:`Swapped to ${name}`,3000);
 }
 function gymShowTypeEdit(){const el=document.getElementById('gym-type-edit');if(el)el.style.display='block';}
 function gymHideTypeEdit(){const el=document.getElementById('gym-type-edit');if(el)el.style.display='none';}
@@ -7407,7 +7436,7 @@ function renderRunPBCard(runs){
 // lettered by type, with Legs filled in because it's the session that collides with running.
 let _tlFilter='all';
 let _tlWeeks=4;
-const TL_GYM_LETTER={Push:'P',Pull:'Pu',Legs:'L',Core:'C',Custom:'Cu',Makeup:'M'};
+const TL_GYM_LETTER={Strength:'S',Size:'Sz',Pump:'Pm',Push:'P',Pull:'Pu',Legs:'L',Core:'C',Custom:'Cu',Makeup:'M'};
 function tlSetFilter(f){_tlFilter=f;haptic('light');_tlRerender();}
 function tlToggleWeeks(){_tlWeeks=_tlWeeks===4?12:4;_tlRerender();}
 function _tlRerender(){document.querySelectorAll('.tl-card').forEach(c=>{c.outerHTML=renderTrainingLogCard();});}
@@ -11347,12 +11376,12 @@ function _coachWeek(o,mode,monK,td){
     gym.sort((a,b)=>a.day-b.day);
     // Which session each one is: the gym coach's pick first (muscle balance, days since,
     // momentum), then the rotation.
-    const rot=legsByRunning()?['Push','Pull']:['Push','Pull','Legs'];
+    const rot=gymProgOn()?['Strength','Size']:legsByRunning()?['Push','Pull']:['Push','Pull','Legs'];
     let gi=Math.max(0,rot.indexOf(_coachGymType()));if(wk>0)gi+=wk*Math.max(1,want);
     gym.forEach(g=>{let t=rot[gi%rot.length];gi++;if(g.upper&&t==='Legs'){t=rot[gi%rot.length];gi++;}g.type=t;
       const i=g.day,nxt=all.find(s=>s.day===i+1),ran=runOn(i);
       const ctx=kind==='taper'||kind==='race'?'race is close, so keep it short and light':nxt&&/Long|B2B|Tempo|Intervals|Sharpener|Race/.test(nxt.sub)?`${_CW_DAY[i+1]}'s ${nxt.sub==='B2B'?'back-to-back':nxt.sub==='Sharpener'?'race-pace reps':nxt.sub.toLowerCase()} is next, so ${t==='Legs'?'keep the legs work light':'no legs'}`:'nothing hard the next day';
-      g.why=`${DN(i)}: ${t.toLowerCase()}, ${i===gym[0].day?'the session your muscle balance and progress say is due':'next in your rotation'}${ran?', after an easy run':''}; ${ctx}.`;});
+      g.why=`${DN(i)}: ${t.toLowerCase()}, ${gymProgOn()?(i===gym[0].day?'next in the programme':'the programme\'s other session'):i===gym[0].day?'the session your muscle balance and progress say is due':'next in your rotation'}${ran?', after an easy run':''}; ${ctx}.`;});
   }
   // The week, summarised.
   // A ceiling per session from what you've actually done lately, so a big week can't turn
@@ -11983,7 +12012,7 @@ function buildWeekReview(mon){
   // Gym + PBs (heaviest weight or best e1RM vs everything before this week)
   const gymAll=loadGymData();
   const gymWk=gymAll.filter(s=>inWk(s.date||''));
-  const gymTarget=(state.builtinTargets&&state.builtinTargets.gym)||3;
+  const gymTarget=(state.builtinTargets&&state.builtinTargets.gym)||2;
   const prior={};
   gymAll.filter(s=>(s.date||'')<monStr).forEach(s=>(s.exercises||[]).forEach(e=>(e.sets||[]).filter(x=>!x.warmup&&!x.technique&&parseFloat(x.weight||0)>0).forEach(x=>{
     const w=parseFloat(x.weight),r=parseFloat(x.reps||0),est=r===1?w:w*(1+r/30);
@@ -13520,7 +13549,7 @@ function saveSessionNotes(idx){
 }
 
 // ── WEEK PLAN ──
-const PLAN_TYPES=['Push','Pull','Legs','Core','Custom','Run','Rest','Off'];
+const PLAN_TYPES=['Strength','Size','Pump','Push','Pull','Legs','Core','Custom','Run','Rest','Off'];
 const RUN_TYPES=['Easy','Tempo','Long','Intervals','Race'];
 const RUN_TYPE_WEIGHT={Easy:1,Tempo:2,Long:3,Intervals:1.8,Race:3};
 const RUN_TYPE_DEFAULT_BY_DOW={1:'Tempo',3:'Easy',6:'Long'}; // 0=Mon; Tue/Thu/Sun defaults
@@ -13563,7 +13592,8 @@ function _addGymHtml(d){
 }
 function _coachGymType(){
   if(Date.now()-_gymAutoCache.t<1500&&_gymAutoCache.v)return _gymAutoCache.v;
-  const fb=()=>{const g=loadGymData().filter(x=>['Push','Pull','Legs'].includes(x.type));const l=g.length?g[g.length-1].type:null;return l==='Push'?'Pull':'Push';};
+  const fb=()=>{if(gymProgOn()){const g=loadGymData().filter(x=>x.type==='Strength'||x.type==='Size');const l=g.length?g[g.length-1].type:null;return l==='Strength'?'Size':'Strength';}
+    const g=loadGymData().filter(x=>['Push','Pull','Legs'].includes(x.type));const l=g.length?g[g.length-1].type:null;return l==='Push'?'Pull':'Push';};
   if(_gymResolving)return fb();
   _gymResolving=true;_gymDue=null;
   try{getGymCoachLine();}catch(e){}finally{_gymResolving=false;}
@@ -13732,7 +13762,7 @@ function getLiftTarget(topLast,lastHasWeight,pb,lastSets){
 // readiness, this week's plan, the race phase, weekly sets per muscle and each lift's own
 // history. Nothing new is stored; it's all recomputed from the logs.
 const GC_LEG_MUSCLES=new Set(['Quads','Hamstrings','Glutes','Calves']);
-const GC_TYPE_MUSCLES={Push:['Chest','Shoulders','Triceps'],Pull:['Back','Biceps'],Legs:['Quads','Hamstrings','Glutes','Calves'],Core:['Core']};
+const GC_TYPE_MUSCLES={Strength:['Chest','Back','Shoulders','Biceps','Quads','Glutes'],Size:['Chest','Back','Shoulders','Triceps','Biceps','Hamstrings','Calves'],Pump:['Back','Chest','Shoulders','Biceps','Triceps','Core'],Push:['Chest','Shoulders','Triceps'],Pull:['Back','Biceps'],Legs:['Quads','Hamstrings','Glutes','Calves'],Core:['Core']};
 const GC_GAP_FALLBACK={Chest:'dumbbell press or flyes',Back:'rows or pulldowns',Shoulders:'lateral raises',Biceps:'curls',Triceps:'pushdowns',Quads:'leg extensions or split squats',Hamstrings:'Romanian deadlifts or leg curls',Glutes:'hip thrusts',Calves:'calf raises',Core:'planks or ab work'};
 const GC_READY_LINE={
   go:'Readiness is high: a good day for a top set or a PR attempt.',
@@ -13863,8 +13893,7 @@ function getMuscleWeekSets(){
   const from=dk(getMonday(today()));
   const c={};ALL_MUSCLE_GROUPS.forEach(m=>c[m]=0);
   loadGymData().filter(s=>s.date>=from).forEach(s=>(s.exercises||[]).forEach(e=>{
-    const n=(e.sets||[]).filter(x=>!x.warmup).length;
-    getExerciseMuscles(e.name).forEach(m=>{if(c[m]!=null)c[m]+=n;});
+    _tallySets(c,e.name,(e.sets||[]).filter(x=>!x.warmup).length);
   }));
   loadRunData().filter(r=>r.date>=from).forEach(r=>{
     const per10=(parseFloat(r.km)||0)/10;
@@ -13879,7 +13908,7 @@ function getGymMuscleGaps(type,exNames){
   const lastSame=sessions.filter(s=>s.type===type).slice(-1)[0];
   if(!lastSame)return[];
   const usual={};
-  (lastSame.exercises||[]).forEach(e=>{const n=(e.sets||[]).filter(x=>!x.warmup).length;getExerciseMuscles(e.name).forEach(m=>{usual[m]=(usual[m]||0)+n;});});
+  ALL_MUSCLE_GROUPS.forEach(m=>usual[m]=0);(lastSame.exercises||[]).forEach(e=>_tallySets(usual,e.name,(e.sets||[]).filter(x=>!x.warmup).length));
   const muscles=GC_TYPE_MUSCLES[type]||[];
   const dow=(today().getDay()+6)%7;
   let repeats=0;for(let j=dow+1;j<7;j++)if(gymTypeThisWeek(j)===type)repeats++;
@@ -13926,7 +13955,7 @@ function renderGymBriefCard(type){
     const sets=(lastSame.exercises||[]).reduce((a,e)=>a+(e.sets||[]).filter(x=>!x.warmup).length,0);
     lines.push({col:'var(--text3)',text:`Last ${type}: ${ago<=0?'earlier today':ago===1?'yesterday':ago+' days ago'}, ${(lastSame.exercises||[]).length} exercises and ${sets} sets.`});
   }
-  if(phase&&!(clash&&clash.race))lines.push({col:'var(--st-go)',text:phase.text});
+  if(phase&&!(clash&&clash.race)&&!(coached&&isProgType(type)))lines.push({col:'var(--st-go)',text:phase.text});
   gaps.forEach(g=>lines.push({col:'var(--st-pace)',text:`${g.muscle}: heading for ${g.projected} of ${g.min}–${g.max} sets this week, even after today. Add ${Math.min(3,Math.max(2,g.short))} sets of ${g.ex||GC_GAP_FALLBACK[g.muscle]}.`}));
   const alt=clash&&clash.alt?_gcUpperAlt():null;
   return`<div class="chart-card rd-mini gc-brief" style="--st:${st?st.col:'var(--text)'};">
@@ -13937,6 +13966,121 @@ function renderGymBriefCard(type){
   </div>`;
 }
 
+// ── THE PROGRAMME ──
+// Two full-body sessions a week, with an optional third. Built for a runner who wants to
+// get stronger and look it:
+// - Each muscle trained twice a week. With volume equal, frequency barely matters
+//   (Schoenfeld 2019), but two exposures fit 2 sessions far better than Push/Pull, which
+//   gave each muscle one.
+// - Strength is heavy (5-8 on the big lifts); Size is moderate (8-15) for volume. Strength
+//   needs few hard sets; size keeps paying with more (Pelland 2024), so arms and shoulders
+//   get their direct work on both days.
+// - Legs are minimal and runner-friendly: one single-leg squat and one hip hinge a week,
+//   because running already trains them and heavy legs blunt the next quality run.
+// - Double progression: stay at a weight and add reps through the range; when every set
+//   hits the top, the weight goes up and the reps start again at the bottom.
+// pri: what goes first when time is short (3 before 2; the first two slots always stay).
+const GYM_PROG_TYPES=['Strength','Size','Pump'];
+const GYM_PROG={
+  Strength:{sub:'Full body · heavy',muscles:['Chest','Back','Shoulders','Biceps','Quads','Glutes'],slots:[
+    {pick:['Plate bench press','Bench press','Dumbbell bench press'],sets:3,lo:5,hi:8,pri:1},
+    {pick:['Barbell Row','Seated row'],sets:3,lo:6,hi:10,pri:1},
+    {pick:['Bulgarian Split Squat','Seated leg press'],sets:2,lo:8,hi:10,pri:2,legs:true},
+    {pick:['Overhead Press','Dumbbell shoulder press'],sets:2,lo:6,hi:10,pri:2},
+    {pick:['Lat pulldown','Chin up'],sets:2,lo:8,hi:12,pri:2},
+    {pick:['Lateral Raises'],sets:2,lo:12,hi:20,pri:2},
+    {pick:['EZ Bar Curl','Hammer Curls'],sets:2,lo:8,hi:12,pri:3},
+  ]},
+  Size:{sub:'Full body · volume',muscles:['Chest','Back','Shoulders','Triceps','Biceps','Hamstrings','Calves'],slots:[
+    {pick:['Incline plate press','Incline dumbbell press'],sets:3,lo:8,hi:12,pri:1},
+    {pick:['Seated row','Dumbbell row'],sets:3,lo:8,hi:12,pri:1},
+    {pick:['Romanian deadlift','Single-Leg RDL','Seated leg curl'],sets:2,lo:8,hi:10,pri:2,legs:true},
+    {pick:['Pec fly','Dips'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Lateral Raises'],sets:3,lo:12,hi:20,pri:2},
+    {pick:['Tricep Pushdowns','Overhead tricep extension'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Hammer Curls','Incline Dumbbell Curl'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Face Pulls','Rear delt fly'],sets:2,lo:12,hi:20,pri:3},
+    {pick:['Calf Raises'],sets:2,lo:10,hi:15,pri:3,legs:true,calves:true},
+  ]},
+  Pump:{sub:'Upper body and core · optional',muscles:['Back','Chest','Shoulders','Biceps','Triceps','Core'],slots:[
+    {pick:['Lat pulldown','Chin up'],sets:3,lo:8,hi:12,pri:1},
+    {pick:['Pec fly','Cable fly'],sets:3,lo:10,hi:15,pri:1},
+    {pick:['Lateral Raises','Cable lateral raise'],sets:3,lo:12,hi:20,pri:2},
+    {pick:['Incline Dumbbell Curl','EZ Bar Curl'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Overhead tricep extension','Tricep dumbbell push','Tricep Pushdowns'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Hammer Ab Crunch Machine','Cable crunch'],sets:2,lo:10,hi:15,pri:3},
+  ]},
+};
+const isProgType=t=>!!GYM_PROG[t];
+function gymProgOn(){return(state.gymProgramme||'hybrid')==='hybrid';}
+// The lift for a slot: the one you swapped in last time if you did, else the first choice.
+function _progPick(type,si){
+  const sl=GYM_PROG[type].slots[si],pref=(state.gymSlotPref||{})[`${type}.${si}`];
+  return _resolveExName(pref||sl.pick[0])||sl.pick[0];
+}
+function _progSlotOf(ex){if(!ex||!ex._slot)return null;const [t,i]=ex._slot.split('.');return GYM_PROG[t]&&GYM_PROG[t].slots[+i]||null;}
+// Why legs sit out today, if they do: a race close, the taper, race recovery, or a key run
+// today (you lift first, so legs would go into it tired) or tomorrow.
+function _progLegsHold(){
+  const ctx=getGymContext(),phase=getGymRacePhase();
+  if(ctx.dRace!=null&&ctx.dRace<=10){const r=getRaces().filter(x=>daysUntil(x.date)>=0)[0];return`${esc(r&&r.name||'your race')} is ${ctx.dRace===0?'today':ctx.dRace===1?'tomorrow':`in ${ctx.dRace} days`}`;}
+  if(phase&&phase.key==='recovery')return'your legs are still recovering from the race';
+  if(phase&&phase.key==='taper')return'it\'s a taper week';
+  const t0=_gcPlanDay(0),t1=_gcPlanDay(1);
+  if(t0.type==='Run'&&KEY_RUNS.has(t0.runType)&&!getSessionDone(dk(today()),'run'))return`today's ${_gcRunName(t0.runType)} comes after this`;
+  if(t1.type==='Run'&&KEY_RUNS.has(t1.runType))return`${t1.day}'s ${_gcRunName(t1.runType)} is tomorrow`;
+  return null;
+}
+// Double progression, read from last time's sets on this lift.
+function _progTarget(name,sl,last,fresh){
+  const lo=sl.lo,hi=sl.hi,range=`${lo}–${hi}`,cl=v=>Math.max(lo,Math.min(hi,v));
+  const ws=(last||[]).filter(x=>!x.warmup&&!x.technique&&parseInt(x.reps)>0);
+  const k=_gcReadyKey()||'ready',ctx=getGymContext(),inc=_exInc(name);
+  const up=k==='go'?'var(--st-go)':'var(--green)';
+  if(!ws.length)return{weight:null,reps:range,tag:'New',note:`first time: pick a weight you could lift 3 or 4 more times than ${lo}. Whatever you log becomes the baseline`,col:'var(--text2)'};
+  if(!ws.some(x=>parseFloat(x.weight||0)>0)){
+    const best=Math.max(...ws.map(x=>parseInt(x.reps)||0));
+    if(best>=hi)return{weight:null,reps:hi,tag:'Add load',note:`${best} reps last time is the top of the ${range} range: hold a dumbbell or add a plate, or lower over three seconds`,col:up};
+    return{weight:null,reps:cl(best+1),tag:'Add a rep',note:`${range} range, ${best} last time`,col:up};
+  }
+  const W=Math.max(...ws.map(x=>parseFloat(x.weight||0))),at=ws.filter(x=>parseFloat(x.weight||0)===W).map(x=>parseInt(x.reps)),mn=Math.min(...at);
+  const step=inc||2.5,rnd=v=>Math.max(step,Math.round(v/step)*step),dn=v=>Math.max(step,Math.floor(v/step)*step);
+  if(ctx.comeback)return{weight:rnd(W*0.8),reps:cl(lo+2),tag:'Comeback',note:`${ctx.layoff} days off: about 80% of ${_kg(W)}`,col:'var(--st-ready)'};
+  if(ctx.race&&k!=='recover')return{weight:W,reps:cl(mn),tag:'Hold',note:`${esc(ctx.race.name||'race')} in ${ctx.dRace} days: no new loads`,col:'var(--st-pace)'};
+  if(k==='recover')return{weight:rnd(W*0.9),reps:cl(mn),tag:'Light day',note:'technique focus',col:'var(--st-recover)'};
+  if(k==='pace')return{weight:W,reps:cl(mn),tag:'Hold',note:'leave 2–3 reps in the tank',col:'var(--st-pace)'};
+  if(mn>=hi&&inc){
+    // Well past the top (a new range for an old lift): jump to the weight that fits, not just one step.
+    const fit=mn>hi+2?Math.max(W+inc,dn(W*(1+mn/30)/(1+(lo+1)/30))):W+inc,w=Math.round(fit*100)/100;
+    return{weight:w,reps:lo,tag:fresh?'New range':'Weight up',note:fresh?`${mn} reps at ${_kg(W)} last time; this works in ${range}, so ${_kg(w)}`:`${at.length>1?`all ${at.length} sets`:'last time\'s set'} hit ${hi}+ at ${_kg(W)}, the top of the ${range} range: +${Math.round((w-W)*100)/100} kg, back to ${lo}`,col:up};}
+  // Under the range: the weight that should give the bottom of it, from the same effort
+  // (estimated one-rep max). The first time in the programme that's just finding the range.
+  if(mn<lo-1){const w=Math.min(dn(W*(1+mn/30)/(1+lo/30)),Math.max(step,W-step));
+    return fresh?{weight:w,reps:lo,tag:'New range',note:`${mn} reps at ${_kg(W)} last time; this works in ${range}, so start at ${_kg(w)}`,col:'var(--text2)'}
+      :{weight:w,reps:lo,tag:'Reset',note:`${mn} reps at ${_kg(W)} is below the ${range} range: ${_kg(w)} for ${lo}, then build back up`,col:'var(--st-pace)'};}
+  if(mn<lo)return{weight:W,reps:lo,tag:'Hold',note:`${mn} last time: ${lo} on every set at ${_kg(W)} first`,col:'var(--st-pace)'};
+  const nx=Math.min(hi,mn+1);
+  return{weight:W,reps:nx,tag:'Add a rep',note:`${range} range: ${mn} last time, ${nx} on every set today. At ${hi} the weight goes up`,col:up};
+}
+// The programme's rows for a session type, before the day's length and season adjust them.
+function _progRows(type,sessions){
+  const T=GYM_PROG[type],hold=_progLegsHold(),out=[],held=[];
+  T.slots.forEach((sl,si)=>{
+    const name=_progPick(type,si);
+    if(sl.legs&&hold){held.push(name);return;}
+    const last=getLastExSets(name,sessions)||[],c=exCat(name);
+    const fresh=!sessions.some(s=>isProgType(s.type)&&(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===name.toLowerCase()));
+    const tgt=_progTarget(name,sl,last,fresh);
+    // A leg lift you haven't done in a while: two easy sets first. New leg work makes
+    // runners sore for days, and the next run pays for it.
+    const timesDone=sessions.filter(s=>s.date>=_dsAgo(42)&&(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===name.toLowerCase()&&_gcWorking(e).length)).length;
+    const intro=sl.legs&&!sl.calves&&timesDone<2;
+    const compound=/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(name);
+    out.push({name,sets:intro?Math.min(2,sl.sets):sl.sets,max:sl.sets+1,tgt:intro&&tgt?{...tgt,note:`${timesDone?'second':'first'} time in a while: stop 3 or 4 reps short. New leg work makes runners sore for two or three days`}:tgt,
+      rest:(compound?120:75)+(c&&c.uni?60:0),w:tgt&&tgt.weight?+tgt.weight:0,slot:`${type}.${si}`,lo:sl.lo,hi:sl.hi,pri:sl.pri,legs:!!sl.legs,intro});
+  });
+  return{rows:out,held,hold};
+}
 // 3 + 4. Build today's session: last session of this type, with set counts adjusted for the
 // race phase, readiness and tomorrow's run, plus an exercise for any muscle running short.
 // ── THE COACH'S GYM SESSION ──
@@ -13947,9 +14091,10 @@ function renderGymBriefCard(type){
 // short this week. Sized to about 40 minutes from your rest times (30 in race and taper
 // weeks) by trimming sets, then the last exercise.
 function planGymSession(type){
-  if(!['Push','Pull','Legs','Core','Custom'].includes(type))return null;
+  const prog=isProgType(type);
+  if(!prog&&!['Push','Pull','Legs','Core','Custom'].includes(type))return null;
   const sessions=loadGymData(),same=sessions.filter(s=>s.type===type).slice(-3);
-  if(!same.length)return null;
+  if(!prog&&!same.length)return null;
   const freq={},order=[];
   same.forEach((s,si)=>(s.exercises||[]).forEach(e=>{const n=_resolveExName(e.name)||e.name;if(!n)return;const key=n.toLowerCase();
     if(!freq[key]){freq[key]={name:n,count:0,last:-1};order.push(key);}if(freq[key].last!==si){freq[key].count++;freq[key].last=si;}}));
@@ -13958,7 +14103,10 @@ function planGymSession(type){
   const picks=order.map(k=>freq[k]).filter(x=>(x.count>=2||x.last===same.length-1)&&fits(x.name)).slice(0,7);
   if(!picks.length)order.slice(0,4).forEach(k=>picks.push(freq[k]));
   const k=_gcReadyKey(),phase=getGymRacePhase(),taper=phase&&phase.key==='taper',ctx=getGymContext();
-  const rows=picks.map(pk=>{
+  // The programme writes its own rows (in its order, with rep ranges); older session types
+  // are rebuilt from your history.
+  const PI=prog?_progRows(type,sessions):null;
+  const rows=prog?PI.rows:picks.map(pk=>{
     const last=getLastExSets(pk.name,sessions)||[],hasW=last.some(x=>parseFloat(x.weight||0)>0),top=_gcTopLast(last);
     let n=last.filter(x=>!x.warmup&&!x.technique).length||3;
     if(taper)n=Math.max(1,Math.round(n/2));else if(k==='recover')n=Math.max(1,n-1);
@@ -13968,7 +14116,10 @@ function planGymSession(type){
     if(mo&&mo.stall>=4&&mo.pct<2&&tgt&&tgt.weight){tgt={...tgt,weight:Math.max(2.5,Math.round(parseFloat(top.weight)*0.9/2.5)*2.5),tag:'Reset',note:`no new best in ${mo.stall} sessions: 10% back and build again`};}
     return{name:pk.name,sets:Math.min(4,n),tgt,rest:getExRestSecs(pk.name)||90,w:top?parseFloat(top.weight||0):0};
   }).sort((a,b)=>b.w-a.w);
-  if(!taper&&k!=='recover')getGymMuscleGaps(type,rows.map(r=>r.name)).forEach(g=>{if(g.ex&&!rows.some(r=>r.name===g.ex))rows.push({name:g.ex,sets:Math.min(3,Math.max(2,g.short)),tgt:null,rest:getExRestSecs(g.ex)||75,w:0,why:`${g.muscle} is short this week`});});
+  // Taper in the programme: two sets a lift at held weights, and the time limit drops the
+  // optional lifts, rather than single sets of everything.
+  if(prog)rows.forEach(r=>{if(taper)r.sets=Math.min(2,r.sets);else if(k==='recover')r.sets=Math.max(1,r.sets-1);});
+  if(!prog&&!taper&&k!=='recover')getGymMuscleGaps(type,rows.map(r=>r.name)).forEach(g=>{if(g.ex&&!rows.some(r=>r.name===g.ex))rows.push({name:g.ex,sets:Math.min(3,Math.max(2,g.short)),tgt:null,rest:getExRestSecs(g.ex)||75,w:0,why:`${g.muscle} is short this week`});});
   // A niggle you flagged in the last fortnight: one set fewer on the lifts that load it.
   const NIG={Shoulder:['Shoulders','Chest'],Elbow:['Triceps','Biceps'],Wrist:['Biceps','Triceps','Chest'],Back:['Back'],Knee:['Quads','Hamstrings','Glutes']};
   const recentN=[...new Set(sessions.filter(x=>x.date>=_dsAgo(14)&&Array.isArray(x.niggles)).flatMap(x=>x.niggles))];
@@ -13985,7 +14136,8 @@ function planGymSession(type){
   const seasonNote=[];
   if(deload){rows.forEach(r=>{r.sets=Math.max(1,r.sets-1);if(r.tgt&&r.tgt.weight)r.tgt={...r.tgt,weight:r25(+r.tgt.weight*0.9),tag:'Easy week'};});seasonNote.push(raced?'Easy week after your race: 10% lighter, a set fewer. Strength holds; the legs recover.':`Easy week: ${streak} weeks of training in a row, so 10% lighter and a set fewer. You come back stronger.`);}
   else if(PHs&&!ctx.comeback&&!ctx.race&&!taper&&k!=='recover'){
-    if(PHs.phase==='base'){let n=0;rows.forEach(r=>{if(isCompound(r.name)&&r.tgt&&r.tgt.weight&&+r.tgt.reps>6){r.tgt={...r.tgt,weight:r25(+r.tgt.weight*1.05),reps:6,tag:'Strength'};n++;}});if(n)seasonNote.push(`Strength block (running base phase, ${PHs.weeksTo} weeks to ${esc(PHs.race.name||'your race')}): heavier, 5–6 reps on the main lifts.`);}
+    if(PHs.phase==='base'&&prog){/* the Strength day is the strength block */}
+    else if(PHs.phase==='base'){let n=0;rows.forEach(r=>{if(isCompound(r.name)&&r.tgt&&r.tgt.weight&&+r.tgt.reps>6){r.tgt={...r.tgt,weight:r25(+r.tgt.weight*1.05),reps:6,tag:'Strength'};n++;}});if(n)seasonNote.push(`Strength block (running base phase, ${PHs.weeksTo} weeks to ${esc(PHs.race.name||'your race')}): heavier, 5–6 reps on the main lifts.`);}
     else{rows.forEach(r=>{r.sets=Math.min(3,r.sets);});seasonNote.push(`Holding strength while the running gets specific (${PHs.phase} phase): same weights, no more than 3 sets.`);}
   }
   if(!deload&&!ctx.comeback&&!ctx.race&&!taper&&k!=='pace'&&k!=='recover'){
@@ -14018,13 +14170,18 @@ function planGymSession(type){
   const mins=()=>{let t=0;const seen=new Set();rows.forEach(r=>{if(seen.has(r.name))return;const q=r.pairWith&&rows.find(x=>x.name===r.pairWith);
     if(q){seen.add(q.name);seen.add(r.name);t+=Math.max(r.sets,q.sets)*(Math.max(r.rest,q.rest)*0.75+80);}else t+=r.sets*(r.rest+40);});return t/60+6;};
   let guard=0;
-  while(mins()>budget&&rows.length>2&&guard++<20){const r=rows.slice(1).sort((a,b)=>b.sets-a.sets)[0];if(r.sets>2)r.sets--;else rows.pop();}
+  // Over time: sets come off first (down to two), then whole lifts, the programme's
+  // most optional first (calves, face pulls, the second arm lift), never the first two.
+  while(mins()>budget+(prog?2:0)&&rows.length>2&&guard++<20){
+    if(prog){const r=rows.slice(1).filter(x=>x.sets>2).sort((a,b)=>b.sets-a.sets)[0];
+      if(r)r.sets--;else{const c=rows.slice(2).map((x,j)=>({x,j})).sort((a,b)=>b.x.pri-a.x.pri||b.j-a.j)[0];rows.splice(rows.indexOf(c.x),1);}continue;}
+    const r=rows.slice(1).sort((a,b)=>b.sets-a.sets)[0];if(r.sets>2)r.sets--;else rows.pop();}
   // Room to spare: a set back on the main lifts first, then another of your usual lifts.
   if(!taper&&k!=='recover'){
     guard=0;
     while(mins()<budget-6&&guard++<12){
-      const r=rows.filter(x=>x.sets<4&&!x.eased).sort((a,b)=>a.sets-b.sets||b.w-a.w)[0];
-      const spare=order.map(kk=>freq[kk]).find(x=>fits(x.name)&&!rows.some(r2=>r2.name.toLowerCase()===x.name.toLowerCase()));
+      const r=rows.filter(x=>x.sets<(x.max||4)&&!x.eased&&!x.intro).sort((a,b)=>a.sets-b.sets||b.w-a.w)[0];
+      const spare=prog?null:order.map(kk=>freq[kk]).find(x=>fits(x.name)&&!rows.some(r2=>r2.name.toLowerCase()===x.name.toLowerCase()));
       if(r&&r.sets<3)r.sets++;
       else if(spare){const last=getLastExSets(spare.name,sessions)||[],top=_gcTopLast(last);rows.push({name:spare.name,sets:3,tgt:top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null,rest:getExRestSecs(spare.name)||75,w:top?+top.weight||0:0,why:'room for one more'});}
       else if(r)r.sets++;else break;
@@ -14032,13 +14189,14 @@ function planGymSession(type){
     }
   }
   const notes=[...seasonNote];
+  if(PI&&PI.held.length)notes.push(`Legs sit out today: ${PI.hold}. Running covers them meanwhile; they come back when the calendar's clear.`);
   notes.push(len==='short'?`Short: about 20 minutes${rows.some(r=>r.pairWith)?', paired as supersets (one rest per pair)':', the main lifts only'}.`:len==='long'?`Long: about ${budget} minutes, more sets on the main lifts.`:`About ${budget} minutes because it's ${why}.`);
   if(_gymLen==='long'&&!longOk)notes.push(`Long isn't on today (${why}).`);
   if(ctx.comeback)notes.push(`${ctx.layoff} days since the gym: about 80% of your last weights for 8–10 reps. Muscle comes back fast; tendons are slower.`);
   else if(ctx.race)notes.push(`${esc(ctx.race.name||'Race')} in ${ctx.dRace} days: hold your weights, nothing to failure.`);
-  if(taper)notes.push('Taper: half the sets.');else if(k==='recover')notes.push('Readiness says recover: one set fewer per lift, technique first.');
+  if(taper)notes.push(prog?'Taper: two sets a lift at the weights you know.':'Taper: half the sets.');else if(k==='recover')notes.push('Readiness says recover: one set fewer per lift, technique first.');
   if(recentN.length)notes.push(`${recentN.join(' and ')} niggle flagged recently: one set fewer on the lifts that load it. Stop anything that hurts.`);
-  return{type,rows,mins:Math.round(mins()),notes,len,longOk,base};
+  return{type,rows,mins:Math.round(mins()),notes,len,longOk,base,prog};
 }
 let _gymLen='coach';
 function setGymLen(v,e){if(e)e.stopPropagation();_gymLen=v;haptic('light');refreshActivePage();}
@@ -14050,17 +14208,17 @@ function renderCoachGymPreview(type,compact){
   return`<div class="cg">
     <div class="cg-h"><span>Coach's session</span><b>about ${P.mins} min</b></div>
     <div class="cg-len">${chip('short','Short')}${chip('coach',"Coach's")}${chip('long','Long')}</div>
-    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.pairWith?`<em>superset with ${esc(r.pairWith)}</em>`:r.why?`<em>${esc(r.why)}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
+    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.pairWith?`<em>superset with ${esc(r.pairWith)}</em>`:r.why?`<em>${esc(r.why)}</em>`:r.tgt&&r.tgt.tag==='New'?'<em>new: find your weight</em>':r.intro?'<em>easing in: stop short</em>':r.lo?`<em>${r.lo}–${r.hi} reps · ${esc((r.tgt&&r.tgt.tag||'').toLowerCase())}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
     ${compact&&P.rows.length>4?`<div class="cg-more">+ ${P.rows.length-4} more</div>`:''}
     ${P.notes.map(n=>`<div class="cg-note">${n}</div>`).join('')}
   </div>`;
 }
-function canBuildGymSession(type){return['Push','Pull','Legs','Core','Custom'].includes(type)&&loadGymData().some(s=>s.type===type);}
+function canBuildGymSession(type){return isProgType(type)||(['Push','Pull','Legs','Core','Custom'].includes(type)&&loadGymData().some(s=>s.type===type));}
 function buildGymSession(type){
   type=type||_gymPickedType;
   const sessions=loadGymData();
   const lastSame=sessions.filter(s=>s.type===type).slice(-1)[0];
-  if(!lastSame){confirmGymSession();return;}
+  if(!lastSame&&!isProgType(type)){confirmGymSession();return;}
   const k=_gcReadyKey();
   const phase=getGymRacePhase();
   const clash=getGymRunClash(type);
@@ -14073,7 +14231,7 @@ function buildGymSession(type){
       const T=r.tgt&&r.tgt.weight?+r.tgt.weight:0;
       // Ramp-up sets for the first two heavy lifts: bar, ~50%, ~75%.
       const wu=_warmupsFor(r.name,T,P.rows.slice(0,j).map(x=>x.name));
-      return{name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why,_warmups:wu,_pair:r.pairWith||null,_tgtOverride:r.tgt&&/PR attempt|Easy week|Strength/.test(r.tgt.tag||'')?r.tgt:null};
+      return{name:r.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:r.sets,_why:r.why,_warmups:wu,_pair:r.pairWith||null,_slot:r.slot||null,_tgtOverride:r.tgt&&(P.prog||/PR attempt|Easy week|Strength/.test(r.tgt.tag||''))?r.tgt:null};
     });
     _gymFocusIdx=null;_gymShowAllEx=false;gymKpResetTarget();
     gymDraft={type,exercises,startedAt:Date.now(),coach:true,planMins:P.mins};_gymLen='coach';
@@ -14460,7 +14618,7 @@ function renderTodayDebrief(){
 // Weekly gym overview vs. the Training Plan - just done vs. remaining against what's
 // actually scheduled, no baseline/volume comparators. Mirrors the race card's "where do
 // I stand this week" framing, scoped to the calendar week (Monday-Sunday).
-const GYM_PLAN_TYPES=new Set(['Push','Pull','Legs','Core','Custom']);
+const GYM_PLAN_TYPES=new Set(['Strength','Size','Pump','Push','Pull','Legs','Core','Custom']);
 function getGymWeekOverview(){
   if(!state.weekPlan||!Array.isArray(state.weekPlan))return null;
   const now=today();
@@ -14507,7 +14665,7 @@ function openUsualWeek(){showPage('today');_uwSel=null;setTimeout(()=>{const e=d
 function _oldRenderWeekPlanSection(){
   const plan=state.weekPlan;
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};
+  const typeColorClass={Strength:'active-strength',Size:'active-size',Pump:'active-pump',Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};
   const planColor={Push:'var(--c-indigo)',Pull:'var(--c-pink)',Legs:'var(--green)',Core:'var(--c-gold)',Custom:'var(--c-purple)',Run:'var(--c-teal)'};
   const planShort={Push:'PSH',Pull:'PLL',Legs:'LEG',Core:'COR',Custom:'CST',Run:'RUN',Rest:'—',Off:'—'};
   const runTypeShort={Easy:'EZY',Tempo:'TMP',Long:'LNG',Intervals:'INT',Race:'RCE'};
@@ -14539,9 +14697,9 @@ function _oldRenderWeekPlanSection(){
             <select class="week-plan-pill" id="wplan-run-${i}" onchange="updateWeekPlanRunType(${i},this.value)" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
               ${RUN_TYPES.map(t=>`<option value="${t}"${t===curRunType?' selected':''}>${t}</option>`).join('')}
             </select>
-            <select class="week-plan-pill ${getWeekPlanGym(i)?typeColorClass[getWeekPlanGym(i)]:''}" id="wplan-gym-${i}" title="Add a gym session to this run day" onchange="this.className='week-plan-pill '+({Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom'}[this.value]||'');this.options[0].text=this.value?'No gym':'+ Gym'" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
+            <select class="week-plan-pill ${getWeekPlanGym(i)?typeColorClass[getWeekPlanGym(i)]:''}" id="wplan-gym-${i}" title="Add a gym session to this run day" onchange="this.className='week-plan-pill '+({Strength:'active-strength',Size:'active-size',Pump:'active-pump',Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom'}[this.value]||'');this.options[0].text=this.value?'No gym':'+ Gym'" style="margin-top:4px;font-size:10px;padding:3px 4px;${cur==='Run'?'':'display:none;'}">
               <option value="">${getWeekPlanGym(i)?'No gym':'+ Gym'}</option>
-              ${['Push','Pull','Legs','Core','Custom'].map(t=>`<option value="${t}"${t===getWeekPlanGym(i)?' selected':''}>+ ${t}</option>`).join('')}
+              ${['Strength','Size','Pump','Push','Pull','Legs','Core','Custom'].map(t=>`<option value="${t}"${t===getWeekPlanGym(i)?' selected':''}>+ ${t}</option>`).join('')}
             </select>
           </div>`;
         }).join('')}
@@ -14565,7 +14723,7 @@ function updateWeekPlanPill(idx,val){
   _weekPlanDraft[idx]=val;
   // Update pill color class
   const el=document.getElementById(`wplan-${idx}`);if(!el)return;
-  const typeColorClass={Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};
+  const typeColorClass={Strength:'active-strength',Size:'active-size',Pump:'active-pump',Push:'active-push',Pull:'active-pull',Legs:'active-legs',Core:'active-core',Custom:'active-custom',Run:'active-run',Rest:'active-rest',Off:'active-off'};
   el.className=`week-plan-pill ${typeColorClass[val]||'active-rest'}`;
   const runSel=document.getElementById(`wplan-run-${idx}`);
   if(runSel)runSel.style.display=val==='Run'?'':'none';
@@ -14598,6 +14756,73 @@ function clearWeekPlan(){
   if(document.getElementById('page-today').classList.contains('active'))renderToday();
 }
 // ── EXERCISE LIBRARY & MUSCLE TRACKING ──
+// ── EXERCISE CATALOGUE ──
+// What each lift trains, for counting volume the way the research does (Pelland et al.
+// 2024): a set counts in full for the muscles it's built for (m) and as half a set for the
+// ones that help (s), so a bench set is a chest set and half a triceps set. Also the kit
+// (eq), the smallest sensible jump in weight (inc), one coaching cue and the swaps.
+// Names match what you've logged, so history carries straight over.
+const EX_CAT={
+  'Plate bench press':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Plate-loaded',inc:2.5,cue:'Shoulder blades pinned back, feet planted. Lower under control to the lower chest, press up and slightly back.',alt:['Bench press','Dumbbell bench press','Incline plate press']},
+  'Bench press':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Barbell',inc:2.5,cue:'Grip just outside shoulder width, shoulder blades pinned, bar to the lower chest with forearms vertical.',alt:['Plate bench press','Dumbbell bench press']},
+  'Dumbbell bench press':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Dumbbells',inc:2,cue:'Dumbbells at the sides of the chest at the bottom, a deep stretch, then press up and in.',alt:['Plate bench press','Bench press']},
+  'Incline plate press':{m:['Chest'],s:['Shoulders','Triceps'],eq:'Plate-loaded',inc:2.5,cue:'Upper chest: elbows about 45 degrees from the body, a full stretch at the bottom.',alt:['Incline dumbbell press','Plate bench press']},
+  'Incline dumbbell press':{m:['Chest'],s:['Shoulders','Triceps'],eq:'Dumbbells',inc:2,cue:'Bench at about 30 degrees; lower until the dumbbells are level with the chest.',alt:['Incline plate press','Dumbbell bench press']},
+  'Dips':{m:['Chest','Triceps'],s:['Shoulders'],eq:'Bodyweight',inc:2.5,cue:'Lean forward a little for chest; lower until the shoulders are just below the elbows, no further if the shoulder complains.',alt:['Pec fly','Close-grip bench press']},
+  'Pec fly':{m:['Chest'],s:[],eq:'Machine',inc:2.5,cue:'Soft elbows, a big stretch at the back, squeeze for a second at the front.',alt:['Cable fly','Dips']},
+  'Cable fly':{m:['Chest'],s:[],eq:'Cable',inc:2.5,cue:'Step forward, soft elbows, hug a big tree; stretch at the back.',alt:['Pec fly']},
+  'Push-ups':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Bodyweight',inc:0,cue:'Body in one line, chest to the floor, elbows about 45 degrees.',alt:['Dumbbell bench press']},
+  'Barbell Row':{m:['Back'],s:['Biceps','Shoulders'],eq:'Barbell',inc:2.5,cue:'Hinge to about 45 degrees, brace, pull to the lower ribs. No heaving: if the torso swings, it is too heavy.',alt:['Seated row','Dumbbell row']},
+  'Seated row':{m:['Back'],s:['Biceps'],eq:'Machine',inc:2.5,cue:'Chest tall, let the shoulders reach forward on the stretch, then pull elbows past the ribs.',alt:['Barbell Row','Dumbbell row']},
+  'Dumbbell row':{m:['Back'],s:['Biceps'],eq:'Dumbbells',inc:2,cue:'Hand and knee on the bench, pull the dumbbell to the hip, not the shoulder.',alt:['Seated row','Barbell Row']},
+  'Lat pulldown':{m:['Back'],s:['Biceps'],eq:'Cable',inc:2.5,cue:'Thighs locked under the pad, pull the bar to the top of the chest leading with the elbows; full stretch at the top.',alt:['Chin up','Pull up']},
+  'Chin up':{m:['Back'],s:['Biceps'],eq:'Bodyweight',inc:2.5,cue:'Palms facing you, from a dead hang to chin over the bar. Add weight once 12 come easily.',alt:['Lat pulldown','Pull up']},
+  'Pull up':{m:['Back'],s:['Biceps'],eq:'Bodyweight',inc:2.5,cue:'Palms away, from a dead hang, chest towards the bar.',alt:['Lat pulldown','Chin up']},
+  'Face Pulls':{m:['Shoulders'],s:['Back'],eq:'Cable',inc:2.5,cue:'Rope at eye height, pull to the face with the hands finishing beside the ears. Rear delts and the small shoulder muscles that keep pressing healthy.',alt:['Rear delt fly']},
+  'Rear delt fly':{m:['Shoulders'],s:['Back'],eq:'Machine',inc:2.5,cue:'Arms long, sweep out and back; no shrugging.',alt:['Face Pulls']},
+  'Overhead Press':{m:['Shoulders'],s:['Triceps'],eq:'Barbell',inc:2.5,cue:'Squeeze the glutes, bar from the collarbone to over the mid-foot, head through at the top.',alt:['Dumbbell shoulder press','Arnold press']},
+  'Dumbbell shoulder press':{m:['Shoulders'],s:['Triceps'],eq:'Dumbbells',inc:2,cue:'Seated, back supported, lower to ear level and press up without clashing the bells.',alt:['Overhead Press','Arnold press']},
+  'Arnold press':{m:['Shoulders'],s:['Triceps'],eq:'Dumbbells',inc:2,cue:'Start palms in, rotate as you press.',alt:['Dumbbell shoulder press']},
+  'Lateral Raises':{m:['Shoulders'],s:[],eq:'Dumbbells',inc:2,cue:'The side delts make your shoulders wider. Lead with the elbows, stop at shoulder height, control the way down. Strict beats heavy.',alt:['Cable lateral raise']},
+  'Cable lateral raise':{m:['Shoulders'],s:[],eq:'Cable',inc:2.5,cue:'Cable from behind, across the body; tension all the way down.',alt:['Lateral Raises']},
+  'EZ Bar Curl':{m:['Biceps'],s:[],eq:'Barbell',inc:2.5,cue:'Elbows pinned at the sides, all the way down every rep.',alt:['Hammer Curls','Incline Dumbbell Curl']},
+  'Hammer Curls':{m:['Biceps'],s:[],eq:'Dumbbells',inc:2,cue:'Thumbs up; trains the brachialis and forearm, which thicken the arm from the side.',alt:['EZ Bar Curl','Incline Dumbbell Curl']},
+  'Incline Dumbbell Curl':{m:['Biceps'],s:[],eq:'Dumbbells',inc:2,cue:'Bench at about 45 degrees, arms hanging behind you: the long stretch is the point.',alt:['EZ Bar Curl','Hammer Curls']},
+  'Tricep Pushdowns':{m:['Triceps'],s:[],eq:'Cable',inc:2.5,cue:'Elbows fixed at the sides, lock out fully and pause.',alt:['Overhead tricep extension','Tricep dumbbell push']},
+  'Overhead tricep extension':{m:['Triceps'],s:[],eq:'Cable',inc:2.5,cue:'Arms overhead stretches the long head, the biggest part of the triceps. Lower behind the head, elbows pointing forward.',alt:['Tricep Pushdowns','Tricep dumbbell push']},
+  'Tricep dumbbell push':{m:['Triceps'],s:[],eq:'Dumbbells',inc:2,cue:'Elbows still, move only at the elbow.',alt:['Overhead tricep extension','Tricep Pushdowns']},
+  'Close-grip bench press':{m:['Triceps'],s:['Chest'],eq:'Barbell',inc:2.5,cue:'Hands shoulder width, elbows tucked.',alt:['Dips','Tricep Pushdowns']},
+  'Bulgarian Split Squat':{m:['Quads','Glutes'],s:[],eq:'Dumbbells',inc:2,uni:true,cue:'Rear foot on the bench, front foot far enough forward that the heel stays down. Lower until the back knee nearly touches. Weaker leg first; match its reps on the other side.',alt:['Seated leg press','Lateral Lunge']},
+  'Single-Leg RDL':{m:['Hamstrings','Glutes'],s:[],eq:'Dumbbells',inc:2,uni:true,cue:'Soft standing knee, hips square, reach the weight down the shin until the hamstring stretches. Balance is part of the training.',alt:['Romanian deadlift','Seated leg curl']},
+  'Romanian deadlift':{m:['Hamstrings','Glutes'],s:['Back'],eq:'Barbell',inc:2.5,cue:'Soft knees, push the hips back, bar close to the legs; stop when the hamstrings are stretched and the back still flat.',alt:['Single-Leg RDL','Seated leg curl']},
+  'Lateral Lunge':{m:['Quads','Glutes'],s:[],eq:'Dumbbells',inc:2,uni:true,cue:'Big step to the side, sit back into that hip, other leg straight.',alt:['Bulgarian Split Squat']},
+  'Seated leg press':{m:['Quads','Glutes'],s:[],eq:'Plate-loaded',inc:5,cue:'Feet mid-platform, lower until the knees are at about 90 degrees without the lower back lifting.',alt:['Bulgarian Split Squat']},
+  'Leg extension':{m:['Quads'],s:[],eq:'Machine',inc:2.5,cue:'Pause at the top, slow on the way down.',alt:['Seated leg press']},
+  'Seated leg curl':{m:['Hamstrings'],s:[],eq:'Machine',inc:2.5,cue:'Lean forward a touch to stretch the hamstrings; full range.',alt:['Romanian deadlift']},
+  'Glute Hip Thrust':{m:['Glutes'],s:['Hamstrings'],eq:'Plate-loaded',inc:5,cue:'Shins vertical at the top, ribs down, squeeze for a second.',alt:['Romanian deadlift']},
+  'Calf Raises':{m:['Calves'],s:[],eq:'Machine',inc:5,cue:'Full stretch and a pause at the bottom, up onto the big toe, three seconds down. Heavy calf work is the runner\'s Achilles insurance.',alt:['Single-leg calf raise']},
+  'Single-leg calf raise':{m:['Calves'],s:[],eq:'Bodyweight',inc:2,uni:true,cue:'On a step, holding a dumbbell; full range, slow down.',alt:['Calf Raises']},
+  'Hammer Ab Crunch Machine':{m:['Core'],s:[],eq:'Machine',inc:2.5,cue:'Curl the ribs to the hips; don\'t pull with the arms.',alt:['Cable crunch','Hanging knee raise']},
+  'Cable crunch':{m:['Core'],s:[],eq:'Cable',inc:2.5,cue:'Kneel, rope by the head, crunch the ribs down to the hips.',alt:['Hammer Ab Crunch Machine']},
+  'Hanging knee raise':{m:['Core'],s:[],eq:'Bodyweight',inc:0,cue:'No swinging; curl the pelvis up, not just the knees.',alt:['Hammer Ab Crunch Machine']},
+  'Decline Sit Up With Plate':{m:['Core'],s:[],eq:'Bodyweight',inc:2.5,cue:'Plate on the chest, controlled down.',alt:['Cable crunch']},
+  'Plank':{m:['Core'],s:[],eq:'Bodyweight',inc:0,cue:'Squeeze the glutes, ribs down; quality seconds only.',alt:['Hanging knee raise']},
+};
+const _exKey=n=>(n||'').toLowerCase().replace(/[^a-z]/g,'').replace(/s$/,'');
+const _EX_CAT_IDX=Object.fromEntries(Object.keys(EX_CAT).map(k=>[_exKey(k),k]));
+function exCat(name){const k=_EX_CAT_IDX[_exKey(name)];return k?{name:k,...EX_CAT[k]}:null;}
+function _exInc(name){const c=exCat(name);return c&&c.inc?c.inc:2.5;}
+// Weighted muscles for one set of a lift: 1 for what it's built for, 0.5 for what helps.
+// Your own muscle tags still win for which muscles; the catalogue says which are secondary.
+function getExMuscleWeights(name){
+  const c=exCat(name),prog=loadGymProg(),tags=prog[name]&&prog[name].muscles&&prog[name].muscles.length?normaliseMuscles(prog[name].muscles):null;
+  const out={};
+  if(c){c.m.forEach(m=>out[m]=1);c.s.forEach(m=>{if(!out[m])out[m]=0.5;});}
+  (tags||(c?[]:getExerciseMuscles(name))).forEach(m=>{if(!out[m])out[m]=1;});
+  return out;
+}
+// Adds n sets of a lift to a muscle tally, fractionally.
+function _tallySets(c,name,n){Object.entries(getExMuscleWeights(name)).forEach(([m,w])=>{if(c[m]!=null)c[m]+=n*w;});}
 const DEFAULT_MUSCLE_MAP={
   // Chest
   'Bench Press':['Chest'],
@@ -14674,6 +14899,8 @@ function getExerciseMuscles(name){
   const nameLower=name.toLowerCase();
   // Check user tags first (normalise v1 muscle names on the fly)
   if(prog[name]&&prog[name].muscles&&prog[name].muscles.length)return normaliseMuscles(prog[name].muscles);
+  // The catalogue: what the lift is built for, then what helps.
+  const cx=exCat(name);if(cx)return[...cx.m,...cx.s];
   // Case-insensitive partial match against DEFAULT_MUSCLE_MAP
   for(const [key,muscles] of Object.entries(DEFAULT_MUSCLE_MAP)){
     if(key.toLowerCase()===nameLower||key.toLowerCase().includes(nameLower)||nameLower.includes(key.toLowerCase()))return muscles;
@@ -14715,11 +14942,14 @@ function saveExRestSecs(name,secs){
 }
 
 let _volPeriod='week';
-// Per-muscle weekly targets (min, max) — realistic for 1 session/muscle/week
+// Weekly sets per muscle (min, max), counted fractionally: a set is 1 for the muscle the
+// lift is built for, 0.5 for the ones that help (Pelland et al. 2024). Sized for two
+// full-body sessions: around 10 for the upper muscles you want to grow, fewer for arms
+// (they get half-sets from every press and row), and low for legs because running counts.
 const VOL_MUSCLE_TARGETS={
-  Chest:{min:8,max:12},Back:{min:8,max:12},Shoulders:{min:6,max:10},
-  Biceps:{min:6,max:10},Triceps:{min:6,max:10},Quads:{min:6,max:10},
-  Hamstrings:{min:4,max:8},Glutes:{min:4,max:8},Calves:{min:3,max:6},Core:{min:3,max:6}
+  Chest:{min:8,max:14},Back:{min:8,max:14},Shoulders:{min:8,max:14},
+  Biceps:{min:5,max:10},Triceps:{min:5,max:10},Quads:{min:3,max:8},
+  Hamstrings:{min:3,max:8},Glutes:{min:3,max:8},Calves:{min:2,max:6},Core:{min:2,max:6}
 };
 // Run contribution: equivalent sets per muscle per 10 km, by effort type
 const VOL_RUN_CONTRIB={
@@ -14761,9 +14991,7 @@ function renderVolumeTab(){
   function countMuscles(sessList){
     const c={};ALL_MUSCLE_GROUPS.forEach(m=>{c[m]=0;});
     sessList.forEach(s=>(s.exercises||[]).forEach(e=>{
-      const muscles=getExerciseMuscles(e.name);
-      const ws=(e.sets||[]).filter(x=>!x.warmup).length;
-      muscles.forEach(m=>{if(c[m]!==undefined)c[m]+=ws;});
+      _tallySets(c,e.name,(e.sets||[]).filter(x=>!x.warmup).length);
     }));
     return c;
   }
@@ -15066,9 +15294,7 @@ function renderMuscleVolume(){
   const counts={};ALL_MUSCLE_GROUPS.forEach(m=>{counts[m]=0;});
   gym.forEach(s=>{
     (s.exercises||[]).forEach(e=>{
-      const muscles=getExerciseMuscles(e.name);
-      const workSets=(e.sets||[]).filter(ss=>!ss.warmup).length;
-      muscles.forEach(m=>{if(counts[m]!==undefined)counts[m]+=workSets;});
+      _tallySets(counts,e.name,(e.sets||[]).filter(ss=>!ss.warmup).length);
     });
   });
   const largeMuscles=['Chest','Back','Quads','Hamstrings','Glutes','Shoulders'];

@@ -277,6 +277,16 @@ async function programme(browser){
       // Finish screen says what each lift does next time
       gymDraft.exercises[1].sets=S(40,[10,10,10]);openGymFinish();o.nextTime=document.querySelectorAll('#gym-finish-content .gf-nx').length;closeModal('gym-save-modal');
       gymDiscardSession();
+      // Rest starts at 2 min for compounds and 75 s for isolation; auto-saved library rests
+      // don't count, one you set yourself does
+      o.restBase=[_restBase('Plate bench press'),_restBase('Lateral Raises')];
+      {const pr=loadGymProg();pr['Lateral Raises']=pr['Lateral Raises']||{history:[]};const keepR={...pr['Lateral Raises']};pr['Lateral Raises'].restSeconds=90;pr['Lateral Raises'].restUser=true;saveGymProg(pr);
+       o.restUser=_restBase('Lateral Raises');const pr2=loadGymProg();pr2['Lateral Raises']=keepR;saveGymProg(pr2);}
+      // The session clock follows the pace: slow sets push the finish out, quick ones pull it in
+      const pace=gap=>{buildGymSession('Strength');restStop();const ex=gymDraft.exercises[0],t0=Date.now()-4*gap*1000;
+        ex.sets=[0,1,2].map(j=>({weight:'60',reps:'8',warmup:false,_at:t0+j*gap*1000,_rest:120}));
+        const P=_gymProj(),r={f:P.pace.f,end:P.end,plan:gymDraft.planMins};gymDiscardSession();return r;};
+      o.slow=pace(330);o.quick=pace(95);
       // The programme card: this week, 9 weeks of consistency, balance bars
       showPage('train');switchTrainTab('gym');o.card=!!document.querySelector('.gpc h3')&&document.querySelectorAll('.gpc-con > div').length===9&&document.querySelectorAll('.gpc-b').length===5;
       // The picker shows the programme first
@@ -299,6 +309,9 @@ async function programme(browser){
   check(r.held===false,'legs programmed five days before a race');
   check(r.legIn&&r.legEased,'legs missing (or not eased in) on a clear day');
   check(r.pref,'swap in a programme slot not remembered');
+  check(r.restBase&&r.restBase[0]===120&&r.restBase[1]===75,`rest doesn't start at 2 min / 75 s: ${JSON.stringify(r.restBase)}`);
+  check(r.restUser===90,`your own rest isn't the starting point: ${r.restUser}`);
+  check(r.slow&&r.slow.f>1.05&&r.quick&&r.quick.f<0.95&&r.slow.end>r.quick.end,`session clock ignores the pace: ${JSON.stringify([r.slow,r.quick])}`);
   check(r.nextTime>=1,'finish screen has no next-time targets');
   check(r.card,'programme card missing or incomplete');
   check(r.tiles===3,`programme tiles: ${r.tiles}`);

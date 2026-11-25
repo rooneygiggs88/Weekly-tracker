@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="123">
+<meta name="app-version" content="124">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -5248,7 +5248,7 @@ function renderGymLogger(){
   document.body.classList.add('gym-live');
   const sp=gymSetProgress();
   const bar=`<div class="gl-bar">
-    <div class="gl-l"><i>${esc(gymDraft.type)}</i><b><span id="gym-session-elapsed">${gymElapsedMins()}</span><small>${gymDraft.planMins?`/${gymDraft.planMins} min`:' min'}</small></b></div>
+    <div class="gl-l"><i>${esc(gymDraft.type)}</i><b><span id="gym-session-elapsed">${gymElapsedMins()}</span><small>${gymDraft.planMins?(()=>{const P=_gymProj();return P.pace.n>=2&&Math.abs(P.end-gymDraft.planMins)>=2?`/~${P.end} min`:`/${gymDraft.planMins} min`;})():' min'}</small></b></div>
     <div class="gl-m"><i>Sets</i><b>${sp.done}<small>${sp.plan?`/${sp.plan}`:''}</small></b></div>
     <button class="gl-menu" onclick="gymToggleMenu(event)" aria-label="Session menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
     <div class="gl-prog"><i style="width:${sp.plan?Math.min(100,Math.round(sp.done/sp.plan*100)):0}%"></i></div>
@@ -5328,10 +5328,30 @@ function gymToggleMenu(e){if(e)e.stopPropagation();_gymMenu=!_gymMenu;renderGymL
 // How the session is tracking against its planned time, and what to cut if it's running over.
 // Where the session stands against its planned time: minutes gone, minutes of planned
 // sets left, and how far over or under that puts you.
+// How this session is actually going against the plan's timings: the time between your
+// sets so far, against the rest the plan assumed plus the work. Over 1 means slower (heavy
+// sets earning longer rests, or resting past the timer); under 1, quicker. It counts for
+// more as sets add up, and gaps over 10 minutes (a chat, the phone) are ignored.
+function _gymPace(){
+  if(!gymDraft)return{f:1,n:0};
+  const L=[];gymDraft.exercises.forEach(ex=>(ex.sets||[]).forEach(s=>{if(s._at&&!s.warmup&&!s.technique)L.push({at:s._at,ex,rest:s._rest});}));
+  L.sort((a,b)=>a.at-b.at);
+  let obs=0,exp=0,given=0,base=0,n=0;
+  for(let i=1;i<L.length;i++){const a=L[i-1],b=L[i],d=(b.at-a.at)/1000;if(d<15||d>600)continue;
+    const pair=a.ex._pair&&a.ex._pair===b.ex.name,same=a.ex===b.ex,r=_restBase(a.ex.name);
+    const planR=pair?15:same?r:Math.min(r,90);
+    obs+=d;exp+=planR+_setWorkSecs(b.ex.name);n++;
+    if(same&&a.rest){given+=a.rest;base+=r;}}
+  if(n<2)return{f:1,n};
+  const raw=Math.max(0.7,Math.min(1.6,obs/exp)),f=1+(raw-1)*n/(n+3);
+  // Why: the timer itself asking for more (heavy sets) or rests running past it.
+  const timer=base?given/base:1,beyond=raw/Math.max(0.7,timer);
+  return{f,n,raw,timer,beyond};
+}
 function _gymProj(){
-  const el=(Date.now()-gymDraft.startedAt)/60000;let rem=0,remSets=0;const open=[];
-  gymDraft.exercises.forEach((ex,i)=>{if(ex._completed)return;const done=_gcWorking(ex).length,left=Math.max(0,(ex._planSets||3)-done);if(left){rem+=left*((getExRestSecs(ex.name)||90)+40)/60;remSets+=left;open.push({ex,i,done,left});}});
-  return{el,rem,remSets,open,over:Math.round(el+rem-(gymDraft.planMins||0))};
+  const el=(Date.now()-gymDraft.startedAt)/60000,pace=_gymPace();let rem=0,remSets=0;const open=[];
+  gymDraft.exercises.forEach((ex,i)=>{if(ex._completed)return;const done=_gcWorking(ex).length,left=Math.max(0,(ex._planSets||3)-done);if(left){rem+=_exMins(ex.name,left,pace.f);remSets+=left;open.push({ex,i,done,left});}});
+  return{el,rem,remSets,open,pace,end:Math.round(el+rem),over:Math.round(el+rem-(gymDraft.planMins||0))};
 }
 // Reps falling away on the last two lifts you worked: the session's useful work is done.
 function _gymFatigue(){
@@ -5345,7 +5365,8 @@ function gymTimeNudge(){
   const P=_gymProj(),fat=_gymFatigue();
   if(fat)return`<div class="gl-nudge">Reps fell away on ${esc(fat[0])} and ${esc(fat[1])}. That's the useful work done: finish this lift and call it.<button onclick="openGymFinish()">Finish now</button></div>`;
   if(P.el>gymDraft.planMins+5)return`<div class="gl-nudge">Past the planned ${gymDraft.planMins} minutes: finish this lift and call it a session.<button onclick="openGymFinish()">Finish now</button></div>`;
-  if(P.over>=5&&P.open.length)return`<div class="gl-nudge">Running about ${P.over} min over.<button onclick="gymTrimToFit()">Trim to fit</button></div>`;
+  if(P.over>=5&&P.open.length){const pc=P.pace,why=pc.n>=2&&pc.raw>1.1?(pc.timer>1.1&&pc.beyond<1.15?': heavy sets are earning longer rests':pc.beyond>=1.15?': rests are running past the timer':''):'';
+    return`<div class="gl-nudge">Finishing at about ${P.end} min, ${P.over} over${why}.<button onclick="gymTrimToFit()">Trim to fit</button></div>`;}
   // Nearly done, well ahead, reps holding: room for one more (not in race weeks or when tired).
   const ctx=getGymContext(),light=ctx.race||(getGymRacePhase()||{}).key==='taper'||['recover','pace'].includes(_gcReadyKey());
   const ahead=Math.round(gymDraft.planMins-(P.el+P.rem));
@@ -5454,12 +5475,13 @@ function _coachExtraPicks(){
   getDefaultExercisesForType(type).forEach(e=>add(e.name,`from your ${type} library`));
   const ctx=getGymContext(),light=ctx.comeback||ctx.race||(getGymRacePhase()||{}).key==='taper';
   return out.slice(0,3).map(o=>{const last=getLastExSets(o.name,loadGymData())||[],top=_gcTopLast(last);
-    return{...o,sets:light?2:3,rest:getExRestSecs(o.name)||75,tgt:top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null};});
+    return{...o,sets:light?2:3,rest:_restBase(o.name),tgt:top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null};});
 }
 function gymAddEx(){
   const P=_coachExtraPicks();
   if(!P.length){gymAddExManual();return;}
-  const opt=n=>{const ps=P.slice(0,n),mins=Math.round(ps.reduce((a,x)=>a+x.sets*(x.rest+40),0)/60+2*n); // + setting up each one
+  const pace=_gymPace().f;
+  const opt=n=>{const ps=P.slice(0,n),mins=Math.round(ps.reduce((a,x)=>a+_exMins(x.name,x.sets,pace),0)+2*n); // + setting up each one, at today's pace
     return`<button onclick="gymAddCoachPicks(${n})"><b>+${n} exercise${n===1?'':'s'}</b><span>about ${mins} min · ${ps.map(x=>esc(x.name)).join(', ')}</span></button>`;};
   document.getElementById('session-detail-content').innerHTML=`
     <h3>Add to ${esc(gymDraft.type)}</h3>
@@ -5474,7 +5496,7 @@ function gymAddCoachPicks(n){
   const P=_coachExtraPicks().slice(0,n);if(!P.length||!gymDraft)return;
   const at=gymDraft.exercises.length;
   P.forEach(x=>gymDraft.exercises.push({name:x.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:x.sets,_why:x.why}));
-  const mins=Math.round(P.reduce((a,x)=>a+x.sets*(x.rest+40),0)/60+2*P.length);
+  const mins=Math.round(P.reduce((a,x)=>a+_exMins(x.name,x.sets),0)+2*P.length);
   if(gymDraft.planMins)gymDraft.planMins+=mins;
   if(gymDraft.exercises.slice(0,at).every(e=>e._completed))_gymFocusIdx=at;
   closeModal('session-detail-modal');gymKpResetTarget();renderGymLogger();haptic('success');
@@ -5700,6 +5722,7 @@ function gymCheckSetDone(i,si,fromKeypad){
     // to "10"), which would cheer a PR that isn't one. Those still get celebrated on save.
     if(fromKeypad)checkLivePR(i,si);
     const rest=getSmartRest(gymDraft.exercises[i],s);
+    s._at=Date.now();s._rest=rest.secs;
     startRestTimer(rest.secs,rest.label);
     if(rest.toIdx!=null){_gymFocusIdx=rest.toIdx;gymKpResetTarget();const nx=document.getElementById('rest-next');if(nx)nx.innerHTML=gymRestNext();}
     saveGymDraft();
@@ -5883,7 +5906,7 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
   // until "Edit completed exercise?" is tapped, so you can't accidentally add to a
   // set you already decided you were finished with.
   if(focusMode&&ex._completed)return renderCompletedExCard(ex,i);
-  const _restSecs=getExRestSecs(ex.name||'');
+  const _restSecs=_restBase(ex.name||'');
   const lastSets=getLastExSets(ex.name,sessions);
   const lastHasWeight=lastSets.some(s=>parseFloat(s.weight||0)>0);
   const topLast=lastSets.length?(lastHasWeight
@@ -14150,7 +14173,7 @@ function _progRows(type,sessions){
     const intro=sl.legs&&!sl.calves&&timesDone<2;
     const compound=/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(name);
     out.push({name,sets:intro?Math.min(2,sl.sets):sl.sets,max:sl.sets+1,tgt:intro&&tgt?{...tgt,note:`${timesDone?'second':'first'} time in a while: stop 3 or 4 reps short. New leg work makes runners sore for two or three days`}:tgt,
-      rest:(compound?120:75)+(c&&c.uni?60:0),w:tgt&&tgt.weight?+tgt.weight:0,slot:`${type}.${si}`,lo:sl.lo,hi:sl.hi,pri:sl.pri,legs:!!sl.legs,intro});
+      rest:_restBase(name),w:tgt&&tgt.weight?+tgt.weight:0,slot:`${type}.${si}`,lo:sl.lo,hi:sl.hi,pri:sl.pri,legs:!!sl.legs,intro});
   });
   return{rows:out,held,hold};
 }
@@ -14254,12 +14277,12 @@ function planGymSession(type){
     // Stalled for 4+ sessions: 10% back and build again (not after a break, already eased).
     const mo=!ctx.comeback&&hasW?_liftMomentum(pk.name):null;
     if(mo&&mo.stall>=4&&mo.pct<2&&tgt&&tgt.weight){tgt={...tgt,weight:Math.max(2.5,Math.round(parseFloat(top.weight)*0.9/2.5)*2.5),tag:'Reset',note:`no new best in ${mo.stall} sessions: 10% back and build again`};}
-    return{name:pk.name,sets:Math.min(4,n),tgt,rest:getExRestSecs(pk.name)||90,w:top?parseFloat(top.weight||0):0};
+    return{name:pk.name,sets:Math.min(4,n),tgt,rest:_restBase(pk.name),w:top?parseFloat(top.weight||0):0};
   }).sort((a,b)=>b.w-a.w);
   // Taper in the programme: two sets a lift at held weights, and the time limit drops the
   // optional lifts, rather than single sets of everything.
   if(prog)rows.forEach(r=>{if(taper)r.sets=Math.min(2,r.sets);else if(k==='recover')r.sets=Math.max(1,r.sets-1);});
-  if(!prog&&!taper&&k!=='recover')getGymMuscleGaps(type,rows.map(r=>r.name)).forEach(g=>{if(g.ex&&!rows.some(r=>r.name===g.ex))rows.push({name:g.ex,sets:Math.min(3,Math.max(2,g.short)),tgt:null,rest:getExRestSecs(g.ex)||75,w:0,why:`${g.muscle} is short this week`});});
+  if(!prog&&!taper&&k!=='recover')getGymMuscleGaps(type,rows.map(r=>r.name)).forEach(g=>{if(g.ex&&!rows.some(r=>r.name===g.ex))rows.push({name:g.ex,sets:Math.min(3,Math.max(2,g.short)),tgt:null,rest:_restBase(g.ex),w:0,why:`${g.muscle} is short this week`});});
   // A niggle you flagged in the last fortnight: one set fewer on the lifts that load it.
   const NIG={Shoulder:['Shoulders','Chest'],Elbow:['Triceps','Biceps'],Wrist:['Biceps','Triceps','Chest'],Back:['Back'],Knee:['Quads','Hamstrings','Glutes']};
   const recentN=[...new Set(sessions.filter(x=>x.date>=_dsAgo(14)&&Array.isArray(x.niggles)).flatMap(x=>x.niggles))];
@@ -14308,7 +14331,7 @@ function planGymSession(type){
   if(len==='short'&&rows.length>=2){const prim=n=>(getExerciseMuscles(n)||[])[0]||n;const free=rows.slice();
     while(free.length>=2){const a=free.shift(),j=free.findIndex(b=>prim(b.name)!==prim(a.name));if(j<0)continue;const b=free.splice(j,1)[0];a.pairWith=b.name;b.pairWith=a.name;}}
   const mins=()=>{let t=0;const seen=new Set();rows.forEach(r=>{if(seen.has(r.name))return;const q=r.pairWith&&rows.find(x=>x.name===r.pairWith);
-    if(q){seen.add(q.name);seen.add(r.name);t+=Math.max(r.sets,q.sets)*(Math.max(r.rest,q.rest)*0.75+80);}else t+=r.sets*(r.rest+40);});return t/60+6;};
+    if(q){seen.add(q.name);seen.add(r.name);t+=Math.max(r.sets,q.sets)*(Math.max(r.rest,q.rest)*0.75+80);}else t+=_exMins(r.name,r.sets)*60;});return t/60+6;};
   let guard=0;
   // Over time: sets come off first (down to two), then whole lifts, the programme's
   // most optional first (calves, face pulls, the second arm lift), never the first two.
@@ -14323,7 +14346,7 @@ function planGymSession(type){
       const r=rows.filter(x=>x.sets<(x.max||4)&&!x.eased&&!x.intro).sort((a,b)=>a.sets-b.sets||b.w-a.w)[0];
       const spare=prog?null:order.map(kk=>freq[kk]).find(x=>fits(x.name)&&!rows.some(r2=>r2.name.toLowerCase()===x.name.toLowerCase()));
       if(r&&r.sets<3)r.sets++;
-      else if(spare){const last=getLastExSets(spare.name,sessions)||[],top=_gcTopLast(last);rows.push({name:spare.name,sets:3,tgt:top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null,rest:getExRestSecs(spare.name)||75,w:top?+top.weight||0:0,why:'room for one more'});}
+      else if(spare){const last=getLastExSets(spare.name,sessions)||[],top=_gcTopLast(last);rows.push({name:spare.name,sets:3,tgt:top?getLiftTarget(top,last.some(x=>+x.weight>0),0,last):null,rest:_restBase(spare.name)||75,w:top?+top.weight||0:0,why:'room for one more'});}
       else if(r)r.sets++;else break;
       if(mins()>budget){const l=rows[rows.length-1];if(l.why==='room for one more')rows.pop();else if(r)r.sets--;break;}
     }
@@ -14499,7 +14522,7 @@ function getSmartRest(ex,s){
   let best=0;const nl=(ex.name||'').toLowerCase();
   loadGymData().forEach(x=>(x.exercises||[]).forEach(e=>{if(e.name&&e.name.toLowerCase()===nl)(e.sets||[]).filter(z=>!z.warmup&&+z.reps>0).forEach(z=>{best=Math.max(best,_gcE1rm(parseFloat(z.weight||0),+z.reps));});}));
   const pct=best&&w?_gcE1rm(w,r)/best:null; // how close this set came to your best
-  let secs=compound?120:75;const why=[];
+  let secs=_restBase(ex.name||'');const why=[];
   if(pct!=null){if(pct>=0.95){secs+=60;why.push('near your best');}else if(pct>=0.85){secs+=30;}else if(pct<0.75){secs-=30;why.push('light');}}
   if(r>=12)secs-=15;
   if(s._tgtR){if(r<s._tgtR-1){secs+=30;why.push('a grind');}else if(r>s._tgtR+1){secs-=20;why.push('easy');}}
@@ -15073,6 +15096,20 @@ function getExRestSecs(name){
   if(/press|row/.test(nl))return 150;
   return 90;
 }
+// ── REST: WHERE THE TIMER STARTS, AND HOW LONG A LIFT TAKES ──
+// The rest timer starts at 2 minutes for a compound lift and 75 seconds for isolation work,
+// then reacts to each set (getSmartRest). A rest you set yourself in the library replaces
+// that starting point; the per-set adjustments still apply on top. The rest times saved
+// automatically in the past (restSeconds without restUser) don't count as yours.
+function _isCompoundEx(name){return getExRestSecs(name)>=120||/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(name||'');}
+function _restUser(name){const pr=loadGymProg(),k=pr[name]?name:Object.keys(pr).find(x=>x.toLowerCase()===(name||'').toLowerCase());const e=k&&pr[k];return e&&e.restUser&&e.restSeconds?+e.restSeconds:null;}
+function _restBase(name){return _restUser(name)||(_isCompoundEx(name)?120:75);}
+// Seconds of work per set: about 40, or 80 for single-leg lifts (both sides).
+function _setWorkSecs(name){const c=exCat(name);return c&&c.uni?80:40;}
+// Minutes a lift takes at a given pace: the sets, the rests between them, and a
+// change-over after the last one (rest capped at 90 s, just time to set up the next lift).
+function _exMins(name,sets,pace){const r=_restBase(name)*(pace||1),w=_setWorkSecs(name)*(pace||1);return sets>0?(sets*w+(sets-1)*r+Math.min(r,90))/60:0;}
+function _fmtRest(secs){return secs>=60?Math.floor(secs/60)+'m'+(secs%60?secs%60+'s':''):secs+'s';}
 function saveExRestSecs(name,secs){
   if(!name)return;
   const prog=loadGymProg();
@@ -15262,8 +15299,7 @@ function renderExerciseLibrary(){
   ];
   function makeRow(name){
     const wts=getExMuscleWeights(name),muscles=Object.keys(wts).sort((a,b)=>wts[b]-wts[a]);
-    const restSecs=getExRestSecs(name);
-    const restLabel=restSecs>=60?Math.floor(restSecs/60)+'m'+(restSecs%60?restSecs%60+'s':''):restSecs+'s';
+    const restLabel=`${_fmtRest(_restBase(name))}${_restUser(name)?' (yours)':''} to start, adjusts per set`;
     const musclePills=muscles.length?muscles.map(m=>{const c=MUSCLE_COLS[m]||'var(--accent2)',half=wts[m]<1;return`<span title="${half?'counts as half a set':'counts as a full set'}" style="display:inline-block;padding:2px 7px;border-radius:10px;background:${half?'var(--surface2)':tint(c,13)};color:${half?'var(--text3)':c};font-size:10px;font-weight:700;margin-right:4px;margin-bottom:2px;">${half?'½ ':''}${m}</span>`;}).join(''):`<span style="font-size:11px;color:var(--text3);">No muscles tagged</span>`;
     return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
@@ -15296,11 +15332,11 @@ function renderExerciseLibrary(){
 }
 
 let _libEditName='';
-let _libRestSecs=90;
+let _libRestSecs=90,_libRestOrig=null;
 let _libCategory='custom';
 function openExerciseEdit(name){
   _libEditName=name;
-  _libRestSecs=getExRestSecs(name);
+  _libRestSecs=_restBase(name);_libRestOrig=_libRestSecs;
   _libCategory=getExCategory(name);
   const prog=loadGymProg();
   const muscles=getExerciseMuscles(name);
@@ -15318,11 +15354,12 @@ function openExerciseEdit(name){
     </div>`;
   }).join('');
   // Inject rest timer selector into the modal
-  const restOptions=[60,90,120,180,240];
+  const restOptions=[60,75,90,120,150,180];
   const restHtml=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:8px;">Default Rest Timer</div>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:8px;">Rest timer starts at</div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.45;margin:-4px 0 8px;">Then it adjusts to each set: heavier or harder sets get longer, light ones shorter. ${_restUser(name)?'You set this one.':'This is the coach\'s default; pick another to make it yours.'}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      ${restOptions.map(s=>{const lbl=s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s';return`<button id="rest-opt-${s}" onclick="libSetRest(${s})" style="padding:7px 14px;border-radius:12px;border:2px solid ${restSecs===s?'var(--accent)':'var(--border)'};background:${restSecs===s?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${restSecs===s?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${lbl}</button>`;}).join('')}
+      ${restOptions.map(s=>{const lbl=s>=60?Math.floor(s/60)+'m'+(s%60?s%60+'s':''):s+'s';return`<button id="rest-opt-${s}" onclick="libSetRest(${s})" style="padding:7px 14px;border-radius:12px;border:2px solid ${_libRestSecs===s?'var(--accent)':'var(--border)'};background:${_libRestSecs===s?'color-mix(in srgb,var(--accent) 15%,transparent)':'var(--surface2)'};color:${_libRestSecs===s?'var(--accent2)':'var(--text2)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">${lbl}</button>`;}).join('')}
     </div>
   </div>`;
   const existing=document.getElementById('lib-rest-selector');
@@ -15425,7 +15462,7 @@ function saveMuscleTag(){
   prog[_muscleTagExercise].muscles=[..._muscleTagSelected];
   // Save rest seconds / category if set from library editor
   const restDiv=document.getElementById('lib-rest-selector');
-  if(restDiv&&_libRestSecs)prog[_muscleTagExercise].restSeconds=_libRestSecs;
+  if(restDiv&&_libRestSecs&&_libRestSecs!==_libRestOrig){prog[_muscleTagExercise].restSeconds=_libRestSecs;prog[_muscleTagExercise].restUser=true;}
   const catDiv=document.getElementById('lib-category-selector');
   if(catDiv&&_libCategory)prog[_muscleTagExercise].category=_libCategory;
   saveGymProg(prog);

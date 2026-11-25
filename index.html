@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="117">
+<meta name="app-version" content="118">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -5058,9 +5058,13 @@ function renderGymTypeSelector(){
       ${isMakeup?`<div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.5;padding:8px 12px;background:rgba(210,153,34,0.08);border-radius:var(--radius-xs);border:1px solid rgba(210,153,34,0.2);">Loads Push, Pull${state.makeupIncludeLegs?' &amp; Legs':''} exercises not yet done this week</div>
       <button onclick="gymToggleMakeupLegs()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${state.makeupIncludeLegs?'var(--amber)':'var(--border)'};background:${state.makeupIncludeLegs?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${state.makeupIncludeLegs?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;transition:all 0.15s;">Include legs? ${state.makeupIncludeLegs?'— ON':'— OFF'}</button>`:`<button onclick="toggleSupersetMode()" style="width:100%;padding:11px;border-radius:var(--radius-xs);border:2px solid ${_gymSupersetMode?'var(--amber)':'var(--border)'};background:${_gymSupersetMode?'rgba(210,153,34,0.12)':'var(--surface2)'};color:${_gymSupersetMode?'var(--amber)':'var(--text3)'};font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:${_gymSupersetMode?'6px':'16px'};transition:all 0.15s;">Superset mode${_gymSupersetMode?' — ON':''}</button>
       ${_gymSupersetMode?`<div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;line-height:1.5;">Exercises auto-paired · rest 90s after each pair · Push, Pull &amp; Legs only</div>`:''}`}
-      ${!_gymSupersetMode&&canBuildGymSession(_gymPickedType)?`<button class="btn-secondary gc-build" style="width:100%;margin-bottom:10px;" onclick="buildGymSession()">${planGymSession(_gymPickedType)?`The coach's ${esc(_gymPickedType)}<span>about ${planGymSession(_gymPickedType).mins} min, with today's targets</span>`:`Build today's ${esc(_gymPickedType)}<span>last session's lifts, with today's targets</span>`}</button>`:''}
+      ${(()=>{const coached=!_gymSupersetMode&&!isMakeup&&planGymSession(_gymPickedType);
+        if(coached)return`${renderCoachGymPreview(_gymPickedType)}
+      <button class="btn-primary" style="width:100%;margin-top:12px;" onclick="buildGymSession()">Start the coach's ${esc(_gymPickedType)}</button>
+      <div class="tp-acts">${hasPrev?`<button onclick="copyLastSession()">Copy last session</button>`:''}<button onclick="confirmGymSession()">Start an empty ${esc(_gymPickedType)}</button></div>`;
+        return`${!_gymSupersetMode&&canBuildGymSession(_gymPickedType)?`<button class="btn-secondary gc-build" style="width:100%;margin-bottom:10px;" onclick="buildGymSession()">Build today's ${esc(_gymPickedType)}<span>last session's lifts, with today's targets</span></button>`:''}
       ${hasPrev&&!isMakeup?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
-      <button class="btn-primary" style="width:100%;${isMakeup?'background:var(--amber);border-color:var(--amber);':''}" onclick="confirmGymSession()">${isMakeup?'Build Makeup session →':_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>
+      <button class="btn-primary" style="width:100%;${isMakeup?'background:var(--amber);border-color:var(--amber);':''}" onclick="confirmGymSession()">${isMakeup?'Build Makeup session →':_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>`;})()}
     </div>`;
   el.innerHTML=`${planCardHtml}${gridCardHtml}${renderGymBriefCard(_gymPickedType)}`;
 }

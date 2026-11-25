@@ -245,6 +245,61 @@ async function gymLive(browser){
   await ctx.close();
 }
 
+// The two-session programme: templates, double progression, fractional volume, legs held
+// near races, swaps remembered, Strength and Size alternating.
+async function programme(browser){
+  const {ctx,page,errors}=await boot(browser);
+  const r=await page.evaluate(()=>{const o={};
+    const keep={gc:getGymContext,rk:_gcReadyKey,ph:getGymRacePhase,pd:_gcPlanDay};
+    try{
+      o.target=state.builtinTargets.gym===2&&state.gymProg1===1;
+      o.plans=['Strength','Size','Pump'].map(t=>{const P=planGymSession(t);return P?P.rows.length:0;});
+      o.weights=getExMuscleWeights('Plate bench press');
+      // Double progression, with a normal day stubbed in
+      getGymContext=()=>({layoff:3,comeback:false,race:null,dRace:null});_gcReadyKey=()=>'ready';
+      const S=(w,rs)=>rs.map(x=>({weight:String(w),reps:String(x)}));
+      const sl={lo:8,hi:12};
+      o.up=_progTarget('Seated row',sl,S(50,[12,12,12]));
+      o.rep=_progTarget('Seated row',sl,S(50,[10,9,9]));
+      o.under=_progTarget('Lat pulldown',sl,S(59,[5,5]),true);
+      o.bw=_progTarget('Chin up',sl,S(0,[12,12]));
+      o.fresh=_progTarget('Romanian deadlift',sl,[]);
+      // Legs: held with a race in five days, in (and eased) when the calendar is clear
+      getGymContext=()=>({layoff:3,comeback:false,race:null,dRace:5});
+      o.held=planGymSession('Strength').rows.some(x=>x.legs);
+      getGymContext=()=>({layoff:3,comeback:false,race:null,dRace:null});getGymRacePhase=()=>null;_gcPlanDay=()=>({type:'Rest',runType:'Easy',gym:null,day:'Monday'});
+      const leg=planGymSession('Strength').rows.find(x=>x.legs);o.legIn=!!leg;o.legEased=leg&&leg.sets<=2;
+      // Swaps are remembered for the slot
+      buildGymSession('Strength');restStop();
+      const i=gymDraft.exercises.findIndex(e=>e._slot==='Strength.0');
+      gymDoSwap(i,'Bench press');o.pref=state.gymSlotPref&&state.gymSlotPref['Strength.0']==='Bench press'&&_progPick('Strength',0)==='Bench press'&&!!gymDraft.exercises[i]._tgtOverride;
+      delete state.gymSlotPref['Strength.0'];saveState();gymDiscardSession();
+      // The picker shows the programme first
+      showPage('train');switchTrainTab('gym');gymBackToPlan();gymShowOtherTypes();o.tiles=document.querySelectorAll('.gp-types button').length;
+      // Strength done today, Size is next
+      const g=loadGymData();g.push({date:dk(today()),type:'Strength',ts:Date.now(),exercises:[{name:'Plate bench press',sets:S(60,[8,8,8])}]});saveGymData(g);
+      _gymAutoCache={t:0,v:null};o.next=_coachGymType();
+    }catch(e){o.err=e.message+' '+(e.stack||'').split('\n')[1];}
+    getGymContext=keep.gc;_gcReadyKey=keep.rk;getGymRacePhase=keep.ph;_gcPlanDay=keep.pd;
+    return o;});
+  check(!r.err,`programme threw: ${r.err}`);
+  check(r.target,'gym target not moved to 2 for the programme');
+  check(r.plans&&r.plans.every(n=>n>=3),`programme sessions too thin: ${JSON.stringify(r.plans)}`);
+  check(r.weights&&r.weights.Chest===1&&r.weights.Triceps===0.5,`bench isn't 1 chest + 0.5 triceps: ${JSON.stringify(r.weights)}`);
+  check(r.up&&r.up.weight===52.5&&r.up.reps===8,`top of the range didn't add weight: ${JSON.stringify(r.up)}`);
+  check(r.rep&&r.rep.weight===50&&r.rep.reps===10,`inside the range didn't add a rep: ${JSON.stringify(r.rep)}`);
+  check(r.under&&r.under.weight<59&&r.under.reps===8&&r.under.tag==='New range',`under the range didn't lighten: ${JSON.stringify(r.under)}`);
+  check(r.bw&&r.bw.tag==='Add load',`bodyweight at the top didn't say add load: ${JSON.stringify(r.bw)}`);
+  check(r.fresh&&r.fresh.tag==='New'&&r.fresh.weight==null,'a new lift got a made-up weight');
+  check(r.held===false,'legs programmed five days before a race');
+  check(r.legIn&&r.legEased,'legs missing (or not eased in) on a clear day');
+  check(r.pref,'swap in a programme slot not remembered');
+  check(r.tiles===3,`programme tiles: ${r.tiles}`);
+  check(r.next==='Size',`after Strength the coach picked ${r.next}`);
+  check(errors.length===0,`programme: page errors: ${errors.join(' | ')}`);
+  await ctx.close();
+}
+
 (async()=>{
   const browser=await chromium.launch();
   try{
@@ -254,6 +309,7 @@ async function gymLive(browser){
     await planRules(browser,'manual',d=>{d.state.planMode='manual';d.state.weekPlan=['Rest','Run','Run','Run','Rest','Run','Run'];d.state.weekPlanRunType=[null,'Tempo','Easy','Auto','Easy','Easy','Long'];d.state.weekPlanGym=['Push',null,null,'Pull',null,null,null];});
     await agreements(browser);
     await gymLive(browser);
+    await programme(browser);
     await nextYear(browser);
   }finally{await browser.close();}
   console.log(`${checks-failures.length}/${checks} checks passed`);

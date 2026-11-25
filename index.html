@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="119">
+<meta name="app-version" content="120">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1169,6 +1169,52 @@ body.gym-live .gx .kp-pad button{padding:7px 0;font-size:22px;}
 .gp-old i{font-style:normal;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-right:4px;}
 .gp-old button{background:var(--surface2);border:0;border-radius:99px;padding:5px 10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;}
 .gp-old button.on{background:color-mix(in srgb,var(--accent) 16%,var(--surface2));color:var(--accent2);}
+.gf-nx{display:grid;grid-template-columns:1fr auto 78px;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--border);font-size:13px;}
+.gf-nx span{font-weight:600;color:var(--text);}
+.gf-nx b{font-family:var(--display);font-size:15px;color:var(--text);}
+.gf-nx i{font-style:normal;font-size:11px;font-weight:700;color:var(--accent2);text-align:right;}
+.gx-cue{font-size:12px;line-height:1.45;color:var(--text2);background:var(--surface2);border-radius:var(--radius-xs);padding:8px 10px;margin:6px 0 2px;}
+.gpc{background:var(--surface);border-radius:var(--radius);padding:18px 16px 14px;margin-top:10px;}
+.gpc-off{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--text2);}
+.gpc-off button,.gpc-sw{background:none;border:0;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--accent2);cursor:pointer;padding:0;}
+.gpc-sw{display:block;margin:12px auto 0;color:var(--text3);}
+.gpc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.gpc-h h3{font-family:var(--display);font-size:22px;line-height:1.05;text-transform:uppercase;letter-spacing:0.01em;margin:4px 0 0;color:var(--text);}
+.gpc-n{text-align:right;flex-shrink:0;}
+.gpc-n b{font-family:var(--display);font-size:34px;line-height:0.9;color:var(--text);}
+.gpc-n i{display:block;font-style:normal;font-size:11px;font-weight:700;color:var(--text3);}
+.gpc-week{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0 4px;}
+.gpc-s{background:var(--surface2);border-radius:var(--radius-xs);padding:9px 10px;}
+.gpc-s b{display:block;font-family:var(--display);font-size:15px;text-transform:uppercase;letter-spacing:0.02em;color:var(--text2);}
+.gpc-s i{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--text3);margin-top:2px;}
+.gpc-s.done{background:color-mix(in srgb,var(--st-go) 16%,var(--surface2));}
+.gpc-s.done b{color:var(--text);}
+.gpc-s.plan b{color:var(--text);}
+.gpc-sec{border-top:1px solid var(--border);margin-top:14px;padding-top:12px;}
+.gpc-sec p{font-size:12.5px;line-height:1.5;color:var(--text2);margin:8px 0 0;}
+.gpc-sec p b{color:var(--text);}
+.gpc-con{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-top:9px;}
+.gpc-con div{display:flex;flex-direction:column;gap:3px;}
+.gpc-con i{display:block;height:9px;border-radius:2px;background:var(--surface2);}
+.gpc-con i.tgt{background:color-mix(in srgb,var(--text) 10%,var(--surface2));}
+.gpc-con i.on{background:var(--st-go);}
+.gpc-con i.xtra{background:var(--accent2);}
+.gpc-con div.now i:not(.on):not(.xtra){background:transparent;box-shadow:inset 0 0 0 1px var(--border);}
+.gpc-lifts{margin-top:6px;}
+.gpc-l{display:flex;align-items:baseline;gap:8px;width:100%;background:none;border:0;padding:7px 0;font-family:inherit;cursor:pointer;text-align:left;}
+.gpc-l+.gpc-l{border-top:1px solid var(--border);}
+.gpc-l span{flex:1;font-size:13.5px;font-weight:600;color:var(--text);}
+.gpc-l b{font-family:var(--display);font-size:17px;color:var(--text);}
+.gpc-l b small{font-size:11px;color:var(--text3);font-family:inherit;font-weight:700;}
+.gpc-l i{font-style:normal;font-size:11.5px;font-weight:800;width:62px;text-align:right;color:var(--text3);}
+.gpc-l i.up{color:var(--st-go);}
+.gpc-l i.dn{color:var(--st-pace);}
+.gpc-bars{margin-top:8px;display:flex;flex-direction:column;gap:7px;}
+.gpc-b{display:grid;grid-template-columns:72px 1fr 26px;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--text2);}
+.gpc-b b{text-align:right;color:var(--text);font-weight:800;}
+.gpc-b div{position:relative;height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;}
+.gpc-b em{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--text) 12%,transparent);}
+.gpc-b s{position:absolute;left:0;top:2px;bottom:2px;border-radius:3px;text-decoration:none;}
 .cg-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--border);font-size:13.5px;}
 .cg-row span{font-weight:600;color:var(--text);}
 .cg-row em{display:block;font-style:normal;font-size:11px;color:var(--accent2);font-weight:600;}
@@ -5088,7 +5134,7 @@ function renderGymTypeSelector(){
       ${hasPrev&&!isMakeup?`<button class="btn-secondary" style="width:100%;margin-bottom:10px;" onclick="copyLastSession()">Copy last session</button>`:''}
       <button class="btn-primary" style="width:100%;${isMakeup?'background:var(--amber);border-color:var(--amber);':''}" onclick="confirmGymSession()">${isMakeup?'Build Makeup session →':_gymSupersetMode&&['Push','Pull','Legs'].includes(_gymPickedType)?`Start ${esc(_gymPickedType)} superset →`:`Start ${esc(_gymPickedType)} session →`}</button>`;})()}
     </div>`;
-  el.innerHTML=`${planCardHtml}${gridCardHtml}${renderGymBriefCard(_gymPickedType)}`;
+  el.innerHTML=`${planCardHtml}${gridCardHtml}${renderGymBriefCard(_gymPickedType)}${renderGymProgrammeCard()}`;
 }
 function gymPickType(t){
   _gymPickedType=t;
@@ -5880,7 +5926,8 @@ function renderExBlock(ex,i,lastSame,prog,sessions,hideRest=false,focusMode=fals
       <button class="gx-x" onclick="gymRemoveEx(${i})" aria-label="Remove exercise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     ${started?'':`${meta?`<div class="gx-meta">${meta}</div>`:''}
-    ${ex._why?`<div class="gx-meta" style="color:var(--st-pace);">Added to the plan: ${esc(ex._why)}</div>`:''}`}
+    ${ex._why?`<div class="gx-meta" style="color:var(--st-pace);">Added to the plan: ${esc(ex._why)}</div>`:''}
+    ${(()=>{const cx=exCat(ex.name);if(!cx||!cx.cue)return'';const n=gymSessions.filter(s=>(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===ex.name.toLowerCase())).length;return n<3?`<div class="gx-cue">${esc(cx.cue)}</div>`:'';})()}`}
     ${started&&(liftT||ex._planSets)?`<div class="gx-tgt1" style="--lt:${liftT?liftT.col:'var(--text3)'};"><i>${liftT?esc(liftT.tag):'Plan'}</i>${tw?`<b>${tw}</b>`:''}${ex._planSets?`<span>${_gcWorking(ex).length} of ${ex._planSets} sets</span>`:''}</div>`
     :liftT||ex._planSets?`<div class="gx-tgt" style="--lt:${liftT?liftT.col:'var(--text3)'};">
       <div class="gx-tgt-l"><i>${liftT?`Target · ${liftT.tag}`:'Plan'}</i>${tw?`<b>${tw}</b>`:''}</div>
@@ -6319,6 +6366,9 @@ function openGymFinish(){
       <div><b>${sets}</b><i>sets</i></div>
       <div><b>${vol>0?Math.round(vol).toLocaleString('en-GB'):'—'}</b><i>kg lifted</i></div>
     </div>
+    ${(()=>{const nx=gymDraft.exercises.map(ex=>{const sl=_progSlotOf(ex),ws=_gcWorking(ex);if(!sl||!ws.length)return null;const t=_progTarget(ex.name,sl,ws,false,true,_prevBestW(ex.name,loadGymData(),true));if(!t)return null;
+      return`<div class="gf-nx"><span>${esc(ex.name)}</span><b>${t.weight!=null?`${_kg(+t.weight)} × ${t.reps}`:`${t.reps} reps`}</b><i>${esc(t.tag.toLowerCase())}</i></div>`;}).filter(Boolean);
+      return nx.length?`<div class="gl-eyebrow" style="text-align:left;margin:18px 0 4px;">Next time, from today's sets</div>${nx.slice(0,7).join('')}`:'';})()}
     <div class="gl-eyebrow" style="text-align:left;margin:18px 0 8px;">Anything niggling?</div>
     <div class="gn-row">${['Shoulder','Elbow','Wrist','Back','Knee'].map(n=>`<button id="gn-${n}" onclick="gymFinishNiggle('${n}')">${n}</button>`).join('')}</div>
     <div class="gl-eyebrow" style="text-align:left;margin:6px 0 8px;">How did it feel? Tap to save</div>
@@ -14032,7 +14082,7 @@ function _progLegsHold(){
   return null;
 }
 // Double progression, read from last time's sets on this lift.
-function _progTarget(name,sl,last,fresh){
+function _progTarget(name,sl,last,fresh,pure,prev){
   const lo=sl.lo,hi=sl.hi,range=`${lo}–${hi}`,cl=v=>Math.max(lo,Math.min(hi,v));
   const ws=(last||[]).filter(x=>!x.warmup&&!x.technique&&parseInt(x.reps)>0);
   const k=_gcReadyKey()||'ready',ctx=getGymContext(),inc=_exInc(name);
@@ -14045,10 +14095,13 @@ function _progTarget(name,sl,last,fresh){
   }
   const W=Math.max(...ws.map(x=>parseFloat(x.weight||0))),at=ws.filter(x=>parseFloat(x.weight||0)===W).map(x=>parseInt(x.reps)),mn=Math.min(...at);
   const step=inc||2.5,rnd=v=>Math.max(step,Math.round(v/step)*step),dn=v=>Math.max(step,Math.floor(v/step)*step);
-  if(ctx.comeback)return{weight:rnd(W*0.8),reps:cl(lo+2),tag:'Comeback',note:`${ctx.layoff} days off: about 80% of ${_kg(W)}`,col:'var(--st-ready)'};
-  if(ctx.race&&k!=='recover')return{weight:W,reps:cl(mn),tag:'Hold',note:`${esc(ctx.race.name||'race')} in ${ctx.dRace} days: no new loads`,col:'var(--st-pace)'};
-  if(k==='recover')return{weight:rnd(W*0.9),reps:cl(mn),tag:'Light day',note:'technique focus',col:'var(--st-recover)'};
-  if(k==='pace')return{weight:W,reps:cl(mn),tag:'Hold',note:'leave 2–3 reps in the tank',col:'var(--st-pace)'};
+  if(pure){}else if(ctx.comeback)return{weight:rnd(W*0.8),reps:cl(lo+2),tag:'Comeback',note:`${ctx.layoff} days off: about 80% of ${_kg(W)}`,col:'var(--st-ready)'};
+  else if(ctx.race&&k!=='recover')return{weight:W,reps:cl(mn),tag:'Hold',note:`${esc(ctx.race.name||'race')} in ${ctx.dRace} days: no new loads`,col:'var(--st-pace)'};
+  else if(k==='recover')return{weight:rnd(W*0.9),reps:cl(mn),tag:'Light day',note:'technique focus',col:'var(--st-recover)'};
+  else if(k==='pace')return{weight:W,reps:cl(mn),tag:'Hold',note:'leave 2–3 reps in the tank',col:'var(--st-pace)'};
+  // Coming back from a break: well under your recent best and hitting the range, so
+  // about 10% back each session rather than one small step at a time.
+  if(prev&&W<prev*0.9&&mn>=lo){const w=Math.min(prev,rnd(W*1.1));if(w>W)return{weight:w,reps:lo,tag:'Building back',note:`${mn} reps at ${_kg(W)}: about 10% more, back towards your ${_kg(prev)}`,col:up};}
   if(mn>=hi&&inc){
     // Well past the top (a new range for an old lift): jump to the weight that fits, not just one step.
     const fit=mn>hi+2?Math.max(W+inc,dn(W*(1+mn/30)/(1+(lo+1)/30))):W+inc,w=Math.round(fit*100)/100;
@@ -14062,6 +14115,14 @@ function _progTarget(name,sl,last,fresh){
   const nx=Math.min(hi,mn+1);
   return{weight:W,reps:nx,tag:'Add a rep',note:`${range} range: ${mn} last time, ${nx} on every set today. At ${hi} the weight goes up`,col:up};
 }
+// Heaviest working weight on a lift in the 10 weeks before its last session (or all of
+// them, when today's session isn't saved yet).
+function _prevBestW(name,sessions,incLast){
+  const nl=name.toLowerCase(),hits=sessions.filter(s=>s.date>=_dsAgo(84)&&(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===nl));
+  const pool=incLast?hits:hits.slice(0,-1);let b=0;
+  pool.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name&&e.name.toLowerCase()===nl)(e.sets||[]).filter(x=>!x.warmup&&!x.technique&&+x.reps>=3).forEach(x=>{b=Math.max(b,+x.weight||0);});}));
+  return b||null;
+}
 // The programme's rows for a session type, before the day's length and season adjust them.
 function _progRows(type,sessions){
   const T=GYM_PROG[type],hold=_progLegsHold(),out=[],held=[];
@@ -14070,7 +14131,11 @@ function _progRows(type,sessions){
     if(sl.legs&&hold){held.push(name);return;}
     const last=getLastExSets(name,sessions)||[],c=exCat(name);
     const fresh=!sessions.some(s=>isProgType(s.type)&&(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===name.toLowerCase()));
-    const tgt=_progTarget(name,sl,last,fresh);
+    let tgt=_progTarget(name,sl,last,fresh,false,_prevBestW(name,sessions));
+    // A lift you haven't touched for three weeks or more (while still training): 85% to find it again.
+    const lastOn=sessions.filter(s=>(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===name.toLowerCase()&&_gcWorking(e).length)).map(s=>s.date).pop();
+    if(lastOn&&lastOn<_dsAgo(21)&&!getGymContext().comeback&&tgt&&tgt.weight&&last.length){const top=Math.max(...last.filter(x=>!x.warmup).map(x=>+x.weight||0)),st=_exInc(name)||2.5,ago=-_gcDaysUntil(lastOn);
+      tgt={weight:Math.max(st,Math.round(top*0.85/st)*st),reps:Math.min(sl.hi,sl.lo+2),tag:'Re-entry',note:`${ago} days since you last did this: about 85% of ${_kg(top)}`,col:'var(--st-ready)'};}
     // A leg lift you haven't done in a while: two easy sets first. New leg work makes
     // runners sore for days, and the next run pays for it.
     const timesDone=sessions.filter(s=>s.date>=_dsAgo(42)&&(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===name.toLowerCase()&&_gcWorking(e).length)).length;
@@ -14081,6 +14146,73 @@ function _progRows(type,sessions){
   });
   return{rows:out,held,hold};
 }
+// ── THE PROGRAMME CARD ──
+// The gym at a glance, under today's session: this week against the programme, how
+// consistent the last two months have been (the thing that matters most), the main
+// lifts' trend, whether the muscles you want to grow are getting their sets, and what
+// your body-composition goal means for eating. Nothing to fill in; all from the logs.
+function _gymWeekCount(mon){const a=dk(mon),b=dk(addDays(mon,6));return new Set(loadGymData().filter(s=>s.date>=a&&s.date<=b).map(s=>s.date)).size;}
+function _liftBest(name,from,to){let b=0,top=null;loadGymData().forEach(s=>{if(s.date<from||s.date>to)return;(s.exercises||[]).forEach(e=>{if(!e.name||e.name.toLowerCase()!==name.toLowerCase())return;
+  (e.sets||[]).filter(x=>!x.warmup&&!x.technique&&+x.weight>0&&+x.reps>0).forEach(x=>{const v=_gcE1rm(+x.weight,+x.reps);if(v>b){b=v;top=x;}});});});return b?{e:b,top}:null;}
+function renderGymProgrammeCard(){
+  if(!gymProgOn())return`<div class="gpc gpc-off"><span>Running the old splits.</span><button onclick="setGymProgramme('hybrid')">Use the programme</button></div>`;
+  const gym=loadGymData(),now=today(),mon=getMonday(now),monK=dk(mon),td=dk(now);
+  const target=(state.builtinTargets&&state.builtinTargets.gym)||2;
+  // This week: each programme session done, planned (and when), or still open.
+  const cw=(()=>{try{return getCalendarWeek(0);}catch(e){return null;}})();
+  const wk=gym.filter(s=>s.date>=monK&&s.date<=td);
+  const doneDays=new Set(wk.map(s=>s.date)).size;
+  const dn=ds=>DAY_NAMES[(new Date(ds+'T12:00:00').getDay()+6)%7].slice(0,3);
+  const chip=t=>{const d=wk.filter(s=>s.type===t).pop(),pl=cw&&cw.days.find(x=>x.gym===t&&x.ds>=td&&!d);
+    const st=d?'done':pl?'plan':'open';
+    return`<div class="gpc-s ${st}"><b>${t}</b><i>${d?`Done ${dn(d.date)}`:pl?(pl.ds===td?'Today':dn(pl.ds)):t==='Pump'?'Optional':'Not planned'}</i></div>`;};
+  // Consistency: sessions in each of the last 8 full weeks, plus this one.
+  const weeks=[];for(let w=8;w>=0;w--){const m=addDays(mon,-7*w);weeks.push({n:_gymWeekCount(m),now:w===0,m});}
+  const full=weeks.slice(0,8),hit=full.filter(x=>x.n>=target).length;
+  const dates=[...new Set(gym.filter(s=>s.date>=_dsAgo(84)).map(s=>s.date))].sort();
+  let gap=0;for(let i=1;i<=dates.length;i++){const a=dates[i-1],b=i<dates.length?dates[i]:td;gap=Math.max(gap,Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5));}
+  const conLine=hit>=6?`${hit} of the last 8 weeks at ${target} or more. That's the habit that builds muscle; keep it.`
+    :`${hit} of the last 8 weeks at ${target} or more${gap>=14?`, and a ${gap}-day gap`:''}. Consistency moves you further than any programme detail: two sessions most weeks beats three some weeks.`;
+  // The main lifts: best estimated one-rep max in the last 6 weeks against the 6 before.
+  const lifts=[_progPick('Strength',0),_progPick('Strength',1),_progPick('Strength',3),_progPick('Size',0)];
+  const lrows=lifts.map(n=>{const a=_liftBest(n,_dsAgo(41),td),b=_liftBest(n,_dsAgo(83),_dsAgo(42)),all=_liftBest(n,'0000',td);if(!all)return null;
+    const pct=a&&b?Math.round((a.e/b.e-1)*100):null,cur=a||all;
+    return`<button class="gpc-l" onclick="openLiftChart(${JSON.stringify(n).replace(/"/g,'&quot;')})"><span>${esc(n)}</span><b>${Math.round(cur.e)}<small> kg</small></b><i class="${pct==null?'':pct>=2?'up':pct<=-2?'dn':''}">${pct==null?(a?'new':'not lately'):pct>0?`+${pct}%`:pct===0?'level':`${pct}%`}</i></button>`;}).filter(Boolean);
+  // Balance: sets a week per muscle over the last 4 weeks (fractional), against the target.
+  // After a break the last 4 weeks are empty, so it shows the 4 weeks before the break:
+  // that's the balance your training actually has.
+  const lastD=gym.length?gym[gym.length-1].date:null,brk=lastD&&lastD<_dsAgo(14);
+  const bEnd=brk?lastD:td,bStart=dk(addDays(new Date(bEnd+'T12:00:00'),-27));
+  const c={};ALL_MUSCLE_GROUPS.forEach(m=>c[m]=0);gym.filter(s=>s.date>=bStart&&s.date<=bEnd).forEach(s=>(s.exercises||[]).forEach(e=>_tallySets(c,e.name,(e.sets||[]).filter(x=>!x.warmup).length)));
+  const UP=['Chest','Back','Shoulders','Biceps','Triceps'],mx=16;
+  const bars=UP.map(m=>{const v=c[m]/4,t=VOL_MUSCLE_TARGETS[m],col=v<t.min?'var(--st-pace)':v>t.max?'var(--accent2)':'var(--st-go)';
+    return`<div class="gpc-b"><span>${m}</span><div><em style="left:${t.min/mx*100}%;width:${(t.max-t.min)/mx*100}%"></em><s style="width:${Math.min(100,v/mx*100)}%;background:${col}"></s></div><b>${v<1&&v>0?'<1':Math.round(v)}</b></div>`;}).join('');
+  const lst=a=>a.length>1?a.slice(0,-1).join(', ')+' and '+a[a.length-1]:a[0]||'';
+  const shortM=UP.filter(m=>c[m]/4<VOL_MUSCLE_TARGETS[m].min),overM=UP.filter(m=>c[m]/4>VOL_MUSCLE_TARGETS[m].max);
+  const balLine=!gym.some(s=>s.date>=bStart&&s.date<=bEnd)?'No sessions in the last 4 weeks. The programme puts every one of these in range at two sessions a week.'
+    :shortM.length?`${brk?'Before the break, ':''}${lst(shortM)} ${shortM.length===1?'was':'were'} under target${overM.length?` while ${lst(overM)} ${overM.length===1?'was':'were'} over`:''}. The programme fixes this: every muscle here gets direct work twice a week.`
+    :overM.length?`${lst(overM)} above the range: more isn't hurting, but it's time other muscles could use.`:'Every muscle here is in range.';
+  // Fuel: what the body-composition goal means at the table.
+  const H=loadHealthData().filter(h=>+h.weight>0).sort((a,b)=>a.date.localeCompare(b.date)),lw=H.length?+H[H.length-1].weight:null;
+  let fuel='';
+  if(lw){const lo=Math.round(lw*1.6/5)*5,hi=Math.round(lw*2.2/5)*5,g=state.bodyCompGoal,old=H.filter(h=>h.date<=_dsAgo(56)).pop();
+    const perWk=old?(lw-+old.weight)/(Math.round((new Date(H[H.length-1].date+'T12:00:00')-new Date(old.date+'T12:00:00'))/864e5)/7):null;
+    const lbf=H[H.length-1].bodyFat?lw*(1-H[H.length-1].bodyFat/100):null,glbm=g&&g.weight&&g.bodyFat?g.weight*(1-g.bodyFat/100):null;
+    const recomp=lbf&&glbm&&glbm>=lbf-0.5&&g.weight<lw;
+    fuel=`<b>${lo}–${hi} g protein a day</b> (1.6–2.2 g per kg at ${_kg(lw)}), spread over 3 or 4 meals. ${recomp?`Your goal (${_kg(+g.weight)} at ${g.bodyFat}%) means losing fat while keeping muscle, so aim for the top of that range and lose no faster than ${(lw*0.005).toFixed(1)} kg a week.`:''}${perWk!=null?` Last 8 weeks: ${perWk<=-0.05?`down ${Math.abs(perWk).toFixed(1)} kg a week`:perWk>=0.05?`up ${perWk.toFixed(1)} kg a week`:'weight steady'}${perWk<-(lw*0.0075)?', faster than strength likes. Eat a little more on lifting days':''}.`:''}`;}
+  return`<div class="gpc">
+    <div class="gpc-h"><div><span class="rd-eyebrow">The programme</span><h3>Two full-body sessions a week</h3></div><div class="gpc-n"><b>${doneDays}</b><i>of ${target}</i></div></div>
+    <div class="gpc-week">${GYM_PROG_TYPES.map(chip).join('')}</div>
+    <div class="gpc-sec"><span class="rd-eyebrow">Consistency · 8 weeks</span>
+      <div class="gpc-con">${weeks.map(w=>`<div class="${w.now?'now':''}" title="${w.n} session${w.n===1?'':'s'}">${[3,2,1].map(k=>`<i class="${w.n>=k?(k<=target?'on':'xtra'):k===target?'tgt':''}"></i>`).join('')}</div>`).join('')}</div>
+      <p>${conLine}</p></div>
+    ${lrows.length?`<div class="gpc-sec"><span class="rd-eyebrow">Main lifts · best estimated max, 6 weeks vs the 6 before</span><div class="gpc-lifts">${lrows.join('')}</div></div>`:''}
+    <div class="gpc-sec"><span class="rd-eyebrow">Sets a week · ${brk?`4 weeks to ${new Date(bEnd+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`:'last 4 weeks'}</span><div class="gpc-bars">${bars}</div><p>${balLine}</p></div>
+    ${fuel?`<div class="gpc-sec"><span class="rd-eyebrow">Fuel</span><p>${fuel}</p></div>`:''}
+    <button class="gpc-sw" onclick="setGymProgramme('classic')">Use the old splits instead</button>
+  </div>`;
+}
+function setGymProgramme(v){state.gymProgramme=v;saveState();_gymAutoCache={t:0,v:null};_gymPickedType=null;_cwMemo={};haptic('light');refreshActivePage();}
 // 3 + 4. Build today's session: last session of this type, with set counts adjusted for the
 // race phase, readiness and tomorrow's run, plus an exercise for any muscle running short.
 // ── THE COACH'S GYM SESSION ──
@@ -14141,7 +14273,7 @@ function planGymSession(type){
     else{rows.forEach(r=>{r.sets=Math.min(3,r.sets);});seasonNote.push(`Holding strength while the running gets specific (${PHs.phase} phase): same weights, no more than 3 sets.`);}
   }
   if(!deload&&!ctx.comeback&&!ctx.race&&!taper&&k!=='pace'&&k!=='recover'){
-    const cand=rows.filter(r=>isCompound(r.name)&&r.tgt&&r.tgt.weight).find(r=>{const mo=_liftMomentum(r.name);return mo&&mo.pct>=2;/* trending up on recent sessions */});
+    const cand=rows.filter(r=>isCompound(r.name)&&r.tgt&&r.tgt.weight&&!/Re-entry|Building back|New/.test(r.tgt.tag||'')&&sessions.some(x=>x.date>=_dsAgo(14)&&(x.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===r.name.toLowerCase()))).find(r=>{const mo=_liftMomentum(r.name);return mo&&mo.pct>=2;/* trending up on recent sessions */});
     if(cand){let pbW=0,pbR=0;sessions.forEach(x=>(x.exercises||[]).forEach(e=>{if(e.name&&e.name.toLowerCase()===cand.name.toLowerCase())(e.sets||[]).filter(z=>!z.warmup).forEach(z=>{const w=+z.weight||0,rr=+z.reps||0;if(w>pbW||(w===pbW&&rr>pbR)){pbW=w;pbR=rr;}});}));
       if(pbW&&+cand.tgt.weight>=pbW*0.92){const tw=+cand.tgt.weight,tr=+cand.tgt.reps||5,already=tw>pbW||(tw===pbW&&tr>pbR);
         const w=already?tw:Math.max(tw,pbW),rr=already?tr:w>pbW?Math.max(3,Math.min(tr,pbR)):pbR+1;

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="122">
+<meta name="app-version" content="123">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -15144,12 +15144,15 @@ function renderVolumeTab(){
     });
     return c;
   }
-  const legsRun=legsByRunning();
   const runKm=list=>list.reduce((a,r)=>a+(parseFloat(r.km)||0),0);
 
   const {from,to,days}=getRange(_volPeriod);
   const fromStr=dk(from),toStr=dk(to);
   const sessions=gym.filter(s=>s.date>=fromStr&&s.date<=toStr);
+  // Legs: once the programme's leg lifts are in the period they're graded on lifting and
+  // running together; until then (or when they're held for a race) running covers them,
+  // shown in km and not graded.
+  const legsRun=legsByRunning()&&!(gymProgOn()&&sessions.some(s=>(s.exercises||[]).some(e=>_gcIsLegEx(e.name)&&(e.sets||[]).some(x=>!x.warmup))));
   const runsInPeriod=run.filter(r=>r.date>=fromStr&&r.date<=toStr);
   const prevFromStr=days?dk(addDays(from,-days)):null;
   const prevSessions=days?gym.filter(s=>s.date>=prevFromStr&&s.date<fromStr):[];
@@ -15164,6 +15167,7 @@ function renderVolumeTab(){
   ALL_MUSCLE_GROUPS.forEach(m=>{runCounts[m]=Math.round(runCounts[m]*10)/10;});
 
   const totalSets=Object.values(gymCounts).reduce((a,b)=>a+b,0);
+  const workSets=sessions.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(x=>!x.warmup).length,0),0);
   const totalRunSets=Object.values(runCounts).reduce((a,b)=>a+b,0);
 
   const periodWeeks={week:1,lastweek:1,'4weeks':4,'8weeks':8,all:null};
@@ -15173,7 +15177,7 @@ function renderVolumeTab(){
   const periodBtns=periods.map(p=>`<button onclick="_volPeriod='${p.id}';renderVolumeTab();" style="padding:7px 14px;border-radius:20px;border:none;background:${_volPeriod===p.id?'var(--accent)':'var(--surface2)'};color:${_volPeriod===p.id?'#fff':'var(--text2)'};font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">${p.label}</button>`).join('');
 
   const bars=ALL_MUSCLE_GROUPS.map(m=>{
-    const gv=gymCounts[m]||0,rv=runCounts[m]||0,v=Math.round(gv+rv);
+    const gv=gymCounts[m]||0,rv=runCounts[m]||0,v=Math.round((gv+rv)*2)/2;
     const pv=prevCounts[m]||0;
     // Legs trained by running aren't graded against lifting targets: the bar still shows the
     // work, but the badge says Running and the figure is km.
@@ -15200,7 +15204,7 @@ function renderVolumeTab(){
         <div style="position:absolute;left:${gymPct}%;top:0;height:100%;width:${runPct}%;background:${runCol};${gymPct===0?'border-radius:5px 0 0 5px;':''}"></div>
         ${byRun?'':`<div style="position:absolute;top:-2px;left:${minPctM}%;width:2px;height:14px;background:color-mix(in srgb,var(--text) 35%,transparent);border-radius:1px;"></div>`}
       </div>
-      <div style="width:46px;text-align:right;font-size:12px;font-weight:800;color:${byRun?'var(--c-teal)':v>0?(isGood?'var(--green)':isLow?'var(--orange)':'var(--accent2)'):'var(--text3)'};">${byRun?periodKm+' km':v+' sets'}</div>
+      <div style="width:58px;white-space:nowrap;text-align:right;font-size:12px;font-weight:800;color:${byRun?'var(--c-teal)':v>0?(isGood?'var(--green)':isLow?'var(--orange)':'var(--accent2)'):'var(--text3)'};">${byRun?periodKm+' km':v+(v===1?' set':' sets')}</div>
       <div style="width:40px;text-align:center;">${v>0?badge:''}</div>
       <div style="width:14px;text-align:center;font-size:13px;font-weight:800;color:${trendCol};">${trendArrow}</div>
     </div>`;
@@ -15214,7 +15218,7 @@ function renderVolumeTab(){
 
   el.innerHTML=`
     <div class="chart-card" style="margin-bottom:10px;">
-      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} session${sessions.length!==1?'s':''} · ${totalSets} gym set${totalSets!==1?'s':''}${totalRunSets>0?' · '+periodKm+' km run':''}</span></div>
+      <div class="chart-card-header"><span class="chart-card-title">Volume by Muscle</span><span class="chart-card-val">${sessions.length} session${sessions.length!==1?'s':''} · ${workSets} working set${workSets!==1?'s':''}${totalRunSets>0?' · '+periodKm+' km run':''}</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">${periodBtns}</div>
       ${legend}
       ${totalSets>0||totalRunSets>0?bars:ALL_MUSCLE_GROUPS.map(m=>{
@@ -15231,7 +15235,7 @@ function renderVolumeTab(){
           <div style="width:14px;text-align:center;color:var(--orange);font-size:13px;font-weight:800;">${byRun?'':'↓'}</div>
         </div>`;
       }).join('')}
-      <div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5;">Work sets only — warmup sets excluded. Running counts per 10 km (an easy 10k ≈ one session's worth; harder runs count more for quads and hamstrings).${legsRun?' Your plan has no Legs day, so leg muscles are trained by running and not graded against lifting targets.':''}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5;">Working sets only, counted the way the research counts them: a set is 1 for the muscle the lift is built for and ½ for the muscles that help (a bench set is 1 chest, ½ triceps, ½ shoulders), so muscle totals add up to more than the sets you did. Running adds leg and core sets per 10 km (an easy 10k ≈ one session's worth; harder runs count more for quads and hamstrings).${legsRun?(gymProgOn()?' No leg lifts in this period (they\'re held around races and key runs), so legs show running km and aren\'t graded. Once the programme\'s leg lifts are logged, legs are graded on lifting and running together.':' Your plan has no Legs day, so leg muscles are trained by running and not graded against lifting targets.'):''}</div>
     </div>`;
 }
 
@@ -15242,6 +15246,10 @@ function renderExerciseLibrary(){
   const gym=loadGymData();
   const nameSet=new Set(Object.keys(prog));
   gym.forEach(s=>(s.exercises||[]).forEach(e=>{if(e.name)nameSet.add(e.name);}));
+  // The programme's lifts are in the library too, even before you've done them, and each
+  // lift says which programme sessions use it.
+  const inProg={};
+  if(gymProgOn())GYM_PROG_TYPES.forEach(t=>GYM_PROG[t].slots.forEach((sl,si)=>{const n=_progPick(t,si);const k=[...nameSet].find(x=>x.toLowerCase()===n.toLowerCase())||n;nameSet.add(k);(inProg[k.toLowerCase()]=inProg[k.toLowerCase()]||[]).includes(t)||inProg[k.toLowerCase()].push(t);}));
   const names=[...nameSet].sort((a,b)=>a.localeCompare(b));
   const searchVal=(document.getElementById('lib-search')||{}).value||'';
   const filtered=names.filter(n=>n.toLowerCase().includes(searchVal.toLowerCase()));
@@ -15253,17 +15261,17 @@ function renderExerciseLibrary(){
     {key:'custom',label:'Custom',col:'var(--c-slate)'},
   ];
   function makeRow(name){
-    const muscles=getExerciseMuscles(name);
+    const wts=getExMuscleWeights(name),muscles=Object.keys(wts).sort((a,b)=>wts[b]-wts[a]);
     const restSecs=getExRestSecs(name);
     const restLabel=restSecs>=60?Math.floor(restSecs/60)+'m'+(restSecs%60?restSecs%60+'s':''):restSecs+'s';
-    const musclePills=muscles.length?muscles.map(m=>{const c=MUSCLE_COLS[m]||'var(--accent2)';return`<span style="display:inline-block;padding:2px 7px;border-radius:10px;background:${tint(c,13)};color:${c};font-size:10px;font-weight:700;margin-right:4px;margin-bottom:2px;">${m}</span>`;}).join(''):`<span style="font-size:11px;color:var(--text3);">No muscles tagged</span>`;
+    const musclePills=muscles.length?muscles.map(m=>{const c=MUSCLE_COLS[m]||'var(--accent2)',half=wts[m]<1;return`<span title="${half?'counts as half a set':'counts as a full set'}" style="display:inline-block;padding:2px 7px;border-radius:10px;background:${half?'var(--surface2)':tint(c,13)};color:${half?'var(--text3)':c};font-size:10px;font-weight:700;margin-right:4px;margin-bottom:2px;">${half?'½ ':''}${m}</span>`;}).join(''):`<span style="font-size:11px;color:var(--text3);">No muscles tagged</span>`;
     return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
         <div style="font-size:13px;font-weight:700;">${esc(name)}</div>
         <button onclick='openExerciseEdit(${JSON.stringify(name)})' style="padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>
       </div>
       <div style="margin-bottom:3px;">${musclePills}</div>
-      <div style="font-size:11px;color:var(--text3);font-weight:600;">Rest: ${restLabel}</div>
+      <div style="font-size:11px;color:var(--text3);font-weight:600;">Rest: ${restLabel}${inProg[name.toLowerCase()]?` · <span style="color:var(--accent2);">${inProg[name.toLowerCase()].join(' · ')}</span>`:''}${!gym.some(s=>(s.exercises||[]).some(e=>e.name&&e.name.toLowerCase()===name.toLowerCase()))?' · not done yet':''}</div>
     </div>`;
   }
   const sections=CATS.map(cat=>{
@@ -15282,6 +15290,7 @@ function renderExerciseLibrary(){
         <button onclick="openLibraryAddEx()" style="padding:6px 14px;border-radius:16px;border:none;background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button>
       </div>
       <input id="lib-search" class="modal-input" placeholder="Search exercises…" style="margin-bottom:12px;" oninput="renderExerciseLibrary()" value="${esc(searchVal)}">
+      ${gymProgOn()?`<div style="font-size:11.5px;color:var(--text3);line-height:1.5;margin:-4px 0 6px;">Faded muscles count as half a set. After the rest time: the programme sessions that use the lift.</div>`:''}
       ${sections||`<div style="font-size:13px;color:var(--text3);padding:12px 0;">No exercises found.</div>`}
     </div>`;
 }

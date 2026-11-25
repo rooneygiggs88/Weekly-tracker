@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="121">
+<meta name="app-version" content="122">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -11429,7 +11429,12 @@ function _coachWeek(o,mode,monK,td){
     // Which session each one is: the gym coach's pick first (muscle balance, days since,
     // momentum), then the rotation.
     const rot=gymProgOn()?['Strength','Size']:legsByRunning()?['Push','Pull']:['Push','Pull','Legs'];
-    let gi=Math.max(0,rot.indexOf(_coachGymType()));if(wk>0)gi+=wk*Math.max(1,want);
+    let gi=Math.max(0,rot.indexOf(_coachGymType()));
+    // Later weeks carry on from the last programme session planned before them (Strength
+    // then Size), not from a guess at how many sessions each week held.
+    if(wk>0&&gymProgOn()){for(let j=wk-1;j>=0;j--){let pw=null;try{pw=getCalendarWeek(j);}catch(e){}
+      const pg=pw&&pw.days.filter(d=>rot.includes(d.gym)).pop();if(pg){gi=rot.indexOf(pg.gym)+1;break;}}}
+    else if(wk>0)gi+=wk*Math.max(1,want);
     gym.forEach(g=>{let t=rot[gi%rot.length];gi++;if(g.upper&&t==='Legs'){t=rot[gi%rot.length];gi++;}g.type=t;
       const i=g.day,nxt=all.find(s=>s.day===i+1),ran=runOn(i);
       const ctx=kind==='taper'||kind==='race'?'race is close, so keep it short and light':nxt&&/Long|B2B|Tempo|Intervals|Sharpener|Race/.test(nxt.sub)?`${_CW_DAY[i+1]}'s ${nxt.sub==='B2B'?'back-to-back':nxt.sub==='Sharpener'?'race-pace reps':nxt.sub.toLowerCase()} is next, so ${t==='Legs'?'keep the legs work light':'no legs'}`:'nothing hard the next day';

@@ -273,7 +273,12 @@ async function programme(browser){
       buildGymSession('Strength');restStop();
       const i=gymDraft.exercises.findIndex(e=>e._slot==='Strength.0');
       gymDoSwap(i,'Bench press');o.pref=state.gymSlotPref&&state.gymSlotPref['Strength.0']==='Bench press'&&_progPick('Strength',0)==='Bench press'&&!!gymDraft.exercises[i]._tgtOverride;
-      delete state.gymSlotPref['Strength.0'];saveState();gymDiscardSession();
+      delete state.gymSlotPref['Strength.0'];saveState();
+      // Finish screen says what each lift does next time
+      gymDraft.exercises[1].sets=S(40,[10,10,10]);openGymFinish();o.nextTime=document.querySelectorAll('#gym-finish-content .gf-nx').length;closeModal('gym-save-modal');
+      gymDiscardSession();
+      // The programme card: this week, 9 weeks of consistency, balance bars
+      showPage('train');switchTrainTab('gym');o.card=!!document.querySelector('.gpc h3')&&document.querySelectorAll('.gpc-con > div').length===9&&document.querySelectorAll('.gpc-b').length===5;
       // The picker shows the programme first
       showPage('train');switchTrainTab('gym');gymBackToPlan();gymShowOtherTypes();o.tiles=document.querySelectorAll('.gp-types button').length;
       // Strength done today, Size is next
@@ -294,6 +299,8 @@ async function programme(browser){
   check(r.held===false,'legs programmed five days before a race');
   check(r.legIn&&r.legEased,'legs missing (or not eased in) on a clear day');
   check(r.pref,'swap in a programme slot not remembered');
+  check(r.nextTime>=1,'finish screen has no next-time targets');
+  check(r.card,'programme card missing or incomplete');
   check(r.tiles===3,`programme tiles: ${r.tiles}`);
   check(r.next==='Size',`after Strength the coach picked ${r.next}`);
   check(errors.length===0,`programme: page errors: ${errors.join(' | ')}`);

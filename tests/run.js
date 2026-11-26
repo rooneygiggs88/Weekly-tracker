@@ -253,6 +253,8 @@ async function programme(browser){
     const keep={gc:getGymContext,rk:_gcReadyKey,ph:getGymRacePhase,pd:_gcPlanDay};
     try{
       o.target=state.builtinTargets.gym===2&&state.gymProg1===1;
+      // Heart-rate targets in watch zones (% of heart-rate reserve): 191 max, 52 resting
+      o.zones=JSON.stringify([hrZone(2,191,52),hrZone(4,191,52)])==='[[135,149],[163,177]]'&&hrTargetTxt('Easy',191,52)==='under 149 bpm (Zone 2)';
       o.plans=['Strength','Size','Pump'].map(t=>{const P=planGymSession(t);return P?P.rows.length:0;});
       o.weights=getExMuscleWeights('Plate bench press');
       // Double progression, with a normal day stubbed in
@@ -311,6 +313,7 @@ async function programme(browser){
     getGymContext=keep.gc;_gcReadyKey=keep.rk;getGymRacePhase=keep.ph;_gcPlanDay=keep.pd;
     return o;});
   check(!r.err,`programme threw: ${r.err}`);
+  check(r.zones,'heart-rate targets don\'t match the watch zones');
   check(r.target,'gym target not moved to 2 for the programme');
   check(r.plans&&r.plans.every(n=>n>=3),`programme sessions too thin: ${JSON.stringify(r.plans)}`);
   check(r.weights&&r.weights.Chest===1&&r.weights.Triceps===0.5,`bench isn't 1 chest + 0.5 triceps: ${JSON.stringify(r.weights)}`);

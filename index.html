@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="125">
+<meta name="app-version" content="126">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1178,6 +1178,8 @@ body.gym-live .gx .kp-pad button{padding:7px 0;font-size:22px;}
 .gpc-off{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--text2);}
 .gpc-off button,.gpc-sw{background:none;border:0;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--accent2);cursor:pointer;padding:0;}
 .gpc-sw{display:block;margin:12px auto 0;color:var(--text3);}
+.gpc-ss{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--border);margin-top:14px;padding-top:12px;font-size:12.5px;line-height:1.45;color:var(--text2);}
+.gpc-ss button{flex-shrink:0;background:var(--surface2);border:0;border-radius:99px;padding:7px 12px;font-family:inherit;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;}
 .gpc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
 .gpc-h h3{font-family:var(--display);font-size:22px;line-height:1.05;text-transform:uppercase;letter-spacing:0.01em;margin:4px 0 0;color:var(--text);}
 .gpc-n{text-align:right;flex-shrink:0;}
@@ -5377,7 +5379,11 @@ function _gymPace(){
 }
 function _gymProj(){
   const el=(Date.now()-gymDraft.startedAt)/60000,pace=_gymPace();let rem=0,remSets=0;const open=[];
-  gymDraft.exercises.forEach((ex,i)=>{if(ex._completed)return;const done=_gcWorking(ex).length,left=Math.max(0,(ex._planSets||3)-done);if(left){rem+=_exMins(ex.name,left,pace.f);remSets+=left;open.push({ex,i,done,left});}});
+  const counted=new Set();
+  gymDraft.exercises.forEach((ex,i)=>{if(ex._completed)return;const done=_gcWorking(ex).length,left=Math.max(0,(ex._planSets||3)-done);if(!left)return;remSets+=left;open.push({ex,i,done,left});
+    const q=ex._pair&&gymDraft.exercises.find(e=>e.name===ex._pair&&!e._completed);
+    if(q){if(counted.has(q.name))return;counted.add(ex.name);const ql=Math.max(0,(q._planSets||3)-_gcWorking(q).length);rem+=_pairMins(ex.name,left,q.name,ql,pace.f);}
+    else rem+=_exMins(ex.name,left,pace.f);});
   return{el,rem,remSets,open,pace,end:Math.round(el+rem),over:Math.round(el+rem-(gymDraft.planMins||0))};
 }
 // Reps falling away on the last two lifts you worked: the session's useful work is done.
@@ -14095,9 +14101,10 @@ const GYM_PROG={
     {pick:['Barbell Row','Seated row'],sets:3,lo:6,hi:10,pri:1},
     {pick:['Bulgarian Split Squat','Seated leg press'],sets:2,lo:8,hi:10,pri:2,legs:true},
     {pick:['Overhead Press','Dumbbell shoulder press'],sets:2,lo:6,hi:10,pri:2},
-    {pick:['Lat pulldown','Chin up'],sets:2,lo:8,hi:12,pri:2},
+    {pick:['Lat pulldown','Chin up'],sets:2,lo:8,hi:12,pri:3},
     {pick:['Lateral Raises'],sets:2,lo:12,hi:20,pri:2},
-    {pick:['EZ Bar Curl','Hammer Curls'],sets:2,lo:8,hi:12,pri:3},
+    {pick:['EZ Bar Curl','Hammer Curls'],sets:2,lo:8,hi:12,pri:2},
+    {pick:['Tricep Pushdowns','Overhead tricep extension'],sets:2,lo:10,hi:15,pri:2},
   ]},
   Size:{sub:'Full body · volume',muscles:['Chest','Back','Shoulders','Triceps','Biceps','Hamstrings','Calves'],slots:[
     {pick:['Incline plate press','Incline dumbbell press'],sets:3,lo:8,hi:12,pri:1},
@@ -14200,7 +14207,7 @@ function _progRows(type,sessions){
     const intro=sl.legs&&!sl.calves&&timesDone<2;
     const compound=/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(name);
     out.push({name,sets:intro?Math.min(2,sl.sets):sl.sets,max:sl.sets+1,tgt:intro&&tgt?{...tgt,note:`${timesDone?'second':'first'} time in a while: stop 3 or 4 reps short. New leg work makes runners sore for two or three days`}:tgt,
-      rest:_restBase(name),w:tgt&&tgt.weight?+tgt.weight:0,slot:`${type}.${si}`,lo:sl.lo,hi:sl.hi,pri:sl.pri,legs:!!sl.legs,intro});
+      rest:_restBase(name),w:tgt&&tgt.weight?+tgt.weight:0,slot:`${type}.${si}`,lo:sl.lo,hi:sl.hi,pri:sl.pri,legs:!!sl.legs,intro,ss:sl.ss||null,sp:sl.sp||null});
   });
   return{rows:out,held,hold};
 }
@@ -14267,6 +14274,7 @@ function renderGymProgrammeCard(){
     ${lrows.length?`<div class="gpc-sec"><span class="rd-eyebrow">Main lifts · best estimated max, 6 weeks vs the 6 before</span><div class="gpc-lifts">${lrows.join('')}</div></div>`:''}
     <div class="gpc-sec"><span class="rd-eyebrow">Sets a week · ${brk?`4 weeks to ${new Date(bEnd+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`:'last 4 weeks'}</span><div class="gpc-bars">${bars}</div><p>${balLine}</p></div>
     ${fuel?`<div class="gpc-sec"><span class="rd-eyebrow">Fuel</span><p>${fuel}</p></div>`:''}
+    <div class="gpc-ss"><span>${gymSupersetsOn()?'Supersets only for lifts at the same spot (pec deck, cable stack, dumbbells).':'Supersets are off: straight sets only.'}</span><button onclick="setGymSupersets('${gymSupersetsOn()?'off':'spot'}')">${gymSupersetsOn()?'Turn off':'Turn on'}</button></div>
     <button class="gpc-sw" onclick="setGymProgramme('classic')">Use the old splits instead</button>
   </div>`;
 }
@@ -14353,19 +14361,38 @@ function planGymSession(type){
   if(k==='go'&&base>=40&&!taper&&!ctx.race){base+=5;why+=', and you\'re fresh';}
   const longOk=!(taper||ctx.race||k==='recover'||k==='pace');
   const len=_gymLen==='short'?'short':_gymLen==='long'&&longOk?'long':'coach';
-  const budget=len==='short'?20:len==='long'?Math.min(60,base+15):base;
+  const budget=len==='short'?(prog?27:20):len==='long'?Math.min(60,base+15):base;
   // Short on time: pair lifts that don't share a main muscle and rest once per pair.
-  if(len==='short'&&rows.length>=2){const prim=n=>(getExerciseMuscles(n)||[])[0]||n;const free=rows.slice();
+  if(!prog&&len==='short'&&rows.length>=2){const prim=n=>(getExerciseMuscles(n)||[])[0]||n;const free=rows.slice();
     while(free.length>=2){const a=free.shift(),j=free.findIndex(b=>prim(b.name)!==prim(a.name));if(j<0)continue;const b=free.splice(j,1)[0];a.pairWith=b.name;b.pairWith=a.name;}}
   const mins=()=>{let t=0;const seen=new Set();rows.forEach(r=>{if(seen.has(r.name))return;const q=r.pairWith&&rows.find(x=>x.name===r.pairWith);
-    if(q){seen.add(q.name);seen.add(r.name);t+=Math.max(r.sets,q.sets)*(Math.max(r.rest,q.rest)*0.75+80);}else t+=_exMins(r.name,r.sets)*60;});return t/60+6;};
-  let guard=0;
-  // Over time: sets come off first (down to two), then whole lifts, the programme's
-  // most optional first (calves, face pulls, the second arm lift), never the first two.
-  while(mins()>budget+(prog?2:0)&&rows.length>2&&guard++<20){
-    if(prog){const r=rows.slice(1).filter(x=>x.sets>2).sort((a,b)=>b.sets-a.sets)[0];
-      if(r)r.sets--;else{const c=rows.slice(2).map((x,j)=>({x,j})).sort((a,b)=>b.x.pri-a.x.pri||b.j-a.j)[0];rows.splice(rows.indexOf(c.x),1);}continue;}
-    const r=rows.slice(1).sort((a,b)=>b.sets-a.sets)[0];if(r.sets>2)r.sets--;else rows.pop();}
+    if(q){seen.add(q.name);seen.add(r.name);t+=_pairMins(r.name,r.sets,q.name,q.sets)*60;}else t+=_exMins(r.name,r.sets)*60;});return t/60+6;};
+  // The programme fits the time without losing a muscle. Small lifts that work opposite
+  // muscles are always supersets (curls with triceps, flyes with face pulls). When it's
+  // over: sets come off first (down to two), then lifts whose muscle another lift in the
+  // session already trains directly (pulldown after rows, face pulls after laterals, a
+  // second chest lift), then the big lifts pair up as supersets (bench with row). The
+  // last direct lift for chest, back, shoulders, biceps or triceps never goes, so each
+  // gets trained in both sessions every week, even two short ones.
+  const dropped=[];
+  if(prog){
+    const UPM=['Chest','Back','Shoulders','Biceps','Triceps'];
+    const prim=r=>{const c=exCat(r.name);return c?c.m:(getExerciseMuscles(r.name)||[]).slice(0,1);};
+    const unlink=r=>{if(!r.pairWith)return;const q=rows.find(x=>x.name===r.pairWith);if(q)q.pairWith=null;r.pairWith=null;};
+    const covered=r=>prim(r).every(m=>!UPM.includes(m)||rows.some(x=>x!==r&&prim(x).includes(m)));
+    // Same-spot supersets only: two isolation lifts at one station that don't share a muscle.
+    if(gymSupersetsOn()){rows.forEach((r,i)=>{if(r.pairWith||_isCompoundEx(r.name))return;const st=exStation(r.name);if(!st)return;
+      const q=rows.slice(i+1).find(x=>!x.pairWith&&!_isCompoundEx(x.name)&&exStation(x.name)===st&&!prim(x).some(m=>prim(r).includes(m)));
+      if(q){r.pairWith=q.name;q.pairWith=r.name;}});}
+    let g2=0;
+    while(mins()>budget+2&&g2++<40){
+      const r=rows.slice(len==='short'?0:1).filter(x=>x.sets>2).sort((a,b)=>b.sets-a.sets||b.pri-a.pri)[0];
+      if(r){r.sets--;continue;}
+      const c=rows.slice(2).map((x,j)=>({x,j})).filter(o=>covered(o.x)).sort((a,b)=>b.x.pri-a.x.pri||b.j-a.j)[0];
+      if(c){unlink(c.x);rows.splice(rows.indexOf(c.x),1);dropped.push(c.x.name);continue;}
+      break;
+    }
+  }
   // Room to spare: a set back on the main lifts first, then another of your usual lifts.
   if(!taper&&k!=='recover'){
     guard=0;
@@ -14378,9 +14405,14 @@ function planGymSession(type){
       if(mins()>budget){const l=rows[rows.length-1];if(l.why==='room for one more')rows.pop();else if(r)r.sets--;break;}
     }
   }
+  // Supersets side by side, in the order of their first lift.
+  if(prog){const out=[];rows.forEach(r=>{if(out.includes(r))return;out.push(r);const q=r.pairWith&&rows.find(x=>x.name===r.pairWith);if(q&&!out.includes(q))out.push(q);});rows.splice(0,rows.length,...out);}
   const notes=[...seasonNote];
   if(PI&&PI.held.length)notes.push(`Legs sit out today: ${PI.hold}. Running covers them meanwhile; they come back when the calendar's clear.`);
-  notes.push(len==='short'?`Short: about 20 minutes${rows.some(r=>r.pairWith)?', paired as supersets (one rest per pair)':', the main lifts only'}.`:len==='long'?`Long: about ${budget} minutes, more sets on the main lifts.`:`About ${budget} minutes because it's ${why}.`);
+  notes.push(len==='short'?`Short: ${prog?'two sets a lift, one lift per muscle':rows.some(r=>r.pairWith)?'paired as supersets (one rest per pair)':'the main lifts only'}.`:len==='long'?`Long: more sets on the main lifts, up to ${budget} minutes.`:`Up to ${budget} minutes because it's ${why}.`);
+  if(prog&&rows.some(r=>r.pairWith)){const pr=rows.filter(r=>r.pairWith),seen=new Set(),ls=[];pr.forEach(r=>{if(seen.has(r.name))return;seen.add(r.name);seen.add(r.pairWith);ls.push(`${r.name} with ${r.pairWith} (${exStation(r.name)})`);});
+    notes.push(`Supersets, each at one spot so you don't need a second station: ${ls.join('; ')}.`);}
+  if(prog&&dropped.length)notes.push(`Left out to fit the time: ${dropped.join(', ')}. Every upper-body muscle still has a direct lift today.`);
   if(_gymLen==='long'&&!longOk)notes.push(`Long isn't on today (${why}).`);
   if(ctx.comeback)notes.push(`${ctx.layoff} days since the gym: about 80% of your last weights for 8–10 reps. Muscle comes back fast; tendons are slower.`);
   else if(ctx.race)notes.push(`${esc(ctx.race.name||'Race')} in ${ctx.dRace} days: hold your weights, nothing to failure.`);
@@ -14398,7 +14430,7 @@ function renderCoachGymPreview(type,compact){
   return`<div class="cg">
     <div class="cg-h"><span>Coach's session</span><b>about ${P.mins} min</b></div>
     <div class="cg-len">${chip('short','Short')}${chip('coach',"Coach's")}${chip('long','Long')}</div>
-    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.pairWith?`<em>superset with ${esc(r.pairWith)}</em>`:r.why?`<em>${esc(r.why)}</em>`:r.tgt&&r.tgt.tag==='New'?'<em>new: find your weight</em>':r.intro?'<em>easing in: stop short</em>':r.lo?`<em>${r.lo}–${r.hi} reps · ${esc((r.tgt&&r.tgt.tag||'').toLowerCase())}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
+    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.pairWith?`<em>superset with ${esc(r.pairWith)}${exStation(r.name)?`, same ${esc(exStation(r.name).replace(/^the /,''))}`:''}</em>`:r.why?`<em>${esc(r.why)}</em>`:r.tgt&&r.tgt.tag==='New'?'<em>new: find your weight</em>':r.intro?'<em>easing in: stop short</em>':r.lo?`<em>${r.lo}–${r.hi} reps · ${esc((r.tgt&&r.tgt.tag||'').toLowerCase())}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
     ${compact&&P.rows.length>4?`<div class="cg-more">+ ${P.rows.length-4} more</div>`:''}
     ${P.notes.map(n=>`<div class="cg-note">${n}</div>`).join('')}
   </div>`;
@@ -14542,7 +14574,7 @@ function getCallIt(ex,lastSets){
 // target. The last planned set of a lift is a change-over: just long enough to set up.
 function getSmartRest(ex,s){
   if(ex._pair&&gymDraft){const j=gymDraft.exercises.findIndex(e=>e.name===ex._pair&&!e._completed);
-    if(j>=0&&_gcWorking(gymDraft.exercises[j]).length<_gcWorking(ex).length)return{secs:15,label:`Superset · straight to ${ex._pair}`,toIdx:j};}
+    if(j>=0&&_gcWorking(gymDraft.exercises[j]).length<_gcWorking(ex).length)return{secs:15,label:`Superset · straight to ${ex._pair}${exStation(ex.name)?`, same ${exStation(ex.name).replace(/^the /,'')}`:''}`,toIdx:j};}
   const lib=getExRestSecs(ex.name||''),compound=lib>=120||/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(ex.name||'');
   const w=parseFloat(s.weight||0),r=parseInt(s.reps)||0,k=_gcReadyKey();
   // Your best estimated one-rep max on this lift.
@@ -14998,6 +15030,14 @@ const EX_CAT={
   'Decline Sit Up With Plate':{m:['Core'],s:[],eq:'Bodyweight',inc:2.5,cue:'Plate on the chest, controlled down.',alt:['Cable crunch']},
   'Plank':{m:['Core'],s:[],eq:'Bodyweight',inc:0,cue:'Squeeze the glutes, ribs down; quality seconds only.',alt:['Hanging knee raise']},
 };
+// Where a lift is done. Two lifts at the same spot can be a superset without needing a
+// second station, which in a busy gym you often can't get: the pec deck does flyes both
+// ways, one cable stack and rope does pushdowns and face pulls, one pair of dumbbells
+// does laterals and curls.
+const EX_STATION={'Pec fly':'the pec deck','Rear delt fly':'the pec deck','Tricep Pushdowns':'the cable stack','Face Pulls':'the cable stack','Overhead tricep extension':'the cable stack','Cable fly':'the cable stack','Cable lateral raise':'the cable stack','Cable crunch':'the cable stack','Lateral Raises':'the dumbbells','Hammer Curls':'the dumbbells','Incline Dumbbell Curl':'the dumbbells','Tricep dumbbell push':'the dumbbells'};
+function exStation(name){const c=exCat(name);return c?EX_STATION[c.name]||null:null;}
+function gymSupersetsOn(){return(state.gymSupersets||'spot')!=='off';}
+function setGymSupersets(v){state.gymSupersets=v;saveState();haptic('light');refreshActivePage();toastMsg(v==='off'?'Supersets off: straight sets only':'Supersets on, for lifts at the same spot');}
 const _exKey=n=>(n||'').toLowerCase().replace(/[^a-z]/g,'').replace(/s$/,'');
 const _EX_CAT_IDX=Object.fromEntries(Object.keys(EX_CAT).map(k=>[_exKey(k),k]));
 function exCat(name){const k=_EX_CAT_IDX[_exKey(name)];return k?{name:k,...EX_CAT[k]}:null;}
@@ -15136,6 +15176,9 @@ function _setWorkSecs(name){const c=exCat(name);return c&&c.uni?80:40;}
 // Minutes a lift takes at a given pace: the sets, the rests between them, and a
 // change-over after the last one (rest capped at 90 s, just time to set up the next lift).
 function _exMins(name,sets,pace){const r=_restBase(name)*(pace||1),w=_setWorkSecs(name)*(pace||1);return sets>0?(sets*w+(sets-1)*r+Math.min(r,90))/60:0;}
+// A superset: both lifts' work back to back, a short walk between them, then one rest
+// per round (a little less than a full rest, since each muscle rested during the other).
+function _pairMins(a,na,b,nb,pace){const n=Math.max(na,nb),r=Math.max(_restBase(a),_restBase(b))*(pace||1),w=(_setWorkSecs(a)+_setWorkSecs(b)+15)*(pace||1);return n>0?(n*w+(n-1)*r*0.85+Math.min(r,90))/60:0;}
 function _fmtRest(secs){return secs>=60?Math.floor(secs/60)+'m'+(secs%60?secs%60+'s':''):secs+'s';}
 function saveExRestSecs(name,secs){
   if(!name)return;

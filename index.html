@@ -1045,6 +1045,10 @@ body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
 .gl-l b,.gl-m b{font-family:var(--display);font-weight:800;font-size:40px;line-height:0.9;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;color:var(--text);}
 .gl-l small,.gl-m small,.gx-tgt small,.gs small,.kp small{font-family:var(--display);font-weight:700;font-size:0.5em;color:var(--text3);letter-spacing:0;margin-left:2px;}
 .gl-m{align-items:flex-end;}
+.gl-pop-len{padding:4px 0 10px;margin-bottom:4px;border-bottom:1px solid var(--border);}
+.gl-pop-len i{display:block;font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.gl-pop-len b{display:block;font-family:var(--display);font-size:20px;text-transform:uppercase;color:var(--text);margin:2px 0 6px;}
+.gl-pop-len button span{display:block;font-size:12px;font-weight:500;color:var(--text3);margin-top:2px;}
 .gl-menu{align-self:center;border:none;background:var(--surface2);color:var(--text);border-radius:12px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .gl-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--surface2);}
 .gl-prog i{display:block;height:100%;background:var(--accent);transition:width 0.3s;}
@@ -5283,6 +5287,10 @@ function renderGymLogger(){
     <div class="gl-prog"><i style="width:${sp.plan?Math.min(100,Math.round(sp.done/sp.plan*100)):0}%"></i></div>
   </div>
   ${_gymMenu?`<div class="gl-pop" onclick="event.stopPropagation()">
+    ${(()=>{if(!gymDraft.planMins)return'';const P=_gymProj(),cut=Math.round(Math.max(P.el+5,20)),pk=_coachExtraPicks();let add=0,n=0;while(n<pk.length&&add<12){add+=_exMins(pk[n].name,pk[n].sets,P.pace.f)+2;n++;}
+      return`<div class="gl-pop-len"><i>Session length</i><b>Finishing at about ${P.end} min</b>
+        ${P.end>cut+2?`<button onclick="gymLiveLen('short')">Cut it short<span>finish by about ${cut} min: drops untouched lifts, then sets</span></button>`:''}
+        ${n?`<button onclick="gymLiveLen('long')">Add time<span>about ${Math.round(add)} min more: ${pk.slice(0,n).map(x=>esc(x.name)).join(', ')}</span></button>`:''}</div>`;})()}
     <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
     ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${new Date(lastSame.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})})</button>`:''}
     ${_todayRunInfo()?`<button onclick="_gymMenu=false;showPage('train');switchTrainTab('run');setTimeout(()=>{const t=_todayRunInfo();if(t)useTodaysRun(t.run.km,t.effort);},80)">Log today's run (session waits)</button>`:''}
@@ -5305,7 +5313,7 @@ function renderGymLogger(){
   startGymTimer();
   startGymPersist();
   // Keep the set you're on in view, just above the pinned keypad.
-  requestAnimationFrame(()=>{const on=document.querySelector('.gs.on'),kp=document.querySelector('.gx .kp');if(!on||!kp)return;
+  requestAnimationFrame(()=>{if(_gymMenu){window.scrollTo({top:0,behavior:'smooth'});return;}const on=document.querySelector('.gs.on'),kp=document.querySelector('.gx .kp');if(!on||!kp)return;
     const ob=on.getBoundingClientRect(),kb=kp.getBoundingClientRect();
     if(ob.bottom>kb.top-6)window.scrollBy({top:ob.bottom-kb.top+12,behavior:'smooth'});
     else if(ob.top<70)window.scrollBy({top:ob.top-90,behavior:'smooth'});});
@@ -5448,7 +5456,7 @@ function gymLiveLen(v){
   _gymMenu=false;if(!gymDraft)return;const P=_gymProj();
   if(v==='short'){gymTrimToFit(Math.max(P.el+5,20));return;}
   const picks=_coachExtraPicks();let mins=0,n=0;
-  while(n<picks.length&&mins<12){mins+=picks[n].sets*(picks[n].rest+40)/60+2;n++;}
+  while(n<picks.length&&mins<12){mins+=_exMins(picks[n].name,picks[n].sets,P.pace.f)+2;n++;}
   if(!n){toastMsg('Nothing sensible to add today');renderGymLogger();return;}
   gymAddCoachPicks(n);
 }
@@ -5521,7 +5529,9 @@ function _newExPopulate(){
 function _coachExtraPicks(){
   if(!gymDraft)return[];
   const type=gymDraft.type,have=new Set(gymDraft.exercises.map(e=>(e.name||'').toLowerCase())),out=[];
-  const add=(name,why)=>{if(!name||have.has(name.toLowerCase())||out.some(o=>o.name.toLowerCase()===name.toLowerCase()))return;out.push({name,why});};
+  // Leg lifts stay out when legs are being held (a race close, the taper, a key run next).
+  const legHold=(()=>{try{return _progLegsHold();}catch(e){return null;}})();
+  const add=(name,why)=>{if(!name||have.has(name.toLowerCase())||out.some(o=>o.name.toLowerCase()===name.toLowerCase()))return;if(legHold&&_gcIsLegEx(name))return;out.push({name,why});};
   try{getGymMuscleGaps(type,[...have]).forEach(g=>{if(g.ex)add(g.ex,`${g.muscle} is short this week`);});}catch(e){}
   const same=loadGymData().filter(s=>s.type===type).slice(-6),freq={};
   same.forEach(s=>(s.exercises||[]).forEach(e=>{const n=_resolveExName(e.name)||e.name;if(n)freq[n]=(freq[n]||0)+1;}));

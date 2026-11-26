@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="130">
+<meta name="app-version" content="131">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1045,10 +1045,6 @@ body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
 .gl-l b,.gl-m b{font-family:var(--display);font-weight:800;font-size:40px;line-height:0.9;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;color:var(--text);}
 .gl-l small,.gl-m small,.gx-tgt small,.gs small,.kp small{font-family:var(--display);font-weight:700;font-size:0.5em;color:var(--text3);letter-spacing:0;margin-left:2px;}
 .gl-m{align-items:flex-end;}
-.gl-pop-len{padding:4px 0 10px;margin-bottom:4px;border-bottom:1px solid var(--border);}
-.gl-pop-len i{display:block;font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
-.gl-pop-len b{display:block;font-family:var(--display);font-size:20px;text-transform:uppercase;color:var(--text);margin:2px 0 6px;}
-.gl-pop-len button span{display:block;font-size:12px;font-weight:500;color:var(--text3);margin-top:2px;}
 .gl-menu{align-self:center;border:none;background:var(--surface2);color:var(--text);border-radius:12px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .gl-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--surface2);}
 .gl-prog i{display:block;height:100%;background:var(--accent);transition:width 0.3s;}
@@ -5285,10 +5281,6 @@ function renderGymLogger(){
     <div class="gl-prog"><i style="width:${sp.plan?Math.min(100,Math.round(sp.done/sp.plan*100)):0}%"></i></div>
   </div>
   ${_gymMenu?`<div class="gl-pop" onclick="event.stopPropagation()">
-    ${(()=>{if(!gymDraft.planMins)return'';const P=_gymProj(),cut=Math.round(Math.max(P.el+5,20)),pk=_coachExtraPicks();let add=0,n=0;while(n<pk.length&&add<12){add+=_exMins(pk[n].name,pk[n].sets,P.pace.f)+2;n++;}
-      return`<div class="gl-pop-len"><i>Session length</i><b>Finishing at about ${P.end} min</b>
-        ${P.end>cut+2?`<button onclick="gymLiveLen('short')">Cut it short<span>finish by about ${cut} min: drops untouched lifts, then sets</span></button>`:''}
-        ${n?`<button onclick="gymLiveLen('long')">Add time<span>about ${Math.round(add)} min more: ${pk.slice(0,n).map(x=>esc(x.name)).join(', ')}</span></button>`:''}</div>`;})()}
     <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
     ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${new Date(lastSame.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})})</button>`:''}
     ${_todayRunInfo()?`<button onclick="_gymMenu=false;showPage('train');switchTrainTab('run');setTimeout(()=>{const t=_todayRunInfo();if(t)useTodaysRun(t.run.km,t.effort);},80)">Log today's run (session waits)</button>`:''}
@@ -5411,6 +5403,8 @@ function _gymProj(){
     const q=ex._pair&&gymDraft.exercises.find(e=>e.name===ex._pair&&!e._completed);
     if(q){if(counted.has(q.name))return;counted.add(ex.name);const ql=Math.max(0,(q._planSets||3)-_gcWorking(q).length);rem+=_pairMins(ex.name,left,q.name,ql,pace.f);}
     else rem+=_exMins(ex.name,left,pace.f);});
+  // The plan allows 6 minutes for warming up; until the first working set it's still to come.
+  if(!gymDraft.exercises.some(e=>_gcWorking(e).length))rem+=Math.max(0,6-el);
   return{el,rem,remSets,open,pace,end:Math.round(el+rem),over:Math.round(el+rem-(gymDraft.planMins||0))};
 }
 // Reps falling away on the last two lifts you worked: the session's useful work is done.
@@ -5454,7 +5448,7 @@ function gymLiveLen(v){
   _gymMenu=false;if(!gymDraft)return;const P=_gymProj();
   if(v==='short'){gymTrimToFit(Math.max(P.el+5,20));return;}
   const picks=_coachExtraPicks();let mins=0,n=0;
-  while(n<picks.length&&mins<12){mins+=_exMins(picks[n].name,picks[n].sets,P.pace.f)+2;n++;}
+  while(n<picks.length&&mins<12){mins+=_exMins(picks[n].name,picks[n].sets,P.pace.f);n++;}
   if(!n){toastMsg('Nothing sensible to add today');renderGymLogger();return;}
   gymAddCoachPicks(n);
 }
@@ -5543,7 +5537,7 @@ function gymAddEx(){
   const P=_coachExtraPicks();
   if(!P.length){gymAddExManual();return;}
   const pace=_gymPace().f;
-  const opt=n=>{const ps=P.slice(0,n),mins=Math.round(ps.reduce((a,x)=>a+_exMins(x.name,x.sets,pace),0)+2*n); // + setting up each one, at today's pace
+  const opt=n=>{const ps=P.slice(0,n),mins=Math.round(ps.reduce((a,x)=>a+_exMins(x.name,x.sets,pace),0)); // at today's pace, change-over included
     return`<button onclick="gymAddCoachPicks(${n})"><b>+${n} exercise${n===1?'':'s'}</b><span>about ${mins} min · ${ps.map(x=>esc(x.name)).join(', ')}</span></button>`;};
   document.getElementById('session-detail-content').innerHTML=`
     <h3>Add to ${esc(gymDraft.type)}</h3>
@@ -5558,7 +5552,7 @@ function gymAddCoachPicks(n){
   const P=_coachExtraPicks().slice(0,n);if(!P.length||!gymDraft)return;
   const at=gymDraft.exercises.length;
   P.forEach(x=>gymDraft.exercises.push({name:x.name,sets:[{weight:'',reps:'',warmup:false}],_planSets:x.sets,_why:x.why}));
-  const mins=Math.round(P.reduce((a,x)=>a+_exMins(x.name,x.sets),0)+2*P.length);
+  const mins=Math.round(P.reduce((a,x)=>a+_exMins(x.name,x.sets),0));
   if(gymDraft.planMins)gymDraft.planMins+=mins;
   if(gymDraft.exercises.slice(0,at).every(e=>e._completed))_gymFocusIdx=at;
   closeModal('session-detail-modal');gymKpResetTarget();renderGymLogger();haptic('success');

@@ -1178,6 +1178,8 @@ body.gym-live .gx .kp-pad button{padding:7px 0;font-size:22px;}
 .gpc-off{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--text2);}
 .gpc-off button,.gpc-sw{background:none;border:0;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--accent2);cursor:pointer;padding:0;}
 .gpc-sw{display:block;margin:12px auto 0;color:var(--text3);}
+.gpc-ss{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--border);margin-top:14px;padding-top:12px;font-size:12.5px;line-height:1.45;color:var(--text2);}
+.gpc-ss button{flex-shrink:0;background:var(--surface2);border:0;border-radius:99px;padding:7px 12px;font-family:inherit;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;}
 .gpc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
 .gpc-h h3{font-family:var(--display);font-size:22px;line-height:1.05;text-transform:uppercase;letter-spacing:0.01em;margin:4px 0 0;color:var(--text);}
 .gpc-n{text-align:right;flex-shrink:0;}
@@ -14095,32 +14097,32 @@ function renderGymBriefCard(type){
 const GYM_PROG_TYPES=['Strength','Size','Pump'];
 const GYM_PROG={
   Strength:{sub:'Full body · heavy',muscles:['Chest','Back','Shoulders','Biceps','Quads','Glutes'],slots:[
-    {pick:['Plate bench press','Bench press','Dumbbell bench press'],sets:3,lo:5,hi:8,pri:1,sp:'a'},
-    {pick:['Barbell Row','Seated row'],sets:3,lo:6,hi:10,pri:1,sp:'a'},
-    {pick:['Bulgarian Split Squat','Seated leg press'],sets:2,lo:8,hi:10,pri:2,legs:true,sp:'b'},
-    {pick:['Overhead Press','Dumbbell shoulder press'],sets:2,lo:6,hi:10,pri:2,sp:'b'},
-    {pick:['Lat pulldown','Chin up'],sets:2,lo:8,hi:12,pri:3,sp:'b'},
+    {pick:['Plate bench press','Bench press','Dumbbell bench press'],sets:3,lo:5,hi:8,pri:1},
+    {pick:['Barbell Row','Seated row'],sets:3,lo:6,hi:10,pri:1},
+    {pick:['Bulgarian Split Squat','Seated leg press'],sets:2,lo:8,hi:10,pri:2,legs:true},
+    {pick:['Overhead Press','Dumbbell shoulder press'],sets:2,lo:6,hi:10,pri:2},
+    {pick:['Lat pulldown','Chin up'],sets:2,lo:8,hi:12,pri:3},
     {pick:['Lateral Raises'],sets:2,lo:12,hi:20,pri:2},
-    {pick:['EZ Bar Curl','Hammer Curls'],sets:2,lo:8,hi:12,pri:2,ss:'arms'},
-    {pick:['Tricep Pushdowns','Overhead tricep extension'],sets:2,lo:10,hi:15,pri:2,ss:'arms'},
+    {pick:['EZ Bar Curl','Hammer Curls'],sets:2,lo:8,hi:12,pri:2},
+    {pick:['Tricep Pushdowns','Overhead tricep extension'],sets:2,lo:10,hi:15,pri:2},
   ]},
   Size:{sub:'Full body · volume',muscles:['Chest','Back','Shoulders','Triceps','Biceps','Hamstrings','Calves'],slots:[
-    {pick:['Incline plate press','Incline dumbbell press'],sets:3,lo:8,hi:12,pri:1,sp:'a'},
-    {pick:['Seated row','Dumbbell row'],sets:3,lo:8,hi:12,pri:1,sp:'a'},
-    {pick:['Romanian deadlift','Single-Leg RDL','Seated leg curl'],sets:2,lo:8,hi:10,pri:2,legs:true,sp:'b'},
-    {pick:['Pec fly','Dips'],sets:2,lo:10,hi:15,pri:2,ss:'fly'},
-    {pick:['Lateral Raises'],sets:3,lo:12,hi:20,pri:2,ss:'lat',sp:'b'},
-    {pick:['Tricep Pushdowns','Overhead tricep extension'],sets:2,lo:10,hi:15,pri:2,ss:'arms'},
-    {pick:['Hammer Curls','Incline Dumbbell Curl'],sets:2,lo:10,hi:15,pri:2,ss:'arms'},
-    {pick:['Face Pulls','Rear delt fly'],sets:2,lo:12,hi:20,pri:3,ss:'fly'},
-    {pick:['Calf Raises'],sets:2,lo:10,hi:15,pri:3,legs:true,calves:true,ss:'lat'},
+    {pick:['Incline plate press','Incline dumbbell press'],sets:3,lo:8,hi:12,pri:1},
+    {pick:['Seated row','Dumbbell row'],sets:3,lo:8,hi:12,pri:1},
+    {pick:['Romanian deadlift','Single-Leg RDL','Seated leg curl'],sets:2,lo:8,hi:10,pri:2,legs:true},
+    {pick:['Pec fly','Dips'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Lateral Raises'],sets:3,lo:12,hi:20,pri:2},
+    {pick:['Tricep Pushdowns','Overhead tricep extension'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Hammer Curls','Incline Dumbbell Curl'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Face Pulls','Rear delt fly'],sets:2,lo:12,hi:20,pri:3},
+    {pick:['Calf Raises'],sets:2,lo:10,hi:15,pri:3,legs:true,calves:true},
   ]},
   Pump:{sub:'Upper body and core · optional',muscles:['Back','Chest','Shoulders','Biceps','Triceps','Core'],slots:[
-    {pick:['Lat pulldown','Chin up'],sets:3,lo:8,hi:12,pri:1,sp:'a'},
-    {pick:['Pec fly','Cable fly'],sets:3,lo:10,hi:15,pri:1,sp:'a'},
+    {pick:['Lat pulldown','Chin up'],sets:3,lo:8,hi:12,pri:1},
+    {pick:['Pec fly','Cable fly'],sets:3,lo:10,hi:15,pri:1},
     {pick:['Lateral Raises','Cable lateral raise'],sets:3,lo:12,hi:20,pri:2},
-    {pick:['Incline Dumbbell Curl','EZ Bar Curl'],sets:2,lo:10,hi:15,pri:2,ss:'arms'},
-    {pick:['Overhead tricep extension','Tricep dumbbell push','Tricep Pushdowns'],sets:2,lo:10,hi:15,pri:2,ss:'arms'},
+    {pick:['Incline Dumbbell Curl','EZ Bar Curl'],sets:2,lo:10,hi:15,pri:2},
+    {pick:['Overhead tricep extension','Tricep dumbbell push','Tricep Pushdowns'],sets:2,lo:10,hi:15,pri:2},
     {pick:['Hammer Ab Crunch Machine','Cable crunch'],sets:2,lo:10,hi:15,pri:3},
   ]},
 };
@@ -14272,6 +14274,7 @@ function renderGymProgrammeCard(){
     ${lrows.length?`<div class="gpc-sec"><span class="rd-eyebrow">Main lifts · best estimated max, 6 weeks vs the 6 before</span><div class="gpc-lifts">${lrows.join('')}</div></div>`:''}
     <div class="gpc-sec"><span class="rd-eyebrow">Sets a week · ${brk?`4 weeks to ${new Date(bEnd+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`:'last 4 weeks'}</span><div class="gpc-bars">${bars}</div><p>${balLine}</p></div>
     ${fuel?`<div class="gpc-sec"><span class="rd-eyebrow">Fuel</span><p>${fuel}</p></div>`:''}
+    <div class="gpc-ss"><span>${gymSupersetsOn()?'Supersets only for lifts at the same spot (pec deck, cable stack, dumbbells).':'Supersets are off: straight sets only.'}</span><button onclick="setGymSupersets('${gymSupersetsOn()?'off':'spot'}')">${gymSupersetsOn()?'Turn off':'Turn on'}</button></div>
     <button class="gpc-sw" onclick="setGymProgramme('classic')">Use the old splits instead</button>
   </div>`;
 }
@@ -14358,7 +14361,7 @@ function planGymSession(type){
   if(k==='go'&&base>=40&&!taper&&!ctx.race){base+=5;why+=', and you\'re fresh';}
   const longOk=!(taper||ctx.race||k==='recover'||k==='pace');
   const len=_gymLen==='short'?'short':_gymLen==='long'&&longOk?'long':'coach';
-  const budget=len==='short'?(prog?25:20):len==='long'?Math.min(60,base+15):base;
+  const budget=len==='short'?(prog?27:20):len==='long'?Math.min(60,base+15):base;
   // Short on time: pair lifts that don't share a main muscle and rest once per pair.
   if(!prog&&len==='short'&&rows.length>=2){const prim=n=>(getExerciseMuscles(n)||[])[0]||n;const free=rows.slice();
     while(free.length>=2){const a=free.shift(),j=free.findIndex(b=>prim(b.name)!==prim(a.name));if(j<0)continue;const b=free.splice(j,1)[0];a.pairWith=b.name;b.pairWith=a.name;}}
@@ -14371,31 +14374,25 @@ function planGymSession(type){
   // second chest lift), then the big lifts pair up as supersets (bench with row). The
   // last direct lift for chest, back, shoulders, biceps or triceps never goes, so each
   // gets trained in both sessions every week, even two short ones.
-  const dropped=[];let bigPaired=false;
+  const dropped=[];
   if(prog){
     const UPM=['Chest','Back','Shoulders','Biceps','Triceps'];
     const prim=r=>{const c=exCat(r.name);return c?c.m:(getExerciseMuscles(r.name)||[]).slice(0,1);};
     const unlink=r=>{if(!r.pairWith)return;const q=rows.find(x=>x.name===r.pairWith);if(q)q.pairWith=null;r.pairWith=null;};
-    const pairBy=key=>{const g={};rows.forEach(r=>{if(r[key]&&!r.pairWith)(g[r[key]]=g[r[key]]||[]).push(r);});
-      Object.values(g).forEach(v=>{if(v.length>=2){v[0].pairWith=v[1].name;v[1].pairWith=v[0].name;}});};
     const covered=r=>prim(r).every(m=>!UPM.includes(m)||rows.some(x=>x!==r&&prim(x).includes(m)));
-    pairBy('ss');
-    if(len==='short'){pairBy('sp');bigPaired=true;}
+    // Same-spot supersets only: two isolation lifts at one station that don't share a muscle.
+    if(gymSupersetsOn()){rows.forEach((r,i)=>{if(r.pairWith||_isCompoundEx(r.name))return;const st=exStation(r.name);if(!st)return;
+      const q=rows.slice(i+1).find(x=>!x.pairWith&&!_isCompoundEx(x.name)&&exStation(x.name)===st&&!prim(x).some(m=>prim(r).includes(m)));
+      if(q){r.pairWith=q.name;q.pairWith=r.name;}});}
     let g2=0;
     while(mins()>budget+2&&g2++<40){
       const r=rows.slice(len==='short'?0:1).filter(x=>x.sets>2).sort((a,b)=>b.sets-a.sets||b.pri-a.pri)[0];
       if(r){r.sets--;continue;}
       const c=rows.slice(2).map((x,j)=>({x,j})).filter(o=>covered(o.x)).sort((a,b)=>b.x.pri-a.x.pri||b.j-a.j)[0];
       if(c){unlink(c.x);rows.splice(rows.indexOf(c.x),1);dropped.push(c.x.name);continue;}
-      if(!bigPaired){bigPaired=true;pairBy('sp');continue;}
       break;
     }
   }
-  let guard=0;
-  // Over time: sets come off first (down to two), then whole lifts, the programme's
-  // most optional first (calves, face pulls, the second arm lift), never the first two.
-  while(!prog&&mins()>budget&&rows.length>2&&guard++<20){
-    const r=rows.slice(1).sort((a,b)=>b.sets-a.sets)[0];if(r.sets>2)r.sets--;else rows.pop();}
   // Room to spare: a set back on the main lifts first, then another of your usual lifts.
   if(!taper&&k!=='recover'){
     guard=0;
@@ -14412,7 +14409,9 @@ function planGymSession(type){
   if(prog){const out=[];rows.forEach(r=>{if(out.includes(r))return;out.push(r);const q=r.pairWith&&rows.find(x=>x.name===r.pairWith);if(q&&!out.includes(q))out.push(q);});rows.splice(0,rows.length,...out);}
   const notes=[...seasonNote];
   if(PI&&PI.held.length)notes.push(`Legs sit out today: ${PI.hold}. Running covers them meanwhile; they come back when the calendar's clear.`);
-  notes.push(len==='short'?`Short: ${prog?'two sets a lift, the big lifts paired as supersets':rows.some(r=>r.pairWith)?'paired as supersets (one rest per pair)':'the main lifts only'}.`:len==='long'?`Long: more sets on the main lifts, up to ${budget} minutes.`:`Up to ${budget} minutes because it's ${why}${bigPaired?'; the big lifts are paired as supersets to fit':''}.`);
+  notes.push(len==='short'?`Short: ${prog?'two sets a lift, one lift per muscle':rows.some(r=>r.pairWith)?'paired as supersets (one rest per pair)':'the main lifts only'}.`:len==='long'?`Long: more sets on the main lifts, up to ${budget} minutes.`:`Up to ${budget} minutes because it's ${why}.`);
+  if(prog&&rows.some(r=>r.pairWith)){const pr=rows.filter(r=>r.pairWith),seen=new Set(),ls=[];pr.forEach(r=>{if(seen.has(r.name))return;seen.add(r.name);seen.add(r.pairWith);ls.push(`${r.name} with ${r.pairWith} (${exStation(r.name)})`);});
+    notes.push(`Supersets, each at one spot so you don't need a second station: ${ls.join('; ')}.`);}
   if(prog&&dropped.length)notes.push(`Left out to fit the time: ${dropped.join(', ')}. Every upper-body muscle still has a direct lift today.`);
   if(_gymLen==='long'&&!longOk)notes.push(`Long isn't on today (${why}).`);
   if(ctx.comeback)notes.push(`${ctx.layoff} days since the gym: about 80% of your last weights for 8–10 reps. Muscle comes back fast; tendons are slower.`);
@@ -14431,7 +14430,7 @@ function renderCoachGymPreview(type,compact){
   return`<div class="cg">
     <div class="cg-h"><span>Coach's session</span><b>about ${P.mins} min</b></div>
     <div class="cg-len">${chip('short','Short')}${chip('coach',"Coach's")}${chip('long','Long')}</div>
-    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.pairWith?`<em>superset with ${esc(r.pairWith)}</em>`:r.why?`<em>${esc(r.why)}</em>`:r.tgt&&r.tgt.tag==='New'?'<em>new: find your weight</em>':r.intro?'<em>easing in: stop short</em>':r.lo?`<em>${r.lo}–${r.hi} reps · ${esc((r.tgt&&r.tgt.tag||'').toLowerCase())}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
+    ${rows.map(r=>`<div class="cg-row"><span>${esc(r.name)}${r.pairWith?`<em>superset with ${esc(r.pairWith)}${exStation(r.name)?`, same ${esc(exStation(r.name).replace(/^the /,''))}`:''}</em>`:r.why?`<em>${esc(r.why)}</em>`:r.tgt&&r.tgt.tag==='New'?'<em>new: find your weight</em>':r.intro?'<em>easing in: stop short</em>':r.lo?`<em>${r.lo}–${r.hi} reps · ${esc((r.tgt&&r.tgt.tag||'').toLowerCase())}</em>`:''}</span><b>${r.sets} × ${r.tgt&&r.tgt.reps&&r.tgt.reps!=='?'?r.tgt.reps:'8–10'}${r.tgt&&r.tgt.weight?` @ ${_kg(+r.tgt.weight)}`:''}</b></div>`).join('')}
     ${compact&&P.rows.length>4?`<div class="cg-more">+ ${P.rows.length-4} more</div>`:''}
     ${P.notes.map(n=>`<div class="cg-note">${n}</div>`).join('')}
   </div>`;
@@ -14575,7 +14574,7 @@ function getCallIt(ex,lastSets){
 // target. The last planned set of a lift is a change-over: just long enough to set up.
 function getSmartRest(ex,s){
   if(ex._pair&&gymDraft){const j=gymDraft.exercises.findIndex(e=>e.name===ex._pair&&!e._completed);
-    if(j>=0&&_gcWorking(gymDraft.exercises[j]).length<_gcWorking(ex).length)return{secs:15,label:`Superset · straight to ${ex._pair}`,toIdx:j};}
+    if(j>=0&&_gcWorking(gymDraft.exercises[j]).length<_gcWorking(ex).length)return{secs:15,label:`Superset · straight to ${ex._pair}${exStation(ex.name)?`, same ${exStation(ex.name).replace(/^the /,'')}`:''}`,toIdx:j};}
   const lib=getExRestSecs(ex.name||''),compound=lib>=120||/press|row|squat|deadlift|rdl|pull ?up|chin|pulldown|dip|lunge|bench|hip thrust/i.test(ex.name||'');
   const w=parseFloat(s.weight||0),r=parseInt(s.reps)||0,k=_gcReadyKey();
   // Your best estimated one-rep max on this lift.
@@ -15031,6 +15030,14 @@ const EX_CAT={
   'Decline Sit Up With Plate':{m:['Core'],s:[],eq:'Bodyweight',inc:2.5,cue:'Plate on the chest, controlled down.',alt:['Cable crunch']},
   'Plank':{m:['Core'],s:[],eq:'Bodyweight',inc:0,cue:'Squeeze the glutes, ribs down; quality seconds only.',alt:['Hanging knee raise']},
 };
+// Where a lift is done. Two lifts at the same spot can be a superset without needing a
+// second station, which in a busy gym you often can't get: the pec deck does flyes both
+// ways, one cable stack and rope does pushdowns and face pulls, one pair of dumbbells
+// does laterals and curls.
+const EX_STATION={'Pec fly':'the pec deck','Rear delt fly':'the pec deck','Tricep Pushdowns':'the cable stack','Face Pulls':'the cable stack','Overhead tricep extension':'the cable stack','Cable fly':'the cable stack','Cable lateral raise':'the cable stack','Cable crunch':'the cable stack','Lateral Raises':'the dumbbells','Hammer Curls':'the dumbbells','Incline Dumbbell Curl':'the dumbbells','Tricep dumbbell push':'the dumbbells'};
+function exStation(name){const c=exCat(name);return c?EX_STATION[c.name]||null:null;}
+function gymSupersetsOn(){return(state.gymSupersets||'spot')!=='off';}
+function setGymSupersets(v){state.gymSupersets=v;saveState();haptic('light');refreshActivePage();toastMsg(v==='off'?'Supersets off: straight sets only':'Supersets on, for lifts at the same spot');}
 const _exKey=n=>(n||'').toLowerCase().replace(/[^a-z]/g,'').replace(/s$/,'');
 const _EX_CAT_IDX=Object.fromEntries(Object.keys(EX_CAT).map(k=>[_exKey(k),k]));
 function exCat(name){const k=_EX_CAT_IDX[_exKey(name)];return k?{name:k,...EX_CAT[k]}:null;}

@@ -268,7 +268,10 @@ async function programme(browser){
       {const UP=['Chest','Back','Shoulders','Biceps','Triceps'],keepCW=getCalendarWeek,keepLen=_gymLen;o.cover=[];
        for(const day of [[],[{type:'Tempo',sub:'Tempo',km:8}]]){getCalendarWeek=()=>({days:[{isToday:true,planned:day}]});
          for(const len of ['short','coach'])for(const t of ['Strength','Size']){_gymLen=len;const P=planGymSession(t);
-           const miss=UP.filter(m=>!P.rows.some(r=>(exCat(r.name)||{m:[]}).m.includes(m)));if(miss.length)o.cover.push(`${t} ${len}: ${miss}`);if(len==='short'&&P.mins>28)o.cover.push(`${t} short is ${P.mins} min`);}}
+           const miss=UP.filter(m=>!P.rows.some(r=>(exCat(r.name)||{m:[]}).m.includes(m)));if(miss.length)o.cover.push(`${t} ${len}: ${miss}`);if(len==='short'&&P.mins>30)o.cover.push(`${t} short is ${P.mins} min`);}}
+       // Supersets only ever pair lifts at the same spot
+       const shot=[];for(const t of ['Strength','Size','Pump']){_gymLen='coach';const P=planGymSession(t);P.rows.forEach(r=>{if(r.pairWith&&exStation(r.name)!==exStation(r.pairWith))shot.push(`${r.name}+${r.pairWith}`);});}
+       if(shot.length)o.cover.push(`two-station supersets: ${shot}`);
        getCalendarWeek=keepCW;_gymLen=keepLen;}
       // Legs: held with a race in five days, in (and eased) when the calendar is clear
       getGymContext=()=>({layoff:3,comeback:false,race:null,dRace:5});

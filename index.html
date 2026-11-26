@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="128">
+<meta name="app-version" content="129">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1045,6 +1045,10 @@ body.gym-live #page-train{padding-top:env(safe-area-inset-top);}
 .gl-l b,.gl-m b{font-family:var(--display);font-weight:800;font-size:40px;line-height:0.9;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;color:var(--text);}
 .gl-l small,.gl-m small,.gx-tgt small,.gs small,.kp small{font-family:var(--display);font-weight:700;font-size:0.5em;color:var(--text3);letter-spacing:0;margin-left:2px;}
 .gl-m{align-items:flex-end;}
+.gl-pop-len{padding:4px 0 10px;margin-bottom:4px;border-bottom:1px solid var(--border);}
+.gl-pop-len i{display:block;font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.gl-pop-len b{display:block;font-family:var(--display);font-size:20px;text-transform:uppercase;color:var(--text);margin:2px 0 6px;}
+.gl-pop-len button span{display:block;font-size:12px;font-weight:500;color:var(--text3);margin-top:2px;}
 .gl-menu{align-self:center;border:none;background:var(--surface2);color:var(--text);border-radius:12px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .gl-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--surface2);}
 .gl-prog i{display:block;height:100%;background:var(--accent);transition:width 0.3s;}
@@ -5283,6 +5287,10 @@ function renderGymLogger(){
     <div class="gl-prog"><i style="width:${sp.plan?Math.min(100,Math.round(sp.done/sp.plan*100)):0}%"></i></div>
   </div>
   ${_gymMenu?`<div class="gl-pop" onclick="event.stopPropagation()">
+    ${(()=>{if(!gymDraft.planMins)return'';const P=_gymProj(),cut=Math.round(Math.max(P.el+5,20)),pk=_coachExtraPicks();let add=0,n=0;while(n<pk.length&&add<12){add+=_exMins(pk[n].name,pk[n].sets,P.pace.f)+2;n++;}
+      return`<div class="gl-pop-len"><i>Session length</i><b>Finishing at about ${P.end} min</b>
+        ${P.end>cut+2?`<button onclick="gymLiveLen('short')">Cut it short<span>finish by about ${cut} min: drops untouched lifts, then sets</span></button>`:''}
+        ${n?`<button onclick="gymLiveLen('long')">Add time<span>about ${Math.round(add)} min more: ${pk.slice(0,n).map(x=>esc(x.name)).join(', ')}</span></button>`:''}</div>`;})()}
     <button onclick="_gymMenu=false;gymShowTypeEdit()">Change session type</button>
     ${lastSame?`<button onclick="_gymMenu=false;copyLastSameSession()">Copy last ${esc(gymDraft.type)} instead (${new Date(lastSame.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})})</button>`:''}
     ${_todayRunInfo()?`<button onclick="_gymMenu=false;showPage('train');switchTrainTab('run');setTimeout(()=>{const t=_todayRunInfo();if(t)useTodaysRun(t.run.km,t.effort);},80)">Log today's run (session waits)</button>`:''}
@@ -5305,7 +5313,7 @@ function renderGymLogger(){
   startGymTimer();
   startGymPersist();
   // Keep the set you're on in view, just above the pinned keypad.
-  requestAnimationFrame(()=>{const on=document.querySelector('.gs.on'),kp=document.querySelector('.gx .kp');if(!on||!kp)return;
+  requestAnimationFrame(()=>{if(_gymMenu){window.scrollTo({top:0,behavior:'smooth'});return;}const on=document.querySelector('.gs.on'),kp=document.querySelector('.gx .kp');if(!on||!kp)return;
     const ob=on.getBoundingClientRect(),kb=kp.getBoundingClientRect();
     if(ob.bottom>kb.top-6)window.scrollBy({top:ob.bottom-kb.top+12,behavior:'smooth'});
     else if(ob.top<70)window.scrollBy({top:ob.top-90,behavior:'smooth'});});
@@ -5448,7 +5456,7 @@ function gymLiveLen(v){
   _gymMenu=false;if(!gymDraft)return;const P=_gymProj();
   if(v==='short'){gymTrimToFit(Math.max(P.el+5,20));return;}
   const picks=_coachExtraPicks();let mins=0,n=0;
-  while(n<picks.length&&mins<12){mins+=picks[n].sets*(picks[n].rest+40)/60+2;n++;}
+  while(n<picks.length&&mins<12){mins+=_exMins(picks[n].name,picks[n].sets,P.pace.f)+2;n++;}
   if(!n){toastMsg('Nothing sensible to add today');renderGymLogger();return;}
   gymAddCoachPicks(n);
 }
@@ -5521,7 +5529,9 @@ function _newExPopulate(){
 function _coachExtraPicks(){
   if(!gymDraft)return[];
   const type=gymDraft.type,have=new Set(gymDraft.exercises.map(e=>(e.name||'').toLowerCase())),out=[];
-  const add=(name,why)=>{if(!name||have.has(name.toLowerCase())||out.some(o=>o.name.toLowerCase()===name.toLowerCase()))return;out.push({name,why});};
+  // Leg lifts stay out when legs are being held (a race close, the taper, a key run next).
+  const legHold=(()=>{try{return _progLegsHold();}catch(e){return null;}})();
+  const add=(name,why)=>{if(!name||have.has(name.toLowerCase())||out.some(o=>o.name.toLowerCase()===name.toLowerCase()))return;if(legHold&&_gcIsLegEx(name))return;out.push({name,why});};
   try{getGymMuscleGaps(type,[...have]).forEach(g=>{if(g.ex)add(g.ex,`${g.muscle} is short this week`);});}catch(e){}
   const same=loadGymData().filter(s=>s.type===type).slice(-6),freq={};
   same.forEach(s=>(s.exercises||[]).forEach(e=>{const n=_resolveExName(e.name)||e.name;if(n)freq[n]=(freq[n]||0)+1;}));
@@ -15007,47 +15017,50 @@ function clearWeekPlan(){
 // 2024): a set counts in full for the muscles it's built for (m) and as half a set for the
 // ones that help (s), so a bench set is a chest set and half a triceps set. Also the kit
 // (eq), the smallest sensible jump in weight (inc), one coaching cue and the swaps.
+// Steps match Bletchley: dumbbells go 5, 7.5, 10, 12.5...; plates go down to 1.25 kg, so
+// barbells and plate-loaded machines move 2.5 kg at a time (1.25 a side). Pin-stack
+// machines vary, so targets there are a guide: use the nearest pin.
 // Names match what you've logged, so history carries straight over.
 const EX_CAT={
   'Plate bench press':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Plate-loaded',inc:2.5,cue:'Shoulder blades pinned back, feet planted. Lower under control to the lower chest, press up and slightly back.',alt:['Bench press','Dumbbell bench press','Incline plate press']},
   'Bench press':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Barbell',inc:2.5,cue:'Grip just outside shoulder width, shoulder blades pinned, bar to the lower chest with forearms vertical.',alt:['Plate bench press','Dumbbell bench press']},
-  'Dumbbell bench press':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Dumbbells',inc:2,cue:'Dumbbells at the sides of the chest at the bottom, a deep stretch, then press up and in.',alt:['Plate bench press','Bench press']},
+  'Dumbbell bench press':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Dumbbells',inc:2.5,cue:'Dumbbells at the sides of the chest at the bottom, a deep stretch, then press up and in.',alt:['Plate bench press','Bench press']},
   'Incline plate press':{m:['Chest'],s:['Shoulders','Triceps'],eq:'Plate-loaded',inc:2.5,cue:'Upper chest: elbows about 45 degrees from the body, a full stretch at the bottom.',alt:['Incline dumbbell press','Plate bench press']},
-  'Incline dumbbell press':{m:['Chest'],s:['Shoulders','Triceps'],eq:'Dumbbells',inc:2,cue:'Bench at about 30 degrees; lower until the dumbbells are level with the chest.',alt:['Incline plate press','Dumbbell bench press']},
+  'Incline dumbbell press':{m:['Chest'],s:['Shoulders','Triceps'],eq:'Dumbbells',inc:2.5,cue:'Bench at about 30 degrees; lower until the dumbbells are level with the chest.',alt:['Incline plate press','Dumbbell bench press']},
   'Dips':{m:['Chest','Triceps'],s:['Shoulders'],eq:'Bodyweight',inc:2.5,cue:'Lean forward a little for chest; lower until the shoulders are just below the elbows, no further if the shoulder complains.',alt:['Pec fly','Close-grip bench press']},
   'Pec fly':{m:['Chest'],s:[],eq:'Machine',inc:2.5,cue:'Soft elbows, a big stretch at the back, squeeze for a second at the front.',alt:['Cable fly','Dips']},
   'Cable fly':{m:['Chest'],s:[],eq:'Cable',inc:2.5,cue:'Step forward, soft elbows, hug a big tree; stretch at the back.',alt:['Pec fly']},
   'Push-ups':{m:['Chest'],s:['Triceps','Shoulders'],eq:'Bodyweight',inc:0,cue:'Body in one line, chest to the floor, elbows about 45 degrees.',alt:['Dumbbell bench press']},
   'Barbell Row':{m:['Back'],s:['Biceps','Shoulders'],eq:'Barbell',inc:2.5,cue:'Hinge to about 45 degrees, brace, pull to the lower ribs. No heaving: if the torso swings, it is too heavy.',alt:['Seated row','Dumbbell row']},
   'Seated row':{m:['Back'],s:['Biceps'],eq:'Machine',inc:2.5,cue:'Chest tall, let the shoulders reach forward on the stretch, then pull elbows past the ribs.',alt:['Barbell Row','Dumbbell row']},
-  'Dumbbell row':{m:['Back'],s:['Biceps'],eq:'Dumbbells',inc:2,cue:'Hand and knee on the bench, pull the dumbbell to the hip, not the shoulder.',alt:['Seated row','Barbell Row']},
+  'Dumbbell row':{m:['Back'],s:['Biceps'],eq:'Dumbbells',inc:2.5,cue:'Hand and knee on the bench, pull the dumbbell to the hip, not the shoulder.',alt:['Seated row','Barbell Row']},
   'Lat pulldown':{m:['Back'],s:['Biceps'],eq:'Cable',inc:2.5,cue:'Thighs locked under the pad, pull the bar to the top of the chest leading with the elbows; full stretch at the top.',alt:['Chin up','Pull up']},
   'Chin up':{m:['Back'],s:['Biceps'],eq:'Bodyweight',inc:2.5,cue:'Palms facing you, from a dead hang to chin over the bar. Add weight once 12 come easily.',alt:['Lat pulldown','Pull up']},
   'Pull up':{m:['Back'],s:['Biceps'],eq:'Bodyweight',inc:2.5,cue:'Palms away, from a dead hang, chest towards the bar.',alt:['Lat pulldown','Chin up']},
   'Face Pulls':{m:['Shoulders'],s:['Back'],eq:'Cable',inc:2.5,cue:'Rope at eye height, pull to the face with the hands finishing beside the ears. Rear delts and the small shoulder muscles that keep pressing healthy.',alt:['Rear delt fly']},
   'Rear delt fly':{m:['Shoulders'],s:['Back'],eq:'Machine',inc:2.5,cue:'Arms long, sweep out and back; no shrugging.',alt:['Face Pulls']},
   'Overhead Press':{m:['Shoulders'],s:['Triceps'],eq:'Barbell',inc:2.5,cue:'Squeeze the glutes, bar from the collarbone to over the mid-foot, head through at the top.',alt:['Dumbbell shoulder press','Arnold press']},
-  'Dumbbell shoulder press':{m:['Shoulders'],s:['Triceps'],eq:'Dumbbells',inc:2,cue:'Seated, back supported, lower to ear level and press up without clashing the bells.',alt:['Overhead Press','Arnold press']},
-  'Arnold press':{m:['Shoulders'],s:['Triceps'],eq:'Dumbbells',inc:2,cue:'Start palms in, rotate as you press.',alt:['Dumbbell shoulder press']},
-  'Lateral Raises':{m:['Shoulders'],s:[],eq:'Dumbbells',inc:2,cue:'The side delts make your shoulders wider. Lead with the elbows, stop at shoulder height, control the way down. Strict beats heavy.',alt:['Cable lateral raise']},
+  'Dumbbell shoulder press':{m:['Shoulders'],s:['Triceps'],eq:'Dumbbells',inc:2.5,cue:'Seated, back supported, lower to ear level and press up without clashing the bells.',alt:['Overhead Press','Arnold press']},
+  'Arnold press':{m:['Shoulders'],s:['Triceps'],eq:'Dumbbells',inc:2.5,cue:'Start palms in, rotate as you press.',alt:['Dumbbell shoulder press']},
+  'Lateral Raises':{m:['Shoulders'],s:[],eq:'Dumbbells',inc:2.5,cue:'The side delts make your shoulders wider. Lead with the elbows, stop at shoulder height, control the way down. Strict beats heavy.',alt:['Cable lateral raise']},
   'Cable lateral raise':{m:['Shoulders'],s:[],eq:'Cable',inc:2.5,cue:'Cable from behind, across the body; tension all the way down.',alt:['Lateral Raises']},
   'EZ Bar Curl':{m:['Biceps'],s:[],eq:'Barbell',inc:2.5,cue:'Elbows pinned at the sides, all the way down every rep.',alt:['Hammer Curls','Incline Dumbbell Curl']},
-  'Hammer Curls':{m:['Biceps'],s:[],eq:'Dumbbells',inc:2,cue:'Thumbs up; trains the brachialis and forearm, which thicken the arm from the side.',alt:['EZ Bar Curl','Incline Dumbbell Curl']},
-  'Incline Dumbbell Curl':{m:['Biceps'],s:[],eq:'Dumbbells',inc:2,cue:'Bench at about 45 degrees, arms hanging behind you: the long stretch is the point.',alt:['EZ Bar Curl','Hammer Curls']},
+  'Hammer Curls':{m:['Biceps'],s:[],eq:'Dumbbells',inc:2.5,cue:'Thumbs up; trains the brachialis and forearm, which thicken the arm from the side.',alt:['EZ Bar Curl','Incline Dumbbell Curl']},
+  'Incline Dumbbell Curl':{m:['Biceps'],s:[],eq:'Dumbbells',inc:2.5,cue:'Bench at about 45 degrees, arms hanging behind you: the long stretch is the point.',alt:['EZ Bar Curl','Hammer Curls']},
   'Tricep Pushdowns':{m:['Triceps'],s:[],eq:'Cable',inc:2.5,cue:'Elbows fixed at the sides, lock out fully and pause.',alt:['Overhead tricep extension','Tricep dumbbell push']},
   'Overhead tricep extension':{m:['Triceps'],s:[],eq:'Cable',inc:2.5,cue:'Arms overhead stretches the long head, the biggest part of the triceps. Lower behind the head, elbows pointing forward.',alt:['Tricep Pushdowns','Tricep dumbbell push']},
-  'Tricep dumbbell push':{m:['Triceps'],s:[],eq:'Dumbbells',inc:2,cue:'Elbows still, move only at the elbow.',alt:['Overhead tricep extension','Tricep Pushdowns']},
+  'Tricep dumbbell push':{m:['Triceps'],s:[],eq:'Dumbbells',inc:2.5,cue:'Elbows still, move only at the elbow.',alt:['Overhead tricep extension','Tricep Pushdowns']},
   'Close-grip bench press':{m:['Triceps'],s:['Chest'],eq:'Barbell',inc:2.5,cue:'Hands shoulder width, elbows tucked.',alt:['Dips','Tricep Pushdowns']},
-  'Bulgarian Split Squat':{m:['Quads','Glutes'],s:[],eq:'Dumbbells',inc:2,uni:true,cue:'Rear foot on the bench, front foot far enough forward that the heel stays down. Lower until the back knee nearly touches. Weaker leg first; match its reps on the other side.',alt:['Seated leg press','Lateral Lunge']},
-  'Single-Leg RDL':{m:['Hamstrings','Glutes'],s:[],eq:'Dumbbells',inc:2,uni:true,cue:'Soft standing knee, hips square, reach the weight down the shin until the hamstring stretches. Balance is part of the training.',alt:['Romanian deadlift','Seated leg curl']},
+  'Bulgarian Split Squat':{m:['Quads','Glutes'],s:[],eq:'Dumbbells',inc:2.5,uni:true,cue:'Rear foot on the bench, front foot far enough forward that the heel stays down. Lower until the back knee nearly touches. Weaker leg first; match its reps on the other side.',alt:['Seated leg press','Lateral Lunge']},
+  'Single-Leg RDL':{m:['Hamstrings','Glutes'],s:[],eq:'Dumbbells',inc:2.5,uni:true,cue:'Soft standing knee, hips square, reach the weight down the shin until the hamstring stretches. Balance is part of the training.',alt:['Romanian deadlift','Seated leg curl']},
   'Romanian deadlift':{m:['Hamstrings','Glutes'],s:['Back'],eq:'Barbell',inc:2.5,cue:'Soft knees, push the hips back, bar close to the legs; stop when the hamstrings are stretched and the back still flat.',alt:['Single-Leg RDL','Seated leg curl']},
-  'Lateral Lunge':{m:['Quads','Glutes'],s:[],eq:'Dumbbells',inc:2,uni:true,cue:'Big step to the side, sit back into that hip, other leg straight.',alt:['Bulgarian Split Squat']},
+  'Lateral Lunge':{m:['Quads','Glutes'],s:[],eq:'Dumbbells',inc:2.5,uni:true,cue:'Big step to the side, sit back into that hip, other leg straight.',alt:['Bulgarian Split Squat']},
   'Seated leg press':{m:['Quads','Glutes'],s:[],eq:'Plate-loaded',inc:5,cue:'Feet mid-platform, lower until the knees are at about 90 degrees without the lower back lifting.',alt:['Bulgarian Split Squat']},
   'Leg extension':{m:['Quads'],s:[],eq:'Machine',inc:2.5,cue:'Pause at the top, slow on the way down.',alt:['Seated leg press']},
   'Seated leg curl':{m:['Hamstrings'],s:[],eq:'Machine',inc:2.5,cue:'Lean forward a touch to stretch the hamstrings; full range.',alt:['Romanian deadlift']},
   'Glute Hip Thrust':{m:['Glutes'],s:['Hamstrings'],eq:'Plate-loaded',inc:5,cue:'Shins vertical at the top, ribs down, squeeze for a second.',alt:['Romanian deadlift']},
   'Calf Raises':{m:['Calves'],s:[],eq:'Machine',inc:5,cue:'Full stretch and a pause at the bottom, up onto the big toe, three seconds down. Heavy calf work is the runner\'s Achilles insurance.',alt:['Single-leg calf raise']},
-  'Single-leg calf raise':{m:['Calves'],s:[],eq:'Bodyweight',inc:2,uni:true,cue:'On a step, holding a dumbbell; full range, slow down.',alt:['Calf Raises']},
+  'Single-leg calf raise':{m:['Calves'],s:[],eq:'Bodyweight',inc:2.5,uni:true,cue:'On a step, holding a dumbbell; full range, slow down.',alt:['Calf Raises']},
   'Hammer Ab Crunch Machine':{m:['Core'],s:[],eq:'Machine',inc:2.5,cue:'Curl the ribs to the hips; don\'t pull with the arms.',alt:['Cable crunch','Hanging knee raise']},
   'Cable crunch':{m:['Core'],s:[],eq:'Cable',inc:2.5,cue:'Kneel, rope by the head, crunch the ribs down to the hips.',alt:['Hammer Ab Crunch Machine']},
   'Hanging knee raise':{m:['Core'],s:[],eq:'Bodyweight',inc:0,cue:'No swinging; curl the pelvis up, not just the knees.',alt:['Hammer Ab Crunch Machine']},

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="127">
+<meta name="app-version" content="128">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -5345,12 +5345,33 @@ function _wuLeft(ex){
   const done=(ex.sets||[]).filter(s=>s.warmup&&gymSetFilled(s,ex.name)).map(s=>+s.weight||0);
   return plan.filter(([w])=>{const k=done.findIndex(d=>Math.abs(d-w)<=5);if(k>=0){done.splice(k,1);return false;}return true;});
 }
+// The gap between the last warm-up and the first working set: a breather before the set
+// that counts, sized to it. About 90 s for a normal working weight; 2 minutes when it's
+// heavy against your best (92%+ of your estimated max); a minute for a light set or a second
+// big lift, when you're already warm; a little more on a low-readiness morning. Between
+// warm-ups there's no timer, just the time to change plates.
+function _warmupGap(ex,i){
+  const T=ex._tgtOverride||null,plan=_wuPlan(ex);
+  const tw=T&&T.weight!=null?+T.weight:plan.length?Math.max(...plan.map(x=>x[0]))/0.75:0,tr=T&&parseInt(T.reps)||8;
+  let best=0;const nl=(ex.name||'').toLowerCase();
+  loadGymData().forEach(x=>(x.exercises||[]).forEach(e=>{if(e.name&&e.name.toLowerCase()===nl)(e.sets||[]).filter(z=>!z.warmup&&+z.reps>0).forEach(z=>{best=Math.max(best,_gcE1rm(+z.weight||0,+z.reps));});}));
+  const pct=best&&tw?_gcE1rm(tw,tr)/best:null;
+  const warm=gymDraft.exercises.slice(0,i).some(e=>_gcWorking(e).length),k=_gcReadyKey();
+  let secs=90,why='';
+  if(pct!=null&&pct>=0.92){secs=warm?90:120;why='heavy first set';}
+  else if(warm){secs=60;why='already warm';}
+  else if(pct!=null&&pct<0.75){secs=60;why='light first set';}
+  if(k==='pace'||k==='recover')secs+=15;
+  return{secs,label:`Warm-ups done · ${tw?`first set ${_kg(Math.round(tw*10)/10)} × ${tr}`:'first working set next'}${why?`, ${why}`:''}`};
+}
+function _startWarmupGap(i){const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;const g=_warmupGap(ex,i);startRestTimer(g.secs,g.label);}
 function gymLogWarmups(i){
   const ex=gymDraft&&gymDraft.exercises[i];if(!ex)return;
   ex._wuPlan=_wuPlan(ex);const left=_wuLeft(ex);if(!left.length)return;
   const filled=(ex.sets||[]).filter(s=>gymSetFilled(s,ex.name)),blank=(ex.sets||[]).filter(s=>!gymSetFilled(s,ex.name));
   ex.sets=[...filled,...left.map(([w,r])=>({weight:String(w),reps:String(r),warmup:true,technique:false})),...blank];
   gymKpResetTarget();renderGymLogger();haptic('success');
+  if(!_gcWorking(ex).length)_startWarmupGap(i);
 }
 let _gymMenu=false;
 function gymToggleMenu(e){if(e)e.stopPropagation();_gymMenu=!_gymMenu;renderGymLogger();}
@@ -6239,6 +6260,8 @@ function gymKpLogSet(){
   else if(tgt&&tgt.reps){s._tgtR=tgt.reps;s._tgtW=tgt.weight;}
   gymSetActiveEx(i);
   gymCheckSetDone(i,si,true);
+  // The last planned warm-up just went in: time the gap before the first working set.
+  const wuGap=s.warmup&&_wuPlan(ex).length&&!_wuLeft(ex).length&&!_gcWorking(ex).length;
   // If that was the last remaining set to fill, add a fresh blank one straight away -
   // otherwise the pad would have nowhere to log the next rep into until you tapped
   // "+ Set" yourself every single time, even mid-exercise.
@@ -6247,6 +6270,7 @@ function gymKpLogSet(){
   gymKpResetTarget();
   renderGymLogger();
   haptic('success');
+  if(wuGap)_startWarmupGap(i);
 }
 function renderGymKeypad(draft){
   const w=draft.weight||'';

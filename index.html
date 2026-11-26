@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Form">
-<meta name="app-version" content="129">
+<meta name="app-version" content="130">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -3240,7 +3240,7 @@ function renderRunCoachCard(){
     // The coach's session: the same one Today shows, steps and reason included.
     const effort=P.sub?({Long:'Long Run',B2B:'Long Run',Tempo:'Tempo',Sharpener:'Tempo',Intervals:'Intervals'}[P.sub]||'Easy'):'Easy';
     const easyDay=rk==='recover'||rk==='pace';const hard=/Tempo|Intervals|Sharpener/.test(P.sub||'');
-    let hrTxt='';if(fm){const mx=fm.hrMax.v,rest=fm.hrRest.v;hrTxt=hard?`${Math.round(rest+0.84*(mx-rest))}–${Math.round(rest+0.92*(mx-rest))} bpm in the reps`:`under ${Math.round(rest+0.75*(mx-rest))} bpm`;}
+    let hrTxt='';if(fm){hrTxt=hrTargetTxt(P.sub==='Intervals'?'Intervals':P.sub==='Sharpener'?'Sharpener':hard?'Tempo':'Easy',fm.hrMax.v,fm.hrRest.v);}
     const left=P.runsLeft>1?`${P.runsLeft} runs left in ${P.daysLeft} day${P.daysLeft===1?'':'s'}.`:'The last run of the week.';
     return`<div class="chart-card rc-card">
       <div class="rc-eyebrow">Today's run${P.ranToday.length?' · already ran today':''}</div>
@@ -3256,13 +3256,11 @@ function renderRunCoachCard(){
   }
   const effort={Long:'Long Run',Tempo:'Tempo',Easy:'Easy'}[P.type]||'Easy';
   const zone={Easy:[0.62,0.70],Long:[0.62,0.72],Tempo:[0.86,0.88]}[P.type]||[0.62,0.70];
-  const hrr={Easy:[0.60,0.72],Long:[0.60,0.75],Tempo:[0.84,0.89]}[P.type];
   let paceTxt='',hrTxt='';
   if(fm){
     const slow=_paceAtPct(fm.tvdot,zone[0]),fast=_paceAtPct(fm.tvdot,zone[1]);
     paceTxt=`<span class="rc-pace" data-secs="${fast},${slow}">${fmtMS(fast)}–${fmtMS(slow)}/km</span>`;
-    const mx=fm.hrMax.v,rest=fm.hrRest.v;
-    hrTxt=P.type==='Tempo'?`${Math.round(rest+hrr[0]*(mx-rest))}–${Math.round(rest+hrr[1]*(mx-rest))} bpm`:`under ${Math.round(rest+hrr[1]*(mx-rest))} bpm`;
+    hrTxt=hrTargetTxt(P.type==='Tempo'?'Tempo':'Easy',fm.hrMax.v,fm.hrRest.v);
   }
   const pw=P.yw.plan&&P.yw.plan.weeks[0];
   const easyDay=rk==='recover'||rk==='pace';
@@ -7817,6 +7815,18 @@ function timeForVdot(vdot,km){
   return(lo+hi)/2*60;
 }
 const _RACE_HR_FRAC=km=>km<=6?0.95:km<=12?0.92:km<=25?0.89:0.86;
+// Heart-rate zones the way your Garmin sets them: % of heart-rate reserve (resting to
+// max), Z1 50-60, Z2 60-70, Z3 70-80, Z4 80-90, Z5 90-100. Run targets use the same
+// zones so the app and the watch say the same thing: easy and long runs stay in Zone 2
+// (the research line for easy running is about 70% of reserve), tempo in Zone 4.
+const HR_ZONES=[[0.5,0.6],[0.6,0.7],[0.7,0.8],[0.8,0.9],[0.9,1]];
+function hrZone(z,mx,rest){if(mx==null){mx=getHrMax().v;rest=getHrRest().v;}const Z=HR_ZONES[z-1];return[Math.round(rest+Z[0]*(mx-rest)),Math.round(rest+Z[1]*(mx-rest))];}
+// What a run's heart-rate target says, in watch zones.
+function hrTargetTxt(kind,mx,rest){
+  if(kind==='Intervals'){const z=hrZone(4,mx,rest);return`Zone 4–5 (${z[0]}+ bpm) by the end of each rep`;}
+  if(kind==='Tempo'||kind==='Sharpener'){const z=hrZone(4,mx,rest);return`${z[0]}–${z[1]} bpm (Zone 4)${kind==='Sharpener'?' in the reps':''}`;}
+  return`under ${hrZone(2,mx,rest)[1]} bpm (Zone 2)`;
+}
 function getHrMax(){
   const p=state.profile||{};
   if(p.maxHr>=140&&p.maxHr<=230)return{v:+p.maxHr,src:'set by you'};

@@ -283,6 +283,10 @@ async function programme(browser){
       const i=gymDraft.exercises.findIndex(e=>e._slot==='Strength.0');
       gymDoSwap(i,'Bench press');o.pref=state.gymSlotPref&&state.gymSlotPref['Strength.0']==='Bench press'&&_progPick('Strength',0)==='Bench press'&&!!gymDraft.exercises[i]._tgtOverride;
       delete state.gymSlotPref['Strength.0'];saveState();
+      // Logging the warm-ups starts a gap timer before the first working set, sized to it
+      {buildGymSession('Strength');restStop();const j=gymDraft.exercises.findIndex(e=>_wuPlan(e).length);
+       if(j>=0){gymLogWarmups(j);o.wuGap=restEndsAt>0&&restTotal>=45&&restTotal<=150&&/Warm-ups done/.test(document.getElementById('rest-overlay-label').textContent);restStop();}else o.wuGap=true;
+       gymDiscardSession();buildGymSession('Strength');restStop();}
       // Finish screen says what each lift does next time
       gymDraft.exercises[1].sets=S(40,[10,10,10]);openGymFinish();o.nextTime=document.querySelectorAll('#gym-finish-content .gf-nx').length;closeModal('gym-save-modal');
       gymDiscardSession();
@@ -322,6 +326,7 @@ async function programme(browser){
   check(r.restBase&&r.restBase[0]===120&&r.restBase[1]===75,`rest doesn't start at 2 min / 75 s: ${JSON.stringify(r.restBase)}`);
   check(r.restUser===90,`your own rest isn't the starting point: ${r.restUser}`);
   check(r.slow&&r.slow.f>1.05&&r.quick&&r.quick.f<0.95&&r.slow.end>r.quick.end,`session clock ignores the pace: ${JSON.stringify([r.slow,r.quick])}`);
+  check(r.wuGap,'no timer between the last warm-up and the first working set');
   check(r.nextTime>=1,'finish screen has no next-time targets');
   check(r.card,'programme card missing or incomplete');
   check(r.tiles===3,`programme tiles: ${r.tiles}`);

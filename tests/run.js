@@ -264,6 +264,12 @@ async function programme(browser){
       o.under=_progTarget('Lat pulldown',sl,S(59,[5,5]),true);
       o.bw=_progTarget('Chin up',sl,S(0,[12,12]));
       o.fresh=_progTarget('Romanian deadlift',sl,[]);
+      // Every upper-body muscle gets a direct lift in every Strength and Size session, short or standard
+      {const UP=['Chest','Back','Shoulders','Biceps','Triceps'],keepCW=getCalendarWeek,keepLen=_gymLen;o.cover=[];
+       for(const day of [[],[{type:'Tempo',sub:'Tempo',km:8}]]){getCalendarWeek=()=>({days:[{isToday:true,planned:day}]});
+         for(const len of ['short','coach'])for(const t of ['Strength','Size']){_gymLen=len;const P=planGymSession(t);
+           const miss=UP.filter(m=>!P.rows.some(r=>(exCat(r.name)||{m:[]}).m.includes(m)));if(miss.length)o.cover.push(`${t} ${len}: ${miss}`);if(len==='short'&&P.mins>28)o.cover.push(`${t} short is ${P.mins} min`);}}
+       getCalendarWeek=keepCW;_gymLen=keepLen;}
       // Legs: held with a race in five days, in (and eased) when the calendar is clear
       getGymContext=()=>({layoff:3,comeback:false,race:null,dRace:5});
       o.held=planGymSession('Strength').rows.some(x=>x.legs);
@@ -306,6 +312,7 @@ async function programme(browser){
   check(r.under&&r.under.weight<59&&r.under.reps===8&&r.under.tag==='New range',`under the range didn't lighten: ${JSON.stringify(r.under)}`);
   check(r.bw&&r.bw.tag==='Add load',`bodyweight at the top didn't say add load: ${JSON.stringify(r.bw)}`);
   check(r.fresh&&r.fresh.tag==='New'&&r.fresh.weight==null,'a new lift got a made-up weight');
+  check(r.cover&&!r.cover.length,`a muscle loses its direct lift: ${JSON.stringify(r.cover)}`);
   check(r.held===false,'legs programmed five days before a race');
   check(r.legIn&&r.legEased,'legs missing (or not eased in) on a clear day');
   check(r.pref,'swap in a programme slot not remembered');
